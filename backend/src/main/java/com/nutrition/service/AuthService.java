@@ -1,5 +1,6 @@
 package com.nutrition.service;
 
+import com.nutrition.dto.AuthResponse;
 import com.nutrition.dto.LoginRequest;
 import com.nutrition.dto.RegisterRequest;
 import com.nutrition.entity.NutritionistProfile;

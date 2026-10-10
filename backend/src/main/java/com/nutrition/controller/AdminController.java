@@ -5,7 +5,8 @@ import com.nutrition.entity.Role;
 import com.nutrition.entity.User;
 import com.nutrition.repository.NutritionistProfileRepository;
 import com.nutrition.repository.UserProfileRepository;
-import com.nutrition.repository.UserRepository;
+import com.nutrition.dto.UserProfileDto;
+import com.nutrition.service.UserProfileService;
 import com.nutrition.service.SystemSettingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final NutritionistProfileRepository nutritionistProfileRepository;
     private final UserProfileRepository userProfileRepository;
+    private final UserProfileService userProfileService;
     private final SystemSettingService systemSettingService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
@@ -98,6 +100,11 @@ public class AdminController {
     @GetMapping("/all-users")
     public ResponseEntity<List<User>> getAllUsersList() {
         return ResponseEntity.ok(userRepository.findAll());
+    }
+
+    @GetMapping("/all-user-profiles")
+    public ResponseEntity<List<UserProfileDto>> getAllUserProfiles() {
+        return ResponseEntity.ok(userProfileService.getAllUserProfiles());
     }
 
     @GetMapping("/users")

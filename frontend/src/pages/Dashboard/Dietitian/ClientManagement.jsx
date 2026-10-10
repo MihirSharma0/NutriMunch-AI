@@ -19,32 +19,71 @@ const ClientManagement = () => {
 
     useEffect(() => {
         fetchRealUsers();
+
+        const handleProfileUpdate = () => {
+            fetchRealUsers();
+        };
+        window.addEventListener('nutrimunch_profile_updated', handleProfileUpdate);
+        return () => window.removeEventListener('nutrimunch_profile_updated', handleProfileUpdate);
     }, []);
 
     const fetchRealUsers = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/admin/all-users');
+            // Fetch live user profiles with updated biometrics, goals, and macro targets
+            const response = await api.get('/admin/all-user-profiles');
             if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-                // Dietitians can see ALL standard patient users, but CANNOT see ADMIN or OTHER DIETITIAN data
-                const patientOnlyUsers = response.data.filter(u => {
-                    const r = u.role ? String(u.role).toUpperCase().replace('ROLE_', '') : 'USER';
-                    return r === 'USER';
-                });
+                const fetchedClients = response.data.map(p => {
+                    const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'Patient User');
+                    const weightStr = p.weightKg ? `${p.weightKg} kg` : '72 kg';
+                    const caloriesStr = p.dailyCaloriesTarget ? `${p.dailyCaloriesTarget.toLocaleString()} kcal` : '2,100 kcal';
+                    const proteinStr = p.proteinTarget ? `${p.proteinTarget}g` : '145g';
+                    const carbsStr = p.carbsTarget ? `${p.carbsTarget}g` : '210g';
+                    const fatsStr = p.fatsTarget ? `${p.fatsTarget}g` : '60g';
+                    const lastSyncStr = p.updatedAt ? `${new Date(p.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${new Date(p.updatedAt).toLocaleDateString()})` : 'Recently Synced';
 
-                const fetchedClients = patientOnlyUsers.map(u => {
-                    const name = u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : (u.email ? u.email.split('@')[0] : 'User');
-                    
                     return {
-                        id: String(u.id),
+                        id: String(p.userId || p.id),
                         name: name,
-                        email: u.email || 'no-email@nutrimunch.com',
+                        email: p.email || 'patient@nutrimunch.com',
                         role: 'USER',
                         roleBadge: 'User',
-                        age: u.age || 28,
-                        goal: u.goal || 'General Health & AI Calibrated Diet',
-                        adherence: u.adherence || 88,
-                        status: u.status || (u.verified || u.enabled ? 'Optimal' : 'Good'),
+                        age: p.age || 28,
+                        goal: p.goal || 'General Health & AI Calibrated Diet',
+                        adherence: p.adherence || 92,
+                        status: p.status || 'Optimal',
+                        lastSync: lastSyncStr,
+                        weight: weightStr,
+                        glucose: '95 mg/dL',
+                        calories: caloriesStr,
+                        protein: proteinStr,
+                        carbs: carbsStr,
+                        fats: fatsStr,
+                        notes: `Allergies: ${p.allergies || 'None'}. Diet Type: ${p.dietType || 'Non-Vegetarian'}. Budget: ${p.mealBudget || 'Affordable'}.`
+                    };
+                });
+                
+                setClientsList(fetchedClients);
+            }
+        } catch (error) {
+            console.error("Falling back to /admin/all-users endpoint", error);
+            try {
+                const fallbackResponse = await api.get('/admin/all-users');
+                if (fallbackResponse.data && Array.isArray(fallbackResponse.data)) {
+                    const patientOnlyUsers = fallbackResponse.data.filter(u => {
+                        const r = u.role ? String(u.role).toUpperCase().replace('ROLE_', '') : 'USER';
+                        return r === 'USER';
+                    });
+                    const fallbackClients = patientOnlyUsers.map(u => ({
+                        id: String(u.id),
+                        name: u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : (u.email ? u.email.split('@')[0] : 'User'),
+                        email: u.email || 'patient@nutrimunch.com',
+                        role: 'USER',
+                        roleBadge: 'User',
+                        age: 28,
+                        goal: 'General Health & AI Calibrated Diet',
+                        adherence: 88,
+                        status: u.verified || u.enabled ? 'Optimal' : 'Good',
                         lastSync: u.verified || u.enabled ? 'Verified Account' : 'Pending OTP',
                         weight: '72 kg',
                         glucose: '95 mg/dL',
@@ -52,17 +91,13 @@ const ClientManagement = () => {
                         protein: '145g',
                         carbs: '210g',
                         fats: '60g',
-                        notes: `Registered platform user. Verification: ${u.verified || u.enabled ? 'Verified' : 'Pending OTP'}.`
-                    };
-                });
-                
-                // Merge fetched real patient users with initial demo records
-                const emailSet = new Set(fetchedClients.map(c => c.email.toLowerCase()));
-                const combined = [...fetchedClients, ...initialClients.filter(c => c.role === 'USER' && !emailSet.has(c.email.toLowerCase()))];
-                setClientsList(combined);
+                        notes: 'Registered platform user.'
+                    }));
+                    setClientsList(fallbackClients);
+                }
+            } catch (err) {
+                console.error("Failed loading fallback users", err);
             }
-        } catch (error) {
-            console.error("Using local fallback clients roster due to API response", error);
         } finally {
             setLoading(false);
         }

@@ -20,6 +20,7 @@ public class UserProfileDto {
     private String dietType;
     private String lifestyleClass;
     private String mealBudget;
+    private String email;
     private String firstName;
     private String lastName;
     private String favoriteFoods;
