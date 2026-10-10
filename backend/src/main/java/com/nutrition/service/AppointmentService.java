@@ -4,7 +4,9 @@ import com.nutrition.dto.AppointmentDto;
 import com.nutrition.entity.Appointment;
 import com.nutrition.entity.Role;
 import com.nutrition.entity.User;
+import com.nutrition.entity.NutritionistProfile;
 import com.nutrition.repository.AppointmentRepository;
+import com.nutrition.repository.NutritionistProfileRepository;
 import com.nutrition.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +25,7 @@ public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
+    private final NutritionistProfileRepository nutritionistProfileRepository;
 
     public List<AppointmentDto> getMyAppointments(Long userId, Role role) {
         List<Appointment> list;
@@ -39,13 +43,42 @@ public class AppointmentService {
     }
 
     public List<Map<String, Object>> getAvailableDietitians() {
-        List<User> dietitians = userRepository.findByRole(Role.NUTRITIONIST);
+        List<User> allUsers = userRepository.findAll();
+        List<User> dietitians = allUsers.stream()
+                .filter(u -> u.getRole() != null && (u.getRole() == Role.NUTRITIONIST || "NUTRITIONIST".equalsIgnoreCase(u.getRole().name())))
+                .collect(Collectors.toList());
+
+        if (dietitians.isEmpty()) {
+            List<NutritionistProfile> profiles = nutritionistProfileRepository.findAll();
+            for (NutritionistProfile p : profiles) {
+                if (p.getUser() != null && !dietitians.contains(p.getUser())) {
+                    dietitians.add(p.getUser());
+                }
+            }
+        }
+
         List<Map<String, Object>> result = new ArrayList<>();
         for (User d : dietitians) {
             Map<String, Object> map = new HashMap<>();
             map.put("id", d.getId());
-            map.put("name", (d.getFirstName() != null ? d.getFirstName() : "") + " " + (d.getLastName() != null ? d.getLastName() : ""));
+            String name = (d.getFirstName() != null ? d.getFirstName() : "") + " " + (d.getLastName() != null ? d.getLastName() : "");
+            if (name.trim().isEmpty()) {
+                name = d.getEmail();
+            }
+            map.put("name", name.trim());
             map.put("email", d.getEmail());
+
+            Optional<NutritionistProfile> profOpt = nutritionistProfileRepository.findByUserId(d.getId());
+            if (profOpt.isPresent()) {
+                NutritionistProfile prof = profOpt.get();
+                map.put("credentials", prof.getCredentials() != null && !prof.getCredentials().trim().isEmpty() ? prof.getCredentials() : "Certified Clinical Dietitian");
+                map.put("specialization", prof.getSpecialization() != null && !prof.getSpecialization().trim().isEmpty() ? prof.getSpecialization() : "Clinical Nutrition");
+                map.put("approvalStatus", prof.getApprovalStatus() != null ? prof.getApprovalStatus() : "APPROVED");
+            } else {
+                map.put("credentials", "Certified Clinical Dietitian");
+                map.put("specialization", "General Metabolic & Sports Nutrition");
+                map.put("approvalStatus", "APPROVED");
+            }
             result.add(map);
         }
         return result;
@@ -113,8 +146,24 @@ public class AppointmentService {
             dto.setUserEmail(apt.getUser().getEmail());
         }
         if (apt.getDietitian() != null) {
-            dto.setDietitianId(apt.getDietitian().getId());
-            dto.setDietitianName((apt.getDietitian().getFirstName() != null ? apt.getDietitian().getFirstName() : "") + " " + (apt.getDietitian().getLastName() != null ? apt.getDietitian().getLastName() : ""));
+            User d = apt.getDietitian();
+            dto.setDietitianId(d.getId());
+            String dName = (d.getFirstName() != null ? d.getFirstName() : "") + " " + (d.getLastName() != null ? d.getLastName() : "");
+            if (dName.trim().isEmpty()) {
+                dName = d.getEmail();
+            }
+            dto.setDietitianName(dName.trim());
+            dto.setDietitianEmail(d.getEmail());
+
+            Optional<NutritionistProfile> profOpt = nutritionistProfileRepository.findByUserId(d.getId());
+            if (profOpt.isPresent()) {
+                NutritionistProfile prof = profOpt.get();
+                dto.setDietitianCredentials(prof.getCredentials() != null && !prof.getCredentials().trim().isEmpty() ? prof.getCredentials() : "Certified Dietitian");
+                dto.setDietitianSpecialization(prof.getSpecialization() != null && !prof.getSpecialization().trim().isEmpty() ? prof.getSpecialization() : "Clinical Nutrition");
+            } else {
+                dto.setDietitianCredentials("Certified Clinical Dietitian");
+                dto.setDietitianSpecialization("General Metabolic & Sports Nutrition");
+            }
         }
         dto.setAppointmentTime(apt.getAppointmentTime());
         dto.setStatus(apt.getStatus());

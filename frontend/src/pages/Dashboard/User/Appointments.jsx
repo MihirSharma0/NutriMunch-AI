@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
+import { API_BASE_URL } from '../../../api/axios';
 
 const Appointments = () => {
     const { user, token } = useContext(AuthContext);
@@ -21,20 +22,27 @@ const Appointments = () => {
     });
 
     useEffect(() => {
-        if (user && token) {
-            fetchAppointments();
-            fetchDietitians();
-        }
+        fetchAppointments();
+        fetchDietitians();
     }, [user, token]);
+
+    useEffect(() => {
+        if (isBookingModalOpen || selectedAppointment) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isBookingModalOpen, selectedAppointment]);
 
     const fetchAppointments = async () => {
         try {
             setLoading(true);
-            const res = await fetch('http://localhost:8080/api/appointments/me', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const authToken = token || localStorage.getItem('token');
+            const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+            const res = await fetch(`${API_BASE_URL}/appointments/me`, { headers });
             if (res.ok) {
                 const data = await res.json();
                 setAppointments(data);
@@ -48,11 +56,9 @@ const Appointments = () => {
 
     const fetchDietitians = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/appointments/dietitians', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const authToken = token || localStorage.getItem('token');
+            const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+            const res = await fetch(`${API_BASE_URL}/appointments/dietitians`, { headers });
             if (res.ok) {
                 const data = await res.json();
                 setDietitians(data);
@@ -78,7 +84,7 @@ const Appointments = () => {
                 status: 'Pending Review'
             };
 
-            const res = await fetch('http://localhost:8080/api/appointments/book', {
+            const res = await fetch(`${API_BASE_URL}/appointments/book`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -111,7 +117,7 @@ const Appointments = () => {
 
     const handleCancelAppointment = async (id) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/appointments/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/appointments/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -153,7 +159,14 @@ const Appointments = () => {
 
     const primaryDietitian = dietitians.length > 0 ? dietitians[0] : {
         name: 'Dr. Elena Rostova',
-        email: 'elena.rostova@nutrimunch.ai'
+        email: 'elena.rostova@nutrimunch.ai',
+        credentials: 'Certified Clinical Dietitian',
+        specialization: 'Algorithmic Biology & Metabolism'
+    };
+
+    const openBookingForDietitian = (dietitianId) => {
+        setBookingForm(prev => ({ ...prev, dietitianId }));
+        setIsBookingModalOpen(true);
     };
 
     return (
@@ -171,7 +184,7 @@ const Appointments = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white mb-1">Consultations</h1>
-                    <p className="text-white/50 text-xs sm:text-sm">Schedule and review 1-on-1 virtual sessions with your clinical nutritionist.</p>
+                    <p className="text-white/50 text-xs sm:text-sm">Schedule and review 1-on-1 virtual sessions with registered clinical nutritionists.</p>
                 </div>
                 <button 
                     onClick={() => setIsBookingModalOpen(true)}
@@ -247,7 +260,7 @@ const Appointments = () => {
                             </div>
                             <h3 className="text-lg font-bold text-white">No Upcoming Consultations</h3>
                             <p className="text-white/50 text-xs max-w-md mx-auto">
-                                You don't have any active appointments scheduled. Book a 1-on-1 session with a certified nutritionist to review your macro targets.
+                                You don't have any active appointments scheduled. Select a registered clinical nutritionist below to review your macro protocol.
                             </p>
                             <button 
                                 onClick={() => setIsBookingModalOpen(true)}
@@ -306,49 +319,65 @@ const Appointments = () => {
                     )}
                 </div>
 
-                {/* Right Sidebar Node Info */}
+                {/* Right Sidebar - All Registered Nutritionists */}
                 <div>
                     <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 sticky top-24 shadow-xl space-y-6">
-                        <h3 className="font-bold font-hero-display text-lg text-white flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[#a5d391]">medical_services</span>
-                            Assigned Nutritionist Node
-                        </h3>
-
-                        <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#a5d391] to-emerald-400 text-[#080b12] font-bold text-xl flex items-center justify-center shadow-lg shrink-0">
-                                {primaryDietitian.name ? primaryDietitian.name.split(' ').map(n => n[0]).join('') : 'DR'}
-                            </div>
-                            <div>
-                                <div className="font-bold text-white text-base">{primaryDietitian.name}</div>
-                                <div className="text-[#a5d391] text-xs font-bold uppercase tracking-wider">Certified Clinical Dietitian</div>
-                                <div className="text-white/40 text-xs truncate mt-0.5">{primaryDietitian.email}</div>
-                            </div>
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-bold font-hero-display text-lg text-white flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[#a5d391]">medical_services</span>
+                                Platform Dietitians
+                            </h3>
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30">
+                                {dietitians.length} Registered
+                            </span>
                         </div>
 
-                        <div className="bg-black/30 border border-white/10 rounded-2xl p-4 space-y-2">
-                            <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Protocol Availability</div>
-                            <div className="flex items-center gap-2 text-xs text-emerald-400 font-semibold">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                Accepting Virtual Bookings
-                            </div>
+                        <p className="text-xs text-white/50">
+                            Certified nutritionists available for 1-on-1 virtual consultation bookings:
+                        </p>
+
+                        <div className="space-y-4 max-h-[480px] overflow-y-auto pr-1">
+                            {dietitians.length === 0 ? (
+                                <div className="text-xs text-white/40 text-center py-4">No dietitian profiles available yet.</div>
+                            ) : (
+                                dietitians.map((d) => (
+                                    <div 
+                                        key={d.id} 
+                                        className="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-3 hover:border-[#a5d391]/40 transition-all"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#a5d391] to-emerald-400 text-[#080b12] font-bold text-base flex items-center justify-center shadow-md shrink-0">
+                                                {d.name ? d.name.split(' ').map(n => n[0]).join('') : 'DR'}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-bold text-white text-sm truncate">{d.name}</div>
+                                                <div className="text-[#a5d391] text-[11px] font-semibold truncate">{d.credentials || 'Certified Dietitian'}</div>
+                                                <div className="text-white/40 text-[10px] truncate">{d.specialization || 'Clinical Specialist'}</div>
+                                            </div>
+                                        </div>
+
+                                        <button 
+                                            onClick={() => openBookingForDietitian(d.id)}
+                                            className="w-full bg-[#a5d391]/10 border border-[#a5d391]/30 text-[#a5d391] hover:bg-[#a5d391] hover:text-black transition-all py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">event</span> Book Consultation
+                                        </button>
+                                    </div>
+                                ))
+                            )}
                         </div>
 
-                        <button 
-                            onClick={() => setIsBookingModalOpen(true)}
-                            className="w-full border border-[#a5d391]/30 text-[#a5d391] px-4 py-3 rounded-2xl text-xs font-bold hover:bg-[#a5d391] hover:text-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                        >
-                            <span className="material-symbols-outlined text-base">event</span> Schedule Booking Slot
-                        </button>
-
-                        <p className="text-xs text-white/40 text-center">Avg response time: &lt; 2 hours</p>
+                        <div className="bg-black/30 border border-white/10 rounded-2xl p-3 text-center">
+                            <p className="text-[11px] text-white/40">⚡ Direct 1-on-1 video call links generated automatically upon booking approval.</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Modal: Book Appointment */}
             {isBookingModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full relative shadow-2xl space-y-6">
+                <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
                         <div className="flex justify-between items-center border-b border-white/10 pb-4">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2 font-hero-display">
                                 <span className="material-symbols-outlined text-[#a5d391]">edit_calendar</span>
@@ -360,21 +389,46 @@ const Appointments = () => {
                         </div>
 
                         <form onSubmit={handleBookSubmit} className="space-y-4">
+                            {/* Rich Dietitian Selection Cards */}
                             <div>
-                                <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Select Nutritionist</label>
-                                <select 
-                                    value={bookingForm.dietitianId}
-                                    onChange={(e) => setBookingForm({ ...bookingForm, dietitianId: e.target.value })}
-                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#a5d391]"
-                                >
-                                    {dietitians.length > 0 ? (
-                                        dietitians.map(d => (
-                                            <option key={d.id} value={d.id}>{d.name} ({d.email})</option>
-                                        ))
-                                    ) : (
+                                <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">
+                                    Select Registered Dietitian ({dietitians.length} Available)
+                                </label>
+
+                                {dietitians.length > 0 ? (
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                        {dietitians.map((d) => (
+                                            <div 
+                                                key={d.id}
+                                                onClick={() => setBookingForm({ ...bookingForm, dietitianId: d.id })}
+                                                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${bookingForm.dietitianId == d.id ? 'bg-[#a5d391]/20 border-[#a5d391] text-white' : 'bg-black/40 border-white/10 text-white/70 hover:border-white/30'}`}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 ${bookingForm.dietitianId == d.id ? 'bg-[#a5d391] text-black' : 'bg-white/10 text-white'}`}>
+                                                        {d.name ? d.name.split(' ').map(n => n[0]).join('') : 'DR'}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="font-bold text-xs text-white truncate">{d.name}</div>
+                                                        <div className="text-[10px] text-[#a5d391] truncate">{d.credentials || 'Certified Clinical Dietitian'} • {d.specialization || 'Clinical Health'}</div>
+                                                        <div className="text-[10px] text-white/40 truncate">{d.email}</div>
+                                                    </div>
+                                                </div>
+
+                                                {bookingForm.dietitianId == d.id && (
+                                                    <span className="material-symbols-outlined text-[#a5d391] shrink-0">check_circle</span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <select 
+                                        value={bookingForm.dietitianId}
+                                        onChange={(e) => setBookingForm({ ...bookingForm, dietitianId: e.target.value })}
+                                        className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#a5d391]"
+                                    >
                                         <option value="">Dr. Elena Rostova (Lead Clinical Dietitian)</option>
-                                    )}
-                                </select>
+                                    </select>
+                                )}
                             </div>
 
                             <div>
@@ -464,8 +518,8 @@ const Appointments = () => {
 
             {/* Modal: Appointment Detail View */}
             {selectedAppointment && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6">
+                <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
                         <div className="flex justify-between items-start border-b border-white/10 pb-4">
                             <div>
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${selectedAppointment.status === 'Confirmed' || selectedAppointment.status === 'SCHEDULED' ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>

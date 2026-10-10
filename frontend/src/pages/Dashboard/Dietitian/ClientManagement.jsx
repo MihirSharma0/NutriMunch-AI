@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../../api/axios';
+import React, { useState, useEffect, useContext } from 'react';
+import api, { API_BASE_URL } from '../../../api/axios';
+import { AuthContext } from '../../../context/AuthContext';
 
 const ClientManagement = () => {
+    const { user, token } = useContext(AuthContext);
+    const dietitianName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Certified Dietitian');
     const initialClients = [
         { id: "442", name: "David Miller", email: "david.m@example.com", role: "USER", roleBadge: "User", age: 45, goal: "Diabetes Management", adherence: 82, status: "Critical", lastSync: "10m ago", weight: "88 kg", glucose: "142 mg/dL", calories: "1,950 kcal", protein: "140g", carbs: "160g", fats: "55g", notes: "Monitored insulin spike post-lunch. Adjusted carb threshold." },
         { id: "8472", name: "Marcus Chen", email: "marcus.c@example.com", role: "USER", roleBadge: "User", age: 32, goal: "Lipid Oxidation & Endurance", adherence: 94, status: "Optimal", lastSync: "5m ago", weight: "76 kg", glucose: "92 mg/dL", calories: "2,650 kcal", protein: "175g", carbs: "310g", fats: "65g", notes: "VO2 max training phase. Excellent carbohydrate timing." },
@@ -164,9 +167,71 @@ const ClientManagement = () => {
         setTimeout(() => setNotification(null), 3500);
     };
 
-    const handleDirectiveSubmit = (e) => {
+    const [directiveText, setDirectiveText] = useState('');
+
+    const handleDirectiveSubmit = async (e) => {
         e.preventDefault();
+        if (!directiveText.trim() || !selectedClient) return;
+
+        const targetId = selectedClient.userId || selectedClient.id;
+        const directiveTitle = `Clinical Directive from Dietitian ${dietitianName}`;
+        const payload = {
+            userId: targetId ? Number(targetId) : null,
+            userEmail: selectedClient.email || '',
+            title: directiveTitle,
+            message: directiveText.trim(),
+            type: 'CLINICAL_DIRECTIVE',
+            icon: 'health_and_safety',
+            path: '/progress'
+        };
+
+        try {
+            await fetch(`${API_BASE_URL}/notifications/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+        } catch (err) {
+            console.error("Failed sending live directive notification to backend", err);
+        }
+
+        const newNotification = {
+            id: `directive_${Date.now()}`,
+            title: directiveTitle,
+            message: directiveText.trim(),
+            time: 'Just now',
+            icon: 'health_and_safety',
+            path: '/progress',
+            targetEmail: selectedClient.email || '',
+            targetUserId: targetId || '',
+            targetName: selectedClient.name || '',
+            read: false
+        };
+
+        try {
+            const existingNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+            localStorage.setItem('nutrimunch_user_notifications', JSON.stringify([newNotification, ...existingNotifs]));
+
+            const existingDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
+            localStorage.setItem('nutrimunch_clinical_directives', JSON.stringify([newNotification, ...existingDirectives]));
+
+            window.dispatchEvent(new Event('nutrimunch_notification_added'));
+            window.dispatchEvent(new Event('storage'));
+
+            try {
+                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
+                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_SENT', payload: newNotification });
+                bc.close();
+            } catch (e) {}
+        } catch (err) {
+            console.error("Failed saving directive notification", err);
+        }
+
         setNotification(`Clinical directive sent to ${selectedClient.name}!`);
+        setDirectiveText('');
         setSelectedClient(null);
         setTimeout(() => setNotification(null), 3500);
     };
@@ -401,6 +466,8 @@ const ClientManagement = () => {
                             <label className="block text-[11px] font-bold uppercase tracking-widest text-white">Send Clinical Directive</label>
                             <textarea 
                                 rows="2"
+                                value={directiveText}
+                                onChange={(e) => setDirectiveText(e.target.value)}
                                 placeholder="Directive note or adjustment for patient..."
                                 className="w-full bg-black/50 border border-white/10 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-[#a5d391]"
                                 required

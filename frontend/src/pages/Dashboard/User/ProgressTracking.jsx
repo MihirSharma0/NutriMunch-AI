@@ -2,18 +2,14 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Droplet, Plus, RotateCcw, CheckCircle2, Sparkles, TrendingUp, Activity, Edit2, Save, X } from 'lucide-react';
-import api from '../../../api/axios';
+import api, { API_BASE_URL } from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const ProgressTracking = () => {
-    const { user } = useContext(AuthContext);
-
-    if (!user) {
-        return <FeatureGate />;
-    }
+    const { user, token } = useContext(AuthContext);
 
     // Dynamic Hydration Target (Fetched from User Profile / localStorage)
     const [waterTargetMl, setWaterTargetMl] = useState(() => {
@@ -51,6 +47,132 @@ const ProgressTracking = () => {
         });
     };
 
+    const [clinicalDirectives, setClinicalDirectives] = useState([]);
+
+    const loadDirectives = async () => {
+        let deletedIds = new Set();
+        try {
+            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
+            deletedIds = new Set(storedDeleted.map(String));
+        } catch (e) {}
+
+        let backendDirectives = [];
+        if (token) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/notifications/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    backendDirectives = data.filter(n => n.type === 'CLINICAL_DIRECTIVE' || (n.title && n.title.includes('Clinical Directive'))).map(n => ({
+                        id: n.id,
+                        title: n.title,
+                        message: n.message,
+                        time: n.timeAgo || 'Just now',
+                        icon: n.icon || 'health_and_safety'
+                    }));
+                }
+            } catch (e) {}
+        }
+
+        let localDirectives = [];
+        try {
+            const storedDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
+            const storedNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+            localDirectives = [...storedDirectives, ...storedNotifs.filter(n => n.title && n.title.includes('Clinical Directive'))];
+        } catch (e) {}
+
+        const allDirectives = [...backendDirectives, ...localDirectives];
+        const uniqueDirectives = Array.from(new Map(allDirectives.map(item => [item.id, item])).values())
+            .filter(item => !deletedIds.has(String(item.id)));
+
+        setClinicalDirectives(uniqueDirectives);
+    };
+
+    const handleDeleteDirective = async (id) => {
+        const stringId = String(id);
+        setClinicalDirectives(prev => prev.filter(d => String(d.id) !== stringId));
+        try {
+            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
+            if (!storedDeleted.includes(stringId)) {
+                localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify([...storedDeleted, stringId]));
+            }
+
+            const storedDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
+            const updatedDirectives = storedDirectives.filter(n => String(n.id) !== stringId);
+            localStorage.setItem('nutrimunch_clinical_directives', JSON.stringify(updatedDirectives));
+
+            const storedNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+            const updatedNotifs = storedNotifs.filter(n => String(n.id) !== stringId);
+            localStorage.setItem('nutrimunch_user_notifications', JSON.stringify(updatedNotifs));
+
+            window.dispatchEvent(new Event('nutrimunch_notification_added'));
+            try {
+                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
+                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_DELETED', id: stringId });
+                bc.close();
+            } catch (err) {}
+
+            if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
+                fetch(`${API_BASE_URL}/notifications/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
+        } catch (e) {}
+    };
+
+    const handleClearAllDirectives = async () => {
+        const allIds = clinicalDirectives.map(d => String(d.id));
+        setClinicalDirectives([]);
+        try {
+            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
+            const combinedDeleted = Array.from(new Set([...storedDeleted, ...allIds]));
+            localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify(combinedDeleted));
+
+            localStorage.setItem('nutrimunch_clinical_directives', '[]');
+            localStorage.setItem('nutrimunch_user_notifications', '[]');
+
+            window.dispatchEvent(new Event('nutrimunch_notification_added'));
+            try {
+                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
+                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_CLEAR_ALL' });
+                bc.close();
+            } catch (err) {}
+
+            if (token) {
+                fetch(`${API_BASE_URL}/notifications/clear-all`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
+        } catch (e) {}
+    };
+
+    useEffect(() => {
+        loadDirectives();
+        const interval = setInterval(loadDirectives, 10000);
+        window.addEventListener('nutrimunch_notification_added', loadDirectives);
+        window.addEventListener('storage', loadDirectives);
+        window.addEventListener('focus', loadDirectives);
+
+        let bc;
+        try {
+            bc = new BroadcastChannel('nutrimunch_clinical_channel');
+            bc.onmessage = () => {
+                loadDirectives();
+            };
+        } catch (e) {}
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('nutrimunch_notification_added', loadDirectives);
+            window.removeEventListener('storage', loadDirectives);
+            window.removeEventListener('focus', loadDirectives);
+            if (bc) bc.close();
+        };
+    }, [token]);
+
     useEffect(() => {
         fetchWaterTarget();
         const handleProfileUpdate = () => {
@@ -63,6 +185,14 @@ const ProgressTracking = () => {
             window.removeEventListener('storage', handleProfileUpdate);
         };
     }, []);
+
+    useEffect(() => {
+        localStorage.setItem('nutrimunch_water_consumed', waterConsumed.toString());
+    }, [waterConsumed]);
+
+    if (!user) {
+        return <FeatureGate />;
+    }
 
     const handleSaveGoal = async (targetVal) => {
         const valToUse = targetVal || editGoalLiters;
@@ -89,10 +219,6 @@ const ProgressTracking = () => {
             setTimeout(() => setLogSuccessMessage(''), 4000);
         }
     };
-
-    useEffect(() => {
-        localStorage.setItem('nutrimunch_water_consumed', waterConsumed.toString());
-    }, [waterConsumed]);
 
     const handleAddWater = (amount) => {
         const newTotal = waterConsumed + amount;
@@ -247,8 +373,8 @@ const ProgressTracking = () => {
 
                     {/* Edit Fluid Goal Popover / Modal Overlay */}
                     {isEditingGoal && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                            <div className="bg-[#0d121c] border border-[#a5d391]/40 rounded-3xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(165,211,145,0.2)] relative text-white space-y-5 animate-in fade-in zoom-in-95">
+                        <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+                            <div className="bg-[#0d121c] border border-[#a5d391]/40 rounded-3xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(165,211,145,0.2)] relative text-white space-y-5 animate-in fade-in zoom-in-95 max-h-[80vh] overflow-y-auto my-auto">
                                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
                                     <div className="flex items-center gap-2">
                                         <Droplet className="w-5 h-5 text-[#a5d391]" />
@@ -397,6 +523,68 @@ const ProgressTracking = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Active Clinical Directives Banner */}
+            <div className="bg-[#0d131f] border border-[#a5d391]/40 rounded-3xl p-5 shadow-xl space-y-3 animate-fadeIn">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                    <div className="flex items-center gap-2 text-[#a5d391]">
+                        <span className="material-symbols-outlined text-lg">health_and_safety</span>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-white">Active Clinical Directives from Dietitian</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {clinicalDirectives.length > 0 && (
+                            <button
+                                onClick={handleClearAllDirectives}
+                                className="text-[10px] font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-2.5 py-0.5 rounded-full transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-xs">delete_sweep</span>
+                                <span>Clear All</span>
+                            </button>
+                        )}
+                        <span className={`text-[10px] font-bold px-3 py-0.5 rounded-full border ${clinicalDirectives.length > 0 ? 'bg-[#a5d391]/20 text-[#a5d391] border-[#a5d391]/30 animate-pulse' : 'bg-white/10 text-white/50 border-white/10'}`}>
+                            {clinicalDirectives.length > 0 ? `${clinicalDirectives.length} Live Directive${clinicalDirectives.length > 1 ? 's' : ''}` : 'Status: Optimal'}
+                        </span>
+                    </div>
+                </div>
+
+                {clinicalDirectives.length === 0 ? (
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between text-xs text-white/60">
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-sm text-[#a5d391]">verified</span>
+                            <span>No pending custom directives. Adhere to your active macro plan.</span>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#a5d391] bg-[#a5d391]/10 px-2.5 py-0.5 rounded-full">Active</span>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {clinicalDirectives.map(dir => (
+                            <div key={dir.id} className="bg-white/5 border border-[#a5d391]/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-[#a5d391] transition-all">
+                                <div className="space-y-1 min-w-0 flex-1">
+                                    <div className="text-xs font-bold text-white flex items-center gap-2 flex-wrap">
+                                        <span className="material-symbols-outlined text-sm text-[#a5d391]">assignment</span>
+                                        <span className="text-[#a5d391] font-bold">{dir.title}</span>
+                                        <span className="text-[10px] text-white/40 font-normal">({dir.time})</span>
+                                    </div>
+                                    <p className="text-xs text-white/90 font-semibold leading-relaxed italic">"{dir.message}"</p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[10px] font-black bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/40 px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-pulse"></span>
+                                        Verified Dietitian Directive
+                                    </span>
+                                    <button
+                                        onClick={() => handleDeleteDirective(dir.id)}
+                                        title="Delete Directive"
+                                        className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-transparent hover:border-red-500/20 cursor-pointer flex items-center justify-center"
+                                    >
+                                        <span className="material-symbols-outlined text-base">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Weight Loss & Lipid Oxidation Trend Chart */}

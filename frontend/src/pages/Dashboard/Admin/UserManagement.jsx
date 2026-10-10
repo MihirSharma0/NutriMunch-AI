@@ -316,8 +316,8 @@ const UserManagement = () => {
 
             {/* Reset Password Modal */}
             {selectedUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-                    <div className="bg-[#080b12] border border-white/15 rounded-[2.5rem] w-full max-w-md p-5 sm:p-8 space-y-6 relative shadow-2xl">
+                <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+                    <div className="bg-[#080b12] border border-white/15 rounded-[2.5rem] w-full max-w-md p-5 sm:p-8 space-y-6 relative shadow-2xl max-h-[80vh] overflow-y-auto my-auto">
                         <div className="flex items-center justify-between border-b border-white/10 pb-4">
                             <h3 className="text-2xl font-bold font-hero-display text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-amber-400">lock_reset</span>

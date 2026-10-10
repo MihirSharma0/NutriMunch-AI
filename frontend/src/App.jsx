@@ -116,6 +116,10 @@ function App() {
               <Route path="dashboard/user/ai-diet" element={<AiDietGenerator />} />
               <Route path="dashboard/user/ai-image" element={<AiImageAnalyzer />} />
               <Route path="dashboard/user/progress" element={<ProgressTracking />} />
+              <Route path="dashboard/progress" element={<ProgressTracking />} />
+              <Route path="dashboard/diet-plans" element={<DietPlans />} />
+              <Route path="dashboard/appointments" element={<Appointments />} />
+              <Route path="dashboard/reports" element={<Reports />} />
               <Route path="dashboard/user/ai-chat" element={<AiChat />} />
               <Route path="dashboard/user/appointments" element={<Appointments />} />
               <Route path="dashboard/user/reports" element={<Reports />} />

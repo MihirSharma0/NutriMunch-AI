@@ -1,10 +1,137 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
+import { API_BASE_URL } from '../../../api/axios';
 
 const DashboardHome = () => {
-    const { user } = useContext(AuthContext);
+    const { user, token } = useContext(AuthContext);
+    const [clinicalDirectives, setClinicalDirectives] = useState([]);
+
+    useEffect(() => {
+        const loadDirectives = async () => {
+            let deletedIds = new Set();
+            try {
+                const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
+                deletedIds = new Set(storedDeleted.map(String));
+            } catch (e) {}
+
+            let backendDirectives = [];
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/notifications/me`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        backendDirectives = data.filter(n => n.type === 'CLINICAL_DIRECTIVE' || (n.title && n.title.includes('Clinical Directive'))).map(n => ({
+                            id: n.id,
+                            title: n.title,
+                            message: n.message,
+                            time: n.timeAgo || 'Active Protocol',
+                            icon: n.icon || 'health_and_safety'
+                        }));
+                    }
+                } catch (e) {}
+            }
+
+            try {
+                const storedDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
+                const storedNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+                const localDirectives = [...storedDirectives, ...storedNotifs.filter(n => n.title && n.title.includes('Clinical Directive'))];
+                
+                const allDirectives = [...backendDirectives, ...localDirectives];
+                const uniqueDirectives = Array.from(new Map(allDirectives.map(item => [item.id, item])).values())
+                    .filter(item => !deletedIds.has(String(item.id)));
+
+                setClinicalDirectives(uniqueDirectives);
+            } catch (e) {
+                setClinicalDirectives(backendDirectives.filter(item => !deletedIds.has(String(item.id))));
+            }
+        };
+
+        loadDirectives();
+        const interval = setInterval(loadDirectives, 10000);
+        window.addEventListener('nutrimunch_notification_added', loadDirectives);
+        window.addEventListener('storage', loadDirectives);
+        window.addEventListener('focus', loadDirectives);
+
+        let bc;
+        try {
+            bc = new BroadcastChannel('nutrimunch_clinical_channel');
+            bc.onmessage = () => {
+                loadDirectives();
+            };
+        } catch (e) {}
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('nutrimunch_notification_added', loadDirectives);
+            window.removeEventListener('storage', loadDirectives);
+            window.removeEventListener('focus', loadDirectives);
+            if (bc) bc.close();
+        };
+    }, [token]);
+
+    const handleDeleteDirective = async (id) => {
+        const stringId = String(id);
+        setClinicalDirectives(prev => prev.filter(d => String(d.id) !== stringId));
+        try {
+            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
+            if (!storedDeleted.includes(stringId)) {
+                localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify([...storedDeleted, stringId]));
+            }
+
+            const storedDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
+            const updatedDirectives = storedDirectives.filter(n => String(n.id) !== stringId);
+            localStorage.setItem('nutrimunch_clinical_directives', JSON.stringify(updatedDirectives));
+
+            const storedNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+            const updatedNotifs = storedNotifs.filter(n => String(n.id) !== stringId);
+            localStorage.setItem('nutrimunch_user_notifications', JSON.stringify(updatedNotifs));
+
+            window.dispatchEvent(new Event('nutrimunch_notification_added'));
+            try {
+                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
+                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_DELETED', id: stringId });
+                bc.close();
+            } catch (err) {}
+
+            if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
+                fetch(`${API_BASE_URL}/notifications/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
+        } catch (e) {}
+    };
+
+    const handleClearAllDirectives = async () => {
+        const allIds = clinicalDirectives.map(d => String(d.id));
+        setClinicalDirectives([]);
+        try {
+            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
+            const combinedDeleted = Array.from(new Set([...storedDeleted, ...allIds]));
+            localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify(combinedDeleted));
+
+            localStorage.setItem('nutrimunch_clinical_directives', '[]');
+            localStorage.setItem('nutrimunch_user_notifications', '[]');
+
+            window.dispatchEvent(new Event('nutrimunch_notification_added'));
+            try {
+                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
+                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_CLEAR_ALL' });
+                bc.close();
+            } catch (err) {}
+
+            if (token) {
+                fetch(`${API_BASE_URL}/notifications/clear-all`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
+        } catch (e) {}
+    };
 
     if (!user) {
         return <FeatureGate />;
@@ -22,6 +149,57 @@ const DashboardHome = () => {
                     Live Telemetry Connected
                 </div>
             </div>
+
+            {/* Active Clinical Directives from Dietitian */}
+            {clinicalDirectives.length > 0 && (
+                <div className="mb-8 bg-gradient-to-r from-emerald-950/60 via-[#0d131f] to-[#080b12] border border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl space-y-4 relative overflow-hidden animate-fadeIn">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#a5d391]/10 blur-3xl pointer-events-none"></div>
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                        <div className="flex items-center gap-2.5 text-[#a5d391]">
+                            <span className="material-symbols-outlined text-2xl">health_and_safety</span>
+                            <h2 className="text-base font-bold font-hero-display tracking-tight text-white">Active Clinical Directives from Dietitian</h2>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleClearAllDirectives}
+                                className="text-[10px] font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3 py-1 rounded-full transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-xs">delete_sweep</span>
+                                <span>Clear All</span>
+                            </button>
+                            <span className="px-3 py-1 rounded-full bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 text-[10px] font-black uppercase tracking-widest">
+                                {clinicalDirectives.length} Active
+                            </span>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        {clinicalDirectives.map(dir => (
+                            <div key={dir.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-[#a5d391]/30 transition-all">
+                                <div className="space-y-1 min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 text-xs font-bold text-white flex-wrap">
+                                        <span className="material-symbols-outlined text-sm text-[#a5d391]">assignment</span>
+                                        <span className="text-[#a5d391] font-bold">{dir.title}</span>
+                                        <span className="text-[10px] text-white/40 font-normal">({dir.time})</span>
+                                    </div>
+                                    <p className="text-xs text-white/80 leading-relaxed italic">"{dir.message}"</p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Link to="/progress" className="px-4 py-2 rounded-xl bg-[#a5d391] text-[#080b12] font-bold text-xs hover:bg-white transition-all shrink-0">
+                                        View Progress Tracker →
+                                    </Link>
+                                    <button
+                                        onClick={() => handleDeleteDirective(dir.id)}
+                                        title="Delete Directive"
+                                        className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-transparent hover:border-red-500/20 cursor-pointer flex items-center justify-center"
+                                    >
+                                        <span className="material-symbols-outlined text-base">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             
             {/* Top Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">

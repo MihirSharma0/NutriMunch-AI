@@ -11,6 +11,9 @@ public class AppointmentDto {
     private String userEmail;
     private Long dietitianId;
     private String dietitianName;
+    private String dietitianEmail;
+    private String dietitianCredentials;
+    private String dietitianSpecialization;
     private LocalDateTime appointmentTime;
     private String status;
     private String meetingLink;

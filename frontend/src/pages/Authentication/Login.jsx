@@ -147,7 +147,7 @@ const Login = () => {
 
             {/* BEGIN: Google Role Selection & Onboarding Modal */}
             {requiresRoleSelection && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080b12]/80 backdrop-blur-sm overflow-y-auto">
+                <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-[#080b12]/90 backdrop-blur-xl overflow-y-auto animate-fadeIn">
                     {onboardingStep === 3 ? (
                         <OnboardingWizard onComplete={() => navigate('/profile')} />
                     ) : (

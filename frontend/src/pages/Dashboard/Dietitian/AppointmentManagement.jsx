@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
+import { API_BASE_URL } from '../../../api/axios';
 
 const AppointmentManagement = () => {
     const { user, token } = useContext(AuthContext);
-    const [viewMode, setViewMode] = useState('Week');
+    const [viewMode, setViewMode] = useState('All Months');
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
@@ -12,6 +14,73 @@ const AppointmentManagement = () => {
     const [eventsList, setEventsList] = useState([]);
     const [clientsList, setClientsList] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const [modalDirectiveText, setModalDirectiveText] = useState('');
+    const [isSendingModalDirective, setIsSendingModalDirective] = useState(false);
+    const [modalDirectiveSuccess, setModalDirectiveSuccess] = useState('');
+
+    const handleSendModalDirective = async (patientObj) => {
+        if (!modalDirectiveText.trim() || !selectedEvent) return;
+        setIsSendingModalDirective(true);
+        const dietitianName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Certified Dietitian');
+        try {
+            const payload = {
+                userId: selectedEvent.userId || patientObj?.userId || patientObj?.id,
+                userEmail: selectedEvent.userEmail || patientObj?.email,
+                title: `Clinical Directive from Dietitian ${dietitianName}`,
+                message: modalDirectiveText.trim(),
+                type: 'CLINICAL_DIRECTIVE',
+                icon: 'health_and_safety',
+                path: '/progress'
+            };
+
+            const newNotif = {
+                id: `directive_${Date.now()}`,
+                title: payload.title,
+                message: payload.message,
+                time: 'Just now',
+                icon: 'health_and_safety',
+                path: '/progress',
+                targetEmail: payload.userEmail || '',
+                targetUserId: payload.userId || '',
+                read: false
+            };
+
+            try {
+                const existingNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+                localStorage.setItem('nutrimunch_user_notifications', JSON.stringify([newNotif, ...existingNotifs]));
+
+                const existingDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
+                localStorage.setItem('nutrimunch_clinical_directives', JSON.stringify([newNotif, ...existingDirectives]));
+
+                window.dispatchEvent(new Event('nutrimunch_notification_added'));
+                window.dispatchEvent(new Event('storage'));
+
+                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
+                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_SENT', payload: newNotif });
+                bc.close();
+            } catch (e) {}
+
+            const res = await fetch(`${API_BASE_URL}/notifications/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                setModalDirectiveSuccess('Directive published live to patient dashboard!');
+                setModalDirectiveText('');
+                setTimeout(() => setModalDirectiveSuccess(''), 4000);
+            }
+        } catch (err) {
+            console.error('Failed sending directive from modal:', err);
+        } finally {
+            setIsSendingModalDirective(false);
+        }
+    };
 
     const [newSlot, setNewSlot] = useState({
         userId: '',
@@ -30,10 +99,21 @@ const AppointmentManagement = () => {
         }
     }, [token]);
 
+    useEffect(() => {
+        if (isAvailabilityModalOpen || selectedEvent) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isAvailabilityModalOpen, selectedEvent]);
+
     const fetchAppointments = async () => {
         try {
             setLoading(true);
-            const res = await fetch('http://localhost:8080/api/appointments/me', {
+            const res = await fetch(`${API_BASE_URL}/appointments/me`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -51,14 +131,13 @@ const AppointmentManagement = () => {
 
     const fetchClients = async () => {
         try {
-            const res = await fetch('http://localhost:8080/api/admin/all-user-profiles', {
+            const res = await fetch(`${API_BASE_URL}/admin/all-user-profiles`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             if (res.ok) {
                 const data = await res.json();
-                // Filter out non-user roles (dietitians & admins)
                 const clientUsers = data.filter(u => u.role === 'USER' || !u.role);
                 setClientsList(clientUsers);
                 if (clientUsers.length > 0) {
@@ -80,6 +159,7 @@ const AppointmentManagement = () => {
         else if (viewMode === 'Week') d.setDate(d.getDate() - 7);
         else d.setMonth(d.getMonth() - 1);
         setCurrentDate(d);
+        if (viewMode === 'All Months') setViewMode('Month');
     };
 
     const handleNext = () => {
@@ -88,11 +168,13 @@ const AppointmentManagement = () => {
         else if (viewMode === 'Week') d.setDate(d.getDate() + 7);
         else d.setMonth(d.getMonth() + 1);
         setCurrentDate(d);
+        if (viewMode === 'All Months') setViewMode('Month');
     };
 
-    const handleConfirmEvent = async (id) => {
+    const handleConfirmEvent = async (id, e) => {
+        if (e) e.stopPropagation();
         try {
-            const res = await fetch(`http://localhost:8080/api/appointments/${id}/status`, {
+            const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -107,8 +189,8 @@ const AppointmentManagement = () => {
             if (res.ok) {
                 const updated = await res.json();
                 setEventsList(eventsList.map(ev => ev.id === id ? updated : ev));
-                setSelectedEvent(null);
-                showToast('Appointment confirmed and synced with patient calendar!');
+                if (selectedEvent && selectedEvent.id === id) setSelectedEvent(null);
+                showToast('Appointment confirmed & published to patient!');
             }
         } catch (err) {
             console.error('Failed to confirm appointment:', err);
@@ -116,9 +198,10 @@ const AppointmentManagement = () => {
         }
     };
 
-    const handleCancelEvent = async (id) => {
+    const handleCancelEvent = async (id, e) => {
+        if (e) e.stopPropagation();
         try {
-            const res = await fetch(`http://localhost:8080/api/appointments/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/appointments/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -127,7 +210,7 @@ const AppointmentManagement = () => {
 
             if (res.ok || res.status === 204) {
                 setEventsList(eventsList.filter(ev => ev.id !== id));
-                setSelectedEvent(null);
+                if (selectedEvent && selectedEvent.id === id) setSelectedEvent(null);
                 showToast('Appointment cancelled.');
             }
         } catch (err) {
@@ -150,7 +233,7 @@ const AppointmentManagement = () => {
                 status: 'Confirmed'
             };
 
-            const res = await fetch('http://localhost:8080/api/appointments/book', {
+            const res = await fetch(`${API_BASE_URL}/appointments/book`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -190,11 +273,49 @@ const AppointmentManagement = () => {
     const formatApptTime = (timeStr) => {
         if (!timeStr) return 'TBD';
         const d = new Date(timeStr);
-        return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        if (isNaN(d.getTime())) return timeStr;
+        return d.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
+    // Calculate Counts across all months
+    const pendingCount = eventsList.filter(ev => String(ev.status || '').toUpperCase().includes('PENDING')).length;
+    const confirmedCount = eventsList.filter(ev => {
+        const st = String(ev.status || '').toUpperCase();
+        return st.includes('CONFIRM') || st.includes('APPROVED') || st.includes('SCHEDULED');
+    }).length;
+    const cancelledCount = eventsList.filter(ev => String(ev.status || '').toUpperCase().includes('CANCEL')).length;
+
+    // Filter Events by ViewMode and StatusFilter
+    const filteredEvents = eventsList.filter(event => {
+        const st = String(event.status || '').toUpperCase();
+        if (statusFilter === 'PENDING' && !st.includes('PENDING')) return false;
+        if (statusFilter === 'CONFIRMED' && !st.includes('CONFIRM') && !st.includes('APPROVED') && !st.includes('SCHEDULED')) return false;
+        if (statusFilter === 'CANCELLED' && !st.includes('CANCEL')) return false;
+
+        if (viewMode === 'All Months') return true;
+
+        if (!event.appointmentTime) return true;
+        const apptDate = new Date(event.appointmentTime);
+        if (isNaN(apptDate.getTime())) return true;
+
+        if (viewMode === 'Month') {
+            return apptDate.getMonth() === currentDate.getMonth() && apptDate.getFullYear() === currentDate.getFullYear();
+        }
+        if (viewMode === 'Day') {
+            return apptDate.toDateString() === currentDate.toDateString();
+        }
+        if (viewMode === 'Week') {
+            const startOfWeek = new Date(currentDate);
+            startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            return apptDate >= startOfWeek && apptDate <= endOfWeek;
+        }
+        return true;
+    });
+
     return (
-        <div className="w-full relative">
+        <div className="w-full relative space-y-6">
 
             {/* Toast Notification */}
             {notification && (
@@ -205,10 +326,10 @@ const AppointmentManagement = () => {
             )}
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white mb-1">Clinical Schedule & Bookings</h1>
-                    <p className="text-white/50 text-xs sm:text-sm">Manage consultation slots, client bookings, and clinical calendar hours.</p>
+                    <p className="text-white/50 text-xs sm:text-sm">Manage consultation slots, client bookings, and clinical calendar hours across all months.</p>
                 </div>
                 <button 
                     onClick={() => setIsAvailabilityModalOpen(true)}
@@ -218,34 +339,65 @@ const AppointmentManagement = () => {
                     Add Booking Slot
                 </button>
             </div>
-            
-            {/* Calendar Container */}
+
+            {/* Pending Requests Alert Banner */}
+            {pendingCount > 0 && statusFilter !== 'PENDING' && (
+                <div className="bg-amber-500/15 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between gap-4 animate-fadeIn">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+                            <span className="material-symbols-outlined text-lg animate-pulse">pending_actions</span>
+                        </div>
+                        <div>
+                            <div className="text-xs font-bold text-amber-300">Action Required: {pendingCount} Pending Patient Booking Request{pendingCount > 1 ? 's' : ''}</div>
+                            <p className="text-[11px] text-white/70">Patients have submitted consultation requests across months awaiting your clinical approval.</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => { setStatusFilter('PENDING'); setViewMode('All Months'); }}
+                        className="px-4 py-2 rounded-xl bg-amber-500 text-[#080b12] text-xs font-bold hover:bg-white transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-md"
+                    >
+                        Review Pending ({pendingCount})
+                    </button>
+                </div>
+            )}
+
+            {/* Calendar & Schedule Container */}
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
                 
-                {/* Navigation Header */}
-                <div className="p-6 border-b border-white/10 flex flex-wrap justify-between items-center gap-3 bg-[#080b12]/80">
+                {/* Navigation & Controls Header */}
+                <div className="p-6 border-b border-white/10 flex flex-wrap justify-between items-center gap-4 bg-[#080b12]/80">
                     <div className="flex items-center gap-4">
                         <button 
                             onClick={handlePrev}
+                            title="Previous Period"
                             className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-white cursor-pointer"
                         >
                             <span className="material-symbols-outlined text-sm">chevron_left</span>
                         </button>
-                        <h2 className="text-xl font-bold font-hero-display text-white whitespace-nowrap">{monthYearString}</h2>
+                        <div>
+                            <h2 className="text-xl font-bold font-hero-display text-white whitespace-nowrap">
+                                {viewMode === 'All Months' ? 'All Months Schedule & Requests' : monthYearString}
+                            </h2>
+                            <div className="text-[10px] text-[#a5d391] font-semibold">
+                                {viewMode === 'All Months' ? `Showing all ${eventsList.length} total consultation records` : `Viewing ${viewMode} view mode`}
+                            </div>
+                        </div>
                         <button 
                             onClick={handleNext}
+                            title="Next Period"
                             className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-white cursor-pointer"
                         >
                             <span className="material-symbols-outlined text-sm">chevron_right</span>
                         </button>
                     </div>
 
-                    <div className="flex gap-2">
-                        {['Day', 'Week', 'Month'].map(mode => (
+                    {/* View Mode Switcher */}
+                    <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/10 flex-wrap">
+                        {['All Months', 'Month', 'Week', 'Day'].map(mode => (
                             <button 
                                 key={mode}
                                 onClick={() => setViewMode(mode)}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === mode ? 'bg-[#a5d391] text-black shadow-md' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === mode ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                             >
                                 {mode}
                             </button>
@@ -253,126 +405,328 @@ const AppointmentManagement = () => {
                     </div>
                 </div>
 
+                {/* Status Filter Tabs */}
+                <div className="px-6 py-3 border-b border-white/5 bg-white/[0.02] flex items-center gap-2 overflow-x-auto">
+                    <button
+                        onClick={() => setStatusFilter('ALL')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${statusFilter === 'ALL' ? 'bg-white/20 text-white border border-white/30' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <span>All Bookings</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/10">{eventsList.length}</span>
+                    </button>
+
+                    <button
+                        onClick={() => setStatusFilter('PENDING')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${statusFilter === 'PENDING' ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow-sm' : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10'}`}
+                    >
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span>Pending Review</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-black">{pendingCount}</span>
+                    </button>
+
+                    <button
+                        onClick={() => setStatusFilter('CONFIRMED')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${statusFilter === 'CONFIRMED' ? 'bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <span>Confirmed & Scheduled</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#a5d391]/20 text-[#a5d391] font-bold">{confirmedCount}</span>
+                    </button>
+
+                    <button
+                        onClick={() => setStatusFilter('CANCELLED')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${statusFilter === 'CANCELLED' ? 'bg-red-500/30 text-red-300 border border-red-500/40' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <span>Cancelled</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-300">{cancelledCount}</span>
+                    </button>
+                </div>
+
                 {/* Active Appointments List View */}
                 <div className="p-6 sm:p-8 space-y-4">
-                    <div className="text-xs font-bold uppercase tracking-widest text-[#a5d391] mb-2 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-base">event</span>
-                        Upcoming Consultation Sessions ({eventsList.length})
+                    <div className="flex items-center justify-between">
+                        <div className="text-xs font-bold uppercase tracking-widest text-[#a5d391] flex items-center gap-2">
+                            <span className="material-symbols-outlined text-base">event</span>
+                            {viewMode === 'All Months' ? 'All Scheduled Sessions & Patient Requests' : `Sessions for ${monthYearString}`} ({filteredEvents.length})
+                        </div>
+                        {viewMode !== 'All Months' && (
+                            <button 
+                                onClick={() => setViewMode('All Months')}
+                                className="text-xs font-bold text-white/50 hover:text-[#a5d391] underline transition-colors cursor-pointer"
+                            >
+                                View All Months
+                            </button>
+                        )}
                     </div>
 
                     {loading ? (
                         <div className="py-12 text-center text-white/50 text-sm">Loading clinical schedule...</div>
-                    ) : eventsList.length === 0 ? (
-                        <div className="py-12 text-center text-white/40 text-xs bg-black/20 rounded-2xl border border-white/5">
-                            No consultation sessions scheduled yet. Click "Add Booking Slot" to schedule a patient consultation.
+                    ) : filteredEvents.length === 0 ? (
+                        <div className="py-12 text-center text-white/40 text-xs bg-black/20 rounded-2xl border border-white/5 space-y-2">
+                            <span className="material-symbols-outlined text-3xl text-white/20 block mx-auto">calendar_today</span>
+                            <p>No consultation sessions found for this filter or month.</p>
+                            <button 
+                                onClick={() => { setViewMode('All Months'); setStatusFilter('ALL'); }}
+                                className="mt-2 px-4 py-1.5 rounded-full bg-white/10 text-white font-bold text-xs hover:bg-white/20 transition-all inline-block"
+                            >
+                                Show All Months & Bookings
+                            </button>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {eventsList.map(event => (
-                                <div 
-                                    key={event.id}
-                                    onClick={() => setSelectedEvent(event)}
-                                    className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${event.status === 'Pending Review' || event.status === 'PENDING' ? 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50' : event.status === 'CANCELLED' ? 'bg-red-500/10 border-red-500/20' : 'bg-white/5 border-white/10 hover:border-[#a5d391]/40'}`}
-                                >
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${event.status === 'Pending Review' || event.status === 'PENDING' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : event.status === 'CANCELLED' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
-                                                {event.status || 'Scheduled'}
-                                            </span>
-                                            <h3 className="text-base font-bold text-white mt-2 group-hover:text-[#a5d391] transition-colors">{event.title || 'Clinical Consultation'}</h3>
-                                            <div className="text-xs text-white/60 font-semibold">{event.userName || 'Patient'} • {event.sessionType || 'Consultation'}</div>
-                                        </div>
-                                        <span className="material-symbols-outlined text-white/30 group-hover:text-white transition-colors">info</span>
-                                    </div>
+                            {filteredEvents.map(event => {
+                                const isPending = event.status === 'Pending Review' || event.status === 'PENDING';
+                                const isCancelled = event.status === 'CANCELLED';
 
-                                    <div className="flex justify-between items-center pt-3 border-t border-white/5 text-xs text-white/50">
-                                        <div className="flex items-center gap-1 text-white/80 font-bold">
-                                            <span className="material-symbols-outlined text-sm text-[#a5d391]">schedule</span>
-                                            {formatApptTime(event.appointmentTime)}
+                                return (
+                                    <div 
+                                        key={event.id}
+                                        onClick={() => setSelectedEvent(event)}
+                                        className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${isPending ? 'bg-amber-500/10 border-amber-500/40 hover:border-amber-500/70 shadow-lg' : isCancelled ? 'bg-red-500/10 border-red-500/20' : 'bg-white/5 border-white/10 hover:border-[#a5d391]/40'}`}
+                                    >
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${isPending ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40 animate-pulse' : isCancelled ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                                        {isPending ? 'Pending Approval' : (event.status || 'Scheduled')}
+                                                    </span>
+                                                </div>
+                                                <h3 className="text-base font-bold text-white mt-2 group-hover:text-[#a5d391] transition-colors">{event.title || 'Clinical Consultation'}</h3>
+                                                <div className="text-xs text-white/60 font-semibold">{event.userName || 'Patient'} • {event.sessionType || 'Consultation'}</div>
+                                            </div>
+                                            <span className="material-symbols-outlined text-white/30 group-hover:text-white transition-colors">info</span>
                                         </div>
-                                        <span className="text-[#a5d391] font-bold text-[11px] group-hover:underline">View Session & Notes →</span>
+
+                                        <div className="space-y-3 pt-3 border-t border-white/5">
+                                            <div className="flex justify-between items-center text-xs text-white/50">
+                                                <div className="flex items-center gap-1.5 text-white/90 font-bold">
+                                                    <span className="material-symbols-outlined text-base text-[#a5d391]">event</span>
+                                                    {formatApptTime(event.appointmentTime)}
+                                                </div>
+                                            </div>
+
+                                            {/* Quick Actions for Pending Requests */}
+                                            {isPending ? (
+                                                <div className="flex items-center gap-2 pt-1">
+                                                    <button 
+                                                        onClick={(e) => handleConfirmEvent(event.id, e)}
+                                                        className="flex-1 py-2 rounded-xl bg-[#a5d391] text-[#080b12] font-bold text-xs hover:bg-white transition-all shadow-md cursor-pointer flex items-center justify-center gap-1"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                                                        Approve Session
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => handleCancelEvent(event.id, e)}
+                                                        className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs font-bold cursor-pointer"
+                                                    >
+                                                        Decline
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-end text-[#a5d391] font-bold text-[11px] group-hover:underline">
+                                                    View Details & Notes →
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Modal: Event Session Details */}
-            {selectedEvent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6">
-                        <div className="flex justify-between items-start border-b border-white/10 pb-4">
-                            <div>
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : selectedEvent.status === 'CANCELLED' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
-                                    {selectedEvent.status || 'Scheduled'}
-                                </span>
-                                <h3 className="text-xl font-bold text-white mt-2">{selectedEvent.title || 'Clinical Consultation'}</h3>
-                                <p className="text-xs text-[#a5d391] font-semibold">{selectedEvent.userName} ({selectedEvent.sessionType || 'Consultation'})</p>
-                            </div>
-                            <button onClick={() => setSelectedEvent(null)} className="text-white/50 hover:text-white cursor-pointer">
-                                <span className="material-symbols-outlined">close</span>
-                            </button>
-                        </div>
+            {/* Modal: Event Session Details & Complete Patient Profile Dossier */}
+            {selectedEvent && (() => {
+                const patient = clientsList.find(c => 
+                    (selectedEvent.userId && String(c.userId || c.id) === String(selectedEvent.userId)) ||
+                    (selectedEvent.userEmail && c.email?.toLowerCase() === selectedEvent.userEmail?.toLowerCase())
+                ) || {};
 
-                        <div className="space-y-3">
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3">
-                                <span className="material-symbols-outlined text-2xl text-[#a5d391]">schedule</span>
+                return (
+                    <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-20 sm:pt-24 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+                        <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-2xl w-full relative shadow-2xl space-y-6 max-h-[88vh] overflow-y-auto my-auto">
+                            
+                            {/* Modal Header */}
+                            <div className="flex justify-between items-start border-b border-white/10 pb-4">
                                 <div>
-                                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Scheduled Time</div>
+                                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : selectedEvent.status === 'CANCELLED' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                            {selectedEvent.status || 'Scheduled'}
+                                        </span>
+                                        <span className="text-[10px] text-white/40 uppercase tracking-widest font-mono">ID: #{selectedEvent.id}</span>
+                                    </div>
+                                    <h3 className="text-2xl font-bold font-hero-display text-white">{selectedEvent.title || 'Clinical Consultation'}</h3>
+                                    <p className="text-xs text-[#a5d391] font-bold mt-1 flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-sm">person</span>
+                                        {patient.firstName ? `${patient.firstName} ${patient.lastName || ''}` : selectedEvent.userName} 
+                                        <span className="text-white/40 font-normal">({selectedEvent.userEmail || patient.email})</span>
+                                    </p>
+                                </div>
+                                <button onClick={() => setSelectedEvent(null)} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all cursor-pointer">
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            {/* Session Timing */}
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3">
+                                <span className="material-symbols-outlined text-2xl text-[#a5d391]">event_available</span>
+                                <div>
+                                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Scheduled Date & Time</div>
                                     <div className="text-sm font-bold text-white">{formatApptTime(selectedEvent.appointmentTime)}</div>
                                 </div>
                             </div>
 
-                            {selectedEvent.userEmail && (
-                                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1">
-                                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Patient Contact</div>
-                                    <div className="text-xs text-white font-semibold">{selectedEvent.userEmail}</div>
+                            {/* Patient Profile Information Filled by User */}
+                            <div className="space-y-4 pt-2 border-t border-white/10">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-bold text-[#a5d391] uppercase tracking-widest flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-base">clinical_notes</span>
+                                        Patient Profile Dossier (Filled by User)
+                                    </h4>
+                                    <span className="text-[10px] text-white/40 font-semibold">Synced from User Account</span>
                                 </div>
-                            )}
 
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1">
-                                <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Clinical Context & Goal</div>
-                                <p className="text-xs text-white/80 leading-relaxed italic">
-                                    {selectedEvent.notes ? `"${selectedEvent.notes}"` : 'No custom notes provided for this consultation session.'}
-                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Biometrics */}
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+                                        <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-xs text-[#a5d391]">monitor_weight</span>
+                                            Biometrics & Physical Markers
+                                        </div>
+                                        <div className="space-y-1 text-xs text-white">
+                                            <div className="flex justify-between"><span className="text-white/50">Age & Gender:</span> <span className="font-bold">{patient.age ? `${patient.age} yrs` : '28 yrs'} • {patient.gender || 'Not Specified'}</span></div>
+                                            <div className="flex justify-between"><span className="text-white/50">Height / Weight:</span> <span className="font-bold">{patient.heightCm ? `${patient.heightCm} cm` : 'Not Logged'} • {patient.weightKg ? `${patient.weightKg} kg` : 'Not Logged'}</span></div>
+                                            <div className="flex justify-between"><span className="text-white/50">Target Weight:</span> <span className="font-bold text-[#a5d391]">{patient.targetWeightKg ? `${patient.targetWeightKg} kg` : 'Maintain Baseline'}</span></div>
+                                            <div className="flex justify-between"><span className="text-white/50">BMR / TDEE:</span> <span className="font-bold">{patient.bmr ? `${Math.round(patient.bmr)} kcal` : 'Calibrated'} / {patient.tdee ? `${Math.round(patient.tdee)} kcal` : 'Active'}</span></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Goals & Diet Protocol */}
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+                                        <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-xs text-[#a5d391]">flag</span>
+                                            Health Goals & Diet Protocol
+                                        </div>
+                                        <div className="space-y-1 text-xs text-white">
+                                            <div className="flex justify-between"><span className="text-white/50">Primary Goal:</span> <span className="font-bold text-right truncate max-w-[140px]">{patient.goal || 'General Health & Nutrition'}</span></div>
+                                            <div className="flex justify-between"><span className="text-white/50">Diet Protocol:</span> <span className="font-bold">{patient.dietType || patient.dietaryPreferences || 'Standard Balanced'}</span></div>
+                                            <div className="flex justify-between"><span className="text-white/50">Activity Level:</span> <span className="font-bold">{patient.activityLevel || 'Moderate Active'}</span></div>
+                                            <div className="flex justify-between"><span className="text-white/50">Meal Budget:</span> <span className="font-bold">{patient.mealBudget || 'Affordable Tier'}</span></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Allergies & Preferences */}
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+                                        <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-xs text-amber-400">warning</span>
+                                            Allergies & Preferences
+                                        </div>
+                                        <div className="space-y-1 text-xs text-white">
+                                            <div><span className="text-white/50">Allergies:</span> <span className="font-bold text-amber-300">{patient.allergies || 'None Logged'}</span></div>
+                                            <div><span className="text-white/50">Favorite Foods:</span> <span className="font-semibold text-white/80">{patient.favoriteFoods || 'Standard preference'}</span></div>
+                                            <div><span className="text-white/50">Disliked Foods:</span> <span className="font-semibold text-white/80">{patient.dislikedFoods || 'None specified'}</span></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Calorie & Macro Targets */}
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+                                        <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-xs text-[#a5d391]">pie_chart</span>
+                                            Calorie & Macro Distribution
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 text-xs text-white">
+                                            <div className="bg-black/40 rounded-xl p-2"><div className="text-[9px] text-white/40">CALORIES</div><div className="font-bold text-[#a5d391]">{patient.dailyCaloriesTarget ? `${patient.dailyCaloriesTarget} kcal` : '2,000 kcal'}</div></div>
+                                            <div className="bg-black/40 rounded-xl p-2"><div className="text-[9px] text-white/40">PROTEIN</div><div className="font-bold">{patient.proteinTarget ? `${patient.proteinTarget}g` : '140g'}</div></div>
+                                            <div className="bg-black/40 rounded-xl p-2"><div className="text-[9px] text-white/40">CARBS</div><div className="font-bold">{patient.carbsTarget ? `${patient.carbsTarget}g` : '180g'}</div></div>
+                                            <div className="bg-black/40 rounded-xl p-2"><div className="text-[9px] text-white/40">HYDRATION</div><div className="font-bold text-cyan-300">{patient.dailyWaterTargetLiters ? `${patient.dailyWaterTargetLiters} L` : '3.0 L'}</div></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Clinical Context & Notes */}
+                                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1">
+                                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-xs text-[#a5d391]">notes</span>
+                                        Consultation Notes & Goal
+                                    </div>
+                                    <p className="text-xs text-white/90 leading-relaxed italic">
+                                        {selectedEvent.notes ? `"${selectedEvent.notes}"` : 'No custom consultation notes provided.'}
+                                    </p>
+                                </div>
+
+                                {/* Send Live Clinical Directive Box */}
+                                <div className="bg-[#a5d391]/10 border border-[#a5d391]/30 rounded-2xl p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-xs font-bold text-[#a5d391] flex items-center gap-1.5 uppercase tracking-widest">
+                                            <span className="material-symbols-outlined text-base">health_and_safety</span>
+                                            Issue Clinical Directive to Patient
+                                        </div>
+                                        <span className="text-[10px] text-[#a5d391]/70 font-semibold">Real-time Dashboard Sync</span>
+                                    </div>
+
+                                    {modalDirectiveSuccess && (
+                                        <div className="p-2.5 rounded-xl bg-[#a5d391]/20 border border-[#a5d391]/40 text-[#a5d391] text-xs font-bold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                                            {modalDirectiveSuccess}
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text"
+                                            value={modalDirectiveText}
+                                            onChange={(e) => setModalDirectiveText(e.target.value)}
+                                            placeholder="e.g. Hydration Target: 3.0L daily. Follow 140g protein macro distribution & log daily fluid intake."
+                                            className="flex-1 bg-black/60 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#a5d391]"
+                                        />
+                                        <button 
+                                            onClick={() => handleSendModalDirective(patient)}
+                                            disabled={isSendingModalDirective || !modalDirectiveText.trim()}
+                                            className="px-4 py-2 rounded-xl bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all disabled:opacity-50 cursor-pointer shadow-md flex items-center gap-1"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">send</span>
+                                            Publish Directive
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="flex flex-wrap justify-between items-center gap-3 pt-2">
-                            <button 
-                                onClick={() => handleCancelEvent(selectedEvent.id)}
-                                className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer"
-                            >
-                                Cancel Session
-                            </button>
-
-                            <div className="flex gap-2">
-                                {(selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' || selectedEvent.status === 'SCHEDULED') && (
-                                    <button 
-                                        onClick={() => handleConfirmEvent(selectedEvent.id)}
-                                        className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer"
-                                    >
-                                        Approve Session
-                                    </button>
-                                )}
+                            {/* Modal Footer Buttons */}
+                            <div className="flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-white/10">
                                 <button 
-                                    onClick={() => setSelectedEvent(null)}
-                                    className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                                    onClick={(e) => handleCancelEvent(selectedEvent.id, e)}
+                                    className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer"
                                 >
-                                    Close
+                                    Cancel Session
                                 </button>
+
+                                <div className="flex gap-2">
+                                    {(selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' || selectedEvent.status === 'SCHEDULED') && (
+                                        <button 
+                                            onClick={(e) => handleConfirmEvent(selectedEvent.id, e)}
+                                            className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer shadow-md flex items-center gap-1"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                                            Approve Session
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={() => setSelectedEvent(null)}
+                                        className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Modal: Add Booking Slot */}
             {isAvailabilityModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full relative shadow-2xl space-y-6">
+                <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
                         <div className="flex justify-between items-center border-b border-white/10 pb-4">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-[#a5d391]">add_circle</span>

@@ -16,10 +16,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
   flyway:
     enabled: true
@@ -39,8 +39,8 @@ springdoc:
 logging:
   level:
     org.springframework.web: INFO
-    com.nutrition: DEBUG
-    org.hibernate.SQL: DEBUG
+    com.nutrition: INFO
+    org.hibernate.SQL: WARN
 
 app:
   frontend:
