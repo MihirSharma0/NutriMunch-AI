@@ -7,6 +7,9 @@ import com.nutrition.entity.UserProfile;
 import com.nutrition.repository.NutritionRuleRepository;
 import com.nutrition.repository.UserProfileRepository;
 import com.nutrition.repository.UserRepository;
+import com.nutrition.entity.Role;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +20,18 @@ public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final UserRepository userRepository;
     private final NutritionRuleRepository nutritionRuleRepository;
+
+    public List<UserProfileDto> getAllUserProfiles() {
+        List<User> users = userRepository.findByRole(Role.USER);
+        return users.stream().map(u -> {
+            UserProfile profile = userProfileRepository.findByUserId(u.getId()).orElseGet(() -> {
+                UserProfile p = new UserProfile();
+                p.setUser(u);
+                return p;
+            });
+            return mapToDto(profile);
+        }).collect(Collectors.toList());
+    }
 
     public UserProfileDto getProfile(Long userId) {
         UserProfile profile = userProfileRepository.findByUserId(userId)
