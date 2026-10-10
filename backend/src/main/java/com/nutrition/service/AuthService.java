@@ -249,7 +249,7 @@ public class AuthService {
             System.err.println("Failed to send account verified email: " + e.getMessage());
         }
 
-        String token = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtUtils.generateTokenFromUsername(user.getEmail(), user.getRole().name(), user.getId());
         return new AuthResponse(token, user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), user.getRole().name());
     }
 

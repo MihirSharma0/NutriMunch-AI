@@ -24,6 +24,8 @@ public class Appointment {
     @Column(nullable = false)
     private LocalDateTime appointmentTime;
 
+    private String title;
+    private String sessionType;
     private String status = "SCHEDULED"; 
     private String meetingLink;
     

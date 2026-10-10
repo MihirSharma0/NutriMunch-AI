@@ -7,10 +7,14 @@ import java.time.LocalDateTime;
 public class AppointmentDto {
     private Long id;
     private Long userId;
+    private String userName;
+    private String userEmail;
     private Long dietitianId;
     private String dietitianName;
     private LocalDateTime appointmentTime;
     private String status;
     private String meetingLink;
     private String notes;
+    private String title;
+    private String sessionType;
 }

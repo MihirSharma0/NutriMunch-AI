@@ -27,24 +27,8 @@ public class UserProfileService {
             UserProfile profile = userProfileRepository.findByUserId(u.getId()).orElseGet(() -> {
                 UserProfile p = new UserProfile();
                 p.setUser(u);
-                p.setAge(28);
-                p.setGender("Male");
-                p.setHeightCm(175.0);
-                p.setWeightKg(72.0);
-                p.setGoal("General Nutrition");
-                p.setDietType("Non-Vegetarian");
-                p.setMealBudget("Budget/Affordable");
-                recalculateNutritionTargets(p);
                 return userProfileRepository.save(p);
             });
-            if (profile.getDailyCaloriesTarget() == null || profile.getDailyCaloriesTarget() == 0) {
-                if (profile.getAge() == null) profile.setAge(28);
-                if (profile.getHeightCm() == null) profile.setHeightCm(175.0);
-                if (profile.getWeightKg() == null) profile.setWeightKg(72.0);
-                if (profile.getGender() == null) profile.setGender("Male");
-                recalculateNutritionTargets(profile);
-                profile = userProfileRepository.save(profile);
-            }
             return mapToDto(profile);
         }).collect(Collectors.toList());
     }

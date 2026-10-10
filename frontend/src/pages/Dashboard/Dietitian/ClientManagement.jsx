@@ -35,12 +35,16 @@ const ClientManagement = () => {
             if (response.data && Array.isArray(response.data) && response.data.length > 0) {
                 const fetchedClients = response.data.map(p => {
                     const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'Patient User');
-                    const weightStr = p.weightKg ? `${p.weightKg} kg` : '72 kg';
-                    const caloriesStr = p.dailyCaloriesTarget ? `${p.dailyCaloriesTarget.toLocaleString()} kcal` : '2,100 kcal';
-                    const proteinStr = p.proteinTarget ? `${p.proteinTarget}g` : '145g';
-                    const carbsStr = p.carbsTarget ? `${p.carbsTarget}g` : '210g';
-                    const fatsStr = p.fatsTarget ? `${p.fatsTarget}g` : '60g';
+                    const weightStr = p.weightKg != null && p.weightKg > 0 ? `${p.weightKg} kg` : 'Not Logged';
+                    const caloriesStr = p.dailyCaloriesTarget != null && p.dailyCaloriesTarget > 0 ? `${p.dailyCaloriesTarget.toLocaleString()} kcal` : 'Not Set';
+                    const proteinStr = p.proteinTarget != null && p.proteinTarget > 0 ? `${p.proteinTarget}g` : 'Not Set';
+                    const carbsStr = p.carbsTarget != null && p.carbsTarget > 0 ? `${p.carbsTarget}g` : 'Not Set';
+                    const fatsStr = p.fatsTarget != null && p.fatsTarget > 0 ? `${p.fatsTarget}g` : 'Not Set';
                     const lastSyncStr = p.updatedAt ? `${new Date(p.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${new Date(p.updatedAt).toLocaleDateString()})` : 'Recently Synced';
+
+                    const notesText = (p.allergies || p.dietType || p.mealBudget)
+                        ? `Diet Protocol: ${p.dietType || 'Standard'} | Budget Tier: ${p.mealBudget || 'Affordable'} | Allergies: ${p.allergies || 'None'}`
+                        : 'User account registered. No custom dietary restrictions logged.';
 
                     return {
                         id: String(p.userId || p.id),
@@ -48,9 +52,9 @@ const ClientManagement = () => {
                         email: p.email || 'patient@nutrimunch.com',
                         role: 'USER',
                         roleBadge: 'User',
-                        age: p.age || 28,
-                        goal: p.goal || 'General Health & AI Calibrated Diet',
-                        adherence: p.adherence || 92,
+                        age: p.age || 25,
+                        goal: p.goal || 'General Health & Nutrition',
+                        adherence: p.adherence || 90,
                         status: p.status || 'Optimal',
                         lastSync: lastSyncStr,
                         weight: weightStr,
@@ -59,7 +63,7 @@ const ClientManagement = () => {
                         protein: proteinStr,
                         carbs: carbsStr,
                         fats: fatsStr,
-                        notes: `Allergies: ${p.allergies || 'None'}. Diet Type: ${p.dietType || 'Non-Vegetarian'}. Budget: ${p.mealBudget || 'Affordable'}.`
+                        notes: notesText
                     };
                 });
                 
@@ -85,12 +89,12 @@ const ClientManagement = () => {
                         adherence: 88,
                         status: u.verified || u.enabled ? 'Optimal' : 'Good',
                         lastSync: u.verified || u.enabled ? 'Verified Account' : 'Pending OTP',
-                        weight: '72 kg',
+                        weight: 'Not Logged',
                         glucose: '95 mg/dL',
-                        calories: '2,100 kcal',
-                        protein: '145g',
-                        carbs: '210g',
-                        fats: '60g',
+                        calories: 'Not Set',
+                        protein: 'Not Set',
+                        carbs: 'Not Set',
+                        fats: 'Not Set',
                         notes: 'Registered platform user.'
                     }));
                     setClientsList(fallbackClients);

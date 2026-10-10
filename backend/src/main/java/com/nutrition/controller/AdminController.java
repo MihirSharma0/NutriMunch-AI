@@ -5,6 +5,7 @@ import com.nutrition.entity.Role;
 import com.nutrition.entity.User;
 import com.nutrition.repository.NutritionistProfileRepository;
 import com.nutrition.repository.UserProfileRepository;
+import com.nutrition.repository.UserRepository;
 import com.nutrition.dto.UserProfileDto;
 import com.nutrition.service.UserProfileService;
 import com.nutrition.service.SystemSettingService;
