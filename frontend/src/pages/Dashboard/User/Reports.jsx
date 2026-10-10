@@ -1,6 +1,14 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { AuthContext } from '../../../context/AuthContext';
+import FeatureGate from '../../../components/FeatureGate';
 
 const Reports = () => {
+    const { user } = useContext(AuthContext);
+
+    if (!user) {
+        return <FeatureGate />;
+    }
+
     return (
         <div className="w-full">
             <h1 className="text-3xl font-bold font-hero-display mb-8 tracking-tight text-white">Data Exports</h1>

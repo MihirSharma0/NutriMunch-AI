@@ -1,8 +1,8 @@
-# Nutrition-AI-Platform — Complete Project Documentation
+# NutriMunch AI — Complete Project Documentation
 
 ## 1. Project Overview
 
-**Name:** Nutrition-AI-Platform (NutriSense AI)
+**Name:** NutriMunch AI (Nutrition-AI-Platform)
 **Type:** AI-powered personalized food & nutrition assistant
 **Architecture:** 3-tier client-server
 - **Client:** React 18+ (Vite)

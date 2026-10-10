@@ -228,13 +228,13 @@ public class AuthService {
         return true;
     }
 
-    public boolean verifyOtp(String email, String otp) {
+    public AuthResponse verifyOtp(String email, String otp) {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null || user.getOtpCode() == null || !user.getOtpCode().equals(otp)) {
-            return false;
+            return null;
         }
         if (user.getOtpExpiryDate() == null || user.getOtpExpiryDate().isBefore(LocalDateTime.now())) {
-            return false;
+            return null;
         }
         user.setVerified(true);
         user.setOtpCode(null);
@@ -248,7 +248,8 @@ public class AuthService {
             System.err.println("Failed to send account verified email: " + e.getMessage());
         }
 
-        return true;
+        String token = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().name());
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), user.getRole().name());
     }
 
     public void resendOtp(String email) {

@@ -115,7 +115,7 @@ const About = () => {
             role: "VP of Neural Networks",
             color: "text-[#38bdf8]",
             image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAW563tK2alaIdKa-cuEfnJW_382lfBQKNmuA-kMrz16M4r0j_X2E-NwzxGnDRl0tocPS3FptCrFu8YlmyZVNj3JFmfqOmLXYrG0ZwVT8uy224ZUKl3NEzQCmKUTO2msjUepTc_nVcKorAi6FUfm_iG51_uMfIOsUZ6jT5AARtHZZqyjyDau5TLry4qgYRmogxwX3RY3MnDdtrqs7kp4S-dvhaj0IMgdKyGytNOKy-15cE-Ml0DX-bU",
-            bio: "Architect of the Aether Convergence engine. Specializes in real-time deep learning pipelines."
+            bio: "Architect of the NutriMunch AI engine. Specializes in real-time deep learning pipelines."
         },
         {
             name: "Sarah Jenkins",

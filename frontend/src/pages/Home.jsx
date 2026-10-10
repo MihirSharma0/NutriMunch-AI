@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Starfield from '../components/Starfield';
 import ServicesOverview from './HomeSections/ServicesOverview';
 
 import AINutritionCoach from './HomeSections/AINutritionCoach';
-import ClientTestimonials from './HomeSections/ClientTestimonials';
 import HowItWorks from './HomeSections/HowItWorks';
-import GlobalAISection from './HomeSections/GlobalAISection';
 import FinalCTA from './HomeSections/FinalCTA';
 
 const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, backClass }) => {
@@ -46,6 +45,7 @@ const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, back
 };
 
 const Home = () => {
+    const navigate = useNavigate();
     const blockShadow = Array.from({ length: 25 }).map((_, i) => {
         const x = i * 0.8;
         const y = i * 0.5;
@@ -99,20 +99,23 @@ const Home = () => {
                     {/* Center: Description */}
                     <div className="col-span-12 md:col-span-5 md:ml-8">
                         <p className="text-white/60 text-base md:text-lg leading-relaxed font-light text-center md:text-left">
-                            Our consensus-driven layers <strong className="text-white font-medium">synthesize global health trends</strong> and personal biometrics to fortify your wellness journey autonomously.
+                            Our intelligent AI platform <strong className="text-white font-medium">analyzes your dietary habits and health metrics</strong> to build personalized meal plans, track macros, and accelerate your wellness goals.
                         </p>
                     </div>
 
                     {/* Right: UI Card & Text */}
-                    <div className="col-span-12 md:col-span-4 flex items-center gap-6 justify-start md:justify-end">
-                        <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-2xl overflow-hidden relative shadow-2xl shrink-0 backdrop-blur-xl group cursor-pointer hover:border-white/20 transition-all">
+                    <div 
+                        onClick={() => navigate('/ai-image')}
+                        className="col-span-12 md:col-span-4 flex items-center gap-6 justify-start md:justify-end cursor-pointer group hover:opacity-90 transition-all"
+                    >
+                        <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-2xl overflow-hidden relative shadow-2xl shrink-0 backdrop-blur-xl group-hover:border-[#a5d391]/50 group-hover:shadow-[0_0_20px_rgba(165,211,145,0.2)] transition-all">
                             <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1AIb88EtGsaDT67Bs1oUgkS5rK8JusRcj0qe2qk4ydl65aRa-fgFIe3Og0O7KdSDssEDKTJoxmMm1tWF05oLw0d_Q044JejnNFQSuu6bI8mQme42twS2bMhcvoSzdUdIPPDne4DKXqUt--BL5RwjSbHfbWCr7xhlYzmWUf-19GgHO0ADNucL9oSeYguAwFlSRACjRCOHRG2q-2E_ojPRhNBa2VHN64pxEyvVjQZAmwG58EgpQLlKp" alt="UI" className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-700"/>
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-white text-2xl drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] group-hover:drop-shadow-[0_0_18px_rgba(255,255,255,1)] transition-all">insights</span>
+                                <span className="material-symbols-outlined text-white text-2xl drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] group-hover:text-[#a5d391] group-hover:drop-shadow-[0_0_18px_rgba(165,211,145,1)] transition-all">insights</span>
                             </div>
                         </div>
-                        <div className="text-white text-[15px] leading-snug">
-                            Direct <span className="italic font-light text-white/70">Infinite Variables</span> with <br/><strong className="font-semibold text-white">Calibrated Precision</strong>
+                        <div className="text-white text-[15px] leading-snug group-hover:text-[#a5d391] transition-colors">
+                            Smart <span className="italic font-light text-white/70 group-hover:text-white/90">Calorie & Macro Logging</span> with <br/><strong className="font-semibold text-white group-hover:text-[#a5d391]">AI-Powered Precision ➔</strong>
                         </div>
                     </div>
 
@@ -133,13 +136,13 @@ const Home = () => {
                         <div className="absolute bottom-4 right-4 sm:bottom-10 sm:left-10 sm:right-10 flex justify-end sm:justify-between items-end">
                             <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl flex gap-16 inner-glow hidden sm:flex">
                                 <div className="flex flex-col">
-                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">VELOCITY OF RISK</span>
-                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter">0.042%</span>
+                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">DAILY TARGET CALORIES</span>
+                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter">2,250 kcal</span>
                                 </div>
                                 <div className="w-px h-12 bg-white/10 self-center"></div>
                                 <div className="flex flex-col">
-                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">MICRONUTRIENT RATIO</span>
-                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter mint-glow">OPTIMAL</span>
+                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">OPTIMAL MACRO SPLIT</span>
+                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter mint-glow">35% P / 45% C / 20% F</span>
                                 </div>
                             </div>
                             <button className="bg-primary-container text-on-primary-container w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(165,211,145,0.3)] hover:scale-105 hover:bg-white transition-all group shrink-0 ml-auto sm:ml-0">
@@ -153,16 +156,16 @@ const Home = () => {
                 <section className="py-16 sm:py-24 md:py-section-gap max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                         
-                        {/* Card 1: Adaptive Intelligence */}
+                        {/* Card 1: AI Food Calorie & Nutrient Scanner */}
                         <FlipFeatureCard 
                             wrapperClass="md:col-span-7 min-h-[480px]"
                             frontClass="bg-white rounded-[2.5rem] p-10 md:p-14 shadow-xl justify-between shadow-[#4a6741]/10 border border-transparent hover:border-[#4a6741]/20"
                             backClass="bg-white shadow-xl shadow-[#4a6741]/10 border border-gray-100"
                             backContent={
                                 <>
-                                    <span className="material-symbols-outlined text-[#4a6741] text-5xl mb-6">psychology</span>
-                                    <h3 className="font-hero-display text-3xl font-bold text-[#111827] mb-4">Real-Time Sync</h3>
-                                    <p className="text-gray-600 text-lg leading-relaxed max-w-md mx-auto">The AI constantly analyzes your heart rate variability and recovery metrics to dynamically adjust your macronutrient intake on a meal-by-meal basis.</p>
+                                    <span className="material-symbols-outlined text-[#4a6741] text-5xl mb-6">document_scanner</span>
+                                    <h3 className="font-hero-display text-3xl font-bold text-[#111827] mb-4">Instant Image Recognition</h3>
+                                    <p className="text-gray-600 text-lg leading-relaxed max-w-md mx-auto">Upload or snap a food photo to automatically estimate calorie counts, protein, carbohydrates, and fats with instant nutrition breakdown.</p>
                                     <div className="mt-8 flex items-center gap-2 text-slate-400 text-sm font-bold uppercase tracking-widest">
                                         <span className="material-symbols-outlined text-sm">autorenew</span> Flip Back
                                     </div>
@@ -172,28 +175,31 @@ const Home = () => {
                             <div>
                                 <div className="flex items-center gap-3 mb-8 transform group-hover:translate-x-2 transition-transform duration-500">
                                     <span className="w-8 h-px bg-[#4a6741] group-hover:w-12 transition-all duration-500"></span>
-                                    <span className="text-[10px] tracking-widest text-[#4a6741] font-bold uppercase">Adaptive Intelligence</span>
+                                    <span className="text-[10px] tracking-widest text-[#4a6741] font-bold uppercase">AI Food Calorie Scanner</span>
                                 </div>
                                 <h3 className="font-hero-display text-[2rem] sm:text-[2.75rem] md:text-[3.5rem] leading-[1.05] text-[#111827] tracking-tight font-bold pr-0 sm:pr-8">
-                                    Autonomous dietary <span className="text-[#4a6741] italic">calibration</span><br/>that evolves with your heartbeat.
+                                    Snap a photo for <span className="text-[#4a6741] italic">instant macro</span><br/>& calorie detection.
                                 </h3>
                             </div>
-                            <div className="flex items-center gap-3 mt-16">
-                                <span className="font-bold text-lg text-[#111827]">Explore the Protocol</span>
-                                <span className="material-symbols-outlined text-[#4a6741] transition-transform duration-500 group-hover:translate-x-4">arrow_forward</span>
-                            </div>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); navigate('/ai-image'); }}
+                                className="flex items-center gap-3 mt-16 cursor-pointer group/btn"
+                            >
+                                <span className="font-bold text-lg text-[#111827] group-hover/btn:text-[#4a6741] transition-colors">Explore AI Food Analyzer</span>
+                                <span className="material-symbols-outlined text-[#4a6741] transition-transform duration-500 group-hover/btn:translate-x-4">arrow_forward</span>
+                            </button>
                         </FlipFeatureCard>
                         
-                        {/* Card 2: Biometric Harvesting */}
+                        {/* Card 2: AI Diet & Recipe Generator */}
                         <FlipFeatureCard
                             wrapperClass="md:col-span-5 min-h-[480px]"
                             frontClass="bg-[#0b121f] text-white rounded-[2.5rem] overflow-hidden shadow-xl shadow-[#a3e635]/10 border border-transparent hover:border-[#a3e635]/20"
                             backClass="bg-[#0b121f] text-white shadow-xl shadow-[#a3e635]/10 border border-white/5"
                             backContent={
                                 <>
-                                    <span className="material-symbols-outlined text-[#a3e635] text-5xl mb-6">data_usage</span>
-                                    <h3 className="font-hero-display text-3xl font-bold mb-4">Precision Telemetry</h3>
-                                    <p className="text-white/60 text-lg leading-relaxed max-w-sm mx-auto">We interface securely with over 40 wearable ecosystems to parse your sleep architecture and blood glucose into actionable data.</p>
+                                    <span className="material-symbols-outlined text-[#a3e635] text-5xl mb-6">restaurant_menu</span>
+                                    <h3 className="font-hero-display text-3xl font-bold mb-4">Custom Meal Planning</h3>
+                                    <p className="text-white/60 text-lg leading-relaxed max-w-sm mx-auto">Generate weekly meal plans, customized recipes, and grocery lists based on your specific health targets, budget, and food allergies.</p>
                                     <div className="mt-8 flex items-center gap-2 text-white/40 text-sm font-bold uppercase tracking-widest">
                                         <span className="material-symbols-outlined text-sm">autorenew</span> Flip Back
                                     </div>
@@ -201,9 +207,9 @@ const Home = () => {
                             }
                         >
                             <div className="p-10 md:p-12 relative z-10 pb-0">
-                                <span className="text-[10px] tracking-widest text-[#a3e635] font-bold uppercase mb-4 block transform group-hover:translate-x-2 transition-transform duration-500">BIOMETRIC HARVESTING</span>
+                                <span className="text-[10px] tracking-widest text-[#a3e635] font-bold uppercase mb-4 block transform group-hover:translate-x-2 transition-transform duration-500">AI DIET PLANNER</span>
                                 <h3 className="font-hero-display text-4xl md:text-[2.5rem] font-bold tracking-tight leading-[1.1]">
-                                    Precision-mapped<br/>ingredient sourcing.
+                                    Precision-tailored<br/>weekly meal plans.
                                 </h3>
                             </div>
                             <div className="relative flex-grow mt-8 flex items-end justify-center w-full">
@@ -213,16 +219,16 @@ const Home = () => {
                             </div>
                         </FlipFeatureCard>
                         
-                        {/* Card 3: Synthetic Metabolism (Full Width) */}
+                        {/* Card 3: Analytics & Health Progress (Full Width) */}
                         <FlipFeatureCard
                             wrapperClass="md:col-span-12 min-h-[300px]"
                             frontClass="bg-gradient-to-br from-[#f8fafc] to-[#e2e8f0] rounded-[2.5rem] p-10 md:p-14 shadow-xl md:flex-row items-center justify-between border border-white/50 shadow-[#0284c7]/10"
                             backClass="bg-gradient-to-br from-[#f8fafc] to-[#e2e8f0] shadow-xl shadow-[#0284c7]/10 border border-white/50"
                             backContent={
                                 <>
-                                    <span className="material-symbols-outlined text-[#0284c7] text-5xl mb-6">auto_awesome</span>
-                                    <h3 className="font-hero-display text-4xl font-bold text-[#0f172a] mb-4">Dynamic Generation</h3>
-                                    <p className="text-slate-600 text-lg leading-relaxed max-w-2xl mx-auto">Our generative engine dynamically constructs Michelin-grade recipes based on the exact macronutrients your body requires at this exact moment, seamlessly factoring in your pantry inventory and flavor profiles.</p>
+                                    <span className="material-symbols-outlined text-[#0284c7] text-5xl mb-6">analytics</span>
+                                    <h3 className="font-hero-display text-4xl font-bold text-[#0f172a] mb-4">Live BMR & Progress Tracking</h3>
+                                    <p className="text-slate-600 text-lg leading-relaxed max-w-2xl mx-auto">Track your daily weight log, BMR/TDEE energy balance, and daily macronutrient distribution with intelligent charts, water hydration targets, and custom progress reports.</p>
                                     <div className="mt-8 flex items-center gap-2 text-slate-400 text-sm font-bold uppercase tracking-widest">
                                         <span className="material-symbols-outlined text-sm">autorenew</span> Flip Back
                                     </div>
@@ -232,20 +238,20 @@ const Home = () => {
                             <div className="md:w-1/2">
                                 <div className="flex items-center gap-3 mb-6 transform group-hover:translate-x-2 transition-transform duration-500">
                                     <span className="w-8 h-px bg-[#0284c7] group-hover:w-12 transition-all duration-500"></span>
-                                    <span className="text-[10px] tracking-widest text-[#0284c7] font-bold uppercase">SYNTHETIC METABOLISM</span>
+                                    <span className="text-[10px] tracking-widest text-[#0284c7] font-bold uppercase">PROGRESS & HEALTH ANALYTICS</span>
                                 </div>
                                 <h3 className="font-hero-display text-4xl md:text-[3rem] leading-[1.1] text-[#0f172a] tracking-tight font-bold">
-                                    Real-time generative <br/>culinary creation.
+                                    Real-time progress & <br/>biometric analytics.
                                 </h3>
                                 <p className="mt-6 text-slate-500 font-medium text-lg leading-relaxed max-w-md group-hover:text-slate-700 transition-colors duration-500">
-                                    Your biometric signature instantly dictates an endless stream of personalized recipes derived directly from your available pantry items.
+                                    Track weight trends, Mifflin-St Jeor BMR & TDEE calorie requirements, daily water intake, and macronutrient targets.
                                 </p>
                             </div>
                             <div className="md:w-1/2 flex justify-center mt-10 md:mt-0 relative">
                                 <div className="w-48 h-48 bg-white rounded-full shadow-2xl flex items-center justify-center relative z-10 border border-slate-100 group-hover:scale-105 transition-transform duration-500">
                                     <div className="w-32 h-32 rounded-full border-4 border-dashed border-[#0284c7] animate-[spin_20s_linear_infinite] group-hover:animate-[spin_10s_linear_infinite] flex items-center justify-center">
                                         <div className="w-20 h-20 bg-[#0284c7]/10 rounded-full flex items-center justify-center animate-pulse group-hover:bg-[#0284c7]/20 transition-colors duration-500">
-                                            <span className="material-symbols-outlined text-[#0284c7] text-4xl group-hover:scale-125 transition-transform duration-500">sync</span>
+                                            <span className="material-symbols-outlined text-[#0284c7] text-4xl group-hover:scale-125 transition-transform duration-500">monitoring</span>
                                         </div>
                                     </div>
                                 </div>
@@ -257,9 +263,6 @@ const Home = () => {
                 </section>
 
                 {/* Appended New Sections */}
-                <div className="w-full bg-[#080b12] py-12 border-t border-white/10">
-                    <GlobalAISection />
-                </div>
                 <div className="w-full bg-background text-on-background py-16">
                     <ServicesOverview />
                 </div>
@@ -269,9 +272,6 @@ const Home = () => {
 
                 <div className="w-full bg-[#080b12] text-white py-12">
                     <AINutritionCoach />
-                </div>
-                <div className="w-full bg-background text-on-background py-12">
-                    <ClientTestimonials />
                 </div>
 
                 <div className="w-full bg-background text-on-background pb-24">

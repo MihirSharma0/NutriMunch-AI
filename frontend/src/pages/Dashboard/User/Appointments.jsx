@@ -1,6 +1,14 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { AuthContext } from '../../../context/AuthContext';
+import FeatureGate from '../../../components/FeatureGate';
 
 const Appointments = () => {
+    const { user } = useContext(AuthContext);
+
+    if (!user) {
+        return <FeatureGate />;
+    }
+
     return (
         <div className="w-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">

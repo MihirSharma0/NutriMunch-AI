@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
 
 const DietitianManagement = () => {
@@ -41,8 +42,38 @@ const DietitianManagement = () => {
     };
 
     return (
-        <div>
-            <h1 className="text-3xl font-bold font-hero-display mb-6">Nutritionist Management</h1>
+        <div className="space-y-8">
+            {/* Unified User Management Header & Section Switcher */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
+                <div>
+                    <div className="text-[#a5d391] text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mb-2">
+                        <span className="w-1.5 h-1.5 bg-[#a5d391] rounded-full animate-pulse"></span>
+                        Admin Control Suite
+                    </div>
+                    <h1 className="text-4xl font-bold font-hero-display text-white">User Management</h1>
+                    <p className="text-white/60 text-sm mt-1 font-light">
+                        Approve or suspend practitioner license credentials, manage dietitian verification status, and manage client permissions.
+                    </p>
+                </div>
+
+                {/* Sub-Menu Navigation Tabs */}
+                <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 shrink-0">
+                    <Link 
+                        to="/dashboard/admin/users" 
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-2 transition-all"
+                    >
+                        <span className="material-symbols-outlined text-sm">manage_accounts</span>
+                        User Directory
+                    </Link>
+                    <Link 
+                        to="/dashboard/admin/dietitians" 
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-[#080b12] shadow-md shadow-[#a5d391]/20 flex items-center gap-2 transition-all"
+                    >
+                        <span className="material-symbols-outlined text-sm">badge</span>
+                        Dietitian Verification
+                    </Link>
+                </div>
+            </div>
             {loading ? (
                 <p>Loading nutritionists...</p>
             ) : (

@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterRole, setFilterRole] = useState('ALL');
+    const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL' | 'VERIFIED' | 'PENDING_OTP'
+    const [searchQuery, setSearchQuery] = useState('');
     
     // Password reset modal state
     const [selectedUser, setSelectedUser] = useState(null);
@@ -89,35 +92,143 @@ const UserManagement = () => {
         }
     };
 
-    const filteredUsers = filterRole === 'ALL' 
-        ? users 
-        : users.filter(u => u.role === filterRole);
+    // Filter Logic: Search by name/email + Role filter + Verification status filter
+    const filteredUsers = users.filter(u => {
+        // Role filter
+        if (filterRole !== 'ALL' && u.role !== filterRole) {
+            return false;
+        }
+
+        // Verification status filter
+        const isVerified = Boolean(u.verified || u.otpVerified || u.enabled);
+        if (filterStatus === 'VERIFIED' && !isVerified) {
+            return false;
+        }
+        if (filterStatus === 'PENDING_OTP' && isVerified) {
+            return false;
+        }
+
+        // Search query filter
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase().trim();
+            const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
+            const email = (u.email || '').toLowerCase();
+            return fullName.includes(query) || email.includes(query);
+        }
+
+        return true;
+    });
+
+    const verifiedCount = users.filter(u => Boolean(u.verified || u.otpVerified || u.enabled)).length;
+    const pendingCount = users.length - verifiedCount;
 
     return (
         <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
                 <div>
                     <div className="text-[#a5d391] text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mb-2">
                         <span className="w-1.5 h-1.5 bg-[#a5d391] rounded-full animate-pulse"></span>
-                        Directory Override
+                        Admin Control Suite
                     </div>
                     <h1 className="text-4xl font-bold font-hero-display text-white">User Management</h1>
                     <p className="text-white/60 text-sm mt-1 font-light">
-                        View all registered users, manage roles, and reset account credentials.
+                        View all registered users, filter by role or OTP status, search by name/email, and verify dietitian credentials.
                     </p>
                 </div>
-                
-                {/* Role Filter Tabs */}
-                <div className="flex items-center flex-wrap gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/10 text-xs font-bold backdrop-blur-md">
-                    {['ALL', 'USER', 'NUTRITIONIST', 'ADMIN'].map((role) => (
-                        <button
-                            key={role}
-                            onClick={() => setFilterRole(role)}
-                            className={`px-4 py-2 rounded-xl transition-all duration-300 cursor-pointer ${filterRole === role ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' : 'text-white/60 hover:text-white'}`}
-                        >
-                            {role}
-                        </button>
-                    ))}
+
+                {/* Sub-Menu Navigation Tabs */}
+                <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 shrink-0">
+                    <Link 
+                        to="/dashboard/admin/users" 
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-[#080b12] shadow-md shadow-[#a5d391]/20 flex items-center gap-2 transition-all"
+                    >
+                        <span className="material-symbols-outlined text-sm">manage_accounts</span>
+                        User Directory
+                    </Link>
+                    <Link 
+                        to="/dashboard/admin/dietitians" 
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-2 transition-all"
+                    >
+                        <span className="material-symbols-outlined text-sm">badge</span>
+                        Dietitian Verification
+                    </Link>
+                </div>
+            </div>
+
+            {/* Filter Controls & Search Bar Row */}
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-6 space-y-4 shadow-xl">
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+                    
+                    {/* Search Bar */}
+                    <div className="relative flex-1 min-w-[280px]">
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-lg">search</span>
+                        <input 
+                            type="text"
+                            placeholder="Search users by name or email address..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-xs text-white placeholder:text-white/40 outline-none focus:border-[#a5d391] transition-all font-mono"
+                        />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-sm">close</span>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Filters Container */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Role Filter Tabs */}
+                        <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 text-xs font-bold">
+                            <span className="text-[10px] text-white/40 uppercase font-mono px-2 hidden sm:inline">Role:</span>
+                            {['ALL', 'USER', 'NUTRITIONIST', 'ADMIN'].map((role) => (
+                                <button
+                                    key={role}
+                                    onClick={() => setFilterRole(role)}
+                                    className={`px-3 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${filterRole === role ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' : 'text-white/60 hover:text-white'}`}
+                                >
+                                    {role}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Verification Status Filter Tabs */}
+                        <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 text-xs font-bold">
+                            <span className="text-[10px] text-white/40 uppercase font-mono px-2 hidden sm:inline">Status:</span>
+                            {[
+                                { id: 'ALL', label: 'ALL' },
+                                { id: 'VERIFIED', label: 'VERIFIED' },
+                                { id: 'PENDING_OTP', label: 'PENDING OTP' }
+                            ].map((statusItem) => (
+                                <button
+                                    key={statusItem.id}
+                                    onClick={() => setFilterStatus(statusItem.id)}
+                                    className={`px-3 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${filterStatus === statusItem.id ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' : 'text-white/60 hover:text-white'}`}
+                                >
+                                    {statusItem.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Summary Count Badges */}
+                <div className="flex flex-wrap items-center justify-between text-xs text-white/50 pt-2 border-t border-white/5 gap-2">
+                    <div>
+                        Showing <strong className="text-white">{filteredUsers.length}</strong> of <strong className="text-white">{users.length}</strong> registered accounts
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30 font-bold text-[10px]">
+                            {verifiedCount} Verified
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 font-bold text-[10px]">
+                            {pendingCount} Pending OTP
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -134,7 +245,7 @@ const UserManagement = () => {
                                 <th className="p-5 rounded-tl-2xl whitespace-nowrap">ID</th>
                                 <th className="p-5 whitespace-nowrap">User Name</th>
                                 <th className="p-5 whitespace-nowrap">Email</th>
-                                <th className="p-5 whitespace-nowrap">Status</th>
+                                <th className="p-5 whitespace-nowrap">Verification Status</th>
                                 <th className="p-5 whitespace-nowrap">Role</th>
                                 <th className="p-5 text-right rounded-tr-2xl whitespace-nowrap">Actions</th>
                             </tr>
@@ -143,57 +254,60 @@ const UserManagement = () => {
                             {filteredUsers.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="p-12 text-center text-white/40 font-light">
-                                        No users found matching filter.
+                                        No users found matching current filters or search query.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredUsers.map(user => (
-                                    <tr key={user.id} className="hover:bg-white/5 transition-colors">
-                                        <td className="p-5 font-mono text-white/40">{user.id}</td>
-                                        <td className="p-5 font-bold text-white">
-                                            {user.firstName} {user.lastName}
-                                        </td>
-                                        <td className="p-5 font-mono text-white/80">{user.email}</td>
-                                        <td className="p-5">
-                                            {user.verified ? (
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391]"></span> Verified
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Pending OTP
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="p-5">
-                                            <select 
-                                                value={user.role} 
-                                                onChange={(e) => changeRole(user.id, e.target.value)}
-                                                className="bg-black/40 border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#a5d391] font-mono cursor-pointer"
-                                            >
-                                                <option value="USER">USER</option>
-                                                <option value="NUTRITIONIST">NUTRITIONIST</option>
-                                                <option value="ADMIN">ADMIN</option>
-                                            </select>
-                                        </td>
-                                        <td className="p-5 text-right whitespace-nowrap space-x-3">
-                                            <button
-                                                onClick={() => handleOpenResetModal(user)}
-                                                className="inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/20 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">lock_reset</span>
-                                                Reset Password
-                                            </button>
-                                            <button
-                                                onClick={() => deleteUser(user.id)}
-                                                className="inline-flex items-center gap-1 text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">delete</span>
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                                filteredUsers.map(user => {
+                                    const isUserVerified = Boolean(user.verified || user.otpVerified || user.enabled);
+                                    return (
+                                        <tr key={user.id} className="hover:bg-white/5 transition-colors">
+                                            <td className="p-5 font-mono text-white/40">{user.id}</td>
+                                            <td className="p-5 font-bold text-white">
+                                                {user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'User'}
+                                            </td>
+                                            <td className="p-5 font-mono text-white/80">{user.email}</td>
+                                            <td className="p-5">
+                                                {isUserVerified ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391]"></span> Verified
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Pending OTP
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-5">
+                                                <select 
+                                                    value={user.role} 
+                                                    onChange={(e) => changeRole(user.id, e.target.value)}
+                                                    className="bg-black/40 border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#a5d391] font-mono cursor-pointer"
+                                                >
+                                                    <option value="USER">USER</option>
+                                                    <option value="NUTRITIONIST">NUTRITIONIST</option>
+                                                    <option value="ADMIN">ADMIN</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-5 text-right whitespace-nowrap space-x-3">
+                                                <button
+                                                    onClick={() => handleOpenResetModal(user)}
+                                                    className="inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/20 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">lock_reset</span>
+                                                    Reset Password
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteUser(user.id)}
+                                                    className="inline-flex items-center gap-1 text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

@@ -1,51 +1,91 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchAllTestimonials } from '../../services/testimonialService';
 
-const ClientTestimonials = () => {
-    const testimonials = [
-        {
-            name: "Sarah J.",
-            result: "-25 lbs in 4 months",
-            quote: "I've tried every diet out there, but this was the first time a program actually adapted to my life rather than forcing me to adapt to it. The AI adjustments were spot on.",
-            avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCP3nQl8b8LU4xjhNKoFcksaAJAjAhTnIGG2n1OFkuoOSwfz2dP7FAXSAOYxRMQnk-7DuXqJnLBChFdrlYZYn7QRk44BaFOFR2McC9ByzI_n03ycyhSZau2fg6iJK1GAFUkV4y7UukilqbSfJNx3Q8s0FvRM0-MajLqixc-NBO9J64ponXllcmORWHcgIeBm5dZrQfkN2U7pz_JafhB_yLLV-RpZx1y4M7u03vzO6MnM8K3Da2D98Hb"
-        },
-        {
-            name: "Marcus T.",
-            result: "Reversed Pre-diabetes",
-            quote: "The clinical precision of the meal plans combined with the continuous glucose monitoring integration gave me the exact blueprint I needed to regain control of my health.",
-            avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAW563tK2alaIdKa-cuEfnJW_382lfBQKNmuA-kMrz16M4r0j_X2E-NwzxGnDRl0tocPS3FptCrFu8YlmyZVNj3JFmfqOmLXYrG0ZwVT8uy224ZUKl3NEzQCmKUTO2msjUepTc_nVcKorAi6FUfm_iG51_uMfIOsUZ6jT5AARtHZZqyjyDau5TLry4qgYRmogxwX3RY3MnDdtrqs7kp4S-dvhaj0IMgdKyGytNOKy-15cE-Ml0DX-bU"
-        },
-        {
-            name: "Elena R.",
-            result: "PCOS Symptoms Eliminated",
-            quote: "Finally, a team that understands hormonal health. The combination of expert nutritionist support and the AI tracking made balancing my macros completely effortless.",
-            avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDZLrZKLb7jzMmFQ5c6qGbPfOriSTc2BC_huR3PJJqupenaW5lWxSI7_t5rEsctSs00W6MwL6qe-qHTKrEjUZAEjRruf0uHFev2ubNwTi4kWIBFgSVq9eO-2GXDO-gHwKpeCq41OZyuAkBa0fNoruRCpaRGqXAPY7wcb-m01KQ-q4hj5mEWx3oKu0Jdv0Iv-jfmt0C8yuj48YFkyamuApv5yVIztLtfvuR9f3xAvA3JU1uCRp1uckTy"
-        }
-    ];
+const ClientTestimonials = ({ showHeader = true, showAll = true, limit = 6 }) => {
+    const [testimonials, setTestimonials] = useState([]);
+
+    const loadTestimonials = async () => {
+        const data = await fetchAllTestimonials();
+        setTestimonials(data);
+    };
+
+    useEffect(() => {
+        loadTestimonials();
+        window.addEventListener('nutrimunch_testimonials_updated', loadTestimonials);
+        return () => window.removeEventListener('nutrimunch_testimonials_updated', loadTestimonials);
+    }, []);
+
+    const listToDisplay = showAll ? testimonials : testimonials.slice(0, limit);
 
     return (
-        <section className="py-16 sm:py-24 md:py-section-gap max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
-            <div className="text-center mb-16">
-                <span className="text-primary font-bold tracking-widest uppercase text-sm mb-4 block">Real Results</span>
-                <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-on-background mb-6">User Transformations</h2>
-            </div>
+        <section className={`max-w-7xl mx-auto px-4 sm:px-8 relative z-20 ${showHeader ? 'py-16 sm:py-24' : 'pb-12'}`}>
+            {showHeader && (
+                <div className="text-center mb-16">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest mb-4">
+                        <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                        Verified Member Stories
+                    </div>
+                    <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-white mb-4">User & Nutritionist Transformations</h2>
+                    <p className="text-white/60 max-w-2xl mx-auto text-sm sm:text-base">
+                        Real biometrics, verified diet protocol feedback, and clinical outcomes submitted by our active platform members.
+                    </p>
+                </div>
+            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {testimonials.map((test, idx) => (
-                    <div key={idx} className="bg-white border border-outline-variant/30 shadow-md rounded-[2rem] p-8 flex flex-col relative overflow-hidden group hover:border-primary/30 transition-all hover:shadow-xl">
-                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <span className="material-symbols-outlined text-6xl text-on-background">format_quote</span>
-                        </div>
-                        <div className="flex items-center gap-4 mb-6">
-                            <img src={test.avatar} alt={test.name} className="w-14 h-14 rounded-full object-cover border-2 border-outline-variant/20" />
+            {listToDisplay.length === 0 ? (
+                <div className="text-center py-12 bg-white/5 border border-white/10 rounded-[2.5rem]">
+                    <span className="material-symbols-outlined text-4xl text-white/30 mb-2">rate_review</span>
+                    <p className="text-white/60 text-sm">No testimonials published yet. Be the first to share your story!</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                    {listToDisplay.map((test, idx) => (
+                        <div key={test.id || idx} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden group hover:border-primary/40 hover:-translate-y-1 transition-all shadow-xl">
+                            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <span className="material-symbols-outlined text-6xl text-white">format_quote</span>
+                            </div>
+
                             <div>
-                                <h4 className="text-on-background font-bold">{test.name}</h4>
-                                <div className="text-primary text-sm font-semibold">{test.result}</div>
+                                {/* Author Info */}
+                                <div className="flex items-center gap-4 mb-5">
+                                    <img 
+                                        src={test.avatarUrl || test.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(test.authorName || test.name || 'User')}&background=38bdf8&color=000`} 
+                                        alt={test.authorName || test.name || 'User'} 
+                                        className="w-14 h-14 rounded-full object-cover border-2 border-white/20 shadow-sm shrink-0" 
+                                    />
+                                    <div className="min-w-0">
+                                        <h4 className="text-white font-bold text-base truncate">
+                                            {test.authorName || test.name}
+                                        </h4>
+                                        <div className="text-xs text-[#a5d391] font-semibold flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-xs">verified</span>
+                                            <span className="truncate">{test.authorRole || 'Standard User'}</span>
+                                        </div>
+                                        {/* Star Rating */}
+                                        <div className="flex items-center text-amber-400 text-xs mt-1">
+                                            {[...Array(test.rating || 5)].map((_, i) => (
+                                                <span key={i} className="material-symbols-outlined text-sm">star</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Program Result Badge */}
+                                {(test.programResult || test.result) && (
+                                    <div className="inline-block px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold mb-4">
+                                        {test.programResult || test.result}
+                                    </div>
+                                )}
+
+                                {/* Quote Content */}
+                                <p className="text-white/80 leading-relaxed italic text-sm relative z-10">
+                                    "{test.content || test.quote}"
+                                </p>
                             </div>
                         </div>
-                        <p className="text-on-background/70 leading-relaxed italic relative z-10">"{test.quote}"</p>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </section>
     );
 };

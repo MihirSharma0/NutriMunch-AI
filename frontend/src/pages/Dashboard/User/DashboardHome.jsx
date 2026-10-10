@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { AuthContext } from '../../../context/AuthContext';
+import FeatureGate from '../../../components/FeatureGate';
 
 const DashboardHome = () => {
+    const { user } = useContext(AuthContext);
+
+    if (!user) {
+        return <FeatureGate />;
+    }
+
     return (
         <div className="w-full">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">

@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
+import FeatureGate from '../../../components/FeatureGate';
 
 const PREDEFINED_ALLERGENS = [
     { id: 'Nuts', label: 'Nuts & Peanuts', icon: '🥜' },
@@ -44,6 +45,10 @@ const DEFAULT_TARGETS = {
 
 const Profile = () => {
     const { user } = useContext(AuthContext);
+    
+    if (!user) {
+        return <FeatureGate />;
+    }
     
     // Active section tab: 'all' | 'body' | 'goals' | 'allergies' | 'budget'
     const [activeTab, setActiveTab] = useState('all');
@@ -163,6 +168,9 @@ const Profile = () => {
                         };
                         setTargets(loadedTargets);
                         setCustomTargets(loadedTargets);
+                        if (loadedTargets.water) {
+                            localStorage.setItem('nutrimunch_water_target_liters', loadedTargets.water.toString());
+                        }
                     } else {
                         // Pre-fill defaults if not set yet
                         setCustomTargets(DEFAULT_TARGETS);
@@ -412,6 +420,10 @@ const Profile = () => {
                 };
                 setTargets(updatedT);
                 setCustomTargets(updatedT);
+                if (updatedT.water) {
+                    localStorage.setItem('nutrimunch_water_target_liters', updatedT.water.toString());
+                    window.dispatchEvent(new Event('nutrimunch_profile_updated'));
+                }
             }
 
             // Collapse form to display card mode after successful save
@@ -488,7 +500,11 @@ const Profile = () => {
                     <div className="text-center md:text-left">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#a5d391]/15 text-[#a5d391] text-[11px] font-bold uppercase tracking-widest border border-[#a5d391]/30 mb-2">
                             <span className="w-2 h-2 rounded-full bg-[#a5d391] animate-pulse"></span>
-                            Target Protocol Locked
+                            {user?.role ? (
+                                String(user.role).toUpperCase().replace('ROLE_', '') === 'ADMIN' ? 'Verified Administrator' :
+                                String(user.role).toUpperCase().replace('ROLE_', '') === 'NUTRITIONIST' || String(user.role).toUpperCase().replace('ROLE_', '') === 'DIETITIAN' ? 'Certified Dietitian' :
+                                'Verified Standard User'
+                            ) : 'Verified Standard User'}
                         </div>
                         <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-white">
                             {profile.firstName || 'User'} {profile.lastName || ''}

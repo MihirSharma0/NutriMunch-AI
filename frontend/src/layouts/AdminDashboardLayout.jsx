@@ -21,6 +21,7 @@ const AdminDashboardLayout = () => {
         { name: "User Management", path: "/dashboard/admin/users", icon: "manage_accounts" },
         { name: "SQL Console", path: "/dashboard/admin/sql", icon: "terminal" },
         { name: "Nutritionist Nodes", path: "/dashboard/admin/dietitians", icon: "badge" },
+        { name: "Testimonials", path: "/dashboard/admin/testimonials", icon: "rate_review" },
         { name: "Blog CMS", path: "/dashboard/admin/blogs", icon: "article" },
         { name: "Global Recipes", path: "/dashboard/admin/recipes", icon: "restaurant_menu" },
         { name: "Transactions", path: "/dashboard/admin/payments", icon: "payments" },
@@ -58,8 +59,8 @@ const AdminDashboardLayout = () => {
                     {navItems.map((item, idx) => {
                         const isActive = location.pathname === item.path || (location.pathname === '/dashboard/admin' && item.path === '/dashboard/admin');
                         return (
-                            <Link 
-                                key={idx} 
+                            <Link
+                                key={idx}
                                 to={item.path}
                                 className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all duration-300 ${isActive ? `${accentBgLight} ${accentColor} border ${accentBorder} ${accentShadow} backdrop-blur-md` : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'}`}
                             >
@@ -83,7 +84,7 @@ const AdminDashboardLayout = () => {
                 {/* Header */}
                 <header className="h-20 bg-[#080b12]/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-30">
                     <div className="flex items-center gap-4">
-                        <button 
+                        <button
                             className="lg:hidden text-white/70 hover:text-white"
                             onClick={() => setIsSidebarOpen(true)}
                         >
@@ -98,14 +99,14 @@ const AdminDashboardLayout = () => {
                             <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#a5d391] rounded-full border-2 border-[#080b12] shadow-[0_0_6px_rgba(165,211,145,0.8)]"></span>
                         </button>
 
-                        <button 
-                            onClick={handleLogout} 
+                        <button
+                            onClick={handleLogout}
                             className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors cursor-pointer"
                             title="Logout"
                         >
                             <span className="material-symbols-outlined text-xl">logout</span>
                         </button>
-                        
+
                         <Link to="/dashboard/admin/profile" className="flex items-center gap-3 pl-3 sm:pl-6 border-l border-white/10 cursor-pointer group">
                             <div className="text-right hidden sm:block">
                                 <div className={`text-sm font-bold text-white group-hover:${accentColor} transition-colors`}>System Admin</div>
@@ -139,8 +140,8 @@ const AdminDashboardLayout = () => {
                             {navItems.map((item, idx) => {
                                 const isActive = location.pathname === item.path || (location.pathname === '/dashboard/admin' && item.path === '/dashboard/admin');
                                 return (
-                                    <Link 
-                                        key={idx} 
+                                    <Link
+                                        key={idx}
                                         to={item.path}
                                         onClick={() => setIsSidebarOpen(false)}
                                         className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${isActive ? `${accentBgLight} ${accentColor}` : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
@@ -152,11 +153,11 @@ const AdminDashboardLayout = () => {
                             })}
                         </nav>
                         <div className="p-4 border-t border-white/10">
-                            <button 
+                            <button
                                 onClick={() => {
                                     setIsSidebarOpen(false);
                                     handleLogout();
-                                }} 
+                                }}
                                 className="flex items-center gap-4 px-4 py-3 rounded-2xl font-bold text-red-400 hover:bg-red-500/10 transition-colors w-full text-left cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-[20px]">logout</span>

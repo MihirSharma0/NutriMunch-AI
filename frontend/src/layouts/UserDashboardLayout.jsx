@@ -22,10 +22,12 @@ const UserDashboardLayout = () => {
         { name: "Diet Plans", path: "/dashboard/user/diet-plans", icon: "restaurant_menu" },
         { name: "Appointments", path: "/dashboard/user/appointments", icon: "calendar_month" },
         { name: "Reports", path: "/dashboard/user/reports", icon: "lab_profile" },
-        { name: "AI Chat", path: "/dashboard/user/ai-chat", icon: "smart_toy" },
-        { name: "AI Diet Gen", path: "/dashboard/user/ai-diet", icon: "magic_button" },
+        { name: "AI Chat Assistant", path: "/dashboard/user/ai-chat", icon: "smart_toy" },
+        { name: "AI Diet Generator", path: "/dashboard/user/ai-diet", icon: "magic_button" },
         { name: "AI Food Analyzer", path: "/dashboard/user/ai-image", icon: "center_focus_strong" },
-        { name: "Profile", path: "/dashboard/user/profile", icon: "person" }
+        { name: "Stories & Ratings", path: "/testimonials", icon: "rate_review" },
+        { name: "Platform Roles", path: "/user-roles", icon: "badge" },
+        { name: "My Profile", path: "/dashboard/user/profile", icon: "person" }
     ];
 
     const handleLogout = () => {

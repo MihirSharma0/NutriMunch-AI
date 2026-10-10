@@ -5,30 +5,50 @@ import { AuthContext } from '../context/AuthContext';
 const getNavItemsForRole = (user) => {
     const aiSubMenu = [
         { label: 'AI Diet Generator', path: '/ai-diet', icon: 'magic_button', desc: 'Generate instant macro-balanced meal plans' },
-        { label: 'AI Food Analyzer', path: '/ai-image', icon: 'center_focus_strong', desc: 'Scan food photos for instant calories & breakdown' },
-        { label: 'AI Health Companion', path: '/ai-chat', icon: 'smart_toy', desc: '24/7 AI nutrition assistant chat' }
+        { label: 'AI Food Analyzer', path: '/ai-image', icon: 'center_focus_strong', desc: 'Scan food photos for calories & macro breakdown' },
+        { label: 'AI Health Companion', path: '/ai-chat', icon: 'smart_toy', desc: '24/7 AI nutrition assistant chat' },
+        { label: 'Smart Hydration & Progress', path: '/progress', icon: 'monitoring', desc: 'Real-time fluid tracking & weight targets' },
+        { label: 'Personal Diet Plans', path: '/diet-plans', icon: 'restaurant_menu', desc: 'Library of active weekly meal plan regimens' },
+        { label: 'Consultations & Bookings', path: '/appointments', icon: 'calendar_month', desc: 'Schedule certified nutritionist sessions' },
+        { label: 'Health Reports', path: '/reports', icon: 'lab_profile', desc: 'Export clinical biometrics & progress cards' }
     ];
 
     if (!user) {
-        // Guest / Unauthenticated Visitor
+        // Guest / Unauthenticated Visitor - Platform Roles links to dedicated /user-roles page
         return [
             { label: 'Home', path: '/' },
-            { label: 'Requirements', path: '/profile' },
-            { label: 'AI Suite', subMenu: aiSubMenu },
+            { label: 'Platform Roles', path: '/user-roles' },
+            { label: 'AI Suite & Features', subMenu: aiSubMenu },
+            { label: 'Testimonials', path: '/testimonials' },
             { label: 'Pricing', path: '/pricing' },
             { label: 'About', path: '/about' },
             { label: 'Contact', path: '/contact' }
         ];
     }
 
+    const userManagementSubMenu = [
+        { label: 'User Directory & Roles', path: '/dashboard/admin/users', icon: 'manage_accounts', desc: 'Search by Name/Email, OTP status, role updates' },
+        { label: 'Dietitian Verification', path: '/dashboard/admin/dietitians', icon: 'badge', desc: 'Approve or suspend nutritionist applications' }
+    ];
+
+    const clientManagementSubMenu = [
+        { label: 'Client Roster', path: '/dashboard/nutritionist/clients', icon: 'group', desc: 'Manage patient roster, health logs & biometrics' },
+        { label: 'Schedule', path: '/dashboard/nutritionist/schedule', icon: 'calendar_month', desc: 'Manage consultation calendar & slots' }
+    ];
+
+    const clinicalToolsSubMenu = [
+        { label: 'Diet Builder', path: '/dashboard/nutritionist/builder', icon: 'restaurant_menu', desc: 'Build dynamic weekly meal plans & macro protocols' },
+        { label: 'Clinical Reports', path: '/dashboard/nutritionist/reports', icon: 'lab_profile', desc: 'Export patient progress reports & biometrics' }
+    ];
+
     const rawRole = user.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'USER';
 
     if (rawRole === 'ADMIN') {
         return [
             { label: 'Home', path: '/' },
-            { label: 'Overview', path: '/dashboard/admin' },
-            { label: 'Users', path: '/dashboard/admin/users' },
-            { label: 'Dietitians', path: '/dashboard/admin/dietitians' },
+            { label: 'System Core', path: '/dashboard/admin' },
+            { label: 'User Management', subMenu: userManagementSubMenu, headerTitle: 'User Administration' },
+            { label: 'Testimonials', path: '/dashboard/admin/testimonials' },
             { label: 'Analytics', path: '/dashboard/admin/analytics' },
             { label: 'SQL Console', path: '/dashboard/admin/sql' },
             { label: 'Profile', path: '/dashboard/admin/profile' },
@@ -39,11 +59,10 @@ const getNavItemsForRole = (user) => {
     if (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') {
         return [
             { label: 'Home', path: '/' },
-            { label: 'Overview', path: '/dashboard/nutritionist' },
-            { label: 'Clients', path: '/dashboard/nutritionist/clients' },
-            { label: 'Diet Builder', path: '/dashboard/nutritionist/builder' },
-            { label: 'Schedule', path: '/dashboard/nutritionist/schedule' },
-            { label: 'Reports', path: '/dashboard/nutritionist/reports' },
+            { label: 'Clinical Core', path: '/dashboard/nutritionist' },
+            { label: 'Client & Schedule', subMenu: clientManagementSubMenu, headerTitle: 'Client Management' },
+            { label: 'Diet & Reports', subMenu: clinicalToolsSubMenu, headerTitle: 'Clinical Protocols' },
+            { label: 'Testimonials', path: '/testimonials' },
             { label: 'Profile', path: '/dashboard/nutritionist/profile' },
             { label: 'Contact', path: '/contact' }
         ];
@@ -52,16 +71,18 @@ const getNavItemsForRole = (user) => {
     // Standard Logged-in User
     return [
         { label: 'Home', path: '/' },
-        { label: 'Requirements', path: '/profile' },
-        { label: 'AI Suite', subMenu: aiSubMenu },
-        { label: 'Progress', path: '/progress' },
+        { label: 'Platform Features', subMenu: aiSubMenu },
+        { label: 'Progress Tracking', path: '/progress' },
         { label: 'Diet Plans', path: '/diet-plans' },
         { label: 'Appointments', path: '/appointments' },
+        { label: 'Testimonials', path: '/testimonials' },
+        { label: 'Profile', path: '/profile' },
         { label: 'Contact', path: '/contact' }
     ];
 };
 
 const checkIsActive = (pathname, itemPath) => {
+    if (!itemPath) return false;
     if (pathname === itemPath) return true;
     if (itemPath === '/' || itemPath === '/dashboard/admin' || itemPath === '/dashboard/nutritionist') {
         return false;
@@ -74,21 +95,21 @@ const Navbar = () => {
     const navigate = useNavigate();
     const { user, logout } = useContext(AuthContext);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isAiDropdownOpen, setIsAiDropdownOpen] = useState(false);
+    const [activeDropdown, setActiveDropdown] = useState(null);
     const dropdownRef = useRef(null);
 
     const navItems = getNavItemsForRole(user);
 
     useEffect(() => {
         setIsMenuOpen(false);
-        setIsAiDropdownOpen(false);
+        setActiveDropdown(null);
     }, [location.pathname]);
 
     // Handle Outside Click to Close Dropdown safely
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsAiDropdownOpen(false);
+                setActiveDropdown(null);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -113,32 +134,34 @@ const Navbar = () => {
                     </Link>
 
                     {/* Desktop Navigation Items Container */}
-                    <div className="hidden lg:flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 border border-white/5">
+                    <div ref={dropdownRef} className="hidden lg:flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 border border-white/5">
                         {navItems.map(item => {
                             if (item.subMenu) {
+                                const isOpen = activeDropdown === item.label;
                                 const isChildActive = item.subMenu.some(sub => location.pathname === sub.path);
+
                                 return (
                                     <div 
                                         key={item.label}
-                                        ref={dropdownRef}
                                         className="relative"
-                                        onMouseEnter={() => setIsAiDropdownOpen(true)}
-                                        onMouseLeave={() => setIsAiDropdownOpen(false)}
+                                        onMouseEnter={() => setActiveDropdown(item.label)}
+                                        onMouseLeave={() => setActiveDropdown(null)}
                                     >
                                         <button
                                             type="button"
-                                            onClick={() => setIsAiDropdownOpen(prev => !prev)}
-                                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${isChildActive || isAiDropdownOpen ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                                            onClick={() => setActiveDropdown(prev => prev === item.label ? null : item.label)}
+                                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${isChildActive || isOpen ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                                         >
                                             <span>{item.label}</span>
-                                            <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isAiDropdownOpen ? 'rotate-180' : ''}`}>expand_more</span>
+                                            <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
                                         </button>
 
-                                        {isAiDropdownOpen && (
+                                        {/* Dropdown for AI Suite */}
+                                        {isOpen && (
                                             <div className="absolute top-full left-0 pt-2 w-72 z-50">
                                                 <div className="bg-[#080b12]/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-2 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                                                     <div className="text-[10px] font-black uppercase text-[#a5d391] tracking-widest px-3 py-1.5">
-                                                        AI Health & Nutrition Suite
+                                                        {item.headerTitle || item.label}
                                                     </div>
                                                     {item.subMenu.map(sub => {
                                                         const isSubActive = location.pathname === sub.path;
@@ -146,7 +169,7 @@ const Navbar = () => {
                                                             <Link
                                                                 key={sub.label}
                                                                 to={sub.path}
-                                                                onClick={() => setIsAiDropdownOpen(false)}
+                                                                onClick={() => setActiveDropdown(null)}
                                                                 className={`flex items-start gap-3 p-2.5 rounded-xl transition-all ${isSubActive ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' : 'text-white/80 hover:bg-white/5 hover:text-white'}`}
                                                             >
                                                                 <span className="material-symbols-outlined text-[#a5d391] text-lg mt-0.5">{sub.icon}</span>
@@ -181,17 +204,61 @@ const Navbar = () => {
                     <div className="hidden md:flex items-center gap-3">
                         {user ? (
                             <div className="flex items-center gap-2">
-                                <Link
-                                    to={user?.role === 'ADMIN' ? '/dashboard/admin/profile' : user?.role === 'NUTRITIONIST' || user?.role === 'DIETITIAN' ? '/dashboard/nutritionist/profile' : '/profile'}
-                                    className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-full transition-all text-xs font-bold text-white group"
-                                >
-                                    <img 
-                                        src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=a5d391&color=000`} 
-                                        alt="Avatar" 
-                                        className="w-6 h-6 rounded-full object-cover border border-white/20 group-hover:border-[#a5d391]" 
-                                    />
-                                    <span className="max-w-[100px] truncate">{displayName}</span>
-                                </Link>
+                                <div className="relative group">
+                                    <Link
+                                        to={user?.role === 'ADMIN' ? '/dashboard/admin/profile' : user?.role === 'NUTRITIONIST' || user?.role === 'DIETITIAN' ? '/dashboard/nutritionist/profile' : '/profile'}
+                                        className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-full transition-all text-xs font-bold text-white group cursor-pointer"
+                                    >
+                                        <img 
+                                            src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=a5d391&color=000`} 
+                                            alt="Avatar" 
+                                            className="w-6 h-6 rounded-full object-cover border border-white/20 group-hover:border-[#a5d391]" 
+                                        />
+                                        <span className="max-w-[100px] truncate">{displayName}</span>
+                                        <span className="material-symbols-outlined text-sm text-white/50 group-hover:rotate-180 transition-transform">expand_more</span>
+                                    </Link>
+
+                                    {/* Hover Dropdown displaying Role */}
+                                    <div className="absolute right-0 top-full pt-2 w-48 z-50 hidden group-hover:block animate-in fade-in slide-in-from-top-1 duration-150">
+                                        <div className="bg-[#080b12]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-3 shadow-2xl space-y-2">
+                                            <div className="flex items-center justify-between px-2 py-1 border-b border-white/10">
+                                                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Role</span>
+                                                <span className="text-xs font-black text-[#a5d391] bg-[#a5d391]/15 px-2.5 py-0.5 rounded-full border border-[#a5d391]/30">
+                                                    {user?.role ? (
+                                                        String(user.role).toUpperCase().replace('ROLE_', '') === 'ADMIN' ? 'Admin' :
+                                                        String(user.role).toUpperCase().replace('ROLE_', '') === 'NUTRITIONIST' || String(user.role).toUpperCase().replace('ROLE_', '') === 'DIETITIAN' ? 'Dietician' :
+                                                        'User'
+                                                    ) : 'User'}
+                                                </span>
+                                            </div>
+
+                                            <Link
+                                                to={user?.role === 'ADMIN' ? '/dashboard/admin/profile' : user?.role === 'NUTRITIONIST' || user?.role === 'DIETITIAN' ? '/dashboard/nutritionist/profile' : '/profile'}
+                                                className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all"
+                                            >
+                                                <span className="material-symbols-outlined text-sm text-[#a5d391]">account_circle</span>
+                                                View Profile
+                                            </Link>
+
+                                            <Link
+                                                to={user?.role === 'ADMIN' ? '/dashboard/admin' : user?.role === 'NUTRITIONIST' || user?.role === 'DIETITIAN' ? '/dashboard/nutritionist' : '/dashboard/user'}
+                                                className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all"
+                                            >
+                                                <span className="material-symbols-outlined text-sm text-[#a5d391]">dashboard</span>
+                                                Dashboard
+                                            </Link>
+
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-all cursor-pointer text-left border-t border-white/5 mt-1"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">logout</span>
+                                                Logout
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <button
                                     onClick={handleLogout}
                                     className="cursor-pointer bg-red-500/10 text-red-400 px-3 py-1.5 rounded-full text-xs font-bold border border-red-500/20 hover:bg-red-500 hover:text-white transition-all"
@@ -226,7 +293,7 @@ const Navbar = () => {
                                     return (
                                         <div key={item.label} className="space-y-1 my-1">
                                             <div className="text-[10px] font-black uppercase text-[#a5d391] tracking-widest px-4 py-1">
-                                                {item.label} Engines
+                                                {item.headerTitle || item.label}
                                             </div>
                                             {item.subMenu.map(sub => (
                                                 <Link
@@ -267,3 +334,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

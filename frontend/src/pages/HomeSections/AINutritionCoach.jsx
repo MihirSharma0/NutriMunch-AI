@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const AINutritionCoach = () => {
     return (
@@ -11,15 +12,18 @@ const AINutritionCoach = () => {
                         alt="AI Coach Dashboard" 
                         className="relative z-10 w-full rounded-[2.5rem] border border-white/10 shadow-2xl"
                     />
-                    <div className="absolute -bottom-6 -right-6 bg-black/80 backdrop-blur-xl border border-white/10 p-6 rounded-2xl z-20 animate-bounce shadow-xl">
+                    <Link to="/ai-chat" className="absolute -bottom-6 -right-6 bg-black/80 backdrop-blur-xl border border-white/10 p-6 rounded-2xl z-20 animate-bounce shadow-xl hover:border-[#a5d391]/50 transition-all group">
                         <div className="flex items-center gap-4">
-                            <span className="material-symbols-outlined text-[#a5d391] text-3xl">smart_toy</span>
+                            <span className="material-symbols-outlined text-[#a5d391] text-3xl group-hover:scale-110 transition-transform">smart_toy</span>
                             <div>
-                                <div className="text-white text-sm font-bold">AI Coach Online</div>
+                                <div className="text-white text-sm font-bold flex items-center gap-1">
+                                    AI Coach Online
+                                    <span className="material-symbols-outlined text-xs text-[#a5d391]">open_in_new</span>
+                                </div>
                                 <div className="text-white/50 text-xs">Analyzing biometrics...</div>
                             </div>
                         </div>
-                    </div>
+                    </Link>
                 </div>
 
                 <div className="order-1 lg:order-2">
@@ -38,9 +42,13 @@ const AINutritionCoach = () => {
                         ))}
                     </ul>
 
-                    <button className="bg-white text-black px-8 py-4 rounded-full font-bold hover:bg-[#a5d391] transition-colors shadow-lg">
+                    <Link 
+                        to="/ai-chat"
+                        className="inline-flex items-center gap-2 bg-white text-black px-8 py-4 rounded-full font-bold hover:bg-[#a5d391] transition-all shadow-lg hover:shadow-[0_0_20px_rgba(165,211,145,0.6)] cursor-pointer hover:-translate-y-0.5"
+                    >
                         Chat with AI Now
-                    </button>
+                        <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                    </Link>
                 </div>
             </div>
         </section>

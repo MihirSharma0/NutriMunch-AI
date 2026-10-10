@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, Sparkles, KeyRound } from 'lucide-react';
 import Starfield from '../../components/Starfield';
+import OnboardingWizard from '../../components/OnboardingWizard';
 
 const VerifyOtp = () => {
     const [searchParams] = useSearchParams();
@@ -14,6 +15,7 @@ const VerifyOtp = () => {
     const [success, setSuccess] = useState('');
     const [resendDisabled, setResendDisabled] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
+    const [showOnboarding, setShowOnboarding] = useState(false);
     
     const { verifyOtp, resendOtp } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -30,8 +32,7 @@ const VerifyOtp = () => {
         
         const result = await verifyOtp(email, otp);
         if (result.success) {
-            setSuccess('Account verified successfully! Redirecting to login...');
-            setTimeout(() => navigate('/login'), 2000);
+            setShowOnboarding(true);
         } else {
             setError(result.message);
         }
@@ -82,79 +83,83 @@ const VerifyOtp = () => {
                 <span className="text-sm font-medium">Back to Login</span>
             </button>
 
-            <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl p-6 sm:p-10 relative z-10">
-                <div className="flex flex-col items-center mb-8">
-                    <div className="w-16 h-16 bg-green-500/10 border border-green-500/30 rounded-full flex items-center justify-center mb-4">
-                        <KeyRound className="w-8 h-8 text-green-400" />
+            {showOnboarding ? (
+                <OnboardingWizard initialEmail={email} onComplete={() => navigate('/profile')} />
+            ) : (
+                <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl p-6 sm:p-10 relative z-10">
+                    <div className="flex flex-col items-center mb-8">
+                        <div className="w-16 h-16 bg-green-500/10 border border-green-500/30 rounded-full flex items-center justify-center mb-4">
+                            <KeyRound className="w-8 h-8 text-green-400" />
+                        </div>
+                        <h2 className="text-2xl sm:text-3xl font-headline-lg font-bold text-center text-white mb-2">Verify Account</h2>
+                        <p className="text-center text-gray-400 text-sm px-4">
+                            Please enter the 6-digit OTP code sent to your email to verify your account. If you received a link instead, you can click it directly.
+                        </p>
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-headline-lg font-bold text-center text-white mb-2">Verify Account</h2>
-                    <p className="text-center text-gray-400 text-sm px-4">
-                        Please enter the 6-digit OTP code sent to your email to verify your account. If you received a link instead, you can click it directly.
-                    </p>
-                </div>
 
-                {error && (
-                    <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl mb-6 text-sm text-center">
-                        {error}
-                    </div>
-                )}
-                
-                {success && (
-                    <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-4 rounded-xl mb-6 text-sm text-center">
-                        {success}
-                    </div>
-                )}
+                    {error && (
+                        <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl mb-6 text-sm text-center">
+                            {error}
+                        </div>
+                    )}
+                    
+                    {success && (
+                        <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-4 rounded-xl mb-6 text-sm text-center">
+                            {success}
+                        </div>
+                    )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">Email</label>
-                        <input 
-                            type="email" 
-                            className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-400/50 transition-colors placeholder-gray-600"
-                            placeholder="john@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                    </div>
-                    
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">OTP Code</label>
-                        <input 
-                            type="text" 
-                            maxLength="6"
-                            className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-400/50 transition-colors placeholder-gray-600 text-center tracking-widest text-lg font-bold"
-                            placeholder="000000"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
-                            required
-                        />
-                    </div>
-                    
-                    <button 
-                        type="submit" 
-                        className="w-full bg-gradient-to-r from-green-400 to-emerald-500 text-black font-bold py-3.5 rounded-xl hover:shadow-[0_0_20px_rgba(74,222,128,0.4)] transition-all mt-4 text-[15px]"
-                    >
-                        Verify Code
-                    </button>
-                    
-                    <div className="text-center mt-4 pt-4 border-t border-white/10">
-                        <p className="text-gray-400 text-sm mb-2">Didn't receive the code?</p>
-                        <button
-                            type="button"
-                            onClick={handleResend}
-                            disabled={resendDisabled}
-                            className={`text-sm font-semibold transition-colors ${
-                                resendDisabled 
-                                ? 'text-gray-600 cursor-not-allowed' 
-                                : 'text-green-400 hover:text-green-300'
-                            }`}
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">Email</label>
+                            <input 
+                                type="email" 
+                                className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-400/50 transition-colors placeholder-gray-600"
+                                placeholder="john@example.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">OTP Code</label>
+                            <input 
+                                type="text" 
+                                maxLength="6"
+                                className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-400/50 transition-colors placeholder-gray-600 text-center tracking-widest text-lg font-bold"
+                                placeholder="000000"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                                required
+                            />
+                        </div>
+                        
+                        <button 
+                            type="submit" 
+                            className="w-full bg-gradient-to-r from-green-400 to-emerald-500 text-black font-bold py-3.5 rounded-xl hover:shadow-[0_0_20px_rgba(74,222,128,0.4)] transition-all mt-4 text-[15px]"
                         >
-                            {resendDisabled ? `Resend available in ${resendTimer}s` : 'Resend OTP'}
+                            Verify Code & Continue
                         </button>
-                    </div>
-                </form>
-            </div>
+                        
+                        <div className="text-center mt-4 pt-4 border-t border-white/10">
+                            <p className="text-gray-400 text-sm mb-2">Didn't receive the code?</p>
+                            <button
+                                type="button"
+                                onClick={handleResend}
+                                disabled={resendDisabled}
+                                className={`text-sm font-semibold transition-colors ${
+                                    resendDisabled 
+                                    ? 'text-gray-600 cursor-not-allowed' 
+                                    : 'text-green-400 hover:text-green-300'
+                                }`}
+                            >
+                                {resendDisabled ? `Resend available in ${resendTimer}s` : 'Resend OTP'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </div>
     );
 };

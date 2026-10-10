@@ -105,9 +105,9 @@ public class AuthController {
 
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@Valid @RequestBody com.nutrition.dto.OtpVerificationRequest request) {
-        boolean isVerified = authService.verifyOtp(request.getEmail(), request.getOtp());
-        if (isVerified) {
-            return ResponseEntity.ok(new MessageResponse("Account verified successfully via OTP!"));
+        com.nutrition.dto.AuthResponse response = authService.verifyOtp(request.getEmail(), request.getOtp());
+        if (response != null) {
+            return ResponseEntity.ok(response);
         } else {
             return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP."));
         }

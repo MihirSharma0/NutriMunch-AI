@@ -3,33 +3,53 @@
 @tailwind utilities;
 
 @layer base {
-  body {
+  html, body {
     @apply font-body-md text-on-background selection:bg-primary-container selection:text-on-primary-container;
-    background: #f8f9ff;
+    background-color: #080b12 !important;
+    color: #ffffff;
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
-  /* Custom Premium Scrollbar */
+  /* Custom Premium Dark Theme Scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: #080b12 !important;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(163, 230, 53, 0.25);
-    border-radius: 10px;
-    transition: background 0.3s ease;
+    background: rgba(165, 211, 145, 0.3) !important;
+    border-radius: 9999px;
+    border: 2px solid #080b12;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(163, 230, 53, 0.6);
+    background: rgba(165, 211, 145, 0.7) !important;
+  }
+  ::-webkit-scrollbar-corner {
+    background: #080b12 !important;
   }
   
   /* Firefox Fallback */
   html {
     scrollbar-width: thin;
-    scrollbar-color: rgba(163, 230, 53, 0.25) transparent;
+    scrollbar-color: rgba(165, 211, 145, 0.4) #080b12;
+  }
+
+  /* Fix Browser Autofill White/Light Background Issue in Dark Theme */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0px 1000px #090d16 inset !important;
+    box-shadow: 0 0 0px 1000px #090d16 inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: #ffffff !important;
   }
 }
 

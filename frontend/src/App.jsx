@@ -12,6 +12,7 @@ import Blog from './pages/Blog';
 import Recipes from './pages/Recipes';
 import Testimonials from './pages/Testimonials';
 import Contact from './pages/Contact';
+import UserRoles from './pages/UserRoles';
 import NotFound from './pages/NotFound';
 import Login from './pages/Authentication/Login';
 import Register from './pages/Authentication/Register';
@@ -47,11 +48,28 @@ import AdminHome from './pages/Dashboard/Admin/AdminHome';
 import UserManagement from './pages/Dashboard/Admin/UserManagement';
 import SqlConsole from './pages/Dashboard/Admin/SqlConsole';
 import DietitianManagement from './pages/Dashboard/Admin/DietitianManagement';
-import BlogManagement from './pages/Dashboard/Admin/BlogManagement';
-import RecipeManagement from './pages/Dashboard/Admin/RecipeManagement';
 import PaymentManagement from './pages/Dashboard/Admin/PaymentManagement';
 import AdminAnalytics from './pages/Dashboard/Admin/AdminAnalytics';
 import AdminProfile from './pages/Dashboard/Admin/AdminProfile';
+
+import TestimonialManagement from './pages/Dashboard/Admin/TestimonialManagement';
+
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'instant'
+    });
+  }, [pathname]);
+
+  return null;
+}
 
 const queryClient = new QueryClient();
 
@@ -64,7 +82,8 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <Router>
-            <Routes>
+              <ScrollToTop />
+              <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify" element={<VerifyEmail />} />
@@ -75,7 +94,10 @@ function App() {
             <Route path="/" element={<GlobalLayout />}>
               <Route index element={<Home />} />
               <Route path="about" element={<About />} />
+              <Route path="user-roles" element={<UserRoles />} />
+              <Route path="roles" element={<UserRoles />} />
               <Route path="pricing" element={<Pricing />} />
+              <Route path="testimonials" element={<Testimonials />} />
               <Route path="contact" element={<Contact />} />
               
               {/* User Platform Feature Routes */}
@@ -113,8 +135,7 @@ function App() {
               <Route path="dashboard/admin/users" element={<UserManagement />} />
               <Route path="dashboard/admin/sql" element={<SqlConsole />} />
               <Route path="dashboard/admin/dietitians" element={<DietitianManagement />} />
-              <Route path="dashboard/admin/blogs" element={<BlogManagement />} />
-              <Route path="dashboard/admin/recipes" element={<RecipeManagement />} />
+              <Route path="dashboard/admin/testimonials" element={<TestimonialManagement />} />
               <Route path="dashboard/admin/payments" element={<PaymentManagement />} />
               <Route path="dashboard/admin/analytics" element={<AdminAnalytics />} />
 

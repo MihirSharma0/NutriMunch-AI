@@ -65,7 +65,7 @@ const Services = () => {
                         </div>
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 tracking-tight leading-tight">Generative Culinary Synthesis</h2>
                         <p className="text-white/60 text-base sm:text-lg leading-relaxed mb-8">
-                            Forget static meal plans. Aether Convergence generates dynamic, chef-grade recipes based on the exact macronutrients your body requires at this exact moment, factoring in your pantry inventory and flavor profiles.
+                            Forget static meal plans. NutriMunch AI generates dynamic, chef-grade recipes based on the exact macronutrients your body requires at this exact moment, factoring in your pantry inventory and flavor profiles.
                         </p>
                         <button className="flex items-center gap-2 text-white font-bold group-hover:text-primary transition-colors">
                             View Sample Output <span className="material-symbols-outlined transition-transform group-hover:translate-x-2">arrow_forward</span>
