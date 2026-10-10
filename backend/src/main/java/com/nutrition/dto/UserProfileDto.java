@@ -20,8 +20,12 @@ public class UserProfileDto {
     private String dietType;
     private String lifestyleClass;
     private String mealBudget;
+    private String firstName;
+    private String lastName;
     private String favoriteFoods;
     private String dislikedFoods;
+    private String cuisinePreferences;
+    private Boolean isCustomTargets;
 
     private Double bmr;
     private Double tdee;

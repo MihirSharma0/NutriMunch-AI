@@ -34,6 +34,10 @@ public class UserProfile {
     private String mealBudget;
     private String favoriteFoods;
     private String dislikedFoods;
+    private String cuisinePreferences;
+    
+    @Column(name = "is_custom_targets")
+    private Boolean isCustomTargets = false;
 
     // Recalculated target fields
     private Double bmr;

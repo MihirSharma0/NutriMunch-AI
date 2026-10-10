@@ -82,37 +82,59 @@ const UserDashboardLayout = () => {
             {/* Main Content Area */}
             <main className="flex-grow flex flex-col h-screen w-full relative z-10 overflow-y-auto">
                 {/* Header */}
-                <header className="h-20 bg-[#080b12]/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-30">
-                    <div className="flex items-center gap-4">
+                <header className="min-h-[4.5rem] bg-[#080b12]/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-6 lg:px-10 py-3 sticky top-0 z-30 shadow-md">
+                    <div className="flex items-center gap-4 py-1">
                         <button 
-                            className="lg:hidden text-white/70 hover:text-white"
+                            className="lg:hidden text-white/70 hover:text-white p-1 rounded-lg transition-colors"
                             onClick={() => setIsSidebarOpen(true)}
                         >
-                            <span className="material-symbols-outlined text-3xl">menu</span>
+                            <span className="material-symbols-outlined text-2xl">menu</span>
                         </button>
-                        <h2 className="text-xl font-bold font-hero-display tracking-wide hidden sm:block">NutriMunch <span className={`${accentColor} italic`}>Health Suite</span></h2>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-lg lg:text-xl font-bold font-hero-display tracking-wide text-white flex items-center gap-2">
+                                <span>NutriMunch</span>
+                                <span className={`${accentColor} italic font-semibold`}>Health Suite</span>
+                            </h2>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-4 sm:gap-6">
-                        <button className="relative text-white/60 hover:text-white transition-colors bg-white/5 w-10 h-10 rounded-full flex items-center justify-center border border-white/10 hover:border-white/30 backdrop-blur-md">
-                            <span className="material-symbols-outlined text-sm">notifications</span>
-                            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#a5d391] rounded-full border-2 border-[#080b12] shadow-[0_0_6px_rgba(165,211,145,0.8)]"></span>
+                    <div className="flex items-center gap-3 sm:gap-5">
+                        {/* Notification Bell Button */}
+                        <button className="relative text-white/70 hover:text-white transition-all bg-white/5 hover:bg-white/10 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border border-white/10 hover:border-white/20 backdrop-blur-md shadow-sm">
+                            <span className="material-symbols-outlined text-lg sm:text-xl">notifications</span>
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#a5d391] rounded-full shadow-[0_0_6px_rgba(165,211,145,0.8)]"></span>
                         </button>
 
+                        {/* Mobile Logout Button */}
                         <button 
                             onClick={handleLogout} 
-                            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors cursor-pointer"
+                            className="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors cursor-pointer"
                             title="Logout"
                         >
-                            <span className="material-symbols-outlined text-xl">logout</span>
+                            <span className="material-symbols-outlined text-lg">logout</span>
                         </button>
                         
-                        <Link to="/dashboard/user/profile" className="flex items-center gap-3 pl-3 sm:pl-6 border-l border-white/10 cursor-pointer group">
-                            <div className="text-right hidden sm:block">
-                                <div className={`text-sm font-bold text-white group-hover:${accentColor} transition-colors`}>{user?.name || user?.username || 'Valued Member'}</div>
-                                <div className="text-[10px] text-[#a5d391] uppercase tracking-widest font-black">Pro Tier Active</div>
+                        {/* Vertical Separator Divider */}
+                        <div className="h-7 w-[1px] bg-white/15 mx-1 hidden sm:block"></div>
+
+                        {/* User Profile Info Pill */}
+                        <Link to="/dashboard/user/profile" className="flex items-center gap-3 py-1 px-2 sm:px-3 rounded-2xl hover:bg-white/5 transition-all cursor-pointer group">
+                            <div className="text-right hidden sm:block leading-tight">
+                                <div className={`text-sm font-bold text-white group-hover:${accentColor} transition-colors tracking-tight`}>
+                                    {user?.name || user?.username || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User')}
+                                </div>
+                                <div className="text-[11px] text-white/60 font-medium tracking-tight mt-0.5">
+                                    {user?.email || 'user@example.com'}
+                                </div>
                             </div>
-                            <img src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || user?.username || 'User')}&background=a5d391&color=000`} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-white/20 group-hover:border-[#a5d391] transition-colors shadow-lg" />
+                            <div className="relative">
+                                <img 
+                                    src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || user?.username || user?.email || 'User')}&background=a5d391&color=000`} 
+                                    alt="Avatar" 
+                                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-white/20 group-hover:border-[#a5d391] transition-all shadow-md" 
+                                />
+                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#080b12] rounded-full"></span>
+                            </div>
                         </Link>
                     </div>
                 </header>

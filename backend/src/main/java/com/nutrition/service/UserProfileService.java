@@ -28,6 +28,15 @@ public class UserProfileService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
             .orElseGet(() -> createEmptyProfile(userId));
 
+        User user = profile.getUser();
+        if (dto.getFirstName() != null && !dto.getFirstName().isBlank()) {
+            user.setFirstName(dto.getFirstName());
+        }
+        if (dto.getLastName() != null && !dto.getLastName().isBlank()) {
+            user.setLastName(dto.getLastName());
+        }
+        userRepository.save(user);
+
         profile.setHeightCm(dto.getHeightCm());
         profile.setWeightKg(dto.getWeightKg());
         profile.setTargetWeightKg(dto.getTargetWeightKg());
@@ -43,8 +52,27 @@ public class UserProfileService {
         profile.setMealBudget(dto.getMealBudget());
         profile.setFavoriteFoods(dto.getFavoriteFoods());
         profile.setDislikedFoods(dto.getDislikedFoods());
+        profile.setCuisinePreferences(dto.getCuisinePreferences());
+        profile.setIsCustomTargets(dto.getIsCustomTargets());
 
-        recalculateNutritionTargets(profile);
+        if (Boolean.TRUE.equals(dto.getIsCustomTargets())) {
+            if (dto.getDailyCaloriesTarget() != null) profile.setDailyCaloriesTarget(dto.getDailyCaloriesTarget());
+            if (dto.getProteinTarget() != null) profile.setProteinTarget(dto.getProteinTarget());
+            if (dto.getCarbsTarget() != null) profile.setCarbsTarget(dto.getCarbsTarget());
+            if (dto.getFatsTarget() != null) profile.setFatsTarget(dto.getFatsTarget());
+            if (dto.getDailyWaterTargetLiters() != null) profile.setDailyWaterTargetLiters(dto.getDailyWaterTargetLiters());
+            if (dto.getDailyFiberTargetG() != null) profile.setDailyFiberTargetG(dto.getDailyFiberTargetG());
+            if (dto.getIronTargetMg() != null) profile.setIronTargetMg(dto.getIronTargetMg());
+            if (dto.getCalciumTargetMg() != null) profile.setCalciumTargetMg(dto.getCalciumTargetMg());
+            if (dto.getVitDTargetMcg() != null) profile.setVitDTargetMcg(dto.getVitDTargetMcg());
+            if (dto.getVitB12TargetMcg() != null) profile.setVitB12TargetMcg(dto.getVitB12TargetMcg());
+            if (dto.getVitCTargetMg() != null) profile.setVitCTargetMg(dto.getVitCTargetMg());
+            if (dto.getZincTargetMg() != null) profile.setZincTargetMg(dto.getZincTargetMg());
+
+            recalculateBmrTdeeOnly(profile);
+        } else {
+            recalculateNutritionTargets(profile);
+        }
 
         profile = userProfileRepository.save(profile);
         return mapToDto(profile);
@@ -61,6 +89,31 @@ public class UserProfileService {
         return nutritionRuleRepository.findByRuleKey(key)
                 .map(NutritionRule::getRuleValue)
                 .orElse(defaultValue);
+    }
+
+    private void recalculateBmrTdeeOnly(UserProfile profile) {
+        if (profile.getAge() == null || profile.getHeightCm() == null || profile.getWeightKg() == null || profile.getGender() == null) {
+            return;
+        }
+
+        double bmr = 10 * profile.getWeightKg() + 6.25 * profile.getHeightCm() - 5 * profile.getAge();
+        if ("Female".equalsIgnoreCase(profile.getGender())) {
+            bmr -= 161;
+        } else {
+            bmr += 5;
+        }
+        profile.setBmr(bmr);
+
+        double multiplier = getRuleValue("multiplier_sedentary", 1.2);
+        if (profile.getActivityLevel() != null) {
+            switch (profile.getActivityLevel()) {
+                case "Lightly Active": multiplier = getRuleValue("multiplier_lightly_active", 1.375); break;
+                case "Moderately Active": multiplier = getRuleValue("multiplier_moderately_active", 1.55); break;
+                case "Very Active": multiplier = getRuleValue("multiplier_very_active", 1.725); break;
+                case "Highly Active-Athlete": multiplier = getRuleValue("multiplier_highly_active", 1.9); break;
+            }
+        }
+        profile.setTdee(bmr * multiplier);
     }
 
     private void recalculateNutritionTargets(UserProfile profile) {
@@ -153,8 +206,12 @@ public class UserProfileService {
         dto.setDietType(profile.getDietType());
         dto.setLifestyleClass(profile.getLifestyleClass());
         dto.setMealBudget(profile.getMealBudget());
+        dto.setFirstName(profile.getUser().getFirstName());
+        dto.setLastName(profile.getUser().getLastName());
         dto.setFavoriteFoods(profile.getFavoriteFoods());
         dto.setDislikedFoods(profile.getDislikedFoods());
+        dto.setCuisinePreferences(profile.getCuisinePreferences());
+        dto.setIsCustomTargets(profile.getIsCustomTargets());
 
         dto.setBmr(profile.getBmr());
         dto.setTdee(profile.getTdee());
