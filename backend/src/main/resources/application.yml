@@ -44,7 +44,7 @@ logging:
 
 app:
   frontend:
-    login-url: ${FRONTEND_LOGIN_URL:https://your-domain.com/login}
+    login-url: ${FRONTEND_LOGIN_URL:http://localhost:5173/login}
   admin:
     email: ${ADMIN_EMAIL:admin@nutrimunch.com}
     password: ${ADMIN_PASSWORD:AdminPass123!}
