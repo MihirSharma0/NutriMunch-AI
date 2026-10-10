@@ -75,49 +75,50 @@ function App() {
             <Route path="/" element={<GlobalLayout />}>
               <Route index element={<Home />} />
               <Route path="about" element={<About />} />
-              <Route path="services" element={<Services />} />
               <Route path="pricing" element={<Pricing />} />
-              <Route path="blog" element={<Blog />} />
-              <Route path="recipes" element={<Recipes />} />
-              <Route path="testimonials" element={<Testimonials />} />
               <Route path="contact" element={<Contact />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-
-            {/* User Dashboard Routes */}
-            <Route path="/dashboard/user" element={<UserDashboardLayout />}>
-              <Route index element={<DashboardHome />} />
+              
+              {/* User Platform Feature Routes */}
               <Route path="profile" element={<Profile />} />
-              <Route path="appointments" element={<Appointments />} />
-              <Route path="progress" element={<ProgressTracking />} />
-              <Route path="diet-plans" element={<DietPlans />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="ai-chat" element={<AiChat />} />
               <Route path="ai-diet" element={<AiDietGenerator />} />
               <Route path="ai-image" element={<AiImageAnalyzer />} />
-            </Route>
+              <Route path="progress" element={<ProgressTracking />} />
+              <Route path="ai-chat" element={<AiChat />} />
+              <Route path="appointments" element={<Appointments />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="diet-plans" element={<DietPlans />} />
 
-            {/* Nutritionist Dashboard Routes */}
-            <Route path="/dashboard/nutritionist" element={<NutritionistDashboardLayout />}>
-              <Route index element={<DietitianHome />} />
-              <Route path="profile" element={<NutritionistProfile />} />
-              <Route path="clients" element={<ClientManagement />} />
-              <Route path="builder" element={<DietPlanBuilder />} />
-              <Route path="schedule" element={<AppointmentManagement />} />
-              <Route path="reports" element={<DietitianReports />} />
-            </Route>
+              {/* User Dashboard Aliases */}
+              <Route path="dashboard/user" element={<DashboardHome />} />
+              <Route path="dashboard/user/profile" element={<Profile />} />
+              <Route path="dashboard/user/ai-diet" element={<AiDietGenerator />} />
+              <Route path="dashboard/user/ai-image" element={<AiImageAnalyzer />} />
+              <Route path="dashboard/user/progress" element={<ProgressTracking />} />
+              <Route path="dashboard/user/ai-chat" element={<AiChat />} />
+              <Route path="dashboard/user/appointments" element={<Appointments />} />
+              <Route path="dashboard/user/reports" element={<Reports />} />
+              <Route path="dashboard/user/diet-plans" element={<DietPlans />} />
 
-            {/* Admin Dashboard Routes */}
-            <Route path="/dashboard/admin" element={<AdminDashboardLayout />}>
-              <Route index element={<AdminHome />} />
-              <Route path="profile" element={<AdminProfile />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="sql" element={<SqlConsole />} />
-              <Route path="dietitians" element={<DietitianManagement />} />
-              <Route path="blogs" element={<BlogManagement />} />
-              <Route path="recipes" element={<RecipeManagement />} />
-              <Route path="payments" element={<PaymentManagement />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
+              {/* Nutritionist Platform Routes */}
+              <Route path="dashboard/nutritionist" element={<DietitianHome />} />
+              <Route path="dashboard/nutritionist/profile" element={<NutritionistProfile />} />
+              <Route path="dashboard/nutritionist/clients" element={<ClientManagement />} />
+              <Route path="dashboard/nutritionist/builder" element={<DietPlanBuilder />} />
+              <Route path="dashboard/nutritionist/schedule" element={<AppointmentManagement />} />
+              <Route path="dashboard/nutritionist/reports" element={<DietitianReports />} />
+
+              {/* Admin Platform Routes */}
+              <Route path="dashboard/admin" element={<AdminHome />} />
+              <Route path="dashboard/admin/profile" element={<AdminProfile />} />
+              <Route path="dashboard/admin/users" element={<UserManagement />} />
+              <Route path="dashboard/admin/sql" element={<SqlConsole />} />
+              <Route path="dashboard/admin/dietitians" element={<DietitianManagement />} />
+              <Route path="dashboard/admin/blogs" element={<BlogManagement />} />
+              <Route path="dashboard/admin/recipes" element={<RecipeManagement />} />
+              <Route path="dashboard/admin/payments" element={<PaymentManagement />} />
+              <Route path="dashboard/admin/analytics" element={<AdminAnalytics />} />
+
+              <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
         </Router>

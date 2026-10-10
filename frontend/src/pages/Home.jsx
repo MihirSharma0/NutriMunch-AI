@@ -57,9 +57,9 @@ const Home = () => {
     }).join(', ') + ', 20px 12px 50px rgba(0,0,0,0.9)';
 
     return (
-        <div className="relative pt-32 flex flex-col w-full">
+        <div className="relative flex flex-col w-full">
             {/* Main Hero Container */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-8 w-full flex-grow relative z-10 flex flex-col justify-between pt-10">
+            <div className="w-full flex-grow relative z-10 flex flex-col justify-between pt-4">
                 
                 {/* Top Section - Huge Typography */}
                 <div className="relative mb-12 md:mb-16">
@@ -119,8 +119,7 @@ const Home = () => {
                 </div>
             </div>
             
-            {/* Top gradient to fade into navbar area slightly */}
-            <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-black/80 to-transparent z-0 pointer-events-none"></div>
+
 
             {/* Below sections restored like before */}
             <div className="relative bg-background w-full z-20">

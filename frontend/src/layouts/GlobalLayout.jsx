@@ -13,7 +13,7 @@ const GlobalLayout = () => {
             <div className="fixed bottom-[20%] right-0 translate-x-[40%] translate-y-1/2 w-[800px] h-[800px] bg-[#0ea5e9]/15 blur-[160px] rounded-full pointer-events-none z-0"></div>
 
             <Navbar />
-            <main className="w-full flex-grow relative z-10">
+            <main className="w-full flex-grow relative z-10 pt-28 sm:pt-32 pb-16 px-4 sm:px-8 max-w-7xl mx-auto">
                 <Outlet />
             </main>
             <Footer />

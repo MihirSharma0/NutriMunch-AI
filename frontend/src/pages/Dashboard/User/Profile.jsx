@@ -99,6 +99,12 @@ const Profile = () => {
 
     useEffect(() => {
         const fetchProfile = async () => {
+            if (!user) {
+                setLoading(false);
+                setTargets(DEFAULT_TARGETS);
+                setCustomTargets(DEFAULT_TARGETS);
+                return;
+            }
             try {
                 const res = await api.get('/profiles/me');
                 if (res.data) {
@@ -164,8 +170,7 @@ const Profile = () => {
                 }
             } catch (err) {
                 console.error("Failed to load profile", err);
-                const errDetail = err.response?.data?.message || err.message || '';
-                setMessage({ type: 'error', text: `Failed to load profile parameters. ${errDetail}` });
+                setCustomTargets(DEFAULT_TARGETS);
             } finally {
                 setLoading(false);
             }
@@ -340,6 +345,14 @@ const Profile = () => {
 
         setSaving(true);
         setMessage({ type: '', text: '' });
+
+        if (!user) {
+            setTargets(customTargets);
+            setIsEditingRequirements(false);
+            setSaving(false);
+            setMessage({ type: 'success', text: 'Daily requirements updated in Guest Mode! Login or Register to save targets to your account.' });
+            return;
+        }
 
         // Combine predefined and custom allergies into single comma-separated string
         const combinedAllergies = [...profile.allergies, ...profile.customAllergies].join(', ');
