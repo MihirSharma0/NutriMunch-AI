@@ -1,0 +1,3 @@
+ALTER TABLE appointments 
+ADD COLUMN title VARCHAR(255),
+ADD COLUMN session_type VARCHAR(255);
