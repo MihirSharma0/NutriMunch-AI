@@ -330,8 +330,8 @@ const Navbar = () => {
     const displayName = user?.name || user?.username || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User');
     const roleLabel = rawRole === 'ADMIN' ? 'Admin' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'Nutritionist' : 'User';
 
-    const profilePath = user?.role === 'ADMIN' ? '/dashboard/admin/profile' 
-        : (user?.role === 'NUTRITIONIST' || user?.role === 'DIETITIAN') ? '/dashboard/nutritionist/profile' 
+    const profilePath = rawRole === 'ADMIN' ? '/dashboard/admin/profile' 
+        : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? '/dashboard/nutritionist/profile' 
         : '/profile';
 
     return (

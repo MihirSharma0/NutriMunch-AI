@@ -59,8 +59,22 @@ public class AuthService {
     private String googleClientId;
 
     public String authenticateUser(LoginRequest loginRequest) {
+        String cleanEmail = loginRequest.getEmail() != null ? loginRequest.getEmail().trim() : "";
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseGet(() -> userRepository.findAll().stream()
+                        .filter(u -> u.getEmail() != null && u.getEmail().equalsIgnoreCase(cleanEmail))
+                        .findFirst().orElse(null));
+
+        if (user == null) {
+            throw new RuntimeException("Profile/E-Mail Id Doesn't Exist. Please Create One");
+        }
+
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Incorrect Password");
+        }
+
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+                new UsernamePasswordAuthenticationToken(user.getEmail(), loginRequest.getPassword()));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         return jwtUtils.generateJwtToken(authentication);

@@ -343,22 +343,54 @@ const Appointments = () => {
                                 dietitians.map((d) => (
                                     <div 
                                         key={d.id} 
-                                        className="bg-black/40 border border-white/10 rounded-2xl p-4 space-y-3 hover:border-[#a5d391]/40 transition-all"
+                                        className="bg-black/50 border border-white/10 hover:border-[#a5d391]/40 rounded-2xl p-4 space-y-3 transition-all shadow-md"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#a5d391] to-emerald-400 text-[#080b12] font-bold text-base flex items-center justify-center shadow-md shrink-0">
-                                                {d.name ? d.name.split(' ').map(n => n[0]).join('') : 'DR'}
-                                            </div>
+                                        <div className="flex items-start gap-3">
+                                            {Boolean(d.isApproved === true || d.approvalStatus === 'APPROVED' || d.approvalStatus === 'VERIFIED') ? (
+                                                <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#a5d391] to-emerald-400 text-[#080b12] font-black text-base flex items-center justify-center shadow-md shrink-0">
+                                                    {d.name ? d.name.split(' ').map(n => n[0]).join('') : 'DR'}
+                                                </div>
+                                            ) : (
+                                                <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/40 p-1.5 flex items-center justify-center shadow-md shrink-0 overflow-hidden">
+                                                    <img src="/pending_avatar.png" alt="Pending Approval" className="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
+                                                </div>
+                                            )}
                                             <div className="min-w-0 flex-1">
-                                                <div className="font-bold text-white text-sm truncate">{d.name}</div>
-                                                <div className="text-[#a5d391] text-[11px] font-semibold truncate">{d.credentials || 'Certified Dietitian'}</div>
-                                                <div className="text-white/40 text-[10px] truncate">{d.specialization || 'Clinical Specialist'}</div>
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className="font-bold text-white text-sm truncate">{d.name}</span>
+                                                    {Boolean(d.isApproved === true || d.approvalStatus === 'APPROVED' || d.approvalStatus === 'VERIFIED') ? (
+                                                        <span className="material-symbols-outlined text-sm text-[#a5d391]" title="Verified Practitioner License">verified</span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 shrink-0" title="License Pending Admin Verification">
+                                                            <span className="material-symbols-outlined text-[10px]">hourglass_empty</span> Pending Approval
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-[#a5d391] text-[11px] font-bold truncate">{d.credentials || 'Certified Clinical Dietitian'}</div>
+                                                <div className="text-white/60 text-[10px] truncate">{d.specialization || 'Clinical Nutrition Specialist'}</div>
                                             </div>
                                         </div>
 
+                                        <div className="bg-white/5 p-2.5 rounded-xl border border-white/5 space-y-1 text-[11px] text-white/70">
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-white/40 uppercase font-bold">Experience</span>
+                                                <span className="text-white font-bold">{d.yearsOfExperience || '7+ Years Exp.'}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-white/40 uppercase font-bold">Rate</span>
+                                                <span className="text-[#a5d391] font-bold">{d.consultationFee || '₹1,500 / Session'}</span>
+                                            </div>
+                                        </div>
+
+                                        {d.bio && (
+                                            <p className="text-[11px] text-white/50 line-clamp-2 italic leading-relaxed">
+                                                "{d.bio}"
+                                            </p>
+                                        )}
+
                                         <button 
                                             onClick={() => openBookingForDietitian(d.id)}
-                                            className="w-full bg-[#a5d391]/10 border border-[#a5d391]/30 text-[#a5d391] hover:bg-[#a5d391] hover:text-black transition-all py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                                            className="w-full bg-[#a5d391]/10 border border-[#a5d391]/30 text-[#a5d391] hover:bg-[#a5d391] hover:text-black transition-all py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                                         >
                                             <span className="material-symbols-outlined text-sm">event</span> Book Consultation
                                         </button>
@@ -404,11 +436,24 @@ const Appointments = () => {
                                                 className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${bookingForm.dietitianId == d.id ? 'bg-[#a5d391]/20 border-[#a5d391] text-white' : 'bg-black/40 border-white/10 text-white/70 hover:border-white/30'}`}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
-                                                    <div className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 ${bookingForm.dietitianId == d.id ? 'bg-[#a5d391] text-black' : 'bg-white/10 text-white'}`}>
-                                                        {d.name ? d.name.split(' ').map(n => n[0]).join('') : 'DR'}
-                                                    </div>
+                                                    {Boolean(d.isApproved === true || d.approvalStatus === 'APPROVED' || d.approvalStatus === 'VERIFIED') ? (
+                                                        <div className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 ${bookingForm.dietitianId == d.id ? 'bg-[#a5d391] text-black' : 'bg-white/10 text-white'}`}>
+                                                            {d.name ? d.name.split(' ').map(n => n[0]).join('') : 'DR'}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/40 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                                                            <img src="/pending_avatar.png" alt="Pending Approval" className="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(245,158,11,0.6)]" />
+                                                        </div>
+                                                    )}
                                                     <div className="min-w-0">
-                                                        <div className="font-bold text-xs text-white truncate">{d.name}</div>
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <span className="font-bold text-xs text-white truncate">{d.name}</span>
+                                                            {Boolean(d.isApproved === true || d.approvalStatus === 'APPROVED' || d.approvalStatus === 'VERIFIED') ? (
+                                                                <span className="material-symbols-outlined text-xs text-[#a5d391]">verified</span>
+                                                            ) : (
+                                                                <span className="px-1.5 py-0.2 rounded-full text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">Pending Approval</span>
+                                                            )}
+                                                        </div>
                                                         <div className="text-[10px] text-[#a5d391] truncate">{d.credentials || 'Certified Clinical Dietitian'} • {d.specialization || 'Clinical Health'}</div>
                                                         <div className="text-[10px] text-white/40 truncate">{d.email}</div>
                                                     </div>

@@ -29,19 +29,27 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        String jwt = authService.authenticateUser(loginRequest);
-        
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        try {
+            String jwt = authService.authenticateUser(loginRequest);
+            
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        User user = userRepository.findById(userDetails.getId()).orElseThrow();
+            User user = userRepository.findById(userDetails.getId()).orElseThrow();
 
-        return ResponseEntity.ok(new JwtResponse(jwt,
-                userDetails.getId(),
-                userDetails.getUsername(),
-                user.getFirstName(),
-                user.getLastName(),
-                userDetails.getAuthorities().iterator().next().getAuthority()));
+            return ResponseEntity.ok(new JwtResponse(jwt,
+                    userDetails.getId(),
+                    userDetails.getUsername(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    userDetails.getAuthorities().iterator().next().getAuthority()));
+        } catch (Exception e) {
+            String msg = e.getMessage();
+            if (msg == null || msg.isBlank() || msg.equalsIgnoreCase("Bad credentials")) {
+                msg = "Incorrect Password";
+            }
+            return ResponseEntity.badRequest().body(new MessageResponse(msg));
+        }
     }
 
     @PostMapping("/google")

@@ -30,9 +30,20 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
             return { success: true, role: userData.role };
         } catch (error) {
+            let serverMsg = error.response?.data?.message || error.response?.data?.error || (typeof error.response?.data === 'string' ? error.response.data : '');
+
+            let finalMessage = 'Incorrect Password';
+            if (serverMsg && (serverMsg.toLowerCase().includes('profile') || serverMsg.toLowerCase().includes('email') || serverMsg.toLowerCase().includes('exist') || serverMsg.toLowerCase().includes('create'))) {
+                finalMessage = "Profile/E-Mail Id Doesn't Exist. Please Create One";
+            } else if (serverMsg && (serverMsg.toLowerCase().includes('password') || serverMsg.toLowerCase().includes('credentials') || serverMsg.toLowerCase().includes('bad') || serverMsg.toLowerCase().includes('incorrect'))) {
+                finalMessage = 'Incorrect Password';
+            } else if (serverMsg) {
+                finalMessage = serverMsg;
+            }
+
             return { 
                 success: false, 
-                message: error.response?.data?.message || 'Login failed' 
+                message: finalMessage 
             };
         }
     };

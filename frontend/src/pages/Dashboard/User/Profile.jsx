@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
 import FeatureGate from '../../../components/FeatureGate';
@@ -459,8 +460,37 @@ const Profile = () => {
         );
     }
 
+    const rawRole = user?.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'USER';
+    const isNutritionist = rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN';
+
     return (
         <div className="w-full max-w-5xl mx-auto pb-16">
+            {/* Professional Nutritionist Banner */}
+            {isNutritionist && (
+                <div className="mb-8 bg-gradient-to-r from-emerald-950/90 via-[#0d131f] to-[#080b12] border border-[#a5d391]/40 rounded-3xl p-5 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-xl">badge</span>
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                Professional Nutritionist Account
+                            </h3>
+                            <p className="text-xs text-white/60 mt-0.5">
+                                Manage your Clinical Specializations, Degrees, License ID, Fees, Bio & Patient Portfolio.
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        to="/dashboard/nutritionist/profile"
+                        className="px-5 py-2.5 rounded-2xl bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all shadow-md shrink-0 flex items-center gap-1.5"
+                    >
+                        <span>Edit Clinical Profile</span>
+                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </Link>
+                </div>
+            )}
+
             {/* Header Title */}
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>

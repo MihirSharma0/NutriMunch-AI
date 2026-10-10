@@ -73,11 +73,26 @@ public class AppointmentService {
                 NutritionistProfile prof = profOpt.get();
                 map.put("credentials", prof.getCredentials() != null && !prof.getCredentials().trim().isEmpty() ? prof.getCredentials() : "Certified Clinical Dietitian");
                 map.put("specialization", prof.getSpecialization() != null && !prof.getSpecialization().trim().isEmpty() ? prof.getSpecialization() : "Clinical Nutrition");
-                map.put("approvalStatus", prof.getApprovalStatus() != null ? prof.getApprovalStatus() : "APPROVED");
+                map.put("bio", prof.getBio() != null ? prof.getBio() : "Specialist in evidence-based nutrition protocols.");
+                map.put("yearsOfExperience", prof.getYearsOfExperience() != null ? prof.getYearsOfExperience() : "7+ Years Exp.");
+                map.put("consultationFee", prof.getConsultationFee() != null ? prof.getConsultationFee() : "₹1,500 / Session");
+                map.put("languages", prof.getLanguages() != null ? prof.getLanguages() : "English, Hindi");
+                map.put("licenseNumber", prof.getLicenseNumber() != null ? prof.getLicenseNumber() : "RD-LIC-98402");
+                map.put("availability", prof.getAvailability() != null ? prof.getAvailability() : "Mon-Fri (09:00 - 17:00 EST)");
+                String status = prof.getApprovalStatus() != null ? prof.getApprovalStatus() : "PENDING";
+                map.put("approvalStatus", status);
+                map.put("isApproved", "APPROVED".equalsIgnoreCase(status) || "VERIFIED".equalsIgnoreCase(status));
             } else {
                 map.put("credentials", "Certified Clinical Dietitian");
                 map.put("specialization", "General Metabolic & Sports Nutrition");
-                map.put("approvalStatus", "APPROVED");
+                map.put("bio", "Specialist in evidence-based nutrition protocols.");
+                map.put("yearsOfExperience", "7+ Years Exp.");
+                map.put("consultationFee", "₹1,500 / Session");
+                map.put("languages", "English, Hindi");
+                map.put("licenseNumber", "RD-LIC-98402");
+                map.put("availability", "Mon-Fri (09:00 - 17:00 EST)");
+                map.put("approvalStatus", "PENDING");
+                map.put("isApproved", false);
             }
             result.add(map);
         }

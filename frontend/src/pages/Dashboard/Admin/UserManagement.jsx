@@ -245,7 +245,7 @@ const UserManagement = () => {
                                 <th className="p-5 rounded-tl-2xl whitespace-nowrap">ID</th>
                                 <th className="p-5 whitespace-nowrap">User Name</th>
                                 <th className="p-5 whitespace-nowrap">Email</th>
-                                <th className="p-5 whitespace-nowrap">Verification Status</th>
+                                <th className="p-5 whitespace-nowrap">Account Verification Status</th>
                                 <th className="p-5 whitespace-nowrap">Role</th>
                                 <th className="p-5 text-right rounded-tr-2xl whitespace-nowrap">Actions</th>
                             </tr>

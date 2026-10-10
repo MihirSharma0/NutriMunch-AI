@@ -26,6 +26,26 @@ public class NutritionistProfile {
     @Column(nullable = false)
     private String specialization;
 
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(name = "years_of_experience")
+    private String yearsOfExperience;
+
+    @Column(name = "consultation_fee")
+    private String consultationFee;
+
+    private String languages;
+
+    @Column(name = "license_number")
+    private String licenseNumber;
+
+    private String availability;
+
+    private Integer age;
+
+    private String gender;
+
     @Column(name = "approval_status", nullable = false)
     private String approvalStatus = "PENDING"; // PENDING, APPROVED, REJECTED
 

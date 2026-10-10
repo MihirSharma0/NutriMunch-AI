@@ -113,9 +113,61 @@ public class AdminController {
         return ResponseEntity.ok(userRepository.findByRole(Role.USER));
     }
 
-    @GetMapping("/nutritionists")
-    public ResponseEntity<List<User>> getAllNutritionists() {
-        return ResponseEntity.ok(userRepository.findByRole(Role.NUTRITIONIST));
+    @GetMapping({"/nutritionists", "/dietitians"})
+    public ResponseEntity<List<Map<String, Object>>> getAllNutritionists() {
+        List<User> nutritionistUsers = userRepository.findByRole(Role.NUTRITIONIST);
+        List<NutritionistProfile> profiles = nutritionistProfileRepository.findAll();
+
+        Map<Long, Map<String, Object>> mapByUserId = new HashMap<>();
+
+        for (User u : nutritionistUsers) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", u.getId());
+            map.put("userId", u.getId());
+            map.put("firstName", u.getFirstName());
+            map.put("lastName", u.getLastName());
+            map.put("email", u.getEmail());
+            map.put("verified", u.isVerified());
+            map.put("credentials", "Certified Clinical Dietitian");
+            map.put("specialization", "Clinical & Medical Nutrition");
+            map.put("licenseNumber", "RD-" + u.getId() + "84920-IN");
+            map.put("approvalStatus", "PENDING");
+            map.put("isApproved", false);
+            mapByUserId.put(u.getId(), map);
+        }
+
+        for (NutritionistProfile profile : profiles) {
+            User u = profile.getUser();
+            if (u != null) {
+                Map<String, Object> map = mapByUserId.computeIfAbsent(u.getId(), id -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", u.getId());
+                    m.put("userId", u.getId());
+                    m.put("firstName", u.getFirstName());
+                    m.put("lastName", u.getLastName());
+                    m.put("email", u.getEmail());
+                    m.put("verified", u.isVerified());
+                    return m;
+                });
+
+                if (profile.getCredentials() != null && !profile.getCredentials().isBlank()) {
+                    map.put("credentials", profile.getCredentials());
+                }
+                if (profile.getSpecialization() != null && !profile.getSpecialization().isBlank()) {
+                    map.put("specialization", profile.getSpecialization());
+                }
+                if (profile.getLicenseNumber() != null && !profile.getLicenseNumber().isBlank()) {
+                    map.put("licenseNumber", profile.getLicenseNumber());
+                }
+                String status = profile.getApprovalStatus() != null ? profile.getApprovalStatus() : "PENDING";
+                map.put("approvalStatus", status);
+                boolean approved = "APPROVED".equalsIgnoreCase(status) || "VERIFIED".equalsIgnoreCase(status);
+                map.put("isApproved", approved);
+                map.put("verified", approved);
+            }
+        }
+
+        return ResponseEntity.ok(new ArrayList<>(mapByUserId.values()));
     }
     
     @PutMapping("/users/{id}/role")
@@ -145,18 +197,56 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
     
-    @PutMapping("/nutritionists/{id}/approve")
-    public ResponseEntity<NutritionistProfile> approveNutritionist(@PathVariable Long id) {
-        NutritionistProfile profile = nutritionistProfileRepository.findByUserId(id)
-                .orElseThrow(() -> new RuntimeException("Nutritionist profile not found"));
-        profile.setApprovalStatus("APPROVED");
-        
-        // Also verify the user
-        User user = profile.getUser();
-        user.setVerified(true);
-        userRepository.save(user);
+    @PutMapping({"/nutritionists/{id}/approve", "/dietitians/{id}/verify", "/nutritionists/{id}/verify"})
+    public ResponseEntity<Map<String, Object>> approveNutritionist(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user != null) {
+            user.setVerified(true);
+            userRepository.save(user);
+        }
 
-        return ResponseEntity.ok(nutritionistProfileRepository.save(profile));
+        NutritionistProfile profile = nutritionistProfileRepository.findByUserId(id).orElse(null);
+        if (profile == null && user != null) {
+            profile = new NutritionistProfile();
+            profile.setUser(user);
+            profile.setCredentials("Certified Clinical Dietitian");
+            profile.setSpecialization("Clinical & Medical Nutrition");
+            profile.setLicenseNumber("RD-84920-IN");
+        }
+
+        if (profile != null) {
+            profile.setApprovalStatus("APPROVED");
+            nutritionistProfileRepository.save(profile);
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Dietitian verified & approved successfully!",
+            "id", id,
+            "verified", true,
+            "approvalStatus", "APPROVED"
+        ));
+    }
+
+    @PutMapping({"/nutritionists/{id}/revoke", "/dietitians/{id}/revoke"})
+    public ResponseEntity<Map<String, Object>> revokeNutritionist(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user != null) {
+            user.setVerified(false);
+            userRepository.save(user);
+        }
+
+        NutritionistProfile profile = nutritionistProfileRepository.findByUserId(id).orElse(null);
+        if (profile != null) {
+            profile.setApprovalStatus("PENDING");
+            nutritionistProfileRepository.save(profile);
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Dietitian verification revoked",
+            "id", id,
+            "verified", false,
+            "approvalStatus", "PENDING"
+        ));
     }
 
     @PostMapping("/settings/otp")
