@@ -127,7 +127,7 @@ public class AppointmentService {
         appointment.setTitle(dto.getTitle() != null && !dto.getTitle().trim().isEmpty() ? dto.getTitle() : "Clinical Nutrition Consultation");
         appointment.setSessionType(dto.getSessionType() != null && !dto.getSessionType().trim().isEmpty() ? dto.getSessionType() : "Clinical Consultation");
         appointment.setNotes(dto.getNotes() != null ? dto.getNotes() : "");
-        appointment.setStatus(dto.getStatus() != null ? dto.getStatus() : "Pending Review");
+        appointment.setStatus(dto.getStatus() != null && !dto.getStatus().isBlank() ? dto.getStatus() : "Requested");
         appointment.setMeetingLink(dto.getMeetingLink() != null ? dto.getMeetingLink() : "https://meet.google.com/nutri-ai-session");
 
         return mapToDto(appointmentRepository.save(appointment));

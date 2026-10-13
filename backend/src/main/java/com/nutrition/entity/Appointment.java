@@ -26,7 +26,7 @@ public class Appointment {
 
     private String title;
     private String sessionType;
-    private String status = "SCHEDULED"; 
+    private String status = "Requested"; 
     private String meetingLink;
     
     @Column(columnDefinition = "TEXT")

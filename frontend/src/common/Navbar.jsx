@@ -41,6 +41,18 @@ export const getNavItemsForRole = (user) => {
         { label: 'Clinical Reports', path: '/dashboard/nutritionist/reports', icon: 'lab_profile', desc: 'Export patient progress reports & biometrics' }
     ];
 
+    const dietProgressSubMenu = [
+        { label: 'Progress Tracking', path: '/progress', icon: 'monitoring', desc: 'Real-time hydration, logs & weight targets' },
+        { label: 'Diet Plans', path: '/diet-plans', icon: 'restaurant_menu', desc: 'Active meal routines & nutritional regimens' },
+        { label: 'Health Reports', path: '/reports', icon: 'lab_profile', desc: 'Export clinical biometrics & progress cards' }
+    ];
+
+    const userAiSubMenu = [
+        { label: 'AI Diet Generator', path: '/ai-diet', icon: 'magic_button', desc: 'Generate instant macro-balanced meal plans' },
+        { label: 'AI Food Analyzer', path: '/ai-image', icon: 'center_focus_strong', desc: 'Scan food photos for calories & macro breakdown' },
+        { label: 'AI Health Companion', path: '/ai-chat', icon: 'smart_toy', desc: '24/7 AI nutrition assistant chat' }
+    ];
+
     const rawRole = user.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'USER';
 
     if (rawRole === 'ADMIN') {
@@ -69,9 +81,8 @@ export const getNavItemsForRole = (user) => {
     // Standard Logged-in User
     return [
         { label: 'Home', path: '/' },
-        { label: 'Platform Features', subMenu: aiSubMenu },
-        { label: 'Progress Tracking', path: '/progress' },
-        { label: 'Diet Plans', path: '/diet-plans' },
+        { label: 'Platform Features', subMenu: userAiSubMenu, headerTitle: 'AI Platform Suite' },
+        { label: 'Diet & Progress', subMenu: dietProgressSubMenu, headerTitle: 'Diet & Health Tracking' },
         { label: 'Appointments', path: '/appointments' },
         { label: 'Testimonials', path: '/testimonials' },
         { label: 'Contact', path: '/contact' }
@@ -326,9 +337,27 @@ const Navbar = () => {
         } catch (e) {}
     };
 
+    const handleDismissToast = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        setToastNotification(null);
+    };
+
     const unreadCount = notifications.filter(n => !n.read).length;
     const displayName = user?.name || user?.username || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User');
     const roleLabel = rawRole === 'ADMIN' ? 'Admin' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'Nutritionist' : 'User';
+
+    const getInitials = (name) => {
+        if (!name) return 'U';
+        const parts = name.trim().split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+        return name.slice(0, 2).toUpperCase();
+    };
+    const userInitials = getInitials(displayName);
 
     const profilePath = rawRole === 'ADMIN' ? '/dashboard/admin/profile' 
         : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? '/dashboard/nutritionist/profile' 
@@ -337,14 +366,14 @@ const Navbar = () => {
     return (
         <div className="fixed top-4 left-4 right-4 z-50 pointer-events-none">
             <nav className="mx-auto max-w-7xl bg-[#080b12]/85 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-3xl overflow-visible shadow-2xl pointer-events-auto">
-                <div className="flex justify-between items-center px-4 sm:px-6 py-3">
-                    <Link to="/" className="font-headline-lg text-lg sm:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap">
+                <div className="flex justify-between items-center px-3 sm:px-6 py-2.5 sm:py-3">
+                    <Link to="/" className="font-headline-lg text-lg sm:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0">
                         <span className="w-2.5 h-2.5 bg-[#a5d391] rounded-full shadow-[0_0_10px_rgba(165,211,145,0.8)]"></span>
                         NutriMunch <span className="text-[#a5d391] italic font-semibold">AI</span>
                     </Link>
 
                     {/* Desktop Navigation Items Container */}
-                    <div ref={dropdownRef} className="hidden lg:flex items-center gap-1 bg-white/5 rounded-full px-2 py-1 border border-white/5 mx-2 sm:mx-4">
+                    <div ref={dropdownRef} className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-white/5 rounded-full px-2 py-1 border border-white/5 mx-1.5 xl:mx-4 shrink min-w-0">
                         {(() => {
                             const isStandaloneActive = navItems.some(nav => !nav.subMenu && checkIsActive(location.pathname, nav.path));
                             return navItems.map(item => {
@@ -362,7 +391,7 @@ const Navbar = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveDropdown(prev => prev === item.label ? null : item.label)}
-                                                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${isChildActive || isOpen ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                                                className={`px-2.5 xl:px-3.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${isChildActive || isOpen ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                                             >
                                                 <span>{item.label}</span>
                                                 <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
@@ -404,7 +433,7 @@ const Navbar = () => {
                                     <Link
                                         key={item.label}
                                         to={item.path}
-                                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${isActive ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                                        className={`px-2.5 xl:px-3.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all whitespace-nowrap ${isActive ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                                     >
                                         {item.label}
                                     </Link>
@@ -414,7 +443,7 @@ const Navbar = () => {
                     </div>
 
                     {/* Right User Actions & Notification Bell */}
-                    <div className="hidden md:flex items-center gap-3 sm:gap-3.5 ml-3 sm:ml-4">
+                    <div className="hidden md:flex items-center gap-2 sm:gap-3.5 ml-2 sm:ml-4 shrink-0">
                         
                         {/* Notification Bell Button (Placed BEFORE User Label) */}
                         <div ref={notificationRef} className="relative">
@@ -534,35 +563,46 @@ const Navbar = () => {
 
                         {/* User Profile Pill & Logout */}
                         {user ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                 <Link
                                     to={profilePath}
-                                    title={`Role: ${roleLabel} • View Profile`}
-                                    className="group relative flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 px-3 py-1.5 rounded-full transition-all text-xs font-bold text-white cursor-pointer shadow-sm"
+                                    title={`${displayName} • Role: ${roleLabel} • View Profile`}
+                                    className="group relative flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 px-2.5 py-1.5 rounded-full transition-all text-xs font-bold text-white cursor-pointer shadow-sm shrink-0"
                                 >
-                                    <img 
-                                        src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=a5d391&color=000`} 
-                                        alt="Avatar" 
-                                        className="w-6 h-6 rounded-full object-cover border border-white/20 group-hover:border-[#a5d391]" 
-                                    />
-                                    <span className="max-w-[110px] truncate">{displayName}</span>
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                    {/* User Initials Avatar Circle */}
+                                    <div className="w-6 h-6 rounded-full bg-[#a5d391] text-black font-black text-[10px] flex items-center justify-center border border-white/20 group-hover:border-[#a5d391] shrink-0 overflow-hidden shadow-sm">
+                                        {user?.avatar && !user.avatar.includes('ui-avatars.com') ? (
+                                            <img 
+                                                src={user.avatar} 
+                                                alt={displayName} 
+                                                className="w-full h-full object-cover" 
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                            />
+                                        ) : (
+                                            <span>{userInitials}</span>
+                                        )}
+                                    </div>
+
+                                    {/* Role Badge (Showing that it is a user) */}
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
                                         {roleLabel}
                                     </span>
 
-                                    {/* Hover Tooltip Popup displaying Role */}
+                                    {/* Hover Tooltip Popup displaying User Name & Role */}
                                     <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2.5 hidden group-hover:flex flex-col items-center z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
                                         <div className="w-2 h-2 bg-[#080b12] border-t border-l border-white/20 rotate-45 -mb-1"></div>
                                         <div className="bg-[#080b12]/95 backdrop-blur-xl border border-white/20 text-white px-3 py-1.5 rounded-xl shadow-2xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-pulse"></span>
-                                            Role: <span className="text-[#a5d391] font-black uppercase">{roleLabel}</span>
+                                            <span className="text-white font-semibold">{displayName}</span>
+                                            <span className="text-white/40">•</span>
+                                            <span className="text-[#a5d391] font-black uppercase">{roleLabel}</span>
                                         </div>
                                     </div>
                                 </Link>
 
                                 <button
                                     onClick={handleLogout}
-                                    className="cursor-pointer bg-red-500/10 text-red-400 px-3 py-1.5 rounded-full text-xs font-bold border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                    className="cursor-pointer bg-red-500/10 text-red-400 px-3 py-1.5 rounded-full text-xs font-bold border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-sm shrink-0 whitespace-nowrap"
                                 >
                                     Logout
                                 </button>
@@ -650,15 +690,20 @@ const Navbar = () => {
 
             {/* Real-Time Push Notification Toast Banner */}
             {toastNotification && (
-                <div className="fixed bottom-6 right-6 z-50 max-w-md w-full animate-bounce-in shadow-2xl">
-                    <div className="bg-[#121f18] border border-[#a5d391]/40 rounded-2xl p-4 shadow-2xl shadow-emerald-950/90 backdrop-blur-xl flex items-start gap-4">
+                <div className="fixed bottom-6 right-6 z-[99999] max-w-md w-full animate-bounce-in shadow-2xl pointer-events-auto">
+                    <div className="bg-[#121f18] border border-[#a5d391]/40 rounded-2xl p-4 shadow-2xl shadow-emerald-950/90 backdrop-blur-xl flex items-start gap-4 pointer-events-auto">
                         <div className="w-10 h-10 rounded-xl bg-[#a5d391]/20 flex items-center justify-center shrink-0 border border-[#a5d391]/30">
                             <span className="material-symbols-outlined text-[#a5d391] animate-pulse text-xl">health_and_safety</span>
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1">
                                 <span className="text-[10px] font-black uppercase tracking-wider text-[#a5d391] bg-[#a5d391]/10 px-2 py-0.5 rounded-full border border-[#a5d391]/20">Live Directive</span>
-                                <button onClick={() => setToastNotification(null)} className="text-white/40 hover:text-white transition-colors">
+                                <button 
+                                    type="button"
+                                    onClick={handleDismissToast} 
+                                    className="text-white/40 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10 cursor-pointer flex items-center justify-center"
+                                    title="Dismiss"
+                                >
                                     <span className="material-symbols-outlined text-sm">close</span>
                                 </button>
                             </div>
@@ -666,16 +711,17 @@ const Navbar = () => {
                             <p className="text-xs text-white/70 line-clamp-2 mt-0.5">{toastNotification.message}</p>
                             <div className="mt-3 flex items-center gap-3">
                                 <Link
-                                    to="/progress"
-                                    onClick={() => setToastNotification(null)}
-                                    className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20"
+                                    to={toastNotification.path || "/diet-plans"}
+                                    onClick={handleDismissToast}
+                                    className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
                                 >
                                     <span>View Directive</span>
                                     <span className="material-symbols-outlined text-xs">arrow_forward</span>
                                 </Link>
                                 <button
-                                    onClick={() => setToastNotification(null)}
-                                    className="text-xs font-medium text-white/50 hover:text-white"
+                                    type="button"
+                                    onClick={handleDismissToast}
+                                    className="text-xs font-medium text-white/50 hover:text-white cursor-pointer px-2 py-1 rounded-lg hover:bg-white/5 transition-colors"
                                 >
                                     Dismiss
                                 </button>

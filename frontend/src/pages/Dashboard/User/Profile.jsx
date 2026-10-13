@@ -185,6 +185,12 @@ const Profile = () => {
             }
         };
         fetchProfile();
+        window.addEventListener('nutrimunch_profile_updated', fetchProfile);
+        window.addEventListener('storage', fetchProfile);
+        return () => {
+            window.removeEventListener('nutrimunch_profile_updated', fetchProfile);
+            window.removeEventListener('storage', fetchProfile);
+        };
     }, [user]);
 
     const handleChange = (e) => {

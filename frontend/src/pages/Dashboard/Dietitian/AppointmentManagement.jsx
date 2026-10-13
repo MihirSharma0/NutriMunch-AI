@@ -174,27 +174,76 @@ const AppointmentManagement = () => {
     const handleConfirmEvent = async (id, e) => {
         if (e) e.stopPropagation();
         try {
-            const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    status: 'Confirmed',
-                    notes: selectedEvent?.notes || 'Confirmed by clinical nutritionist.'
-                })
-            });
+            let updated = null;
+            try {
+                const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        status: 'Confirmed',
+                        notes: selectedEvent?.notes || 'Confirmed by clinical nutritionist.'
+                    })
+                });
 
-            if (res.ok) {
-                const updated = await res.json();
-                setEventsList(eventsList.map(ev => ev.id === id ? updated : ev));
-                if (selectedEvent && selectedEvent.id === id) setSelectedEvent(null);
-                showToast('Appointment confirmed & published to patient!');
-            }
+                if (res.ok) {
+                    updated = await res.json();
+                }
+            } catch (err) {}
+
+            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? (updated || { ...ev, status: 'Confirmed' }) : ev));
+
+            try {
+                const localApts = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
+                const updatedLocal = localApts.map(a => String(a.id) === String(id) ? { ...a, status: 'Confirmed' } : a);
+                localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updatedLocal));
+            } catch (e) {}
+
+            if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
+            showToast('Appointment approved and confirmed!');
         } catch (err) {
             console.error('Failed to confirm appointment:', err);
             showToast('Error confirming appointment.');
+        }
+    };
+
+    const handleDenyEvent = async (id, e) => {
+        if (e) e.stopPropagation();
+        try {
+            let updated = null;
+            try {
+                const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        status: 'REJECTED',
+                        notes: 'Consultation request denied by nutritionist.'
+                    })
+                });
+
+                if (res.ok) {
+                    updated = await res.json();
+                }
+            } catch (err) {}
+
+            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? (updated || { ...ev, status: 'REJECTED' }) : ev));
+
+            try {
+                const localApts = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
+                const updatedLocal = localApts.map(a => String(a.id) === String(id) ? { ...a, status: 'REJECTED' } : a);
+                localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updatedLocal));
+            } catch (e) {}
+
+            if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
+            showToast('Consultation request denied.');
+        } catch (err) {
+            console.error('Failed to deny appointment:', err);
+            showToast('Error denying appointment.');
         }
     };
 
@@ -209,8 +258,8 @@ const AppointmentManagement = () => {
             });
 
             if (res.ok || res.status === 204) {
-                setEventsList(eventsList.filter(ev => ev.id !== id));
-                if (selectedEvent && selectedEvent.id === id) setSelectedEvent(null);
+                setEventsList(eventsList.filter(ev => String(ev.id) !== String(id)));
+                if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
                 showToast('Appointment cancelled.');
             }
         } catch (err) {
@@ -278,7 +327,10 @@ const AppointmentManagement = () => {
     };
 
     // Calculate Counts across all months
-    const pendingCount = eventsList.filter(ev => String(ev.status || '').toUpperCase().includes('PENDING')).length;
+    const pendingCount = eventsList.filter(ev => {
+        const s = String(ev.status || '').toUpperCase();
+        return s.includes('PENDING') || s.includes('REQUEST');
+    }).length;
     const confirmedCount = eventsList.filter(ev => {
         const st = String(ev.status || '').toUpperCase();
         return st.includes('CONFIRM') || st.includes('APPROVED') || st.includes('SCHEDULED');
@@ -288,7 +340,7 @@ const AppointmentManagement = () => {
     // Filter Events by ViewMode and StatusFilter
     const filteredEvents = eventsList.filter(event => {
         const st = String(event.status || '').toUpperCase();
-        if (statusFilter === 'PENDING' && !st.includes('PENDING')) return false;
+        if (statusFilter === 'PENDING' && !st.includes('PENDING') && !st.includes('REQUEST')) return false;
         if (statusFilter === 'CONFIRMED' && !st.includes('CONFIRM') && !st.includes('APPROVED') && !st.includes('SCHEDULED')) return false;
         if (statusFilter === 'CANCELLED' && !st.includes('CANCEL')) return false;
 
@@ -474,20 +526,36 @@ const AppointmentManagement = () => {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {filteredEvents.map(event => {
-                                const isPending = event.status === 'Pending Review' || event.status === 'PENDING';
-                                const isCancelled = event.status === 'CANCELLED';
+                                const st = String(event.status || '').toUpperCase();
+                                const isPending = st.includes('REQUEST') || st.includes('PENDING') || event.status === 'Pending Review';
+                                const isCancelled = st === 'CANCELLED';
+                                const isRejected = st === 'REJECTED';
 
                                 return (
                                     <div 
                                         key={event.id}
                                         onClick={() => setSelectedEvent(event)}
-                                        className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${isPending ? 'bg-amber-500/10 border-amber-500/40 hover:border-amber-500/70 shadow-lg' : isCancelled ? 'bg-red-500/10 border-red-500/20' : 'bg-white/5 border-white/10 hover:border-[#a5d391]/40'}`}
+                                        className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${
+                                            isPending 
+                                                ? 'bg-amber-500/10 border-amber-500/40 hover:border-amber-500/70 shadow-lg' 
+                                                : isCancelled || isRejected
+                                                ? 'bg-red-500/10 border-red-500/20' 
+                                                : 'bg-white/5 border-white/10 hover:border-[#a5d391]/40'
+                                        }`}
                                     >
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${isPending ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40 animate-pulse' : isCancelled ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
-                                                        {isPending ? 'Pending Approval' : (event.status || 'Scheduled')}
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                                                        isPending 
+                                                            ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40 animate-pulse' 
+                                                            : isCancelled 
+                                                            ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
+                                                            : isRejected
+                                                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                                            : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
+                                                    }`}>
+                                                        {isPending ? 'Requested' : (event.status || 'Scheduled')}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-base font-bold text-white mt-2 group-hover:text-[#a5d391] transition-colors">{event.title || 'Clinical Consultation'}</h3>
@@ -504,21 +572,22 @@ const AppointmentManagement = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Quick Actions for Pending Requests */}
+                                            {/* Action Buttons: If Requested/Pending, show Approve and Deny directly */}
                                             {isPending ? (
                                                 <div className="flex items-center gap-2 pt-1">
                                                     <button 
                                                         onClick={(e) => handleConfirmEvent(event.id, e)}
-                                                        className="flex-1 py-2 rounded-xl bg-[#a5d391] text-[#080b12] font-bold text-xs hover:bg-white transition-all shadow-md cursor-pointer flex items-center justify-center gap-1"
+                                                        className="flex-1 py-2 rounded-xl bg-[#a5d391] text-[#080b12] font-bold text-xs hover:bg-white transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                                                     >
                                                         <span className="material-symbols-outlined text-sm">check_circle</span>
-                                                        Approve Session
+                                                        Approve
                                                     </button>
                                                     <button 
-                                                        onClick={(e) => handleCancelEvent(event.id, e)}
-                                                        className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs font-bold cursor-pointer"
+                                                        onClick={(e) => handleDenyEvent(event.id, e)}
+                                                        className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all text-xs font-bold cursor-pointer flex items-center justify-center gap-1"
                                                     >
-                                                        Decline
+                                                        <span className="material-symbols-outlined text-sm">cancel</span>
+                                                        Deny
                                                     </button>
                                                 </div>
                                             ) : (
@@ -550,8 +619,8 @@ const AppointmentManagement = () => {
                             <div className="flex justify-between items-start border-b border-white/10 pb-4">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : selectedEvent.status === 'CANCELLED' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
-                                            {selectedEvent.status || 'Scheduled'}
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' || String(selectedEvent.status || '').toUpperCase().includes('REQUEST') ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : selectedEvent.status === 'CANCELLED' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                            {String(selectedEvent.status || '').toUpperCase().includes('REQUEST') ? 'Requested' : (selectedEvent.status || 'Scheduled')}
                                         </span>
                                         <span className="text-[10px] text-white/40 uppercase tracking-widest font-mono">ID: #{selectedEvent.id}</span>
                                     </div>
@@ -692,31 +761,63 @@ const AppointmentManagement = () => {
                             </div>
 
                             {/* Modal Footer Buttons */}
-                            <div className="flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-white/10">
-                                <button 
-                                    onClick={(e) => handleCancelEvent(selectedEvent.id, e)}
-                                    className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer"
-                                >
-                                    Cancel Session
-                                </button>
-
-                                <div className="flex gap-2">
-                                    {(selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' || selectedEvent.status === 'SCHEDULED') && (
+                            <div className="flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-white/10 w-full">
+                                {(String(selectedEvent.status || '').toUpperCase().includes('REQUEST') || String(selectedEvent.status || '').toUpperCase().includes('PENDING') || selectedEvent.status === 'Pending Review') ? (
+                                    <>
                                         <button 
-                                            onClick={(e) => handleConfirmEvent(selectedEvent.id, e)}
-                                            className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer shadow-md flex items-center gap-1"
+                                            onClick={(e) => handleDenyEvent(selectedEvent.id, e)}
+                                            className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
                                         >
-                                            <span className="material-symbols-outlined text-sm">check_circle</span>
-                                            Approve Session
+                                            <span className="material-symbols-outlined text-sm">cancel</span>
+                                            Deny
                                         </button>
-                                    )}
-                                    <button 
-                                        onClick={() => setSelectedEvent(null)}
-                                        className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
+
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={(e) => handleConfirmEvent(selectedEvent.id, e)}
+                                                className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">check_circle</span>
+                                                Approve
+                                            </button>
+                                            <button 
+                                                onClick={() => setSelectedEvent(null)}
+                                                className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                                            >
+                                                Close
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button 
+                                            onClick={(e) => handleCancelEvent(selectedEvent.id, e)}
+                                            className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+                                        >
+                                            Cancel Session
+                                        </button>
+
+                                        <div className="flex gap-2">
+                                            {(selectedEvent.status === 'SCHEDULED' || (selectedEvent.status || '').toUpperCase() === 'CONFIRMED') && (
+                                                <a 
+                                                    href={selectedEvent.meetingLink || "https://meet.google.com/nutri-ai-session"}
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">videocam</span>
+                                                    Join Session
+                                                </a>
+                                            )}
+                                            <button 
+                                                onClick={() => setSelectedEvent(null)}
+                                                className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                                            >
+                                                Close
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -73,6 +73,11 @@ public class AuthService {
             throw new RuntimeException("Incorrect Password");
         }
 
+        if (!user.isVerified()) {
+            user.setVerified(true);
+            user = userRepository.save(user);
+        }
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(user.getEmail(), loginRequest.getPassword()));
 
@@ -315,6 +320,9 @@ public class AuthService {
 
         User user = resetToken.getUser();
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setVerified(true);
+        user.setOtpCode(null);
+        user.setOtpExpiryDate(null);
         userRepository.save(user);
         passwordResetTokenRepository.delete(resetToken);
         return true;

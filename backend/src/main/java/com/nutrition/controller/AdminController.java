@@ -185,8 +185,20 @@ public class AdminController {
         }
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setVerified(true);
+        user.setOtpCode(null);
+        user.setOtpExpiryDate(null);
         userRepository.save(user);
-        return ResponseEntity.ok(Map.of("message", "Password reset successfully for user " + user.getEmail()));
+        return ResponseEntity.ok(Map.of("message", "Password reset successfully for user " + user.getEmail() + ". Account is verified and enabled."));
+    }
+
+    @PutMapping("/users/{id}/verify")
+    public ResponseEntity<User> verifyUser(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setVerified(true);
+        user.setOtpCode(null);
+        user.setOtpExpiryDate(null);
+        return ResponseEntity.ok(userRepository.save(user));
     }
 
     @DeleteMapping("/users/{id}")

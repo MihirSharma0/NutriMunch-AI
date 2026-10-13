@@ -19,8 +19,7 @@ const NutritionistDashboardLayout = () => {
     const navItems = [
         { name: "Command Center", path: "/dashboard/nutritionist", icon: "monitoring" },
         { name: "Clinical Profile", path: "/dashboard/nutritionist/profile", icon: "badge" },
-        { name: "User Roster", path: "/dashboard/nutritionist/clients", icon: "group" },
-        { name: "Protocol Builder", path: "/dashboard/nutritionist/builder", icon: "science" },
+        { name: "Diet Builder", path: "/dashboard/nutritionist/builder", icon: "restaurant_menu" },
         { name: "Schedule & Bookings", path: "/dashboard/nutritionist/schedule", icon: "event" },
         { name: "Clinical Reports", path: "/dashboard/nutritionist/reports", icon: "lab_profile" },
         { name: "Stories & Ratings", path: "/testimonials", icon: "rate_review" },
