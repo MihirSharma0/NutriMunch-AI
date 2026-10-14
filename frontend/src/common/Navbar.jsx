@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { API_BASE_URL } from '../api/axios';
+import ConsultationChatModal from '../components/ConsultationChatModal';
 
 export const getNavItemsForRole = (user) => {
     const aiSubMenu = [
@@ -105,6 +106,7 @@ const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const [isChatModalOpen, setIsChatModalOpen] = useState(false);
 
     const dropdownRef = useRef(null);
     const notificationRef = useRef(null);
@@ -290,16 +292,7 @@ const Navbar = () => {
             const updatedNotifs = storedNotifs.filter(n => String(n.id) !== stringId);
             localStorage.setItem('nutrimunch_user_notifications', JSON.stringify(updatedNotifs));
 
-            const storedDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
-            const updatedDirectives = storedDirectives.filter(n => String(n.id) !== stringId);
-            localStorage.setItem('nutrimunch_clinical_directives', JSON.stringify(updatedDirectives));
-
             window.dispatchEvent(new Event('nutrimunch_notification_added'));
-            try {
-                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
-                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_DELETED', id: stringId });
-                bc.close();
-            } catch (err) {}
 
             if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
                 fetch(`${API_BASE_URL}/notifications/${id}`, {
@@ -319,14 +312,8 @@ const Navbar = () => {
             localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify(combinedDeleted));
 
             localStorage.setItem('nutrimunch_user_notifications', '[]');
-            localStorage.setItem('nutrimunch_clinical_directives', '[]');
 
             window.dispatchEvent(new Event('nutrimunch_notification_added'));
-            try {
-                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
-                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_CLEAR_ALL' });
-                bc.close();
-            } catch (err) {}
 
             if (token) {
                 fetch(`${API_BASE_URL}/notifications/clear-all`, {
@@ -445,6 +432,19 @@ const Navbar = () => {
                     {/* Right User Actions & Notification Bell */}
                     <div className="hidden md:flex items-center gap-2 sm:gap-3.5 ml-2 sm:ml-4 shrink-0">
                         
+                        {/* Consultation Chat Button */}
+                        {user && (
+                            <button
+                                type="button"
+                                onClick={() => setIsChatModalOpen(true)}
+                                aria-label="Clinical Consultation Chat"
+                                className="relative w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 flex items-center justify-center text-white/80 hover:text-[#a5d391] transition-all cursor-pointer shadow-sm"
+                                title="Consultation Chat with Dietitian"
+                            >
+                                <span className="material-symbols-outlined text-lg">forum</span>
+                            </button>
+                        )}
+
                         {/* Notification Bell Button (Placed BEFORE User Label) */}
                         <div ref={notificationRef} className="relative">
                             <button
@@ -693,11 +693,15 @@ const Navbar = () => {
                 <div className="fixed bottom-6 right-6 z-[99999] max-w-md w-full animate-bounce-in shadow-2xl pointer-events-auto">
                     <div className="bg-[#121f18] border border-[#a5d391]/40 rounded-2xl p-4 shadow-2xl shadow-emerald-950/90 backdrop-blur-xl flex items-start gap-4 pointer-events-auto">
                         <div className="w-10 h-10 rounded-xl bg-[#a5d391]/20 flex items-center justify-center shrink-0 border border-[#a5d391]/30">
-                            <span className="material-symbols-outlined text-[#a5d391] animate-pulse text-xl">health_and_safety</span>
+                            <span className="material-symbols-outlined text-[#a5d391] animate-pulse text-xl">
+                                {toastNotification.type === 'CONSULTATION_CHAT' ? 'forum' : 'notifications_active'}
+                            </span>
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-[#a5d391] bg-[#a5d391]/10 px-2 py-0.5 rounded-full border border-[#a5d391]/20">Live Directive</span>
+                                <span className="text-[10px] font-black uppercase tracking-wider text-[#a5d391] bg-[#a5d391]/10 px-2 py-0.5 rounded-full border border-[#a5d391]/20">
+                                    {toastNotification.type === 'CONSULTATION_CHAT' ? 'Consultation Chat' : 'Notification'}
+                                </span>
                                 <button 
                                     type="button"
                                     onClick={handleDismissToast} 
@@ -707,17 +711,31 @@ const Navbar = () => {
                                     <span className="material-symbols-outlined text-sm">close</span>
                                 </button>
                             </div>
-                            <h4 className="text-sm font-bold text-white truncate">{toastNotification.title || 'Clinical Directive Received'}</h4>
+                            <h4 className="text-sm font-bold text-white truncate">{toastNotification.title || 'Live Update Received'}</h4>
                             <p className="text-xs text-white/70 line-clamp-2 mt-0.5">{toastNotification.message}</p>
                             <div className="mt-3 flex items-center gap-3">
-                                <Link
-                                    to={toastNotification.path || "/diet-plans"}
-                                    onClick={handleDismissToast}
-                                    className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
-                                >
-                                    <span>View Directive</span>
-                                    <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </Link>
+                                {toastNotification.type === 'CONSULTATION_CHAT' ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            handleDismissToast();
+                                            setIsChatModalOpen(true);
+                                        }}
+                                        className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
+                                    >
+                                        <span>Open Consultation Chat</span>
+                                        <span className="material-symbols-outlined text-xs">forum</span>
+                                    </button>
+                                ) : (
+                                    <Link
+                                        to={toastNotification.path || "/diet-plans"}
+                                        onClick={handleDismissToast}
+                                        className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
+                                    >
+                                        <span>View Details</span>
+                                        <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                    </Link>
+                                )}
                                 <button
                                     type="button"
                                     onClick={handleDismissToast}
@@ -729,6 +747,15 @@ const Navbar = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Consultation Chat Modal */}
+            {isChatModalOpen && (
+                <ConsultationChatModal
+                    isOpen={isChatModalOpen}
+                    onClose={() => setIsChatModalOpen(false)}
+                    currentUser={user}
+                />
             )}
         </div>
     );

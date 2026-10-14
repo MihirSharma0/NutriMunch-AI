@@ -150,6 +150,91 @@ const DietitianHome = () => {
                     </div>
                 </div>
             </div>
+
+            {/* FORMULATED DIET PROTOCOLS HISTORY VAULT SECTION */}
+            <div className="mt-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#a5d391] text-xl">history_edu</span>
+                            <h2 className="text-xl font-bold font-hero-display text-white">Formulated Diet Protocols History</h2>
+                        </div>
+                        <p className="text-xs text-white/50 mt-1">
+                            Recent general public protocols and exclusive patient diet formulations created from your clinical console.
+                        </p>
+                    </div>
+
+                    <a
+                        href="/dashboard/nutritionist/builder"
+                        className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-1.5 shrink-0"
+                    >
+                        <span>Open Diet Builder Vault</span>
+                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </a>
+                </div>
+
+                {/* History Items Grid */}
+                {(() => {
+                    let history = [];
+                    try {
+                        const raw = localStorage.getItem('nutrimunch_diet_plans_history');
+                        if (raw) history = JSON.parse(raw);
+                    } catch (e) {}
+
+                    if (!history || history.length === 0) {
+                        history = [
+                            { id: "h1", title: "Clinical Metabolic Optimization Protocol", scope: "GENERAL", targetUserName: "All Users", calories: 2100, protein: 160, carbs: 150, fats: 70, waterLiters: 3.0, dietType: "High-Protein Metabolic" },
+                            { id: "h2", title: "Ketogenic Glycemic Reset Protocol", scope: "GENERAL", targetUserName: "All Users", calories: 2050, protein: 140, carbs: 35, fats: 150, waterLiters: 3.2, dietType: "Keto Glycemic Reset" },
+                            { id: "h3", title: "Exclusive Protocol for David Miller", scope: "EXCLUSIVE", targetUserName: "David Miller", calories: 2200, protein: 165, carbs: 160, fats: 68, waterLiters: 3.2, dietType: "High-Protein Metabolic" }
+                        ];
+                    }
+
+                    return (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {history.slice(0, 3).map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="p-5 rounded-2xl bg-[#080b12]/80 border border-white/10 hover:border-[#a5d391]/40 transition-all flex flex-col justify-between space-y-4 group"
+                                >
+                                    <div>
+                                        <div className="flex justify-between items-start gap-2 mb-2">
+                                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                                                item.scope === 'GENERAL'
+                                                    ? 'bg-[#a5d391]/15 text-[#a5d391] border-[#a5d391]/30'
+                                                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                            }`}>
+                                                {item.scope === 'GENERAL' ? 'General Protocol' : `Exclusive: ${item.targetUserName || 'Patient'}`}
+                                            </span>
+                                            <span className="text-[10px] text-white/30 font-mono">#{item.id.slice(-6)}</span>
+                                        </div>
+                                        <h3 className="font-bold text-sm text-white group-hover:text-[#a5d391] transition-colors truncate">
+                                            {item.title || item.planTitle || 'Custom Protocol'}
+                                        </h3>
+                                        <span className="text-[11px] text-white/50 block mt-0.5">
+                                            {item.dietType || 'Clinical Formulation'}
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-1.5 p-2 bg-white/5 rounded-xl text-center text-[10px]">
+                                        <div><span className="text-white/40 block text-[8px] uppercase">Cal</span><strong className="text-white">{item.calories}</strong></div>
+                                        <div><span className="text-white/40 block text-[8px] uppercase">Prot</span><strong className="text-[#a5d391]">{item.protein}g</strong></div>
+                                        <div><span className="text-white/40 block text-[8px] uppercase">Carb</span><strong className="text-cyan-300">{item.carbs}g</strong></div>
+                                        <div><span className="text-white/40 block text-[8px] uppercase">Fat</span><strong className="text-amber-300">{item.fats}g</strong></div>
+                                    </div>
+
+                                    <a
+                                        href="/dashboard/nutritionist/builder"
+                                        className="text-xs font-bold text-[#a5d391] hover:text-white transition-colors flex items-center justify-between pt-2 border-t border-white/5"
+                                    >
+                                        <span>View in Builder Vault</span>
+                                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
+            </div>
         </div>
     );
 };

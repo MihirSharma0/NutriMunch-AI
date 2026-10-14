@@ -29,6 +29,7 @@ public class AdminController {
     private final NutritionistProfileRepository nutritionistProfileRepository;
     private final UserProfileRepository userProfileRepository;
     private final UserProfileService userProfileService;
+    private final com.nutrition.repository.DietPlanRepository dietPlanRepository;
     private final SystemSettingService systemSettingService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
@@ -115,10 +116,19 @@ public class AdminController {
 
     @GetMapping({"/nutritionists", "/dietitians"})
     public ResponseEntity<List<Map<String, Object>>> getAllNutritionists() {
-        List<User> nutritionistUsers = userRepository.findByRole(Role.NUTRITIONIST);
-        List<NutritionistProfile> profiles = nutritionistProfileRepository.findAll();
+        // Automatically cleanup any stale nutritionist profiles for users whose role is no longer NUTRITIONIST
+        try {
+            List<NutritionistProfile> allProfiles = nutritionistProfileRepository.findAll();
+            for (NutritionistProfile p : allProfiles) {
+                if (p.getUser() == null || p.getUser().getRole() != Role.NUTRITIONIST) {
+                    nutritionistProfileRepository.delete(p);
+                }
+            }
+        } catch (Exception ignored) {}
 
-        Map<Long, Map<String, Object>> mapByUserId = new HashMap<>();
+        // STRICT: Only fetch users whose CURRENT role in the database is Role.NUTRITIONIST
+        List<User> nutritionistUsers = userRepository.findByRole(Role.NUTRITIONIST);
+        List<Map<String, Object>> resultList = new ArrayList<>();
 
         for (User u : nutritionistUsers) {
             Map<String, Object> map = new HashMap<>();
@@ -127,29 +137,16 @@ public class AdminController {
             map.put("firstName", u.getFirstName());
             map.put("lastName", u.getLastName());
             map.put("email", u.getEmail());
-            map.put("verified", u.isVerified());
+            map.put("role", u.getRole() != null ? u.getRole().name() : "NUTRITIONIST");
+            map.put("verified", false);
             map.put("credentials", "Certified Clinical Dietitian");
             map.put("specialization", "Clinical & Medical Nutrition");
             map.put("licenseNumber", "RD-" + u.getId() + "84920-IN");
             map.put("approvalStatus", "PENDING");
             map.put("isApproved", false);
-            mapByUserId.put(u.getId(), map);
-        }
 
-        for (NutritionistProfile profile : profiles) {
-            User u = profile.getUser();
-            if (u != null) {
-                Map<String, Object> map = mapByUserId.computeIfAbsent(u.getId(), id -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("id", u.getId());
-                    m.put("userId", u.getId());
-                    m.put("firstName", u.getFirstName());
-                    m.put("lastName", u.getLastName());
-                    m.put("email", u.getEmail());
-                    m.put("verified", u.isVerified());
-                    return m;
-                });
-
+            NutritionistProfile profile = nutritionistProfileRepository.findByUserId(u.getId()).orElse(null);
+            if (profile != null) {
                 if (profile.getCredentials() != null && !profile.getCredentials().isBlank()) {
                     map.put("credentials", profile.getCredentials());
                 }
@@ -163,17 +160,40 @@ public class AdminController {
                 map.put("approvalStatus", status);
                 boolean approved = "APPROVED".equalsIgnoreCase(status) || "VERIFIED".equalsIgnoreCase(status);
                 map.put("isApproved", approved);
-                map.put("verified", approved);
+                map.put("verified", approved && u.isVerified());
             }
+            resultList.add(map);
         }
 
-        return ResponseEntity.ok(new ArrayList<>(mapByUserId.values()));
+        return ResponseEntity.ok(resultList);
     }
     
     @PutMapping("/users/{id}/role")
     public ResponseEntity<User> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        user.setRole(Role.valueOf(body.get("role").toUpperCase()));
+        Role newRole = Role.valueOf(body.get("role").toUpperCase());
+        user.setRole(newRole);
+
+        if (newRole == Role.NUTRITIONIST) {
+            // When role is changed to dietitian, their license state should by default be in pending review stage,
+            // like a newly formed account for that particular role
+            NutritionistProfile profile = nutritionistProfileRepository.findByUserId(id).orElseGet(() -> {
+                NutritionistProfile p = new NutritionistProfile();
+                p.setUser(user);
+                return p;
+            });
+            profile.setCredentials("Certified Clinical Dietitian");
+            profile.setSpecialization("Clinical & Medical Nutrition");
+            profile.setLicenseNumber("RD-" + user.getId() + "84920-IN");
+            profile.setApprovalStatus("PENDING");
+            nutritionistProfileRepository.save(profile);
+            user.setVerified(false);
+        } else {
+            // When role is changed away from NUTRITIONIST to USER or ADMIN,
+            // completely remove their dietitian profile so they no longer appear in dietitian verification
+            nutritionistProfileRepository.findByUserId(id).ifPresent(nutritionistProfileRepository::delete);
+        }
+
         return ResponseEntity.ok(userRepository.save(user));
     }
 
@@ -203,6 +223,18 @@ public class AdminController {
 
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElse(null);
+        String userEmail = user != null ? user.getEmail() : null;
+
+        // If any dietitian account is deleted, all of their diet plans and settings are deleted as well
+        try {
+            dietPlanRepository.deleteByUserId(id);
+        } catch (Exception ignored) {}
+
+        if (userEmail != null) {
+            DietPlanController.purgePlansByAuthor(id, userEmail);
+        }
+
         nutritionistProfileRepository.findByUserId(id).ifPresent(nutritionistProfileRepository::delete);
         userProfileRepository.findByUserId(id).ifPresent(userProfileRepository::delete);
         userRepository.deleteById(id);

@@ -18,6 +18,7 @@ const AdminDashboardLayout = () => {
 
     const navItems = [
         { name: "System Core", path: "/dashboard/admin", icon: "dashboard" },
+        { name: "Diet Protocols Vault", path: "/dashboard/admin/diet-plans", icon: "menu_book" },
         { name: "User Management", path: "/dashboard/admin/users", icon: "manage_accounts" },
         { name: "SQL Console", path: "/dashboard/admin/sql", icon: "terminal" },
         { name: "Nutritionist Nodes", path: "/dashboard/admin/dietitians", icon: "badge" },

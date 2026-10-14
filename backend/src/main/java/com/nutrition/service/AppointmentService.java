@@ -51,7 +51,7 @@ public class AppointmentService {
         if (dietitians.isEmpty()) {
             List<NutritionistProfile> profiles = nutritionistProfileRepository.findAll();
             for (NutritionistProfile p : profiles) {
-                if (p.getUser() != null && !dietitians.contains(p.getUser())) {
+                if (p.getUser() != null && p.getUser().getRole() == Role.NUTRITIONIST && !dietitians.contains(p.getUser())) {
                     dietitians.add(p.getUser());
                 }
             }

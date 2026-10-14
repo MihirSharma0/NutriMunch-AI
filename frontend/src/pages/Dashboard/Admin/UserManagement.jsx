@@ -33,10 +33,59 @@ const UserManagement = () => {
     };
 
     const deleteUser = async (id) => {
+        const targetUser = users.find(u => u.id === id);
         if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
             try {
                 await api.delete(`/admin/users/${id}`);
                 setUsers(users.filter(u => u.id !== id));
+
+                // If user/dietitian is deleted, purge all their associated diet plans & local caches
+                if (targetUser) {
+                    const uEmail = (targetUser.email || '').toLowerCase().trim();
+                    const uIdStr = String(id);
+
+                    try {
+                        const rawHistory = localStorage.getItem('nutrimunch_diet_plans_history');
+                        if (rawHistory) {
+                            const parsed = JSON.parse(rawHistory);
+                            const cleaned = parsed.filter(p => {
+                                const pTarget = String(p.targetUserId || '');
+                                const pDietitianId = String(p.dietitianId || '');
+                                const pAuthor = (p.author || p.dietitianName || '').toLowerCase().trim();
+                                const pEmail = (p.dietitianEmail || '').toLowerCase().trim();
+                                return pTarget !== uIdStr && pDietitianId !== uIdStr && pEmail !== uEmail && !pAuthor.includes(uEmail);
+                            });
+                            localStorage.setItem('nutrimunch_diet_plans_history', JSON.stringify(cleaned));
+                        }
+                    } catch (e) {}
+
+                    try {
+                        const rawExclusive = localStorage.getItem('nutrimunch_exclusive_diet_plans');
+                        if (rawExclusive) {
+                            const parsed = JSON.parse(rawExclusive);
+                            delete parsed[uIdStr];
+                            if (uEmail) delete parsed[uEmail];
+                            localStorage.setItem('nutrimunch_exclusive_diet_plans', JSON.stringify(parsed));
+                        }
+                    } catch (e) {}
+
+                    try {
+                        const rawGen = localStorage.getItem('nutrimunch_general_diet_plan');
+                        if (rawGen) {
+                            const gen = JSON.parse(rawGen);
+                            const gEmail = (gen.dietitianEmail || '').toLowerCase().trim();
+                            const gAuthor = (gen.author || gen.dietitianName || '').toLowerCase().trim();
+                            if (gEmail === uEmail || gAuthor.includes(uEmail)) {
+                                localStorage.removeItem('nutrimunch_general_diet_plan');
+                            }
+                        }
+                    } catch (e) {}
+
+                    window.dispatchEvent(new Event('nutrimunch_diet_history_updated'));
+                    window.dispatchEvent(new Event('nutrimunch_diet_plan_updated'));
+                    window.dispatchEvent(new Event('nutrimunch_role_updated'));
+                    window.dispatchEvent(new Event('storage'));
+                }
             } catch (error) {
                 console.error("Error deleting user", error);
             }
@@ -46,6 +95,25 @@ const UserManagement = () => {
     const changeRole = async (id, newRole) => {
         try {
             await api.put(`/admin/users/${id}/role`, { role: newRole });
+            
+            // 1. Instantly update local table state
+            setUsers(prev => prev.map(u => u.id === id ? { ...u, role: newRole } : u));
+
+            // 2. If the current logged-in user in localStorage had their role changed, update it so all navigation/permissions reflect immediately
+            try {
+                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                const targetUser = users.find(u => u.id === id);
+                if (storedUser && (String(storedUser.id) === String(id) || (targetUser && storedUser.email?.toLowerCase() === targetUser.email?.toLowerCase()))) {
+                    storedUser.role = newRole;
+                    localStorage.setItem('user', JSON.stringify(storedUser));
+                    window.dispatchEvent(new Event('nutrimunch_profile_updated'));
+                }
+            } catch (e) {}
+
+            // 3. Dispatch global events so DietitianManagement, Navbar, Sidebar, etc. immediately re-fetch or update
+            window.dispatchEvent(new Event('nutrimunch_role_updated'));
+            window.dispatchEvent(new Event('storage'));
+
             fetchUsers();
         } catch (error) {
             console.error("Error updating role", error);

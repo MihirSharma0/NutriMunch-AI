@@ -10,4 +10,5 @@ public interface DietPlanRepository extends JpaRepository<DietPlan, Long> {
     List<DietPlan> findByUserIdOrderByGeneratedDateDesc(Long userId);
     Optional<DietPlan> findFirstByUserIdOrderByGeneratedDateDesc(Long userId);
     Optional<DietPlan> findByUserIdAndGeneratedDate(Long userId, LocalDate generatedDate);
+    void deleteByUserId(Long userId);
 }

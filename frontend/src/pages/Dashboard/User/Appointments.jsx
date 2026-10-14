@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import { API_BASE_URL } from '../../../api/axios';
+import ConsultationChatModal from '../../../components/ConsultationChatModal';
 
 const Appointments = () => {
     const { user, token } = useContext(AuthContext);
@@ -12,6 +13,7 @@ const Appointments = () => {
     const [selectedAppointment, setSelectedAppointment] = useState(null);
     const [notification, setNotification] = useState(null);
     const [historyFilter, setHistoryFilter] = useState('ALL');
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
     const [bookingForm, setBookingForm] = useState({
         dietitianId: '',
@@ -502,6 +504,13 @@ const Appointments = () => {
                                 </p>
 
                                 <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsChatOpen(true)}
+                                        className="bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.2)] cursor-pointer"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">forum</span> Chat with Dietitian
+                                    </button>
                                     <a 
                                         href={featuredUpcoming.meetingLink || "https://meet.google.com/nutri-ai-session"} 
                                         target="_blank" 
@@ -1077,6 +1086,15 @@ const Appointments = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Live Consultation Chat Modal */}
+            {isChatOpen && (
+                <ConsultationChatModal
+                    isOpen={isChatOpen}
+                    onClose={() => setIsChatOpen(false)}
+                    currentUser={user}
+                />
             )}
         </div>
     );

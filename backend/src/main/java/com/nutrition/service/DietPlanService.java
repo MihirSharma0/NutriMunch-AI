@@ -44,6 +44,19 @@ public class DietPlanService {
         return mapToDto(dietPlanRepository.save(plan));
     }
 
+    public void deleteDietPlan(Long id) {
+        if (id != null && dietPlanRepository.existsById(id)) {
+            dietPlanRepository.deleteById(id);
+        }
+    }
+
+    public List<DietPlanDto> getAllDietPlans() {
+        return dietPlanRepository.findAll()
+            .stream()
+            .map(this::mapToDto)
+            .collect(Collectors.toList());
+    }
+
     private DietPlanDto mapToDto(DietPlan plan) {
         DietPlanDto dto = new DietPlanDto();
         dto.setId(plan.getId());

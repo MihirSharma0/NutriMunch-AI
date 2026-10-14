@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
 import { API_BASE_URL } from '../../../api/axios';
+import ConsultationChatModal from '../../../components/ConsultationChatModal';
 
 const AppointmentManagement = () => {
     const { user, token } = useContext(AuthContext);
@@ -15,71 +16,19 @@ const AppointmentManagement = () => {
     const [clientsList, setClientsList] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const [modalDirectiveText, setModalDirectiveText] = useState('');
-    const [isSendingModalDirective, setIsSendingModalDirective] = useState(false);
-    const [modalDirectiveSuccess, setModalDirectiveSuccess] = useState('');
+    // Consultation Chat Modal
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatTargetPatient, setChatTargetPatient] = useState(null);
 
-    const handleSendModalDirective = async (patientObj) => {
-        if (!modalDirectiveText.trim() || !selectedEvent) return;
-        setIsSendingModalDirective(true);
-        const dietitianName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Certified Dietitian');
-        try {
-            const payload = {
-                userId: selectedEvent.userId || patientObj?.userId || patientObj?.id,
-                userEmail: selectedEvent.userEmail || patientObj?.email,
-                title: `Clinical Directive from Dietitian ${dietitianName}`,
-                message: modalDirectiveText.trim(),
-                type: 'CLINICAL_DIRECTIVE',
-                icon: 'health_and_safety',
-                path: '/progress'
-            };
-
-            const newNotif = {
-                id: `directive_${Date.now()}`,
-                title: payload.title,
-                message: payload.message,
-                time: 'Just now',
-                icon: 'health_and_safety',
-                path: '/progress',
-                targetEmail: payload.userEmail || '',
-                targetUserId: payload.userId || '',
-                read: false
-            };
-
-            try {
-                const existingNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
-                localStorage.setItem('nutrimunch_user_notifications', JSON.stringify([newNotif, ...existingNotifs]));
-
-                const existingDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
-                localStorage.setItem('nutrimunch_clinical_directives', JSON.stringify([newNotif, ...existingDirectives]));
-
-                window.dispatchEvent(new Event('nutrimunch_notification_added'));
-                window.dispatchEvent(new Event('storage'));
-
-                const bc = new BroadcastChannel('nutrimunch_clinical_channel');
-                bc.postMessage({ type: 'CLINICAL_DIRECTIVE_SENT', payload: newNotif });
-                bc.close();
-            } catch (e) {}
-
-            const res = await fetch(`${API_BASE_URL}/notifications/send`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                setModalDirectiveSuccess('Directive published live to patient dashboard!');
-                setModalDirectiveText('');
-                setTimeout(() => setModalDirectiveSuccess(''), 4000);
-            }
-        } catch (err) {
-            console.error('Failed sending directive from modal:', err);
-        } finally {
-            setIsSendingModalDirective(false);
-        }
+    const handleOpenChatFromAppointment = (patientObj) => {
+        const target = {
+            id: selectedEvent?.userId || patientObj?.userId || patientObj?.id || '442',
+            userId: selectedEvent?.userId || patientObj?.userId || patientObj?.id || '442',
+            name: selectedEvent?.patientName || patientObj?.name || 'Patient',
+            email: selectedEvent?.userEmail || patientObj?.email || ''
+        };
+        setChatTargetPatient(target);
+        setIsChatOpen(true);
     };
 
     const [newSlot, setNewSlot] = useState({
@@ -612,7 +561,7 @@ const AppointmentManagement = () => {
                 ) || {};
 
                 return (
-                    <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-20 sm:pt-24 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+                    <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
                         <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-2xl w-full relative shadow-2xl space-y-6 max-h-[88vh] overflow-y-auto my-auto">
                             
                             {/* Modal Header */}
@@ -723,40 +672,24 @@ const AppointmentManagement = () => {
                                     </p>
                                 </div>
 
-                                {/* Send Live Clinical Directive Box */}
-                                <div className="bg-[#a5d391]/10 border border-[#a5d391]/30 rounded-2xl p-4 space-y-3">
-                                    <div className="flex items-center justify-between">
+                                {/* Consultation Chat Box */}
+                                <div className="bg-[#a5d391]/10 border border-[#a5d391]/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    <div className="space-y-0.5">
                                         <div className="text-xs font-bold text-[#a5d391] flex items-center gap-1.5 uppercase tracking-widest">
-                                            <span className="material-symbols-outlined text-base">health_and_safety</span>
-                                            Issue Clinical Directive to Patient
+                                            <span className="material-symbols-outlined text-base">forum</span>
+                                            <span>Clinical Consultation Chat</span>
                                         </div>
-                                        <span className="text-[10px] text-[#a5d391]/70 font-semibold">Real-time Dashboard Sync</span>
+                                        <p className="text-[11px] text-white/60">Initiate live two-way consultation messaging directly with this patient.</p>
                                     </div>
 
-                                    {modalDirectiveSuccess && (
-                                        <div className="p-2.5 rounded-xl bg-[#a5d391]/20 border border-[#a5d391]/40 text-[#a5d391] text-xs font-bold flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-sm">check_circle</span>
-                                            {modalDirectiveSuccess}
-                                        </div>
-                                    )}
-
-                                    <div className="flex gap-2">
-                                        <input 
-                                            type="text"
-                                            value={modalDirectiveText}
-                                            onChange={(e) => setModalDirectiveText(e.target.value)}
-                                            placeholder="e.g. Hydration Target: 3.0L daily. Follow 140g protein macro distribution & log daily fluid intake."
-                                            className="flex-1 bg-black/60 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#a5d391]"
-                                        />
-                                        <button 
-                                            onClick={() => handleSendModalDirective(patient)}
-                                            disabled={isSendingModalDirective || !modalDirectiveText.trim()}
-                                            className="px-4 py-2 rounded-xl bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all disabled:opacity-50 cursor-pointer shadow-md flex items-center gap-1"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">send</span>
-                                            Publish Directive
-                                        </button>
-                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={() => handleOpenChatFromAppointment(patient)}
+                                        className="px-4 py-2.5 rounded-xl bg-[#a5d391] hover:bg-white text-black font-bold text-xs transition-all cursor-pointer shadow-md flex items-center gap-1.5 shrink-0"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">chat</span>
+                                        <span>Open Consultation Chat</span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -939,6 +872,15 @@ const AppointmentManagement = () => {
                         </form>
                     </div>
                 </div>
+            )}
+            {/* Consultation Chat Modal */}
+            {isChatOpen && (
+                <ConsultationChatModal
+                    isOpen={isChatOpen}
+                    onClose={() => setIsChatOpen(false)}
+                    currentUser={user}
+                    targetPatient={chatTargetPatient}
+                />
             )}
         </div>
     );

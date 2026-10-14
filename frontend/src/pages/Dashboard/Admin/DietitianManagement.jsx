@@ -9,6 +9,12 @@ const DietitianManagement = () => {
 
     useEffect(() => {
         fetchDietitians();
+        window.addEventListener('nutrimunch_role_updated', fetchDietitians);
+        window.addEventListener('storage', fetchDietitians);
+        return () => {
+            window.removeEventListener('nutrimunch_role_updated', fetchDietitians);
+            window.removeEventListener('storage', fetchDietitians);
+        };
     }, []);
 
     const showToast = (msg) => {
@@ -21,7 +27,12 @@ const DietitianManagement = () => {
         try {
             const response = await api.get('/admin/dietitians');
             if (response.data && Array.isArray(response.data)) {
-                setDietitians(response.data);
+                // STRICT CHECK: Disallow non-nutritionists (e.g. if changed to USER)
+                const strictlyNutritionists = response.data.filter(d => {
+                    const r = d.role ? String(d.role).toUpperCase().replace('ROLE_', '') : 'NUTRITIONIST';
+                    return r === 'NUTRITIONIST' || r === 'DIETITIAN';
+                });
+                setDietitians(strictlyNutritionists);
             } else {
                 await fetchFallbackUsers();
             }
@@ -85,11 +96,60 @@ const DietitianManagement = () => {
     };
 
     const deleteDietitian = async (id) => {
+        const targetDietitian = dietitians.find(d => d.id === id);
         if (window.confirm("Are you sure you want to delete this nutritionist account?")) {
             try {
                 await api.delete(`/admin/users/${id}`);
                 setDietitians(dietitians.filter(d => d.id !== id));
                 showToast('Nutritionist account removed from system.');
+
+                // Purge associated diet plans & local caches
+                if (targetDietitian) {
+                    const uEmail = (targetDietitian.email || '').toLowerCase().trim();
+                    const uIdStr = String(id);
+
+                    try {
+                        const rawHistory = localStorage.getItem('nutrimunch_diet_plans_history');
+                        if (rawHistory) {
+                            const parsed = JSON.parse(rawHistory);
+                            const cleaned = parsed.filter(p => {
+                                const pTarget = String(p.targetUserId || '');
+                                const pDietitianId = String(p.dietitianId || '');
+                                const pAuthor = (p.author || p.dietitianName || '').toLowerCase().trim();
+                                const pEmail = (p.dietitianEmail || '').toLowerCase().trim();
+                                return pTarget !== uIdStr && pDietitianId !== uIdStr && pEmail !== uEmail && !pAuthor.includes(uEmail);
+                            });
+                            localStorage.setItem('nutrimunch_diet_plans_history', JSON.stringify(cleaned));
+                        }
+                    } catch (e) {}
+
+                    try {
+                        const rawExclusive = localStorage.getItem('nutrimunch_exclusive_diet_plans');
+                        if (rawExclusive) {
+                            const parsed = JSON.parse(rawExclusive);
+                            delete parsed[uIdStr];
+                            if (uEmail) delete parsed[uEmail];
+                            localStorage.setItem('nutrimunch_exclusive_diet_plans', JSON.stringify(parsed));
+                        }
+                    } catch (e) {}
+
+                    try {
+                        const rawGen = localStorage.getItem('nutrimunch_general_diet_plan');
+                        if (rawGen) {
+                            const gen = JSON.parse(rawGen);
+                            const gEmail = (gen.dietitianEmail || '').toLowerCase().trim();
+                            const gAuthor = (gen.author || gen.dietitianName || '').toLowerCase().trim();
+                            if (gEmail === uEmail || gAuthor.includes(uEmail)) {
+                                localStorage.removeItem('nutrimunch_general_diet_plan');
+                            }
+                        }
+                    } catch (e) {}
+
+                    window.dispatchEvent(new Event('nutrimunch_diet_history_updated'));
+                    window.dispatchEvent(new Event('nutrimunch_diet_plan_updated'));
+                    window.dispatchEvent(new Event('nutrimunch_role_updated'));
+                    window.dispatchEvent(new Event('storage'));
+                }
             } catch (error) {
                 console.error("Error deleting nutritionist", error);
             }

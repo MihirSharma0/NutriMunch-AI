@@ -51,7 +51,7 @@ import DietitianManagement from './pages/Dashboard/Admin/DietitianManagement';
 import PaymentManagement from './pages/Dashboard/Admin/PaymentManagement';
 import AdminAnalytics from './pages/Dashboard/Admin/AdminAnalytics';
 import AdminProfile from './pages/Dashboard/Admin/AdminProfile';
-
+import DietPlanManagement from './pages/Dashboard/Admin/DietPlanManagement';
 import TestimonialManagement from './pages/Dashboard/Admin/TestimonialManagement';
 
 import { useEffect } from 'react';
@@ -135,6 +135,7 @@ function App() {
 
               {/* Admin Platform Routes */}
               <Route path="dashboard/admin" element={<AdminHome />} />
+              <Route path="dashboard/admin/diet-plans" element={<DietPlanManagement />} />
               <Route path="dashboard/admin/profile" element={<AdminProfile />} />
               <Route path="dashboard/admin/users" element={<UserManagement />} />
               <Route path="dashboard/admin/sql" element={<SqlConsole />} />

@@ -1,0 +1,612 @@
+import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../../../api/axios';
+import { AuthContext } from '../../../context/AuthContext';
+import FeatureGate from '../../../components/FeatureGate';
+import { permanentlyDeleteDietPlan, getDeletedPlanIds, normalizeAndDeduplicatePlans } from '../../../utils/dietPlanSync';
+
+const SEED_BACKUP_PLANS = [];
+
+const DietPlanManagement = () => {
+    const { user } = useContext(AuthContext);
+    const [plans, setPlans] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [scopeFilter, setScopeFilter] = useState('ALL'); // 'ALL', 'GENERAL', 'EXCLUSIVE'
+    const [notification, setNotification] = useState(null);
+    const [selectedPlan, setSelectedPlan] = useState(null);
+    const [planToDelete, setPlanToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    if (!user) {
+        return <FeatureGate />;
+    }
+
+    const showToast = (msg) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(null), 3500);
+    };
+
+    const loadAllPlans = async () => {
+        setLoading(true);
+        let rawItems = [];
+
+        // 1. Fetch server registry
+        try {
+            const res = await api.get('/diet-plans/published');
+            if (res.data && Array.isArray(res.data)) {
+                rawItems.push(...res.data);
+            }
+        } catch (e) {
+            console.warn('Server published registry fetch error:', e);
+        }
+
+        // 2. Local storage history
+        try {
+            const historyRaw = localStorage.getItem('nutrimunch_diet_plans_history');
+            if (historyRaw) {
+                const parsed = JSON.parse(historyRaw);
+                if (Array.isArray(parsed)) rawItems.push(...parsed);
+            }
+        } catch (e) {}
+
+        // Normalize and deduplicate
+        const deduplicated = normalizeAndDeduplicatePlans({
+            rawList: rawItems
+        });
+
+        if (deduplicated.length === 0) {
+            localStorage.removeItem('nutrimunch_latest_deployed_plan');
+            localStorage.removeItem('nutrimunch_latest_deployed_plan_id');
+            localStorage.removeItem('nutrimunch_general_diet_plan');
+            localStorage.removeItem('nutrimunch_exclusive_diet_plans');
+        }
+
+        setPlans(deduplicated);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        loadAllPlans();
+
+        let bc;
+        try {
+            bc = new BroadcastChannel('nutrimunch_diet_plan_channel');
+            bc.onmessage = (event) => {
+                if (event.data?.type === 'DIET_PLAN_DELETED' || event.data?.plan) {
+                    loadAllPlans();
+                }
+            };
+        } catch (e) {}
+
+        window.addEventListener('nutrimunch_diet_plan_updated', loadAllPlans);
+        window.addEventListener('nutrimunch_diet_history_updated', loadAllPlans);
+        window.addEventListener('nutrimunch_diet_plan_deleted', loadAllPlans);
+        window.addEventListener('storage', loadAllPlans);
+
+        return () => {
+            if (bc) bc.close();
+            window.removeEventListener('nutrimunch_diet_plan_updated', loadAllPlans);
+            window.removeEventListener('nutrimunch_diet_history_updated', loadAllPlans);
+            window.removeEventListener('nutrimunch_diet_plan_deleted', loadAllPlans);
+            window.removeEventListener('storage', loadAllPlans);
+        };
+    }, []);
+
+    // Permanent Deletion Execution
+    const handleConfirmDelete = async () => {
+        if (!planToDelete) return;
+        setIsDeleting(true);
+        try {
+            await permanentlyDeleteDietPlan(planToDelete, api);
+            showToast(`Protocol "${planToDelete.title || planToDelete.planTitle}" permanently purged from database.`);
+            setPlanToDelete(null);
+            if (selectedPlan?.id === planToDelete.id) {
+                setSelectedPlan(null);
+            }
+            await loadAllPlans();
+        } catch (err) {
+            console.error('Failed to permanently delete plan:', err);
+            showToast('Failed to delete protocol. Try again.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Promote a Plan to Active Global Protocol
+    const handlePromoteToGlobal = async (plan) => {
+        try {
+            const updated = {
+                ...plan,
+                scope: 'GENERAL',
+                targetMode: 'GENERAL',
+                targetUserName: 'All Platform Users',
+                targetUserId: null,
+                deployedAt: new Date().toISOString()
+            };
+
+            localStorage.setItem('nutrimunch_general_diet_plan', JSON.stringify(updated));
+            localStorage.setItem('nutrimunch_latest_deployed_plan', JSON.stringify(updated));
+            localStorage.setItem('nutrimunch_latest_deployed_plan_id', String(updated.id));
+
+            try {
+                const bc = new BroadcastChannel('nutrimunch_diet_plan_channel');
+                bc.postMessage({ type: 'DIET_PLAN_DEPLOYED', plan: updated });
+                setTimeout(() => { try { bc.close(); } catch (e) {} }, 1000);
+            } catch (e) {}
+
+            window.dispatchEvent(new Event('nutrimunch_diet_plan_updated'));
+            window.dispatchEvent(new Event('storage'));
+
+            await api.post('/diet-plans/deploy', updated).catch(() => {});
+
+            showToast(`"${plan.title || plan.planTitle}" promoted to Platform Active Protocol!`);
+            loadAllPlans();
+        } catch (e) {
+            showToast('Failed to promote protocol.');
+        }
+    };
+
+    const filteredPlans = plans.filter(p => {
+        const title = (p.title || p.planTitle || '').toLowerCase();
+        const author = (p.dietitianName || '').toLowerCase();
+        const email = (p.dietitianEmail || '').toLowerCase();
+        const target = (p.targetUserName || '').toLowerCase();
+        const notes = (p.nutritionistNotes || '').toLowerCase();
+        const search = searchTerm.toLowerCase();
+
+        const matchesSearch = title.includes(search) || author.includes(search) || email.includes(search) || target.includes(search) || notes.includes(search);
+        
+        if (scopeFilter === 'GENERAL') {
+            return matchesSearch && (p.scope === 'GENERAL' || p.targetMode === 'GENERAL');
+        }
+        if (scopeFilter === 'EXCLUSIVE') {
+            return matchesSearch && (p.scope === 'EXCLUSIVE' || p.targetMode === 'EXCLUSIVE');
+        }
+        return matchesSearch;
+    });
+
+    const generalCount = plans.filter(p => p.scope === 'GENERAL' || p.targetMode === 'GENERAL').length;
+    const exclusiveCount = plans.filter(p => p.scope === 'EXCLUSIVE' || p.targetMode === 'EXCLUSIVE').length;
+
+    return (
+        <div className="space-y-8 pb-16">
+            {/* Live Notification Feedback Toast */}
+            {notification && (
+                <div className="fixed top-24 right-8 z-[9999] bg-[#a5d391] text-[#080b12] px-6 py-3.5 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-2 animate-bounce">
+                    <span className="material-symbols-outlined text-lg">check_circle</span>
+                    <span>{notification}</span>
+                </div>
+            )}
+
+            {/* Header */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div>
+                    <div className="text-[#a5d391] text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mb-2">
+                        <span className="w-1.5 h-1.5 bg-[#a5d391] rounded-full animate-pulse"></span>
+                        Admin Control Suite • Protocol Vault
+                    </div>
+                    <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white flex items-center gap-3">
+                        <span className="material-symbols-outlined text-[#a5d391] text-3xl">menu_book</span>
+                        Diet Protocols Management
+                    </h1>
+                    <p className="text-white/60 text-xs sm:text-sm mt-1">
+                        Audit, inspect, promote, and permanently purge diet regimens across all platform users, nutritionists, and database records.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={loadAllPlans}
+                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-sm">refresh</span>
+                        <span>Sync Registry</span>
+                    </button>
+                    <Link
+                        to="/dashboard/nutritionist/builder"
+                        className="px-5 py-2.5 bg-[#a5d391] text-black hover:bg-white rounded-2xl text-xs font-bold transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] flex items-center gap-2 cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                        <span>Open Diet Studio</span>
+                    </Link>
+                </div>
+            </div>
+
+            {/* Telemetry Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg">
+                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-1">Total Formulated Plans</span>
+                    <div className="text-3xl font-bold font-hero-display text-[#a5d391]">{plans.length}</div>
+                    <span className="text-white/40 text-[10px] mt-1 block">Active across all practices</span>
+                </div>
+                <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg">
+                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-1">General Public Protocols</span>
+                    <div className="text-3xl font-bold font-hero-display text-sky-400">{generalCount}</div>
+                    <span className="text-white/40 text-[10px] mt-1 block">Available to all platform users</span>
+                </div>
+                <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg">
+                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-1">Exclusive Patient Plans</span>
+                    <div className="text-3xl font-bold font-hero-display text-amber-400">{exclusiveCount}</div>
+                    <span className="text-white/40 text-[10px] mt-1 block">Prescribed to targeted clients</span>
+                </div>
+                <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg">
+                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-1">Database Sync Status</span>
+                    <div className="text-3xl font-bold font-hero-display text-emerald-400 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-2xl">verified</span>
+                        <span>LIVE</span>
+                    </div>
+                    <span className="text-white/40 text-[10px] mt-1 block">Sub-1.2s reactive broadcast</span>
+                </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10">
+                <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 text-base">search</span>
+                    <input
+                        type="text"
+                        placeholder="Search protocols by title, formulator, patient, or notes..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#a5d391] transition-all"
+                    />
+                </div>
+
+                {/* Scope Filter Pills */}
+                <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10 shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setScopeFilter('ALL')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            scopeFilter === 'ALL'
+                                ? 'bg-[#a5d391] text-black shadow-md font-black'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        All ({plans.length})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setScopeFilter('GENERAL')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            scopeFilter === 'GENERAL'
+                                ? 'bg-[#a5d391] text-black shadow-md font-black'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        General ({generalCount})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setScopeFilter('EXCLUSIVE')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            scopeFilter === 'EXCLUSIVE'
+                                ? 'bg-[#a5d391] text-black shadow-md font-black'
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                        Exclusive ({exclusiveCount})
+                    </button>
+                </div>
+            </div>
+
+            {/* Plans List Table / Grid */}
+            {loading ? (
+                <div className="p-16 text-center text-white/50 bg-white/5 rounded-3xl border border-white/10 space-y-3">
+                    <span className="material-symbols-outlined text-4xl text-[#a5d391] animate-spin">progress_activity</span>
+                    <p className="text-xs font-mono">Synchronizing clinical protocol vault...</p>
+                </div>
+            ) : filteredPlans.length === 0 ? (
+                <div className="p-16 text-center bg-white/5 rounded-3xl border border-white/10 space-y-3">
+                    <span className="material-symbols-outlined text-5xl text-white/30">folder_open</span>
+                    <h3 className="text-white font-bold text-lg">No Diet Plans Match Filters</h3>
+                    <p className="text-white/50 text-xs max-w-md mx-auto">
+                        No protocols found matching "{searchTerm}". Try clearing search or resetting scope filters.
+                    </p>
+                    <button
+                        onClick={() => { setSearchTerm(''); setScopeFilter('ALL'); }}
+                        className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                        Reset All Filters
+                    </button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {filteredPlans.map((plan) => {
+                        const isGen = plan.scope === 'GENERAL' || plan.targetMode === 'GENERAL';
+                        const title = plan.title || plan.planTitle || 'Custom Protocol';
+
+                        return (
+                            <div
+                                key={plan.id}
+                                className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 hover:border-white/25 rounded-3xl p-6 transition-all duration-300 flex flex-col justify-between space-y-5 shadow-xl relative overflow-hidden group"
+                            >
+                                <div className="space-y-3">
+                                    {/* Top Tag & ID */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
+                                            isGen
+                                                ? 'bg-[#a5d391]/15 text-[#a5d391] border-[#a5d391]/30'
+                                                : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                        }`}>
+                                            {isGen ? 'General • All Users' : `Exclusive: ${plan.targetUserName || 'Patient'}`}
+                                        </span>
+                                        <span className="text-[10px] font-mono text-white/40">
+                                            #{String(plan.id).slice(-6)}
+                                        </span>
+                                    </div>
+
+                                    {/* Title & Author */}
+                                    <div>
+                                        <h3 className="text-white font-bold text-base leading-snug group-hover:text-[#a5d391] transition-colors">
+                                            {title}
+                                        </h3>
+                                        <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-white/50">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-xs text-[#a5d391]">stethoscope</span>
+                                                <span>{plan.dietitianName || 'Dietitian Specialist'}</span>
+                                            </div>
+                                            {plan.dietitianEmail && (
+                                                <div className="text-[10px] text-[#a5d391] font-mono pl-4 truncate max-w-[220px]" title={plan.dietitianEmail}>
+                                                    {plan.dietitianEmail}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Calorie & Macro Strip */}
+                                    <div className="grid grid-cols-4 gap-2 py-3 border-y border-white/10 text-center">
+                                        <div className="bg-black/30 p-2 rounded-xl">
+                                            <span className="text-[9px] text-white/40 block font-bold">ENERGY</span>
+                                            <span className="text-xs font-black text-white">{plan.calories || 2100}</span>
+                                            <span className="text-[8px] text-white/40 block">kcal</span>
+                                        </div>
+                                        <div className="bg-black/30 p-2 rounded-xl">
+                                            <span className="text-[9px] text-[#a5d391] block font-bold">PRO</span>
+                                            <span className="text-xs font-black text-[#a5d391]">{plan.protein || 150}g</span>
+                                        </div>
+                                        <div className="bg-black/30 p-2 rounded-xl">
+                                            <span className="text-[9px] text-sky-400 block font-bold">CARBS</span>
+                                            <span className="text-xs font-black text-sky-400">{plan.carbs || 180}g</span>
+                                        </div>
+                                        <div className="bg-black/30 p-2 rounded-xl">
+                                            <span className="text-[9px] text-amber-400 block font-bold">FATS</span>
+                                            <span className="text-xs font-black text-amber-400">{plan.fats || 65}g</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Clinical Notes snippet */}
+                                    {plan.nutritionistNotes && (
+                                        <p className="text-[11px] text-white/50 italic line-clamp-2 bg-black/20 p-2.5 rounded-xl border border-white/5">
+                                            "{plan.nutritionistNotes}"
+                                        </p>
+                                    )}
+
+                                    {/* Metadata Footer */}
+                                    <div className="flex items-center justify-between text-[10px] text-white/40 pt-1">
+                                        <span>Hydration: {plan.waterLiters || 3}L • Fiber: {plan.fiber || 28}g</span>
+                                        <span>Meals: {plan.meals?.length || 4} slots</span>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="space-y-2 pt-2 border-t border-white/10">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedPlan(plan)}
+                                            className="flex-1 py-2 px-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">visibility</span>
+                                            <span>Inspect Dossier</span>
+                                        </button>
+
+                                        {isGen && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handlePromoteToGlobal(plan)}
+                                                title="Promote to Platform Default Active Plan"
+                                                className="py-2 px-3 bg-[#a5d391]/15 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">rocket_launch</span>
+                                                <span>Deploy</span>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlanToDelete(plan)}
+                                        className="w-full py-2 px-3 bg-red-500/10 hover:bg-red-500/25 border border-red-500/30 text-red-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer group-hover:border-red-500/50"
+                                    >
+                                        <span className="material-symbols-outlined text-sm text-red-400">delete_forever</span>
+                                        <span>Permanent Purge (DB & All Registries)</span>
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Inspect Clinical Dossier Modal */}
+            {selectedPlan && (
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fadeIn">
+                    <div className="bg-[#080b12] border border-white/15 rounded-[2.5rem] w-full max-w-2xl p-6 sm:p-8 space-y-6 relative shadow-2xl max-h-[85vh] overflow-y-auto">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                            <div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#a5d391] block mb-1">
+                                    Clinical Protocol Dossier • #{String(selectedPlan.id).slice(-8)}
+                                </span>
+                                <h3 className="text-xl font-bold font-hero-display text-white">
+                                    {selectedPlan.title || selectedPlan.planTitle}
+                                </h3>
+                            </div>
+                            <button onClick={() => setSelectedPlan(null)} className="text-white/40 hover:text-white cursor-pointer p-1">
+                                <span className="material-symbols-outlined text-xl">close</span>
+                            </button>
+                        </div>
+
+                        {/* Overview strip */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
+                                <span className="text-[10px] text-white/50 block font-bold">TARGET SCOPE</span>
+                                <span className="text-xs font-bold text-[#a5d391] mt-0.5 block">
+                                    {selectedPlan.scope === 'EXCLUSIVE' ? `Exclusive (${selectedPlan.targetUserName || 'Patient'})` : 'General Public'}
+                                </span>
+                            </div>
+                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
+                                <span className="text-[10px] text-white/50 block font-bold">FORMULATOR</span>
+                                <span className="text-xs font-bold text-white mt-0.5 block">{selectedPlan.dietitianName || 'Specialist'}</span>
+                                {selectedPlan.dietitianEmail && (
+                                    <span className="text-[10px] text-[#a5d391] font-mono block mt-0.5 truncate" title={selectedPlan.dietitianEmail}>
+                                        {selectedPlan.dietitianEmail}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
+                                <span className="text-[10px] text-white/50 block font-bold">HYDRATION</span>
+                                <span className="text-xs font-bold text-sky-400 mt-0.5 block">{selectedPlan.waterLiters || 3} Liters/day</span>
+                            </div>
+                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
+                                <span className="text-[10px] text-white/50 block font-bold">FIBER TARGET</span>
+                                <span className="text-xs font-bold text-emerald-400 mt-0.5 block">{selectedPlan.fiber || 28} Grams/day</span>
+                            </div>
+                        </div>
+
+                        {/* Full Macro & Micronutrient Grid */}
+                        <div className="p-4 bg-black/40 rounded-2xl border border-white/10 space-y-3">
+                            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Calibrated Macro & Micronutrient Splits</h4>
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
+                                <div className="p-2 bg-white/5 rounded-xl">
+                                    <span className="text-[9px] text-white/40 block">Calories</span>
+                                    <span className="text-xs font-black text-white">{selectedPlan.calories} kcal</span>
+                                </div>
+                                <div className="p-2 bg-white/5 rounded-xl">
+                                    <span className="text-[9px] text-[#a5d391] block">Protein</span>
+                                    <span className="text-xs font-black text-[#a5d391]">{selectedPlan.protein}g</span>
+                                </div>
+                                <div className="p-2 bg-white/5 rounded-xl">
+                                    <span className="text-[9px] text-sky-400 block">Carbs</span>
+                                    <span className="text-xs font-black text-sky-400">{selectedPlan.carbs}g</span>
+                                </div>
+                                <div className="p-2 bg-white/5 rounded-xl">
+                                    <span className="text-[9px] text-amber-400 block">Fats</span>
+                                    <span className="text-xs font-black text-amber-400">{selectedPlan.fats}g</span>
+                                </div>
+                                <div className="p-2 bg-white/5 rounded-xl">
+                                    <span className="text-[9px] text-purple-400 block">Calcium</span>
+                                    <span className="text-xs font-black text-purple-400">{selectedPlan.calcium || 1000}mg</span>
+                                </div>
+                                <div className="p-2 bg-white/5 rounded-xl">
+                                    <span className="text-[9px] text-rose-400 block">Iron</span>
+                                    <span className="text-xs font-black text-rose-400">{selectedPlan.iron || 18}mg</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Meals breakdown */}
+                        {selectedPlan.meals && selectedPlan.meals.length > 0 && (
+                            <div className="space-y-3">
+                                <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm text-[#a5d391]">restaurant</span>
+                                    Prescribed Meal Schedule ({selectedPlan.meals.length} Slots)
+                                </h4>
+                                <div className="space-y-2">
+                                    {selectedPlan.meals.map((meal, mIdx) => (
+                                        <div key={mIdx} className="p-3 bg-white/5 border border-white/5 rounded-2xl flex items-start justify-between gap-3">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-mono text-[#a5d391] px-2 py-0.5 bg-[#a5d391]/10 rounded-md font-bold">
+                                                        {meal.time}
+                                                    </span>
+                                                    <span className="text-xs font-bold text-white">{meal.name}</span>
+                                                    <span className="text-[10px] text-white/40 uppercase">({meal.mealType})</span>
+                                                </div>
+                                                <p className="text-[11px] text-white/50">{meal.ingredients}</p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <span className="text-xs font-black text-white">{meal.calories} kcal</span>
+                                                <div className="text-[10px] text-white/40">P: {meal.protein}g • C: {meal.carbs}g • F: {meal.fats}g</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Clinical notes */}
+                        {selectedPlan.nutritionistNotes && (
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-1.5">
+                                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Clinical Guidance & Prescriptive Notes</h4>
+                                <p className="text-xs text-white/70 italic leading-relaxed">"{selectedPlan.nutritionistNotes}"</p>
+                            </div>
+                        )}
+
+                        <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedPlan(null)}
+                                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                                Close Dossier
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Permanent Purge Confirmation Modal */}
+            {planToDelete && (
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fadeIn">
+                    <div className="bg-[#080b12] border border-red-500/40 rounded-[2.5rem] w-full max-w-md p-6 sm:p-8 space-y-6 relative shadow-2xl">
+                        <div className="flex items-center gap-3 text-red-400">
+                            <span className="material-symbols-outlined text-3xl">warning</span>
+                            <h3 className="text-xl font-bold font-hero-display text-white">Permanent Purge</h3>
+                        </div>
+
+                        <div className="space-y-3 text-xs text-white/70">
+                            <p>
+                                You are about to permanently purge the following diet protocol:
+                            </p>
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl space-y-1">
+                                <div className="text-white font-bold text-sm">
+                                    "{planToDelete.title || planToDelete.planTitle}"
+                                </div>
+                                <div className="text-white/50 text-[10px] font-mono">
+                                    ID: #{planToDelete.id} • {planToDelete.calories} kcal • {planToDelete.dietitianName || 'Dietitian'}{planToDelete.dietitianEmail ? ` (${planToDelete.dietitianEmail})` : ''}
+                                </div>
+                            </div>
+                            <p className="text-red-300 font-bold">
+                                ⚠️ This action will permanently remove this protocol from MySQL database, in-memory cache, dietitian history vaults, and all user dashboards.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => setPlanToDelete(null)}
+                                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white text-xs rounded-xl font-bold cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={handleConfirmDelete}
+                                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(239,68,68,0.4)] cursor-pointer flex items-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-sm">delete_forever</span>
+                                <span>{isDeleting ? 'Purging...' : 'Confirm Purge'}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default DietPlanManagement;

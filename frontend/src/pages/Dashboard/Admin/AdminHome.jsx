@@ -155,13 +155,23 @@ const AdminHome = () => {
             </div>
 
             {/* Quick Action Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Link to="/dashboard/admin/diet-plans" className="p-7 bg-white/5 backdrop-blur-xl hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 rounded-[2rem] transition-all duration-300 group flex items-center gap-5 shadow-xl hover:-translate-y-1">
+                    <div className="w-14 h-14 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center border border-[#a5d391]/30 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(165,211,145,0.2)]">
+                        <span className="material-symbols-outlined text-3xl">menu_book</span>
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-white text-lg group-hover:text-[#a5d391] transition-colors">Diet Protocols Vault</h3>
+                        <p className="text-sm text-white/50 font-light mt-0.5">Manage, inspect, promote, and permanently purge diet plans.</p>
+                    </div>
+                </Link>
+
                 <Link to="/dashboard/admin/users" className="p-7 bg-white/5 backdrop-blur-xl hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 rounded-[2rem] transition-all duration-300 group flex items-center gap-5 shadow-xl hover:-translate-y-1">
                     <div className="w-14 h-14 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center border border-[#a5d391]/30 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(165,211,145,0.2)]">
                         <span className="material-symbols-outlined text-3xl">manage_accounts</span>
                     </div>
                     <div>
-                        <h3 className="font-bold text-white text-lg group-hover:text-[#a5d391] transition-colors">User Management & Password Reset</h3>
+                        <h3 className="font-bold text-white text-lg group-hover:text-[#a5d391] transition-colors">User Management</h3>
                         <p className="text-sm text-white/50 font-light mt-0.5">View all user accounts and reset credentials directly.</p>
                     </div>
                 </Link>

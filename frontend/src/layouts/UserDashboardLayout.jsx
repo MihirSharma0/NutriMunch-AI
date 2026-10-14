@@ -2,12 +2,14 @@ import React, { useState, useContext } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Starfield from '../components/Starfield';
+import ConsultationChatModal from '../components/ConsultationChatModal';
 
 const UserDashboardLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout } = useContext(AuthContext);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isConsultationChatOpen, setIsConsultationChatOpen] = useState(false);
 
     // Signature Theme (#a5d391 / Mint / #080b12)
     const accentColor = "text-[#a5d391]";
@@ -100,7 +102,17 @@ const UserDashboardLayout = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 sm:gap-5">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        {/* Dietitian Consultation Chat Header Button */}
+                        <button 
+                            type="button"
+                            onClick={() => setIsConsultationChatOpen(true)}
+                            className="relative text-white/70 hover:text-[#a5d391] transition-all bg-white/5 hover:bg-white/10 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border border-white/10 hover:border-[#a5d391]/40 backdrop-blur-md shadow-sm cursor-pointer"
+                            title="Consultation Chat with Dietitian"
+                        >
+                            <span className="material-symbols-outlined text-lg sm:text-xl">forum</span>
+                        </button>
+
                         {/* Notification Bell Button */}
                         <button className="relative text-white/70 hover:text-white transition-all bg-white/5 hover:bg-white/10 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border border-white/10 hover:border-white/20 backdrop-blur-md shadow-sm">
                             <span className="material-symbols-outlined text-lg sm:text-xl">notifications</span>
@@ -190,6 +202,26 @@ const UserDashboardLayout = () => {
                         </div>
                     </aside>
                 </div>
+            )}
+
+            {/* Floating Consultation Chat Widget Launcher */}
+            <button
+                type="button"
+                onClick={() => setIsConsultationChatOpen(true)}
+                className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-[#a5d391] to-[#7ec362] text-black font-extrabold p-3 sm:px-5 sm:py-3.5 rounded-full shadow-[0_0_25px_rgba(165,211,145,0.4)] hover:shadow-[0_0_35px_rgba(165,211,145,0.8)] hover:scale-105 transition-all flex items-center gap-2 cursor-pointer"
+                title="Consultation Chat with Dietitian"
+            >
+                <span className="material-symbols-outlined text-xl">forum</span>
+                <span className="hidden sm:inline text-xs uppercase tracking-wider font-bold">Dietitian Chat</span>
+            </button>
+
+            {/* Consultation Chat Modal */}
+            {isConsultationChatOpen && (
+                <ConsultationChatModal
+                    isOpen={isConsultationChatOpen}
+                    onClose={() => setIsConsultationChatOpen(false)}
+                    currentUser={user}
+                />
             )}
         </div>
     );
