@@ -429,31 +429,30 @@ const Navbar = () => {
                         })()}
                     </div>
 
-                    {/* Right User Actions & Notification Bell */}
-                    <div className="hidden md:flex items-center gap-2 sm:gap-3.5 ml-2 sm:ml-4 shrink-0">
-                        
-                        {/* Consultation Chat Button */}
+                    {/* Right User Actions & Controls (Notifications, Mobile Toggle, Login/Profile) */}
+                    <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                        {/* Consultation Chat Button (when user is logged in) */}
                         {user && (
                             <button
                                 type="button"
                                 onClick={() => setIsChatModalOpen(true)}
                                 aria-label="Clinical Consultation Chat"
-                                className="relative w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 flex items-center justify-center text-white/80 hover:text-[#a5d391] transition-all cursor-pointer shadow-sm"
+                                className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 flex items-center justify-center text-white/80 hover:text-[#a5d391] transition-all cursor-pointer shadow-sm"
                                 title="Consultation Chat with Dietitian"
                             >
-                                <span className="material-symbols-outlined text-lg">forum</span>
+                                <span className="material-symbols-outlined text-base sm:text-lg">forum</span>
                             </button>
                         )}
 
-                        {/* Notification Bell Button (Placed BEFORE User Label) */}
+                        {/* Notification Bell Button & Dropdown */}
                         <div ref={notificationRef} className="relative">
                             <button
                                 type="button"
                                 onClick={() => setIsNotificationOpen(prev => !prev)}
                                 aria-label="Notifications"
-                                className="relative w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm"
+                                className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm"
                             >
-                                <span className="material-symbols-outlined text-lg">notifications</span>
+                                <span className="material-symbols-outlined text-base sm:text-lg">notifications</span>
                                 {unreadCount > 0 && (
                                     <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 text-[#080b12] font-black text-[9px] flex items-center justify-center shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse">
                                         {unreadCount}
@@ -463,7 +462,7 @@ const Navbar = () => {
 
                             {/* Notification Popover Dropdown */}
                             {isNotificationOpen && (
-                                <div className="absolute right-0 top-full pt-3 w-80 sm:w-96 z-[99999]">
+                                <div className="absolute right-0 top-full pt-3 w-80 sm:w-96 max-w-[calc(100vw-2rem)] z-[99999]">
                                     <div className="bg-[#080b12]/95 backdrop-blur-2xl border border-white/15 rounded-3xl p-4 shadow-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
                                         <div className="flex items-center justify-between pb-2 border-b border-white/10">
                                             <div className="flex items-center gap-2">
@@ -508,7 +507,7 @@ const Navbar = () => {
                                                         Sign in to receive personalized AI macro target updates and live nutritionist booking alerts.
                                                     </p>
                                                     <Link 
-                                                        to="/login"
+                                                        to="/login" 
                                                         onClick={() => setIsNotificationOpen(false)}
                                                         className="inline-block mt-2 px-4 py-1.5 rounded-full bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all shadow-md"
                                                     >
@@ -561,13 +560,24 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* User Profile Pill & Logout */}
+                        {/* Mobile Menu Toggle Button (Hamburger / Close) - visible on < lg */}
+                        <button
+                            type="button"
+                            className="lg:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm"
+                            onClick={() => setIsMenuOpen(prev => !prev)}
+                            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+                            aria-expanded={isMenuOpen}
+                        >
+                            <span className="material-symbols-outlined text-lg sm:text-xl">{isMenuOpen ? 'close' : 'menu'}</span>
+                        </button>
+
+                        {/* Extreme Right: User Profile Pill & Logout OR Login / Sign up Button */}
                         {user ? (
                             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                 <Link
                                     to={profilePath}
                                     title={`${displayName} • Role: ${roleLabel} • View Profile`}
-                                    className="group relative flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 px-2.5 py-1.5 rounded-full transition-all text-xs font-bold text-white cursor-pointer shadow-sm shrink-0"
+                                    className="group relative flex items-center gap-1.5 sm:gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 px-2 sm:px-2.5 py-1.5 rounded-full transition-all text-xs font-bold text-white cursor-pointer shadow-sm shrink-0"
                                 >
                                     {/* User Initials Avatar Circle */}
                                     <div className="w-6 h-6 rounded-full bg-[#a5d391] text-black font-black text-[10px] flex items-center justify-center border border-white/20 group-hover:border-[#a5d391] shrink-0 overflow-hidden shadow-sm">
@@ -583,8 +593,8 @@ const Navbar = () => {
                                         )}
                                     </div>
 
-                                    {/* Role Badge (Showing that it is a user) */}
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                    {/* Role Badge */}
+                                    <span className={`hidden sm:inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
                                         {roleLabel}
                                     </span>
 
@@ -602,39 +612,19 @@ const Navbar = () => {
 
                                 <button
                                     onClick={handleLogout}
-                                    className="cursor-pointer bg-red-500/10 text-red-400 px-3 py-1.5 rounded-full text-xs font-bold border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-sm shrink-0 whitespace-nowrap"
+                                    className="cursor-pointer bg-red-500/10 text-red-400 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-sm shrink-0 whitespace-nowrap"
                                 >
                                     Logout
                                 </button>
                             </div>
                         ) : (
-                            <Link to="/login" className="cursor-pointer bg-gradient-to-r from-[#a5d391] to-[#7ec362] text-black font-bold px-5 py-2 rounded-full text-xs shadow-[0_0_15px_rgba(165,211,145,0.4)] hover:shadow-[0_0_25px_rgba(165,211,145,0.8)] transition-all hover:-translate-y-0.5">
-                                Login / Sign up
+                            <Link 
+                                to="/login" 
+                                className="cursor-pointer bg-gradient-to-r from-[#a5d391] to-[#7ec362] text-black font-bold px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs shadow-[0_0_15px_rgba(165,211,145,0.4)] hover:shadow-[0_0_25px_rgba(165,211,145,0.8)] transition-all hover:-translate-y-0.5 whitespace-nowrap"
+                            >
+                                Login<span className="hidden min-[480px]:inline"> / Sign up</span>
                             </Link>
                         )}
-                    </div>
-
-                    {/* Mobile menu toggle & Notification icon */}
-                    <div className="flex items-center gap-2 lg:hidden">
-                        <button
-                            type="button"
-                            onClick={() => setIsNotificationOpen(prev => !prev)}
-                            className="relative p-2 text-white/80 hover:text-white cursor-pointer"
-                        >
-                            <span className="material-symbols-outlined text-2xl">notifications</span>
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                            )}
-                        </button>
-
-                        <button
-                            className="text-white/80 hover:text-white p-2 -mr-2"
-                            onClick={() => setIsMenuOpen(prev => !prev)}
-                            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-                            aria-expanded={isMenuOpen}
-                        >
-                            <span className="material-symbols-outlined text-2xl">{isMenuOpen ? 'close' : 'menu'}</span>
-                        </button>
                     </div>
                 </div>
 
@@ -653,6 +643,7 @@ const Navbar = () => {
                                                 <Link
                                                     key={sub.label}
                                                     to={sub.path}
+                                                    onClick={() => setIsMenuOpen(false)}
                                                     className={`flex items-center gap-3 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${location.pathname === sub.path ? 'bg-[#a5d391]/20 text-[#a5d391]' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                                                 >
                                                     <span className="material-symbols-outlined text-sm text-[#a5d391]">{sub.icon}</span>
@@ -667,6 +658,7 @@ const Navbar = () => {
                                     <Link
                                         key={item.label}
                                         to={item.path}
+                                        onClick={() => setIsMenuOpen(false)}
                                         className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${isActive ? 'bg-[#a5d391]/20 text-[#a5d391]' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                                     >
                                         {item.label}
@@ -675,11 +667,21 @@ const Navbar = () => {
                             })}
                             
                             {user ? (
-                                <button onClick={handleLogout} className="mt-2 text-center bg-red-500/20 text-red-300 font-bold px-4 py-2.5 rounded-xl text-sm transition-all border border-red-500/30">
+                                <button 
+                                    onClick={() => {
+                                        setIsMenuOpen(false);
+                                        handleLogout();
+                                    }} 
+                                    className="mt-2 text-center bg-red-500/20 text-red-300 font-bold px-4 py-2.5 rounded-xl text-sm transition-all border border-red-500/30"
+                                >
                                     Logout
                                 </button>
                             ) : (
-                                <Link to="/login" className="mt-2 text-center bg-[#a5d391] text-black font-bold px-4 py-2.5 rounded-xl text-sm transition-all">
+                                <Link 
+                                    to="/login" 
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="mt-2 text-center bg-[#a5d391] text-black font-bold px-4 py-2.5 rounded-xl text-sm transition-all"
+                                >
                                     Login / Sign up
                                 </Link>
                             )}
