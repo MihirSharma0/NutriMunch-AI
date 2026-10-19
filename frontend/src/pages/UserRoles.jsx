@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    User, 
-    Stethoscope, 
-    ShieldCheck, 
-    Sparkles, 
-    Utensils, 
-    Camera, 
-    Droplets, 
-    Bot, 
-    Calendar, 
-    FileText, 
-    Users, 
-    BookOpen, 
-    CheckCircle2, 
+import {
+    User,
+    Stethoscope,
+    ShieldCheck,
+    Sparkles,
+    Utensils,
+    Camera,
+    Droplets,
+    Bot,
+    Calendar,
+    FileText,
+    Users,
+    BookOpen,
+    CheckCircle2,
     ArrowRight,
     Lock
 } from 'lucide-react';
 import Starfield from '../components/Starfield';
 
 const UserRoles = () => {
-    const [activeTab, setActiveTab] = useState('user'); // 'user' | 'dietitian'
+    const [activeTab, setActiveTab] = useState('user'); // 'user' | 'nutritionist'
 
     const userFeatures = [
         {
@@ -46,8 +46,8 @@ const UserRoles = () => {
         },
         {
             icon: Calendar,
-            title: '1-on-1 Certified Dietitian Consults',
-            desc: 'Book one-on-one virtual video and chat consultations with verified professional dietitians and licensed nutritionists.'
+            title: '1-on-1 Certified Nutritionist Consults',
+            desc: 'Book one-on-one virtual video and chat consultations with verified professional nutritionists and licensed nutritionists.'
         },
         {
             icon: FileText,
@@ -56,7 +56,7 @@ const UserRoles = () => {
         }
     ];
 
-    const dietitianFeatures = [
+    const nutritionistFeatures = [
         {
             icon: Users,
             title: 'Client Management Console',
@@ -90,17 +90,17 @@ const UserRoles = () => {
     ];
 
     const comparisonMatrix = [
-        { feature: 'AI Weekly Diet Plan Generator', user: true, dietitian: true, admin: true },
-        { feature: 'Food Photo Calorie & Macro Scanner', user: true, dietitian: true, admin: true },
-        { feature: 'Smart Hydration & BMR Tracking', user: true, dietitian: true, admin: true },
-        { feature: '24/7 AI Health Chat Assistant', user: true, dietitian: true, admin: true },
-        { feature: 'Book Certified Dietitian Consultations', user: true, dietitian: false, admin: false },
-        { feature: 'Client Roster & Patient Health History', user: false, dietitian: true, admin: true },
-        { feature: 'Custom Prescription Diet Regimen Builder', user: false, dietitian: true, admin: true },
-        { feature: 'Virtual Consultation Calendar & Scheduling', user: false, dietitian: true, admin: true },
-        { feature: 'Clinical PDF Progress & Compliance Export', user: true, dietitian: true, admin: true },
-        { feature: 'User & Dietitian Management Portal', user: false, dietitian: false, admin: true },
-        { feature: 'SQL Console & System Analytics', user: false, dietitian: false, admin: true }
+        { feature: 'AI Weekly Diet Plan Generator', user: true, nutritionist: true, admin: true },
+        { feature: 'Food Photo Calorie & Macro Scanner', user: true, nutritionist: true, admin: true },
+        { feature: 'Smart Hydration & BMR Tracking', user: true, nutritionist: true, admin: true },
+        { feature: '24/7 AI Health Chat Assistant', user: true, nutritionist: true, admin: true },
+        { feature: 'Book Certified Nutritionist Consultations', user: true, nutritionist: false, admin: false },
+        { feature: 'Client Roster & Patient Health History', user: false, nutritionist: true, admin: true },
+        { feature: 'Custom Prescription Diet Regimen Builder', user: false, nutritionist: true, admin: true },
+        { feature: 'Virtual Consultation Calendar & Scheduling', user: false, nutritionist: true, admin: true },
+        { feature: 'Clinical PDF Progress & Compliance Export', user: true, nutritionist: true, admin: true },
+        { feature: 'User & Nutritionist Management Portal', user: false, nutritionist: false, admin: true },
+        { feature: 'SQL Console & System Analytics', user: false, nutritionist: false, admin: true }
     ];
 
     return (
@@ -113,7 +113,7 @@ const UserRoles = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 {/* Hero Header */}
                 <div className="text-center max-w-3xl mx-auto mb-16">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
@@ -122,8 +122,8 @@ const UserRoles = () => {
                         <Sparkles className="w-4 h-4" />
                         Platform Roles & Capabilities
                     </motion.div>
-                    
-                    <motion.h1 
+
+                    <motion.h1
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
@@ -134,8 +134,8 @@ const UserRoles = () => {
                             Every Health Journey
                         </span>
                     </motion.h1>
-                    
-                    <motion.p 
+
+                    <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
@@ -151,8 +151,8 @@ const UserRoles = () => {
                         <button
                             onClick={() => setActiveTab('user')}
                             className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                activeTab === 'user' 
-                                    ? 'bg-[#a5d391] text-black shadow-[0_0_20px_rgba(165,211,145,0.4)]' 
+                                activeTab === 'user'
+                                    ? 'bg-[#a5d391] text-black shadow-[0_0_20px_rgba(165,211,145,0.4)]'
                                     : 'text-white/70 hover:text-white hover:bg-white/5'
                             }`}
                         >
@@ -160,15 +160,15 @@ const UserRoles = () => {
                             <span>Standard User</span>
                         </button>
                         <button
-                            onClick={() => setActiveTab('dietitian')}
+                            onClick={() => setActiveTab('nutritionist')}
                             className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                activeTab === 'dietitian' 
-                                    ? 'bg-[#a5d391] text-black shadow-[0_0_20px_rgba(165,211,145,0.4)]' 
+                                activeTab === 'nutritionist'
+                                    ? 'bg-[#a5d391] text-black shadow-[0_0_20px_rgba(165,211,145,0.4)]'
                                     : 'text-white/70 hover:text-white hover:bg-white/5'
                             }`}
                         >
                             <Stethoscope className="w-4 h-4" />
-                            <span>Nutritionist / Dietitian</span>
+                            <span>Nutritionist / Nutritionist</span>
                         </button>
                     </div>
                 </div>
@@ -196,7 +196,7 @@ const UserRoles = () => {
                                         </div>
                                     </div>
                                     <p className="text-white/70 leading-relaxed text-sm sm:text-base">
-                                        As a standard user, NutriMunch AI acts as your personal digital nutritionist. Get instant access to AI-generated weekly diet plans, food photo calorie scanning, daily hydration logs, and 1-on-1 consultations with certified dietitians.
+                                        As a standard user, NutriMunch AI acts as your personal digital nutritionist. Get instant access to AI-generated weekly diet plans, food photo calorie scanning, daily hydration logs, and 1-on-1 consultations with certified nutritionists.
                                     </p>
                                 </div>
                                 <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -250,13 +250,13 @@ const UserRoles = () => {
                         </motion.div>
                     ) : (
                         <motion.div
-                            key="dietitian-role"
+                            key="nutritionist-role"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3 }}
                         >
-                            {/* Dietitian Overview Banner */}
+                            {/* Nutritionist Overview Banner */}
                             <div className="bg-gradient-to-br from-[#0d131f] to-[#080b12] border border-[#a5d391]/30 rounded-3xl p-8 sm:p-10 mb-12 shadow-[0_0_50px_rgba(165,211,145,0.1)] flex flex-col md:flex-row items-center justify-between gap-8">
                                 <div className="space-y-4 max-w-2xl">
                                     <div className="flex items-center gap-3">
@@ -264,12 +264,12 @@ const UserRoles = () => {
                                             <Stethoscope className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-white">Nutritionist & Dietitian Role</h2>
+                                            <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-white">Nutritionist & Nutritionist Role</h2>
                                             <span className="text-xs font-bold text-[#a5d391] uppercase tracking-wider">For Healthcare & Clinical Professionals</span>
                                         </div>
                                     </div>
                                     <p className="text-white/70 leading-relaxed text-sm sm:text-base">
-                                        Designed specifically for certified dietitians and nutritionists. Manage client rosters, prescribe customized weekly meal plans directly to patients, schedule virtual appointments, and generate white-labeled clinical PDF reports.
+                                        Designed specifically for certified nutritionists and nutritionists. Manage client rosters, prescribe customized weekly meal plans directly to patients, schedule virtual appointments, and generate white-labeled clinical PDF reports.
                                     </p>
                                 </div>
                                 <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -291,7 +291,7 @@ const UserRoles = () => {
 
                             {/* Features Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
-                                {dietitianFeatures.map((feat, idx) => {
+                                {nutritionistFeatures.map((feat, idx) => {
                                     const IconComponent = feat.icon;
                                     return (
                                         <motion.div
@@ -359,7 +359,7 @@ const UserRoles = () => {
                                                 )}
                                             </td>
                                             <td className="p-5 text-center">
-                                                {row.dietitian ? (
+                                                {row.nutritionist ? (
                                                     <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#a5d391]/20 text-[#a5d391]">
                                                         <CheckCircle2 className="w-4 h-4" />
                                                     </span>
@@ -393,7 +393,7 @@ const UserRoles = () => {
                     <div className="space-y-3 max-w-xl text-center md:text-left">
                         <h3 className="text-2xl sm:text-3xl font-bold font-hero-display text-white">Ready to Experience NutriMunch AI?</h3>
                         <p className="text-white/70 text-sm sm:text-base leading-relaxed">
-                            Sign up today as an individual user or apply to join our verified dietitian network.
+                            Sign up today as an individual user or apply to join our verified nutritionist network.
                         </p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">

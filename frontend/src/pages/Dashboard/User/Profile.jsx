@@ -47,11 +47,11 @@ const DEFAULT_TARGETS = {
 
 const Profile = () => {
     const { user } = useContext(AuthContext);
-    
+
     if (!user) {
         return <FeatureGate />;
     }
-    
+
     // Active section tab: 'all' | 'body' | 'goals' | 'allergies' | 'budget'
     const [activeTab, setActiveTab] = useState('all');
 
@@ -189,7 +189,7 @@ const Profile = () => {
             if (e?.detail) {
                 const targetId = String(e.detail.recipientId || '');
                 const targetEmail = (e.detail.recipientEmail || '').toLowerCase();
-                const isForMe = (targetId && myId && targetId === myId) || 
+                const isForMe = (targetId && myId && targetId === myId) ||
                                 (targetEmail && myEmail && targetEmail === myEmail) ||
                                 (!targetId && !targetEmail);
                 if (!isForMe) return;
@@ -228,7 +228,7 @@ const Profile = () => {
                     const targetEmail = (event.data.recipientEmail || '').toLowerCase();
                     const myId = String(user?.id || user?.userId || '');
                     const myEmail = (user?.email || user?.username || '').toLowerCase();
-                    const isForMe = (targetId && myId && targetId === myId) || 
+                    const isForMe = (targetId && myId && targetId === myId) ||
                                     (targetEmail && myEmail && targetEmail === myEmail) ||
                                     (!targetId && !targetEmail);
                     if (!isForMe) return;
@@ -277,7 +277,7 @@ const Profile = () => {
                 if (res.data) {
                     const heightCm = res.data.heightCm || 170;
                     const weightKg = res.data.weightKg || 70;
-                    
+
                     // Imperial conversions
                     const totalInches = heightCm / 2.54;
                     const ft = Math.floor(totalInches / 12);
@@ -420,7 +420,7 @@ const Profile = () => {
             const exists = prev.allergies.includes(allergenId);
             return {
                 ...prev,
-                allergies: exists 
+                allergies: exists
                     ? prev.allergies.filter(a => a !== allergenId)
                     : [...prev.allergies, allergenId]
             };
@@ -628,7 +628,7 @@ const Profile = () => {
     }
 
     const rawRole = user?.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'USER';
-    const isNutritionist = rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN';
+    const isNutritionist = rawRole === 'NUTRITIONIST';
 
     return (
         <div className="w-full max-w-5xl mx-auto pb-16">
@@ -699,7 +699,7 @@ const Profile = () => {
                             <span className="w-2 h-2 rounded-full bg-[#a5d391] animate-pulse"></span>
                             {user?.role ? (
                                 String(user.role).toUpperCase().replace('ROLE_', '') === 'ADMIN' ? 'Verified Administrator' :
-                                String(user.role).toUpperCase().replace('ROLE_', '') === 'NUTRITIONIST' || String(user.role).toUpperCase().replace('ROLE_', '') === 'DIETITIAN' ? 'Certified Dietitian' :
+                                String(user.role).toUpperCase().replace('ROLE_', '') === 'NUTRITIONIST' ? 'Certified Nutritionist' :
                                 'Verified Standard User'
                             ) : 'Verified Standard User'}
                         </div>
@@ -1323,13 +1323,13 @@ const Profile = () => {
                         <div>
                             <h3 className="text-xl font-bold font-hero-display text-white">Daily Requirements</h3>
                             <p className="text-xs text-white/50">
-                                {isEditingRequirements 
-                                    ? 'Fill your daily nutrition targets manually below or click "Apply Default Baseline".' 
+                                {isEditingRequirements
+                                    ? 'Fill your daily nutrition targets manually below or click "Apply Default Baseline".'
                                     : 'Active daily target protocol driving AI meal generation and progress tracking.'}
                             </p>
                         </div>
                     </div>
-                    
+
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2 self-start sm:self-auto">
                         {!isEditingRequirements ? (

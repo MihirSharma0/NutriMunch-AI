@@ -22,7 +22,7 @@ public class Testimonial {
     private String authorEmail;
 
     @Column(name = "author_role")
-    private String authorRole; // e.g. "Standard User", "Certified Dietitian", "Nutritionist"
+    private String authorRole; // e.g. "Standard User", "Certified Nutritionist", "Nutritionist"
 
     @Column(name = "user_id")
     private Long userId;

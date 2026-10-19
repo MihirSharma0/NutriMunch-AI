@@ -24,12 +24,12 @@ public class DietPlanController {
         String emailLower = email != null ? email.toLowerCase().trim() : "";
         deployedPlansStore.removeIf(p -> {
             String targetId = String.valueOf(p.get("targetUserId"));
-            String dId = String.valueOf(p.get("dietitianId"));
+            String dId = String.valueOf(p.get("nutritionistId"));
             String uId = String.valueOf(p.get("userId"));
-            String dEmail = String.valueOf(p.get("dietitianEmail")).toLowerCase().trim();
+            String dEmail = String.valueOf(p.get("nutritionistEmail")).toLowerCase().trim();
             String author = String.valueOf(p.get("author")).toLowerCase().trim();
             String aEmail = String.valueOf(p.get("authorEmail")).toLowerCase().trim();
-            return idStr.equals(targetId) || idStr.equals(dId) || idStr.equals(uId) || 
+            return idStr.equals(targetId) || idStr.equals(dId) || idStr.equals(uId) ||
                    (!emailLower.isEmpty() && (emailLower.equals(dEmail) || emailLower.equals(author) || emailLower.equals(aEmail)));
         });
     }

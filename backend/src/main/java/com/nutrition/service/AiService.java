@@ -50,7 +50,7 @@ public class AiService {
 
         String prompt = String.format(
                 """
-                You are an expert clinical dietitian and sports nutritionist. Create a comprehensive, realistic, and highly detailed 1-day personalized meal and nutrition protocol for an individual with:
+                You are an expert clinical nutritionist and sports nutritionist. Create a comprehensive, realistic, and highly detailed 1-day personalized meal and nutrition protocol for an individual with:
                 - Primary Health Goals: %s
                 - Allergies & Dietary Restrictions: %s
 
@@ -1351,7 +1351,7 @@ public class AiService {
 
         String prompt = String.format(
                 """
-                        You are a expert clinical dietitian and food scientist AI. Analyze the provided food input (%s): %s.
+                        You are a expert clinical nutritionist and food scientist AI. Analyze the provided food input (%s): %s.
                         User Allergies: %s. User Diet Type: %s.
                         Provide JSON response strictly matching this structure:
                         {

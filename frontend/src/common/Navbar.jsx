@@ -28,7 +28,7 @@ export const getNavItemsForRole = (user) => {
 
     const userManagementSubMenu = [
         { label: 'User Directory & Roles', path: '/dashboard/admin/users', icon: 'manage_accounts', desc: 'Search by Name/Email, OTP status, role updates' },
-        { label: 'Dietitian Verification', path: '/dashboard/admin/dietitians', icon: 'badge', desc: 'Approve or suspend nutritionist applications' }
+        { label: 'Nutritionist Verification', path: '/dashboard/admin/nutritionists', icon: 'badge', desc: 'Approve or suspend nutritionist applications' }
     ];
 
     const systemCoreSubMenu = [
@@ -65,7 +65,7 @@ export const getNavItemsForRole = (user) => {
         { label: 'AI Health Companion', path: '/ai-chat', icon: 'smart_toy', desc: '24/7 AI nutrition assistant chat' }
     ];
 
-    const dietitianPlatformSubMenu = [
+    const nutritionistPlatformSubMenu = [
         { label: 'Clinical Command Core', path: '/dashboard/nutritionist', icon: 'dashboard', desc: 'Real-time patient monitoring & algorithmic oversight' },
         { label: 'AI Diet Generator', path: '/ai-diet', icon: 'magic_button', desc: 'Generate instant macro-balanced meal plans' },
         { label: 'AI Food Analyzer', path: '/ai-image', icon: 'center_focus_strong', desc: 'Scan food photos for calories & macro breakdown' },
@@ -85,10 +85,10 @@ export const getNavItemsForRole = (user) => {
         ];
     }
 
-    if (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') {
+    if (rawRole === 'NUTRITIONIST') {
         return [
             { label: 'Home', path: '/' },
-            { label: 'Platform Features', subMenu: dietitianPlatformSubMenu, headerTitle: 'Platform Features' },
+            { label: 'Platform Features', subMenu: nutritionistPlatformSubMenu, headerTitle: 'Platform Features' },
             { label: 'Client & Schedule', subMenu: clientManagementSubMenu, headerTitle: 'Client Management' },
             { label: 'Diet & Reports', subMenu: clinicalToolsSubMenu, headerTitle: 'Clinical Protocols' },
             { label: 'Testimonials', path: '/testimonials' },
@@ -216,7 +216,7 @@ const Navbar = () => {
             const realNotifs = [...backendNotifs, ...localNotifs];
             const currentUserId = String(user?.id || user?.userId || '');
             const currentUserEmail = user?.email?.toLowerCase() || '';
-            const isDietitian = rawRole.includes('DIETITIAN') || rawRole.includes('NUTRITIONIST');
+            const isNutritionist = rawRole.includes('NUTRITIONIST');
 
             const uniqueReal = Array.from(new Map(realNotifs.map(item => [item.id, item])).values())
                 .filter(item => !deletedIds.has(String(item.id)))
@@ -226,17 +226,17 @@ const Navbar = () => {
                         const targetId = String(item.targetUserId);
                         const targetEmail = item.targetUserEmail?.toLowerCase();
                         // For patients: only show if directed to me
-                        if (!isDietitian) {
+                        if (!isNutritionist) {
                             return targetId === currentUserId || (targetEmail && targetEmail === currentUserEmail);
                         }
-                        // For dietitians: do not show their own outgoing message to patient as an incoming notification!
-                        if (isDietitian && item.type === 'CONSULTATION_CHAT') {
+                        // For nutritionists: do not show their own outgoing message to patient as an incoming notification!
+                        if (isNutritionist && item.type === 'CONSULTATION_CHAT') {
                             return false;
                         }
                     }
                     if (item.targetPatientId) {
-                        // Message sent by patient to dietitians: only dietitians should see this!
-                        if (!isDietitian) {
+                        // Message sent by patient to nutritionists: only nutritionists should see this!
+                        if (!isNutritionist) {
                             return false;
                         }
                     }
@@ -263,20 +263,20 @@ const Navbar = () => {
                 loadNotifications();
                 if (event.data?.payload) {
                     const p = event.data.payload;
-                    const isDietitian = rawRole.includes('DIETITIAN') || rawRole.includes('NUTRITIONIST');
+                    const isNutritionist = rawRole.includes('NUTRITIONIST');
                     const myId = String(user?.id || user?.userId || '');
                     const myEmail = user?.email?.toLowerCase() || '';
 
                     // Only show floating toast if this user is the intended receiver:
                     let shouldShowToast = true;
                     if (p.targetUserId) {
-                        if (!isDietitian) {
+                        if (!isNutritionist) {
                             shouldShowToast = String(p.targetUserId) === myId || (p.targetUserEmail && p.targetUserEmail.toLowerCase() === myEmail);
                         } else if (p.type === 'CONSULTATION_CHAT') {
                             shouldShowToast = false;
                         }
                     }
-                    if (p.targetPatientId && !isDietitian) {
+                    if (p.targetPatientId && !isNutritionist) {
                         shouldShowToast = false;
                     }
 
@@ -346,9 +346,9 @@ const Navbar = () => {
 
         // DIRECT NAVIGATION LOGIC - deep link directly to the exact page/modal!
         if (
-            item.type === 'CONSULTATION_CHAT' || 
-            item.type === 'CONSULTATION_REQUEST' || 
-            item.path === 'chat' || 
+            item.type === 'CONSULTATION_CHAT' ||
+            item.type === 'CONSULTATION_REQUEST' ||
+            item.path === 'chat' ||
             (item.title && (item.title.toLowerCase().includes('message') || item.title.toLowerCase().includes('consultation')))
         ) {
             if (item.targetPatientId || item.targetUserId) {
@@ -368,8 +368,8 @@ const Navbar = () => {
         }
 
         if (item.type === 'APPOINTMENT' || item.path?.includes('appointment')) {
-            const isDietitian = rawRole.includes('DIETITIAN') || rawRole.includes('NUTRITIONIST');
-            navigate(isDietitian ? '/dashboard/dietitian/appointments' : '/appointments');
+            const isNutritionist = rawRole.includes('NUTRITIONIST');
+            navigate(isNutritionist ? '/dashboard/nutritionist/appointments' : '/appointments');
             return;
         }
 
@@ -455,7 +455,7 @@ const Navbar = () => {
 
     const unreadCount = notifications.filter(n => !n.read).length;
     const displayName = user?.name || user?.username || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User');
-    const roleLabel = rawRole === 'ADMIN' ? 'Admin' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'Nutritionist' : 'User';
+    const roleLabel = rawRole === 'ADMIN' ? 'Admin' : (rawRole === 'NUTRITIONIST') ? 'Nutritionist' : 'User';
 
     const getInitials = (name) => {
         if (!name) return 'U';
@@ -467,8 +467,8 @@ const Navbar = () => {
     };
     const userInitials = getInitials(displayName);
 
-    const profilePath = rawRole === 'ADMIN' ? '/dashboard/admin/profile' 
-        : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? '/dashboard/nutritionist/profile' 
+    const profilePath = rawRole === 'ADMIN' ? '/dashboard/admin/profile'
+        : (rawRole === 'NUTRITIONIST') ? '/dashboard/nutritionist/profile'
         : '/profile';
 
     return (
@@ -482,8 +482,8 @@ const Navbar = () => {
                     </Link>
 
                     {/* Desktop Navigation Items Container */}
-                    <div 
-                        ref={dropdownRef} 
+                    <div
+                        ref={dropdownRef}
                         className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-white/5 rounded-full px-2.5 xl:px-3.5 py-1 border border-white/10 mx-1 xl:mx-2 shrink-0 shadow-inner"
                     >
                         {(() => {
@@ -494,7 +494,7 @@ const Navbar = () => {
                                     const isChildActive = !isStandaloneActive && item.subMenu.some(sub => checkIsActive(location.pathname, sub.path));
 
                                     return (
-                                        <div 
+                                        <div
                                             key={item.label}
                                             className="relative"
                                             onMouseEnter={() => setActiveDropdown(item.label)}
@@ -563,7 +563,7 @@ const Navbar = () => {
                                 onClick={() => setIsChatModalOpen(true)}
                                 aria-label="Clinical Consultation Chat"
                                 className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 flex items-center justify-center text-white/80 hover:text-[#a5d391] transition-all cursor-pointer shadow-sm"
-                                title="Consultation Chat with Dietitian"
+                                title="Consultation Chat with Nutritionist"
                             >
                                 <span className="material-symbols-outlined text-base sm:text-lg">forum</span>
                             </button>
@@ -601,7 +601,7 @@ const Navbar = () => {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 {unreadCount > 0 && (
-                                                    <button 
+                                                    <button
                                                         onClick={markAllAsRead}
                                                         className="text-[11px] text-white/50 hover:text-[#a5d391] font-semibold transition-colors cursor-pointer"
                                                     >
@@ -609,7 +609,7 @@ const Navbar = () => {
                                                     </button>
                                                 )}
                                                 {notifications.length > 0 && (
-                                                    <button 
+                                                    <button
                                                         onClick={handleClearAllNotifications}
                                                         className="text-[11px] text-red-400/80 hover:text-red-300 font-semibold transition-colors cursor-pointer flex items-center gap-0.5"
                                                     >
@@ -631,8 +631,8 @@ const Navbar = () => {
                                                     <p className="text-[11px] text-white/50 leading-relaxed">
                                                         Sign in to receive personalized AI macro target updates and live nutritionist booking alerts.
                                                     </p>
-                                                    <Link 
-                                                        to="/login" 
+                                                    <Link
+                                                        to="/login"
                                                         onClick={() => setIsNotificationOpen(false)}
                                                         className="inline-block mt-2 px-4 py-1.5 rounded-full bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all shadow-md"
                                                     >
@@ -645,7 +645,7 @@ const Navbar = () => {
                                                 </div>
                                             ) : (
                                                 notifications.map((n) => (
-                                                    <div 
+                                                    <div
                                                         key={n.id}
                                                         onClick={() => handleNotificationClick(n)}
                                                         className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 group ${!n.read ? 'bg-[#a5d391]/10 border-[#a5d391]/30 hover:border-[#a5d391]/60' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
@@ -707,10 +707,10 @@ const Navbar = () => {
                                     {/* User Initials Avatar Circle */}
                                     <div className="w-6 h-6 rounded-full bg-[#a5d391] text-black font-black text-[10px] flex items-center justify-center border border-white/20 group-hover:border-[#a5d391] shrink-0 overflow-hidden shadow-sm">
                                         {user?.avatar && !user.avatar.includes('ui-avatars.com') ? (
-                                            <img 
-                                                src={user.avatar} 
-                                                alt={displayName} 
-                                                className="w-full h-full object-cover" 
+                                            <img
+                                                src={user.avatar}
+                                                alt={displayName}
+                                                className="w-full h-full object-cover"
                                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                             />
                                         ) : (
@@ -719,7 +719,7 @@ const Navbar = () => {
                                     </div>
 
                                     {/* Role Badge */}
-                                    <span className={`hidden xl:inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                    <span className={`hidden xl:inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
                                         {roleLabel}
                                     </span>
 
@@ -743,8 +743,8 @@ const Navbar = () => {
                                 </button>
                             </div>
                         ) : (
-                            <Link 
-                                to="/login" 
+                            <Link
+                                to="/login"
                                 className="cursor-pointer bg-gradient-to-r from-[#a5d391] to-[#7ec362] text-black font-bold px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs shadow-[0_0_15px_rgba(165,211,145,0.4)] hover:shadow-[0_0_25px_rgba(165,211,145,0.8)] transition-all hover:-translate-y-0.5 whitespace-nowrap"
                             >
                                 Login<span className="hidden min-[480px]:inline"> / Sign up</span>
@@ -790,20 +790,20 @@ const Navbar = () => {
                                     </Link>
                                 );
                             })}
-                            
+
                             {user ? (
-                                <button 
+                                <button
                                     onClick={() => {
                                         setIsMenuOpen(false);
                                         handleLogout();
-                                    }} 
+                                    }}
                                     className="mt-2 text-center bg-red-500/20 text-red-300 font-bold px-4 py-2.5 rounded-xl text-sm transition-all border border-red-500/30"
                                 >
                                     Logout
                                 </button>
                             ) : (
-                                <Link 
-                                    to="/login" 
+                                <Link
+                                    to="/login"
                                     onClick={() => setIsMenuOpen(false)}
                                     className="mt-2 text-center bg-[#a5d391] text-black font-bold px-4 py-2.5 rounded-xl text-sm transition-all"
                                 >
@@ -830,9 +830,9 @@ const Navbar = () => {
                                 <span className="text-[10px] font-black uppercase tracking-wider text-[#a5d391] bg-[#a5d391]/10 px-2 py-0.5 rounded-full border border-[#a5d391]/20">
                                     {toastNotification.type === 'CONSULTATION_CHAT' ? 'Consultation Chat' : 'Notification'}
                                 </span>
-                                <button 
+                                <button
                                     type="button"
-                                    onClick={handleDismissToast} 
+                                    onClick={handleDismissToast}
                                     className="text-white/40 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10 cursor-pointer flex items-center justify-center"
                                     title="Dismiss"
                                 >

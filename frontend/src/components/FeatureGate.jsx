@@ -19,7 +19,7 @@ const FEATURE_DESCRIPTIONS = {
         title: 'Consultations & Bookings',
         icon: 'calendar_month',
         category: 'Clinical Telehealth',
-        desc: 'Browse certified platform dietitians and nutritionists, view available consultation slots, schedule virtual appointments, and receive prescription meal plans.'
+        desc: 'Browse certified platform nutritionists and nutritionists, view available consultation slots, schedule virtual appointments, and receive prescription meal plans.'
     },
     '/reports': {
         title: 'Health Reports & Biometric Exporter',
@@ -43,7 +43,7 @@ const FEATURE_DESCRIPTIONS = {
         title: 'Platform System Core & Administration',
         icon: 'admin_panel_settings',
         category: 'System Control',
-        desc: 'Access system analytics, manage user accounts, verify dietitian licenses, execute SQL queries, and moderate platform testimonials.'
+        desc: 'Access system analytics, manage user accounts, verify nutritionist licenses, execute SQL queries, and moderate platform testimonials.'
     }
 };
 
@@ -61,12 +61,12 @@ const FeatureGate = ({ titleOverride, descOverride, iconOverride }) => {
     return (
         <div className="min-h-[80vh] pt-32 pb-24 flex items-center justify-center relative overflow-hidden px-4 sm:px-8">
             <Starfield />
-            
+
             {/* Ambient Lighting Glows */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#a5d391]/10 blur-[150px] rounded-full pointer-events-none z-0"></div>
 
             <div className="max-w-2xl w-full bg-[#080b12]/90 backdrop-blur-2xl border border-white/10 rounded-[3rem] p-8 sm:p-12 text-center relative z-10 shadow-2xl space-y-8 animate-fadeIn">
-                
+
                 {/* Feature Icon Badge */}
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-[#a5d391]/20 to-[#38bdf8]/10 border border-[#a5d391]/30 shadow-[0_0_30px_rgba(165,211,145,0.2)]">
                     <span className="material-symbols-outlined text-4xl text-[#a5d391]">{matchedConfig.icon}</span>

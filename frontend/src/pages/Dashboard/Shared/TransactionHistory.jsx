@@ -20,7 +20,7 @@ const TransactionHistory = () => {
 
     const rawRole = user?.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'USER';
     const isAdmin = rawRole === 'ADMIN';
-    const isNutritionist = rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN';
+    const isNutritionist = rawRole === 'NUTRITIONIST';
 
     // 1. Fetch live balance & transaction ledger
     const loadData = async () => {
@@ -37,7 +37,7 @@ const TransactionHistory = () => {
             if (balRes?.data && balRes.data.balance !== undefined) {
                 setBalance(Number(balRes.data.balance));
             } else {
-                const cached = localStorage.getItem(`nutrimunch_wallet_balance_${myId}`) || 
+                const cached = localStorage.getItem(`nutrimunch_wallet_balance_${myId}`) ||
                                localStorage.getItem(`nutrimunch_wallet_balance_${myEmail}`);
                 if (cached) setBalance(Number(cached));
             }
@@ -214,8 +214,8 @@ const TransactionHistory = () => {
                           status === 'LOW_BALANCE' ||
                           status === 'FAILED';
 
-        const isMyEscrow = !isNutritionist || 
-                           (tx.recipient?.id && String(tx.recipient.id) === myId) || 
+        const isMyEscrow = !isNutritionist ||
+                           (tx.recipient?.id && String(tx.recipient.id) === myId) ||
                            (tx.recipient?.email && tx.recipient.email.toLowerCase() === myEmail);
 
         // Escrow is locked ONLY if still HELD and NOT yet released or refunded
@@ -346,7 +346,7 @@ const TransactionHistory = () => {
     return (
         <div className="min-h-screen bg-[#080b12] text-white pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans">
             <div className="max-w-7xl mx-auto space-y-8">
-                
+
                 {/* Real-time Push Notification Banner */}
                 {liveEventBanner && (
                     <div className="p-4 rounded-2xl bg-gradient-to-r from-[#a5d391]/20 via-[#a5d391]/10 to-transparent border border-[#a5d391]/40 flex items-center justify-between shadow-2xl animate-in fade-in slide-in-from-top-2">
@@ -572,7 +572,7 @@ const TransactionHistory = () => {
                                                         {tx.recipient?.name || tx.initiator?.name || (isCredit ? 'NutriMunch Platform' : 'Consultation Escrow')}
                                                     </div>
                                                     <div className="text-[10px] text-white/40">
-                                                        {tx.recipient?.email || tx.initiator?.email || (isCredit ? 'System Administrator' : 'Dietitian Consultation')}
+                                                        {tx.recipient?.email || tx.initiator?.email || (isCredit ? 'System Administrator' : 'Nutritionist Consultation')}
                                                     </div>
                                                 </td>
 

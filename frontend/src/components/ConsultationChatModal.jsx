@@ -21,40 +21,40 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
 
     // Robust Role Detection (handles Spring Security ROLE_ prefix, single/multiple roles, and token authorities)
     const rawRole = String(
-        activeUser?.role || 
-        activeUser?.roles?.[0] || 
+        activeUser?.role ||
+        activeUser?.roles?.[0] ||
         (Array.isArray(activeUser?.authorities) ? activeUser.authorities[0]?.authority : '') ||
         activeUser?.authority ||
-        activeUser?.userType || 
+        activeUser?.userType ||
         ''
     ).toUpperCase().replace('ROLE_', '').trim();
-    
-    const isNutritionist = rawRole.includes('NUTRITIONIST') || rawRole.includes('DIETITIAN') || rawRole.includes('ADMIN');
+
+    const isNutritionist = rawRole.includes('NUTRITIONIST') || rawRole.includes('ADMIN');
 
     // Patient roster for Nutritionist view
     const [patientList, setPatientList] = useState(DEFAULT_PATIENTS);
     const [selectedPatient, setSelectedPatient] = useState(targetPatient || DEFAULT_PATIENTS[0]);
-    const [platformDietitianName, setPlatformDietitianName] = useState('Dietitian Niraj Shaw');
-    const [currentDietitianName, setCurrentDietitianName] = useState('');
+    const [platformNutritionistName, setPlatformNutritionistName] = useState('Nutritionist Niraj Shaw');
+    const [currentNutritionistName, setCurrentNutritionistName] = useState('');
     const [incomingRequest, setIncomingRequest] = useState(null);
 
-    // Fetch verified platform dietitians
+    // Fetch verified platform nutritionists
     useEffect(() => {
-        api.get('/admin/dietitians')
+        api.get('/admin/nutritionists')
             .then(res => {
                 if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-                    // Look for active dietitian or take first
+                    // Look for active nutritionist or take first
                     const activeD = res.data.find(d => {
                         const fullName = `${d.firstName || ''} ${d.lastName || ''}`.toLowerCase();
-                        return fullName.includes('niraj') || fullName.includes('dietitian');
+                        return fullName.includes('niraj') || fullName.includes('nutritionist');
                     }) || res.data[0];
 
-                    const name = (activeD.firstName || activeD.lastName) 
-                        ? `${activeD.firstName || ''} ${activeD.lastName || ''}`.trim() 
+                    const name = (activeD.firstName || activeD.lastName)
+                        ? `${activeD.firstName || ''} ${activeD.lastName || ''}`.trim()
                         : (activeD.name || activeD.email?.split('@')[0]);
 
                     if (name) {
-                        setPlatformDietitianName(name.toLowerCase().startsWith('dietitian') ? name : `Dietitian ${name}`);
+                        setPlatformNutritionistName(name.toLowerCase().startsWith('nutritionist') ? name : `Nutritionist ${name}`);
                     }
                 }
             })
@@ -100,9 +100,9 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         ? (selectedPatient?.name || selectedPatient?.firstName || 'Patient')
         : (activeUser?.firstName ? `${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || 'Patient'));
 
-    const dietitianName = isNutritionist
-        ? (activeUser?.firstName ? `Dietitian ${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || 'Dietitian Niraj Shaw'))
-        : (currentDietitianName || platformDietitianName || 'Dietitian Niraj Shaw');
+    const nutritionistName = isNutritionist
+        ? (activeUser?.firstName ? `Nutritionist ${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || 'Nutritionist Niraj Shaw'))
+        : (currentNutritionistName || platformNutritionistName || 'Nutritionist Niraj Shaw');
 
     const [messages, setMessages] = useState([]);
     const [sessionStatus, setSessionStatus] = useState('NOT_STARTED'); // 'NOT_STARTED', 'ACTIVE', 'ENDED'
@@ -188,10 +188,10 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
             if (currentSession) {
                 setSessionStatus(currentSession.sessionStatus || 'ACTIVE');
                 setMessages(currentSession.messages || []);
-                const resolvedDietitian = currentSession.dietitianName || 
+                const resolvedNutritionist = currentSession.nutritionistName ||
                     currentSession.messages?.slice().reverse().find(m => m.sender === 'nutritionist')?.senderName;
-                if (resolvedDietitian) {
-                    setCurrentDietitianName(resolvedDietitian.toLowerCase().startsWith('dietitian') ? resolvedDietitian : `Dietitian ${resolvedDietitian}`);
+                if (resolvedNutritionist) {
+                    setCurrentNutritionistName(resolvedNutritionist.toLowerCase().startsWith('nutritionist') ? resolvedNutritionist : `Nutritionist ${resolvedNutritionist}`);
                 }
             }
 
@@ -224,8 +224,8 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
 
                                 const matches = isNutritionist
                                     ? String(backendSession.patientId) === String(targetId) || (targetEmail && backendSession.patientEmail?.toLowerCase() === targetEmail)
-                                    : String(backendSession.patientId) === String(targetId) || 
-                                      (targetEmail && backendSession.patientEmail?.toLowerCase() === targetEmail) || 
+                                    : String(backendSession.patientId) === String(targetId) ||
+                                      (targetEmail && backendSession.patientEmail?.toLowerCase() === targetEmail) ||
                                       (myName && backendSession.patientName?.toLowerCase() === myName) ||
                                       (backendSession.sessionStatus === 'ACTIVE') ||
                                       (!targetId && backendSession.messages.length > 0);
@@ -235,10 +235,10 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                                     if (backendSession.messages.length >= currCount || backendSession.sessionStatus !== sessionStatus) {
                                         setMessages(backendSession.messages);
                                         setSessionStatus(backendSession.sessionStatus || 'ACTIVE');
-                                        const resolvedDietitian = backendSession.dietitianName || 
+                                        const resolvedNutritionist = backendSession.nutritionistName ||
                                             backendSession.messages.slice().reverse().find(m => m.sender === 'nutritionist')?.senderName;
-                                        if (resolvedDietitian) {
-                                            setCurrentDietitianName(resolvedDietitian.toLowerCase().startsWith('dietitian') ? resolvedDietitian : `Dietitian ${resolvedDietitian}`);
+                                        if (resolvedNutritionist) {
+                                            setCurrentNutritionistName(resolvedNutritionist.toLowerCase().startsWith('nutritionist') ? resolvedNutritionist : `Nutritionist ${resolvedNutritionist}`);
                                         }
 
                                         // Update local caches
@@ -336,7 +336,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                 patientId: targetPatientId,
                 patientEmail: targetEmail,
                 patientName: patientName,
-                dietitianName: dietitianName,
+                nutritionistName: nutritionistName,
                 sessionStatus: status,
                 updatedAt: new Date().toISOString(),
                 messages: updatedMessages
@@ -390,8 +390,8 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
             id: `sys_${Date.now()}`,
             sender: 'system',
             text: isNutritionist
-                ? `Consultation chat session initiated by ${dietitianName}. Real-time communication channel is now active.`
-                : `Consultation session opened with ${dietitianName}. You can now send live clinical guidance messages.`,
+                ? `Consultation chat session initiated by ${nutritionistName}. Real-time communication channel is now active.`
+                : `Consultation session opened with ${nutritionistName}. You can now send live clinical guidance messages.`,
             time: timestamp
         };
 
@@ -399,10 +399,10 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
             {
                 id: `msg_welcome_${Date.now()}`,
                 sender: isNutritionist ? 'nutritionist' : 'user',
-                senderName: isNutritionist ? dietitianName : patientName,
+                senderName: isNutritionist ? nutritionistName : patientName,
                 text: isNutritionist
                     ? `Hello ${patientName}, I've initiated your live clinical consultation chat. How are you progressing with your nutrition and daily macro targets?`
-                    : `Hello ${dietitianName}, I've opened this consultation chat to discuss my nutrition targets and meal plans.`,
+                    : `Hello ${nutritionistName}, I've opened this consultation chat to discuss my nutrition targets and meal plans.`,
                 time: timestamp
             }
         ];
@@ -417,7 +417,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                 id: `chat_notif_${Date.now()}`,
                 title: `Live Consultation Chat Initiated`,
                 message: isNutritionist
-                    ? `Dietitian ${dietitianName} has opened an active consultation chat with you.`
+                    ? `Nutritionist ${nutritionistName} has opened an active consultation chat with you.`
                     : `Patient ${patientName} has initiated a live consultation session with you.`,
                 time: 'Just now',
                 icon: 'forum',
@@ -467,7 +467,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         setTimeout(() => setRequestPingSent(false), 5000);
     };
 
-    // Dietitian accepts incoming patient request
+    // Nutritionist accepts incoming patient request
     const handleAcceptRequest = (req) => {
         const found = patientList.find(p => String(p.userId || p.id) === String(req.patientId));
         if (found) {
@@ -493,7 +493,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         const endMessage = {
             id: `sys_end_${Date.now()}`,
             sender: 'system',
-            text: `Consultation session concluded by ${dietitianName} at ${timestamp}. The session history is archived.`,
+            text: `Consultation session concluded by ${nutritionistName} at ${timestamp}. The session history is archived.`,
             time: timestamp
         };
 
@@ -514,7 +514,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         const newMessage = {
             id: `msg_${Date.now()}`,
             sender: isNutritionist ? 'nutritionist' : 'user',
-            senderName: isNutritionist ? dietitianName : patientName,
+            senderName: isNutritionist ? nutritionistName : patientName,
             text: textToSend,
             time: timestamp
         };
@@ -528,7 +528,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         // Notify Receiver in real-time with direct deep-link to chat
         try {
             const notifTitle = isNutritionist
-                ? `New Message from ${dietitianName}`
+                ? `New Message from ${nutritionistName}`
                 : `New Message from ${patientName} (#${patientId})`;
             const notifMessage = textToSend;
             const notifPayload = {
@@ -578,7 +578,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
     if (!isOpen) return null;
 
     const modalContent = (
-        <div 
+        <div
             className="fixed inset-0 z-[99999] flex flex-col items-center justify-start pt-20 sm:pt-24 pb-6 px-3 sm:px-4 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn pointer-events-auto"
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
@@ -586,11 +586,11 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                 }
             }}
         >
-            <div 
+            <div
                 className="relative w-full max-w-2xl bg-[#080b12] border border-[#a5d391]/40 rounded-[2.5rem] shadow-[0_0_80px_rgba(165,211,145,0.25)] flex flex-col h-[78vh] max-h-[calc(100vh-7.5rem)] overflow-hidden shrink-0 my-auto sm:my-0 pointer-events-auto"
                 onClick={(e) => e.stopPropagation()}
             >
-                
+
                 {/* Header */}
                 <div className="px-5 sm:px-6 py-4 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
@@ -600,7 +600,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-sm sm:text-base font-bold text-white font-hero-display truncate">
-                                    {isNutritionist ? `Consultation with ${patientName}` : `Clinical Consultation with ${dietitianName}`}
+                                    {isNutritionist ? `Consultation with ${patientName}` : `Clinical Consultation with ${nutritionistName}`}
                                 </h3>
                                 <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                                     sessionStatus === 'ACTIVE'
@@ -613,8 +613,8 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                                 </span>
                             </div>
                             <p className="text-[11px] sm:text-xs text-white/50 truncate">
-                                {isNutritionist 
-                                    ? `Patient ID: #${patientId} • Goal: ${selectedPatient?.goal || 'General Health & Nutrition'}` 
+                                {isNutritionist
+                                    ? `Patient ID: #${patientId} • Goal: ${selectedPatient?.goal || 'General Health & Nutrition'}`
                                     : `Certified Nutritionist • Real-time clinical guidance • Patient: ${patientName}`}
                             </p>
                         </div>
@@ -719,9 +719,9 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                         <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-base text-amber-400">lock</span>
                             <span className="font-semibold">
-                                {isNutritionist 
-                                    ? 'Session concluded. Click "Re-open Chat" above anytime to resume two-way communication.' 
-                                    : 'Consultation concluded by Dietitian. History is archived. You can send a follow-up message below to resume.'}
+                                {isNutritionist
+                                    ? 'Session concluded. Click "Re-open Chat" above anytime to resume two-way communication.'
+                                    : 'Consultation concluded by Nutritionist. History is archived. You can send a follow-up message below to resume.'}
                             </span>
                         </div>
                         <span className="text-[10px] font-bold uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded-full">Archived</span>
@@ -733,9 +733,9 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                         <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-base text-[#a5d391]">forum</span>
                             <span>
-                                {isNutritionist 
-                                    ? `Direct channel ready with ${patientName}. Type below or click "Initiate Chat".` 
-                                    : `Direct channel ready with ${dietitianName}. Type your message below to start chatting.`}
+                                {isNutritionist
+                                    ? `Direct channel ready with ${patientName}. Type below or click "Initiate Chat".`
+                                    : `Direct channel ready with ${nutritionistName}. Type your message below to start chatting.`}
                             </span>
                         </div>
                         <span className="text-[10px] font-bold uppercase tracking-widest text-[#a5d391]/80">Two-Way Live</span>
@@ -753,12 +753,12 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                                 <h4 className="text-lg font-bold text-white font-hero-display">
                                     {isNutritionist
                                         ? `Start Consultation with ${patientName}`
-                                        : `Consultation with ${dietitianName}`}
+                                        : `Consultation with ${nutritionistName}`}
                                 </h4>
                                 <p className="text-xs text-white/50 max-w-md mt-1">
                                     {isNutritionist
                                         ? `Send clinical guidance, macro updates, or review nutritional adherence with ${patientName}.`
-                                        : `Ask your dietitian questions about macro targets, diet adherence, or meal adjustments anytime.`}
+                                        : `Ask your nutritionist questions about macro targets, diet adherence, or meal adjustments anytime.`}
                                 </p>
                             </div>
 
@@ -792,7 +792,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                                             className="text-[11px] text-[#a5d391]/80 hover:text-[#a5d391] flex items-center gap-1.5 mx-auto transition-colors cursor-pointer"
                                         >
                                             <span className="material-symbols-outlined text-sm">notifications_active</span>
-                                            <span>{requestPingSent ? 'Notification Sent to Dietitian' : 'Send Alert Ping to Dietitian'}</span>
+                                            <span>{requestPingSent ? 'Notification Sent to Nutritionist' : 'Send Alert Ping to Nutritionist'}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -824,24 +824,24 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                             }
 
                             const isMe = isNutritionist ? msg.sender === 'nutritionist' : msg.sender === 'user';
-                            const isDietitianMsg = msg.sender === 'nutritionist';
+                            const isNutritionistMsg = msg.sender === 'nutritionist';
 
                             return (
                                 <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                                     <div className="flex items-center gap-1.5 mb-1 px-1">
                                         <span className="text-[11px] font-bold text-white/70">{msg.senderName}</span>
-                                        {isDietitianMsg && (
+                                        {isNutritionistMsg && (
                                             <span className="text-[9px] font-black uppercase tracking-wider text-[#a5d391] bg-[#a5d391]/15 px-1.5 py-0.2 rounded border border-[#a5d391]/30">
-                                                Dietitian
+                                                Nutritionist
                                             </span>
                                         )}
                                         <span className="text-[10px] text-white/40">{msg.time}</span>
                                     </div>
                                     <div className={`max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                                        isMe 
-                                            ? 'bg-[#a5d391] text-black font-medium rounded-tr-none shadow-lg' 
-                                            : isDietitianMsg 
-                                                ? 'bg-[#0d131f] border border-[#a5d391]/40 text-white rounded-tl-none shadow-md' 
+                                        isMe
+                                            ? 'bg-[#a5d391] text-black font-medium rounded-tr-none shadow-lg'
+                                            : isNutritionistMsg
+                                                ? 'bg-[#0d131f] border border-[#a5d391]/40 text-white rounded-tl-none shadow-md'
                                                 : 'bg-white/10 border border-white/10 text-white rounded-tl-none shadow-md'
                                     }`}>
                                         {msg.text}
@@ -903,7 +903,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                             type="text"
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
-                            placeholder={isNutritionist ? `Message ${patientName}...` : `Message ${dietitianName}...`}
+                            placeholder={isNutritionist ? `Message ${patientName}...` : `Message ${nutritionistName}...`}
                             className="flex-1 bg-[#080b12] border border-white/15 focus:border-[#a5d391] text-white text-xs sm:text-sm px-4 py-3 rounded-2xl outline-none transition-all placeholder:text-white/40"
                         />
                         <button

@@ -33,20 +33,20 @@ const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, back
     const isBackShowing = normalized === 180;
 
     return (
-        <div 
-            className={`relative cursor-pointer group [perspective:1500px] transition-transform duration-500 hover:-translate-y-3 ${wrapperClass}`} 
+        <div
+            className={`relative cursor-pointer group [perspective:1500px] transition-transform duration-500 hover:-translate-y-3 ${wrapperClass}`}
             onClick={handleClick}
         >
-            <div 
+            <div
                 className="w-full h-full duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] [transform-style:preserve-3d] transition-transform will-change-transform"
-                style={{ 
+                style={{
                     transform: `rotateY(${rotation}deg)`,
                     WebkitTransformStyle: 'preserve-3d',
                     transformStyle: 'preserve-3d'
                 }}
             >
                 {/* Front */}
-                <div 
+                <div
                     className={`absolute inset-0 w-full h-full flex flex-col group-hover:shadow-2xl transition-shadow duration-500 ${frontClass}`}
                     style={{
                         backfaceVisibility: 'hidden',
@@ -63,7 +63,7 @@ const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, back
                 </div>
 
                 {/* Back */}
-                <div 
+                <div
                     className={`absolute inset-0 w-full h-full flex flex-col justify-center items-center text-center p-6 sm:p-10 md:p-14 rounded-[2.5rem] group-hover:shadow-2xl transition-shadow duration-500 ${backClass}`}
                     style={{
                         backfaceVisibility: 'hidden',
@@ -87,7 +87,7 @@ const Home = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);
     const role = String(user?.role || '').toUpperCase().replace('ROLE_', '');
-    const isStaffHome = role === 'ADMIN' || role === 'NUTRITIONIST' || role === 'DIETITIAN';
+    const isStaffHome = role === 'ADMIN' || role === 'NUTRITIONIST';
     const roleContent = role === 'ADMIN'
         ? {
             eyebrow: 'Administration workspace',
@@ -97,7 +97,7 @@ const Home = () => {
             path: '/dashboard/admin',
             icon: 'admin_panel_settings'
         }
-        : role === 'NUTRITIONIST' || role === 'DIETITIAN'
+        : role === 'NUTRITIONIST'
             ? {
                 eyebrow: 'Clinical workspace',
                 title: 'Deliver better nutrition care.',
@@ -128,7 +128,7 @@ const Home = () => {
         <div className="relative flex flex-col w-full">
             {/* Main Hero Container */}
             <div className="w-full flex-grow relative z-10 flex flex-col justify-between pt-4">
-                
+
                 {/* Top Section - Huge Typography */}
                 <div className="relative mb-12 md:mb-16">
                     <h1
@@ -141,7 +141,7 @@ const Home = () => {
 
                 {/* Bottom Info Grid */}
                 <div className="grid grid-cols-12 gap-6 sm:gap-8 md:gap-12 items-end mb-40 md:mb-56">
-                    
+
                     {/* Left: Avatars */}
                     <div className="col-span-12 md:col-span-3 space-y-4">
                         <div className="flex -space-x-4">
@@ -173,7 +173,7 @@ const Home = () => {
                     </div>
 
                     {/* Right: UI Card & Text */}
-                    <div 
+                    <div
                         onClick={() => navigate(roleContent.path)}
                         className="col-span-12 md:col-span-4 flex items-center gap-6 justify-start md:justify-end cursor-pointer group hover:opacity-90 transition-all"
                     >
@@ -190,7 +190,7 @@ const Home = () => {
 
                 </div>
             </div>
-            
+
 
 
             {/* Below sections restored like before */}
@@ -221,7 +221,7 @@ const Home = () => {
                     <div className="relative rounded-xl overflow-hidden shadow-[0_80px_120px_-20px_rgba(15,23,42,0.3)] aspect-[21/9] border border-white/10">
                         <img className="w-full h-full object-cover scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQW1ayK2QptnJC4qRpFZJQfK25SrdzXBlBBKDdfgFsY3fbK5Q9MBP4F2v2a6cli_nEXhYxZdynfefZ9y6wd9ardu7fb6hI4n4NzwrwE4B--Y4wqSMdeuOKZZfTXGlE55PD6O95ZslKGxZFe9jEyC5O4jQKnL_jnYppX1ixe10PJAE_5uvWDiX9c_vA5cz5JtDILmRAtwTwIPmdRfsDOx7e2W8rsEiFw4gzv8YSmBzQ-2grz1UCn8l" alt="Dashboard"/>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                        
+
                         {/* Floating Biometric UI */}
                         <div className="absolute bottom-4 right-4 sm:bottom-10 sm:left-10 sm:right-10 flex justify-end sm:justify-between items-end">
                             <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl flex gap-16 inner-glow hidden sm:flex">
@@ -245,9 +245,9 @@ const Home = () => {
                 {/* Bento Grid Insights */}
                 <section className="pt-12 sm:pt-16 pb-6 sm:pb-8 max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                        
+
                         {/* Card 1: AI Food Calorie & Nutrient Scanner */}
-                        <FlipFeatureCard 
+                        <FlipFeatureCard
                             wrapperClass="md:col-span-7 min-h-[480px]"
                             frontClass="bg-white rounded-[2.5rem] p-10 md:p-14 shadow-xl justify-between shadow-[#4a6741]/10 border border-transparent hover:border-[#4a6741]/20"
                             backClass="bg-white shadow-xl shadow-[#4a6741]/10 border border-gray-100"
@@ -279,7 +279,7 @@ const Home = () => {
                                     Snap a photo for <span className="text-[#4a6741] italic">instant macro</span><br/>& calorie detection.
                                 </h3>
                             </div>
-                            <button 
+                            <button
                                 onClick={(e) => { e.stopPropagation(); navigate('/ai-image'); }}
                                 className="flex items-center gap-3 mt-16 cursor-pointer group/btn"
                             >
@@ -287,7 +287,7 @@ const Home = () => {
                                 <span className="material-symbols-outlined text-[#4a6741] transition-transform duration-500 group-hover/btn:translate-x-4">arrow_forward</span>
                             </button>
                         </FlipFeatureCard>
-                        
+
                         {/* Card 2: AI Diet & Recipe Generator */}
                         <FlipFeatureCard
                             wrapperClass="md:col-span-5 min-h-[480px]"
@@ -312,22 +312,22 @@ const Home = () => {
                             }
                         >
                             <div className="p-8 sm:p-10 md:p-12 relative z-20 pb-0">
-                                <Link 
-                                    to="/ai-diet" 
-                                    onClick={(e) => e.stopPropagation()} 
+                                <Link
+                                    to="/ai-diet"
+                                    onClick={(e) => e.stopPropagation()}
                                     className="text-[10px] tracking-widest text-[#a3e635] hover:text-white font-bold uppercase mb-3 inline-flex items-center gap-1.5 transform group-hover:translate-x-2 transition-transform duration-500"
                                 >
                                     <span>AI DIET PLANNER</span>
                                     <span className="material-symbols-outlined text-xs">open_in_new</span>
                                 </Link>
-                                <h3 
+                                <h3
                                     onClick={(e) => { e.stopPropagation(); navigate('/ai-diet'); }}
                                     className="font-hero-display text-3xl sm:text-4xl md:text-[2.25rem] font-bold tracking-tight leading-[1.1] cursor-pointer hover:text-[#a3e635] transition-colors"
                                 >
                                     Precision-tailored<br/>weekly meal plans.
                                 </h3>
                                 <div className="mt-5">
-                                    <button 
+                                    <button
                                         onClick={(e) => { e.stopPropagation(); navigate('/ai-diet'); }}
                                         className="inline-flex items-center gap-2 bg-[#a3e635] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(163,230,53,0.35)] hover:scale-105 cursor-pointer"
                                     >
@@ -340,9 +340,9 @@ const Home = () => {
                             {/* Image container strictly below the text */}
                             <div className="relative w-full h-44 sm:h-52 overflow-hidden mt-6 z-10">
                                 <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[#0b121f]/20 to-[#0b121f] z-10 pointer-events-none"></div>
-                                <img 
-                                    className="w-full h-full object-cover object-center opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" 
-                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQW1ayK2QptnJC4qRpFZJQfK25SrdzXBlBBKDdfgFsY3fbK5Q9MBP4F2v2a6cli_nEXhYxZdynfefZ9y6wd9ardu7fb6hI4n4NzwrwE4B--Y4wqSMdeuOKZZfTXGlE55PD6O95ZslKGxZFe9jEyC5O4jQKnL_jnYppX1ixe10PJAE_5uvWDiX9c_vA5cz5JtDILmRAtwTwIPmdRfsDOx7e2W8rsEiFw4gzv8YSmBzQ-2grz1UCn8l" 
+                                <img
+                                    className="w-full h-full object-cover object-center opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQW1ayK2QptnJC4qRpFZJQfK25SrdzXBlBBKDdfgFsY3fbK5Q9MBP4F2v2a6cli_nEXhYxZdynfefZ9y6wd9ardu7fb6hI4n4NzwrwE4B--Y4wqSMdeuOKZZfTXGlE55PD6O95ZslKGxZFe9jEyC5O4jQKnL_jnYppX1ixe10PJAE_5uvWDiX9c_vA5cz5JtDILmRAtwTwIPmdRfsDOx7e2W8rsEiFw4gzv8YSmBzQ-2grz1UCn8l"
                                     alt="Healthy meal plan plate"
                                 />
                             </div>

@@ -33,7 +33,7 @@ const INITIAL_SEED_TESTIMONIALS = [
         id: 'seed-3',
         authorName: "Dr. Elena Rodriguez",
         authorEmail: "elena.r@example.com",
-        authorRole: "Certified Dietitian",
+        authorRole: "Certified Nutritionist",
         userId: 103,
         rating: 5,
         programResult: "PCOS Symptoms Managed",

@@ -2,18 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
 
-const DietitianManagement = () => {
-    const [dietitians, setDietitians] = useState([]);
+const NutritionistManagement = () => {
+    const [nutritionists, setNutritionists] = useState([]);
     const [loading, setLoading] = useState(true);
     const [notification, setNotification] = useState(null);
 
     useEffect(() => {
-        fetchDietitians();
-        window.addEventListener('nutrimunch_role_updated', fetchDietitians);
-        window.addEventListener('storage', fetchDietitians);
+        fetchNutritionists();
+        window.addEventListener('nutrimunch_role_updated', fetchNutritionists);
+        window.addEventListener('storage', fetchNutritionists);
         return () => {
-            window.removeEventListener('nutrimunch_role_updated', fetchDietitians);
-            window.removeEventListener('storage', fetchDietitians);
+            window.removeEventListener('nutrimunch_role_updated', fetchNutritionists);
+            window.removeEventListener('storage', fetchNutritionists);
         };
     }, []);
 
@@ -22,22 +22,22 @@ const DietitianManagement = () => {
         setTimeout(() => setNotification(null), 3500);
     };
 
-    const fetchDietitians = async () => {
+    const fetchNutritionists = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/admin/dietitians');
+            const response = await api.get('/admin/nutritionists');
             if (response.data && Array.isArray(response.data)) {
                 // STRICT CHECK: Disallow non-nutritionists (e.g. if changed to USER)
                 const strictlyNutritionists = response.data.filter(d => {
                     const r = d.role ? String(d.role).toUpperCase().replace('ROLE_', '') : 'NUTRITIONIST';
-                    return r === 'NUTRITIONIST' || r === 'DIETITIAN';
+                    return r === 'NUTRITIONIST';
                 });
-                setDietitians(strictlyNutritionists);
+                setNutritionists(strictlyNutritionists);
             } else {
                 await fetchFallbackUsers();
             }
         } catch (error) {
-            console.error("Error fetching dietitians from endpoint, attempting fallback...", error);
+            console.error("Error fetching nutritionists from endpoint, attempting fallback...", error);
             await fetchFallbackUsers();
         } finally {
             setLoading(false);
@@ -50,7 +50,7 @@ const DietitianManagement = () => {
             if (res.data && Array.isArray(res.data)) {
                 const nutrs = res.data.filter(u => {
                     const r = u.role ? String(u.role).toUpperCase().replace('ROLE_', '') : '';
-                    return r === 'NUTRITIONIST' || r === 'DIETITIAN';
+                    return r === 'NUTRITIONIST';
                 }).map(u => ({
                     id: u.id,
                     userId: u.id,
@@ -59,53 +59,53 @@ const DietitianManagement = () => {
                     email: u.email,
                     verified: Boolean(u.verified),
                     isApproved: false,
-                    credentials: 'Certified Clinical Dietitian',
+                    credentials: 'Certified Clinical Nutritionist',
                     specialization: 'Clinical & Medical Nutrition',
                     licenseNumber: `RD-${u.id}84920-IN`,
                     approvalStatus: 'PENDING'
                 }));
-                setDietitians(nutrs);
+                setNutritionists(nutrs);
             }
         } catch (err) {
-            console.error("Failed loading fallback dietitians", err);
+            console.error("Failed loading fallback nutritionists", err);
         }
     };
 
-    const verifyDietitian = async (id) => {
+    const verifyNutritionist = async (id) => {
         try {
-            await api.put(`/admin/dietitians/${id}/verify`);
+            await api.put(`/admin/nutritionists/${id}/verify`);
             window.dispatchEvent(new Event('nutrimunch_profile_updated'));
-            showToast('Dietitian practitioner status approved & verified!');
-            fetchDietitians();
+            showToast('Nutritionist practitioner status approved & verified!');
+            fetchNutritionists();
         } catch (error) {
-            console.error("Error verifying dietitian", error);
-            showToast('Error approving dietitian credentials.');
+            console.error("Error verifying nutritionist", error);
+            showToast('Error approving nutritionist credentials.');
         }
     };
 
-    const revokeDietitian = async (id) => {
+    const revokeNutritionist = async (id) => {
         try {
-            await api.put(`/admin/dietitians/${id}/revoke`);
+            await api.put(`/admin/nutritionists/${id}/revoke`);
             window.dispatchEvent(new Event('nutrimunch_profile_updated'));
-            showToast('Dietitian verification revoked.');
-            fetchDietitians();
+            showToast('Nutritionist verification revoked.');
+            fetchNutritionists();
         } catch (error) {
-            console.error("Error revoking dietitian", error);
+            console.error("Error revoking nutritionist", error);
             showToast('Error revoking verification status.');
         }
     };
 
-    const deleteDietitian = async (id) => {
-        const targetDietitian = dietitians.find(d => d.id === id);
+    const deleteNutritionist = async (id) => {
+        const targetNutritionist = nutritionists.find(d => d.id === id);
         if (window.confirm("Are you sure you want to delete this nutritionist account?")) {
             try {
                 await api.delete(`/admin/users/${id}`);
-                setDietitians(dietitians.filter(d => d.id !== id));
+                setNutritionists(nutritionists.filter(d => d.id !== id));
                 showToast('Nutritionist account removed from system.');
 
                 // Purge associated diet plans & local caches
-                if (targetDietitian) {
-                    const uEmail = (targetDietitian.email || '').toLowerCase().trim();
+                if (targetNutritionist) {
+                    const uEmail = (targetNutritionist.email || '').toLowerCase().trim();
                     const uIdStr = String(id);
 
                     try {
@@ -114,10 +114,10 @@ const DietitianManagement = () => {
                             const parsed = JSON.parse(rawHistory);
                             const cleaned = parsed.filter(p => {
                                 const pTarget = String(p.targetUserId || '');
-                                const pDietitianId = String(p.dietitianId || '');
-                                const pAuthor = (p.author || p.dietitianName || '').toLowerCase().trim();
-                                const pEmail = (p.dietitianEmail || '').toLowerCase().trim();
-                                return pTarget !== uIdStr && pDietitianId !== uIdStr && pEmail !== uEmail && !pAuthor.includes(uEmail);
+                                const pNutritionistId = String(p.nutritionistId || '');
+                                const pAuthor = (p.author || p.nutritionistName || '').toLowerCase().trim();
+                                const pEmail = (p.nutritionistEmail || '').toLowerCase().trim();
+                                return pTarget !== uIdStr && pNutritionistId !== uIdStr && pEmail !== uEmail && !pAuthor.includes(uEmail);
                             });
                             localStorage.setItem('nutrimunch_diet_plans_history', JSON.stringify(cleaned));
                         }
@@ -137,8 +137,8 @@ const DietitianManagement = () => {
                         const rawGen = localStorage.getItem('nutrimunch_general_diet_plan');
                         if (rawGen) {
                             const gen = JSON.parse(rawGen);
-                            const gEmail = (gen.dietitianEmail || '').toLowerCase().trim();
-                            const gAuthor = (gen.author || gen.dietitianName || '').toLowerCase().trim();
+                            const gEmail = (gen.nutritionistEmail || '').toLowerCase().trim();
+                            const gAuthor = (gen.author || gen.nutritionistName || '').toLowerCase().trim();
                             if (gEmail === uEmail || gAuthor.includes(uEmail)) {
                                 localStorage.removeItem('nutrimunch_general_diet_plan');
                             }
@@ -175,7 +175,7 @@ const DietitianManagement = () => {
                     </div>
                     <h1 className="text-4xl font-bold font-hero-display text-white">User Management</h1>
                     <p className="text-white/60 text-sm mt-1 font-light">
-                        Approve or suspend practitioner license credentials, manage dietitian verification status, and manage client permissions.
+                        Approve or suspend practitioner license credentials, manage nutritionist verification status, and manage client permissions.
                     </p>
                 </div>
 
@@ -189,18 +189,18 @@ const DietitianManagement = () => {
                         User Directory
                     </Link>
                     <Link 
-                        to="/dashboard/admin/dietitians" 
+                        to="/dashboard/admin/nutritionists" 
                         className="px-4 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-[#080b12] shadow-md shadow-[#a5d391]/20 flex items-center gap-2 transition-all"
                     >
                         <span className="material-symbols-outlined text-sm">badge</span>
-                        Dietitian Verification ({dietitians.length})
+                        Nutritionist Verification ({nutritionists.length})
                     </Link>
                 </div>
             </div>
 
             {loading ? (
                 <div className="p-12 text-center text-white/50 text-sm">
-                    Loading registered dietitians & practitioner applications...
+                    Loading registered nutritionists & practitioner applications...
                 </div>
             ) : (
                 <div className="overflow-x-auto bg-white/5 rounded-3xl border border-white/10 p-4 shadow-2xl">
@@ -216,14 +216,14 @@ const DietitianManagement = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {dietitians.map(dietitian => {
-                                const isApproved = Boolean(dietitian.isApproved === true || dietitian.approvalStatus === 'APPROVED' || dietitian.approvalStatus === 'VERIFIED');
-                                const fullName = `${dietitian.firstName || ''} ${dietitian.lastName || ''}`.trim() || 'Dietitian';
+                            {nutritionists.map(nutritionist => {
+                                const isApproved = Boolean(nutritionist.isApproved === true || nutritionist.approvalStatus === 'APPROVED' || nutritionist.approvalStatus === 'VERIFIED');
+                                const fullName = `${nutritionist.firstName || ''} ${nutritionist.lastName || ''}`.trim() || 'Nutritionist';
 
                                 return (
-                                    <tr key={dietitian.id} className="hover:bg-white/[0.02] transition-colors group">
+                                    <tr key={nutritionist.id} className="hover:bg-white/[0.02] transition-colors group">
                                         <td className="p-4 text-xs font-mono font-bold text-white/50">
-                                            #{dietitian.id}
+                                            #{nutritionist.id}
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
@@ -238,15 +238,15 @@ const DietitianManagement = () => {
                                                 )}
                                                 <div>
                                                     <div className="font-bold text-sm text-white">{fullName}</div>
-                                                    <div className="text-[10px] text-[#a5d391] font-mono">{dietitian.licenseNumber || 'RD-84920-IN'}</div>
+                                                    <div className="text-[10px] text-[#a5d391] font-mono">{nutritionist.licenseNumber || 'RD-84920-IN'}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="p-4 text-xs text-white/70">
-                                            {dietitian.email}
+                                            {nutritionist.email}
                                         </td>
                                         <td className="p-4 text-xs text-white/50 max-w-[200px] truncate">
-                                            {dietitian.specialization || dietitian.credentials || 'Clinical Nutrition'}
+                                            {nutritionist.specialization || nutritionist.credentials || 'Clinical Nutrition'}
                                         </td>
                                         <td className="p-4 whitespace-nowrap">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${isApproved ? 'bg-[#a5d391]/20 text-[#a5d391] border-[#a5d391]/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}`}>
@@ -256,21 +256,21 @@ const DietitianManagement = () => {
                                         <td className="p-4 text-right whitespace-nowrap space-x-2">
                                             {!isApproved ? (
                                                 <button 
-                                                    onClick={() => verifyDietitian(dietitian.id)} 
+                                                    onClick={() => verifyNutritionist(nutritionist.id)} 
                                                     className="bg-[#a5d391] text-black hover:bg-white px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-md"
                                                 >
                                                     Approve & Verify
                                                 </button>
                                             ) : (
                                                 <button 
-                                                    onClick={() => revokeDietitian(dietitian.id)} 
+                                                    onClick={() => revokeNutritionist(nutritionist.id)} 
                                                     className="border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
                                                 >
                                                     Revoke
                                                 </button>
                                             )}
                                             <button 
-                                                onClick={() => deleteDietitian(dietitian.id)} 
+                                                onClick={() => deleteNutritionist(nutritionist.id)} 
                                                 className="border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
                                             >
                                                 Delete
@@ -280,10 +280,10 @@ const DietitianManagement = () => {
                                 );
                             })}
 
-                            {dietitians.length === 0 && (
+                            {nutritionists.length === 0 && (
                                 <tr>
                                     <td colSpan="6" className="p-12 text-center text-white/50 text-sm">
-                                        No nutritionists or dietitian accounts registered yet.
+                                        No nutritionists or nutritionist accounts registered yet.
                                     </td>
                                 </tr>
                             )}
@@ -295,4 +295,4 @@ const DietitianManagement = () => {
     );
 };
 
-export default DietitianManagement;
+export default NutritionistManagement;

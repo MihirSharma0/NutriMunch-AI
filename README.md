@@ -10,7 +10,7 @@ A comprehensive, full-stack AI-driven nutrition and diet management platform bui
   - Role-Based Access Control (RBAC).
 - **Role-Specific Dashboards**
   - **User Portal**: Track calories, get AI-powered diet plans, chat with AI, and book nutritionist appointments.
-  - **Dietitian Portal**: Manage client portfolios, build custom meal plans, and track client adherence.
+  - **Nutritionist Portal**: Manage client portfolios, build custom meal plans, and track client adherence.
   - **Admin Portal**: Platform analytics, user management, and system overview.
 - **Automated Database Management**
   - Seamless schema tracking and updates using **Flyway Migrations**.
@@ -31,7 +31,7 @@ A comprehensive, full-stack AI-driven nutrition and diet management platform bui
 - **Deployment**: Vercel
 
 ### Backend (Server)
-- **Framework**: Java Spring Boot 
+- **Framework**: Java Spring Boot
 - **Security**: Spring Security & JSON Web Tokens (JWT)
 - **Database Mapping**: Spring Data JPA / Hibernate
 - **Database Migrations**: Flyway
@@ -40,6 +40,14 @@ A comprehensive, full-stack AI-driven nutrition and diet management platform bui
 
 ### Database
 - **Primary DB**: MySQL 8.0 (Managed via Aiven Cloud)
+
+### Naming convention
+
+The application consistently uses **Nutritionist** for the clinical provider
+role, including frontend page names, dashboard routes, API fields, and current
+database schema. Flyway migration `V17__rename_nutritionist_column.sql`
+renames the live appointments foreign-key column from the legacy
+`dietitian_id` name to `nutritionist_id` and updates saved diet-plan JSON keys.
 
 ---
 

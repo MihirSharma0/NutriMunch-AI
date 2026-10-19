@@ -24,7 +24,7 @@ public class BookingController {
 
     /**
      * STEP 2.2: Booking Request & Escrow Lock (POST /api/bookings/request)
-     * User requests an appointment with a Dietitian for a specific amount.
+     * User requests an appointment with a Nutritionist for a specific amount.
      * Deducts/locks amount into ESCROW state and creates booking with status "requested".
      */
     @PostMapping("/request")
@@ -36,8 +36,8 @@ public class BookingController {
         }
 
         AppointmentDto dto = new AppointmentDto();
-        if (payload.get("dietitianId") != null) {
-            dto.setDietitianId(Long.valueOf(payload.get("dietitianId").toString()));
+        if (payload.get("nutritionistId") != null) {
+            dto.setNutritionistId(Long.valueOf(payload.get("nutritionistId").toString()));
         }
         if (payload.get("userId") != null) {
             dto.setUserId(Long.valueOf(payload.get("userId").toString()));
@@ -84,8 +84,8 @@ public class BookingController {
     }
 
     /**
-     * STEP 2.3: Dietitian Response (PATCH /api/bookings/:id/respond)
-     * If Accepted: Moves funds from escrow to dietitian's balance, records transfer, status -> accepted.
+     * STEP 2.3: Nutritionist Response (PATCH /api/bookings/:id/respond)
+     * If Accepted: Moves funds from escrow to nutritionist's balance, records transfer, status -> accepted.
      * If Cancelled/Declined: Releases funds back to user's balance, records refund, status -> cancelled.
      */
     @PatchMapping("/{id}/respond")

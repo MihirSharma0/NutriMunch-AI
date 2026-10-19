@@ -9,7 +9,7 @@ import { subscribeWalletSse } from '../../../utils/walletSse';
 const Appointments = () => {
     const { user, token } = useContext(AuthContext);
     const [appointments, setAppointments] = useState([]);
-    const [dietitians, setDietitians] = useState([]);
+    const [nutritionists, setNutritionists] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -53,7 +53,7 @@ const Appointments = () => {
     const [selectedCardId, setSelectedCardId] = useState(null);
 
     const [bookingForm, setBookingForm] = useState({
-        dietitianId: '',
+        nutritionistId: '',
         title: 'Metabolic Baseline Review',
         sessionType: 'Clinical Consultation',
         date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0], // 2 days from now
@@ -109,7 +109,7 @@ const Appointments = () => {
 
     useEffect(() => {
         fetchAppointments();
-        fetchDietitians();
+        fetchNutritionists();
         fetchWallet();
 
         const handleWalletUpdated = (e) => {
@@ -131,7 +131,7 @@ const Appointments = () => {
             if (e?.detail) {
                 const targetId = String(e.detail.recipientId || '');
                 const targetEmail = (e.detail.recipientEmail || '').toLowerCase();
-                const isForMe = (targetId && myId && targetId === myId) || 
+                const isForMe = (targetId && myId && targetId === myId) ||
                                 (targetEmail && myEmail && targetEmail === myEmail) ||
                                 (!targetId && !targetEmail);
                 if (!isForMe) return;
@@ -202,7 +202,7 @@ const Appointments = () => {
                     const targetEmail = (event.data.recipientEmail || '').toLowerCase();
                     const myId = String(user?.id || user?.userId || '');
                     const myEmail = (user?.email || user?.username || '').toLowerCase();
-                    const isForMe = (targetId && myId && targetId === myId) || 
+                    const isForMe = (targetId && myId && targetId === myId) ||
                                     (targetEmail && myEmail && targetEmail === myEmail) ||
                                     (!targetId && !targetEmail);
                     if (!isForMe) return;
@@ -258,7 +258,7 @@ const Appointments = () => {
             return {
                 ...apt,
                 status: 'Confirmed',
-                notes: apt.notes || 'Cancellation request declined by dietitian; session remains confirmed.'
+                notes: apt.notes || 'Cancellation request declined by nutritionist; session remains confirmed.'
             };
         }
         return apt;
@@ -283,18 +283,18 @@ const Appointments = () => {
         return { month, day, time, fullDate };
     };
 
-    const primaryDietitian = dietitians.length > 0 ? dietitians[0] : {
+    const primaryNutritionist = nutritionists.length > 0 ? nutritionists[0] : {
         name: 'Dr. Elena Rostova',
         email: 'elena.rostova@nutrimunch.ai',
-        credentials: 'Certified Clinical Dietitian',
+        credentials: 'Certified Clinical Nutritionist',
         specialization: 'Algorithmic Biology & Metabolism'
     };
 
     // Default starter history if user has 0 records yet
     const getDefaultHistoricalAppointments = () => {
-        const dName = primaryDietitian.name || 'Dr. Elena Rostova';
-        const dEmail = primaryDietitian.email || 'elena.rostova@nutrimunch.ai';
-        const dCred = primaryDietitian.credentials || 'Certified Clinical Dietitian';
+        const dName = primaryNutritionist.name || 'Dr. Elena Rostova';
+        const dEmail = primaryNutritionist.email || 'elena.rostova@nutrimunch.ai';
+        const dCred = primaryNutritionist.credentials || 'Certified Clinical Nutritionist';
         const now = Date.now();
 
         return [
@@ -304,9 +304,9 @@ const Appointments = () => {
                 sessionType: 'Clinical Consultation',
                 appointmentTime: new Date(now + 2 * 3600 * 1000).toISOString(), // 2 hours from now (ongoing/future)
                 status: 'Ongoing',
-                dietitianName: dName,
-                dietitianEmail: dEmail,
-                dietitianCredentials: dCred,
+                nutritionistName: dName,
+                nutritionistEmail: dEmail,
+                nutritionistCredentials: dCred,
                 notes: 'Active assessment of caloric deficit and nutrient partition efficiency.',
                 meetingLink: 'https://meet.google.com/nutri-ai-session'
             },
@@ -316,9 +316,9 @@ const Appointments = () => {
                 sessionType: 'Dietary Protocol Review',
                 appointmentTime: new Date(now + 4 * 86400 * 1000).toISOString(), // 4 days from now (future)
                 status: 'Scheduled',
-                dietitianName: dName,
-                dietitianEmail: dEmail,
-                dietitianCredentials: dCred,
+                nutritionistName: dName,
+                nutritionistEmail: dEmail,
+                nutritionistCredentials: dCred,
                 notes: 'Reviewing digestive tolerance, fermented food integration, and fiber targets.',
                 meetingLink: 'https://meet.google.com/nutri-ai-session'
             },
@@ -328,9 +328,9 @@ const Appointments = () => {
                 sessionType: 'Macro Calibration',
                 appointmentTime: new Date(now - 5 * 86400 * 1000).toISOString(), // 5 days ago (past)
                 status: 'Completed',
-                dietitianName: dName,
-                dietitianEmail: dEmail,
-                dietitianCredentials: dCred,
+                nutritionistName: dName,
+                nutritionistEmail: dEmail,
+                nutritionistCredentials: dCred,
                 notes: 'Calibrated daily baseline targets: 2000 kcal, 140g protein. Patient shows positive metabolic adaptation.',
                 meetingLink: 'https://meet.google.com/nutri-ai-session'
             },
@@ -340,9 +340,9 @@ const Appointments = () => {
                 sessionType: 'Clinical Consultation',
                 appointmentTime: new Date(now - 12 * 86400 * 1000).toISOString(), // 12 days ago (past)
                 status: 'Completed',
-                dietitianName: dName,
-                dietitianEmail: dEmail,
-                dietitianCredentials: dCred,
+                nutritionistName: dName,
+                nutritionistEmail: dEmail,
+                nutritionistCredentials: dCred,
                 notes: 'Increased daily hydration target to 3.0 L with scheduled electrolyte replenishment.',
                 meetingLink: 'https://meet.google.com/nutri-ai-session'
             },
@@ -352,9 +352,9 @@ const Appointments = () => {
                 sessionType: 'Follow-up Check-in',
                 appointmentTime: new Date(now - 19 * 86400 * 1000).toISOString(), // 19 days ago (past)
                 status: 'Cancelled',
-                dietitianName: dName,
-                dietitianEmail: dEmail,
-                dietitianCredentials: dCred,
+                nutritionistName: dName,
+                nutritionistEmail: dEmail,
+                nutritionistCredentials: dCred,
                 notes: 'Consultation cancelled due to patient business travel. Rescheduled for later date.',
                 meetingLink: 'https://meet.google.com/nutri-ai-session'
             }
@@ -415,20 +415,20 @@ const Appointments = () => {
         }
     };
 
-    const fetchDietitians = async () => {
+    const fetchNutritionists = async () => {
         try {
             const authToken = token || localStorage.getItem('token');
             const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
-            const res = await fetch(`${API_BASE_URL}/appointments/dietitians`, { headers });
+            const res = await fetch(`${API_BASE_URL}/appointments/nutritionists`, { headers });
             if (res.ok) {
                 const data = await res.json();
-                setDietitians(data);
+                setNutritionists(data);
                 if (data.length > 0) {
-                    setBookingForm(prev => ({ ...prev, dietitianId: data[0].id }));
+                    setBookingForm(prev => ({ ...prev, nutritionistId: data[0].id }));
                 }
             }
         } catch (err) {
-            console.error('Failed to fetch dietitians:', err);
+            console.error('Failed to fetch nutritionists:', err);
         }
     };
 
@@ -458,9 +458,9 @@ const Appointments = () => {
             }
 
             const chosenPrice = Number(sessionFee || 500);
-            const chosenDietitianId = bookingForm.dietitianId ? Number(bookingForm.dietitianId) : (dietitians.length > 0 ? dietitians[0].id : null);
+            const chosenNutritionistId = bookingForm.nutritionistId ? Number(bookingForm.nutritionistId) : (nutritionists.length > 0 ? nutritionists[0].id : null);
 
-            if (!chosenDietitianId) {
+            if (!chosenNutritionistId) {
                 showToast('Please select a registered nutritionist.');
                 return;
             }
@@ -469,7 +469,7 @@ const Appointments = () => {
 
             const appointmentTime = `${bookingForm.date}T${bookingForm.time}:00`;
             const payload = {
-                dietitianId: chosenDietitianId,
+                nutritionistId: chosenNutritionistId,
                 title: bookingForm.title,
                 sessionType: bookingForm.sessionType,
                 appointmentTime: appointmentTime,
@@ -520,7 +520,7 @@ const Appointments = () => {
 
             setIsBookingModalOpen(false);
             setBookingForm({
-                dietitianId: dietitians.length > 0 ? dietitians[0].id : '',
+                nutritionistId: nutritionists.length > 0 ? nutritionists[0].id : '',
                 title: 'Metabolic Baseline Review',
                 sessionType: 'Clinical Consultation',
                 date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
@@ -543,7 +543,7 @@ const Appointments = () => {
         const appt = appointments.find(a => String(a.id) === stringId);
         const statusUpper = (appt?.status || '').toUpperCase();
 
-        // If approved by dietitian, user CANNOT cancel unilaterally
+        // If approved by nutritionist, user CANNOT cancel unilaterally
         if (isConfirmedOrApproved(statusUpper)) {
             setCancelPromptModal({ open: true, appointmentId: id });
             return;
@@ -572,7 +572,7 @@ const Appointments = () => {
         showToast('Consultation session cancelled. Locked escrow funds automatically refunded to your wallet.');
     };
 
-    // Submits request to cancel to the dietitian once session is approved
+    // Submits request to cancel to the nutritionist once session is approved
     const handleRequestCancellation = async (id) => {
         const stringId = String(id);
         const appt = appointments.find(a => String(a.id) === stringId);
@@ -691,7 +691,7 @@ const Appointments = () => {
     const featuredUpcoming = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
 
     const activeDisplayedAppointment = (selectedCardId ? appointments.find(a => String(a.id) === String(selectedCardId)) : null)
-        || featuredUpcoming 
+        || featuredUpcoming
         || (appointments.length > 0 ? appointments[0] : null);
 
     const deletableAppointmentsCount = appointments.filter(a => canDeleteAppointment(a)).length;
@@ -711,9 +711,9 @@ const Appointments = () => {
         return true;
     });
 
-    const openBookingForDietitian = (dietitianId) => {
-        setBookingForm(prev => ({ ...prev, dietitianId }));
-        const found = dietitians.find(d => String(d.id) === String(dietitianId));
+    const openBookingForNutritionist = (nutritionistId) => {
+        setBookingForm(prev => ({ ...prev, nutritionistId }));
+        const found = nutritionists.find(d => String(d.id) === String(nutritionistId));
         if (found && found.consultationFee) {
             const parsed = parseFloat(String(found.consultationFee).replace(/[^0-9.]/g, ''));
             if (!isNaN(parsed) && parsed > 0) {
@@ -742,7 +742,7 @@ const Appointments = () => {
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                     {/* Live Wallet Card with direct link to Transaction History */}
-                    <Link 
+                    <Link
                         to="/transactions"
                         title="App Wallet Balance — Click to view Transaction History & Ledger"
                         className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/50 rounded-2xl px-4 py-2 flex items-center gap-3 backdrop-blur-md transition-all cursor-pointer group shadow-sm hover:shadow-[0_0_15px_rgba(165,211,145,0.15)]"
@@ -761,7 +761,7 @@ const Appointments = () => {
                         </div>
                     </Link>
 
-                    <button 
+                    <button
                         onClick={() => setIsBookingModalOpen(true)}
                         className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer flex items-center gap-2"
                     >
@@ -771,7 +771,7 @@ const Appointments = () => {
                 </div>
             </div>
 
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Left Content */}
                 <div className="lg:col-span-2 space-y-6">
@@ -821,8 +821,8 @@ const Appointments = () => {
                                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                                             : (activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED'
                                             ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
-                                            : isConfirmedOrApproved(activeDisplayedAppointment.status) 
-                                            ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' 
+                                            : isConfirmedOrApproved(activeDisplayedAppointment.status)
+                                            ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
                                             : (activeDisplayedAppointment.status || '').toUpperCase() === 'REQUESTED' || (activeDisplayedAppointment.status || '').toUpperCase().includes('PENDING')
                                             ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
                                             : 'bg-white/10 text-white/80 border border-white/20'
@@ -835,8 +835,8 @@ const Appointments = () => {
                                             ? 'Completed'
                                             : (activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED'
                                             ? 'Cancellation Requested'
-                                            : isConfirmedOrApproved(activeDisplayedAppointment.status) 
-                                            ? 'Confirmed' 
+                                            : isConfirmedOrApproved(activeDisplayedAppointment.status)
+                                            ? 'Confirmed'
                                             : ((activeDisplayedAppointment.status || '').toUpperCase() === 'REQUESTED' || (activeDisplayedAppointment.status || '').toUpperCase().includes('PENDING')) ? 'Requested' : (activeDisplayedAppointment.status || 'Requested')}
                                     </span>
                                     <span className="text-xs text-white/40 font-semibold">• {activeDisplayedAppointment.sessionType || 'Clinical Consultation'}</span>
@@ -844,14 +844,14 @@ const Appointments = () => {
 
                                 <h3 className="font-bold text-xl mb-1 font-hero-display text-white">{activeDisplayedAppointment.title || 'Metabolic Baseline Review'}</h3>
                                 <p className="text-white/60 text-sm mb-2">
-                                    Nutritionist: <span className="text-white font-semibold">{activeDisplayedAppointment.dietitianName || primaryDietitian.name}</span>
+                                    Nutritionist: <span className="text-white font-semibold">{activeDisplayedAppointment.nutritionistName || primaryNutritionist.name}</span>
                                     {activeDisplayedAppointment.notes ? ` — "${activeDisplayedAppointment.notes}"` : ''}
                                 </p>
 
-                                {((activeDisplayedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (activeDisplayedAppointment.notes || '').toLowerCase().includes('declined by dietitian')) && (
+                                {((activeDisplayedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (activeDisplayedAppointment.notes || '').toLowerCase().includes('declined by nutritionist')) && (
                                     <div className="mb-4 bg-amber-500/15 border border-amber-500/35 rounded-xl px-3.5 py-2 text-xs text-amber-200 flex items-center gap-2 font-medium">
                                         <span className="material-symbols-outlined text-amber-400 text-base shrink-0">info</span>
-                                        <span>Disclaimer: Cancellation request was declined by the dietitian. The consultation remains scheduled and confirmed.</span>
+                                        <span>Disclaimer: Cancellation request was declined by the nutritionist. The consultation remains scheduled and confirmed.</span>
                                     </div>
                                 )}
 
@@ -863,7 +863,7 @@ const Appointments = () => {
                                                 <span>Session Cancelled</span>
                                             </div>
                                             {canDeleteAppointment(activeDisplayedAppointment) && (
-                                                <button 
+                                                <button
                                                     onClick={() => handleDeleteHistoryItem(null, activeDisplayedAppointment)}
                                                     className="border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                                                 >
@@ -889,10 +889,10 @@ const Appointments = () => {
                                                 onClick={() => setIsChatOpen(true)}
                                                 className="bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.2)] cursor-pointer"
                                             >
-                                                <span className="material-symbols-outlined text-sm">forum</span> Chat with Dietitian
+                                                <span className="material-symbols-outlined text-sm">forum</span> Chat with Nutritionist
                                             </button>
-                                            <Link 
-                                                to="/virtual-room" 
+                                            <Link
+                                                to="/virtual-room"
                                                 className="bg-[#a5d391] text-black px-5 py-2.5 rounded-full text-xs font-bold hover:bg-white transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer"
                                             >
                                                 <span className="material-symbols-outlined text-sm">videocam</span> Join Virtual Room
@@ -900,19 +900,19 @@ const Appointments = () => {
                                             {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED' ? (
                                                 <div className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
                                                     <span className="material-symbols-outlined text-sm animate-pulse">hourglass_top</span>
-                                                    <span>Cancellation Requested (Awaiting Dietitian)</span>
+                                                    <span>Cancellation Requested (Awaiting Nutritionist)</span>
                                                 </div>
                                             ) : isConfirmedOrApproved(activeDisplayedAppointment.status) ? (
-                                                <button 
+                                                <button
                                                     onClick={() => setCancelPromptModal({ open: true, appointmentId: activeDisplayedAppointment.id })}
                                                     className="border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-black px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-                                                    title="Request cancellation from dietitian. Note: Money will not be refunded."
+                                                    title="Request cancellation from nutritionist. Note: Money will not be refunded."
                                                 >
                                                     <span className="material-symbols-outlined text-sm">schedule_send</span>
                                                     <span>Request to Cancel</span>
                                                 </button>
                                             ) : (
-                                                <button 
+                                                <button
                                                     onClick={() => handleCancelAppointment(activeDisplayedAppointment.id)}
                                                     className="border border-red-500/30 text-red-300 hover:bg-red-500 hover:text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer"
                                                 >
@@ -933,7 +933,7 @@ const Appointments = () => {
                             <p className="text-white/50 text-xs max-w-md mx-auto">
                                 You don't have any active appointments scheduled. Select a registered clinical nutritionist below to review your macro protocol.
                             </p>
-                            <button 
+                            <button
                                 onClick={() => setIsBookingModalOpen(true)}
                                 className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-6 py-2.5 rounded-full hover:bg-white transition-all shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer"
                             >
@@ -966,7 +966,7 @@ const Appointments = () => {
                                         <span>Clear Past & Cancelled ({deletableAppointmentsCount})</span>
                                     </button>
                                 ) : (
-                                    <span 
+                                    <span
                                         className="text-[11px] font-semibold text-white/40 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full flex items-center gap-1 cursor-default"
                                         title="No past or cancelled history to clear. Active ongoing and future sessions are protected."
                                     >
@@ -1038,12 +1038,12 @@ const Appointments = () => {
                                     const upper = (item.status || '').toUpperCase();
                                     const isSelected = String(item.id) === String(activeDisplayedAppointment?.id);
                                     return (
-                                        <div 
-                                            key={item.id} 
+                                        <div
+                                            key={item.id}
                                             onClick={() => setSelectedCardId(item.id)}
                                             className={`p-5 sm:p-6 flex items-center justify-between gap-4 transition-all cursor-pointer group ${
-                                                isSelected 
-                                                    ? 'bg-white/10 border-l-4 border-l-[#a5d391] shadow-lg' 
+                                                isSelected
+                                                    ? 'bg-white/10 border-l-4 border-l-[#a5d391] shadow-lg'
                                                     : 'hover:bg-white/5 border-l-4 border-l-transparent'
                                             }`}
                                         >
@@ -1059,7 +1059,7 @@ const Appointments = () => {
                                                     <div className="text-xs text-white/50 truncate flex items-center gap-1.5 flex-wrap">
                                                         <span>{dt.fullDate} at {dt.time}</span>
                                                         <span>•</span>
-                                                        <span className="text-white/70">{item.dietitianName || primaryDietitian.name}</span>
+                                                        <span className="text-white/70">{item.nutritionistName || primaryNutritionist.name}</span>
                                                         <span>•</span>
                                                         <span className="text-white/40">{item.sessionType || 'Consultation'}</span>
                                                     </div>
@@ -1154,10 +1154,10 @@ const Appointments = () => {
                         <div className="flex justify-between items-center">
                             <h3 className="font-bold font-hero-display text-lg text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-[#a5d391]">medical_services</span>
-                                Platform Dietitians
+                                Platform Nutritionists
                             </h3>
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30">
-                                {dietitians.length} Registered
+                                {nutritionists.length} Registered
                             </span>
                         </div>
 
@@ -1166,12 +1166,12 @@ const Appointments = () => {
                         </p>
 
                         <div className="space-y-4 max-h-[480px] overflow-y-auto pr-1">
-                            {dietitians.length === 0 ? (
-                                <div className="text-xs text-white/40 text-center py-4">No dietitian profiles available yet.</div>
+                            {nutritionists.length === 0 ? (
+                                <div className="text-xs text-white/40 text-center py-4">No nutritionist profiles available yet.</div>
                             ) : (
-                                dietitians.map((d) => (
-                                    <div 
-                                        key={d.id} 
+                                nutritionists.map((d) => (
+                                    <div
+                                        key={d.id}
                                         className="bg-black/50 border border-white/10 hover:border-[#a5d391]/40 rounded-2xl p-4 space-y-3 transition-all shadow-md"
                                     >
                                         <div className="flex items-start gap-3">
@@ -1195,7 +1195,7 @@ const Appointments = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-[#a5d391] text-[11px] font-bold truncate">{d.credentials || 'Certified Clinical Dietitian'}</div>
+                                                <div className="text-[#a5d391] text-[11px] font-bold truncate">{d.credentials || 'Certified Clinical Nutritionist'}</div>
                                                 <div className="text-white/60 text-[10px] truncate">{d.specialization || 'Clinical Nutrition Specialist'}</div>
                                             </div>
                                         </div>
@@ -1217,8 +1217,8 @@ const Appointments = () => {
                                             </p>
                                         )}
 
-                                        <button 
-                                            onClick={() => openBookingForDietitian(d.id)}
+                                        <button
+                                            onClick={() => openBookingForNutritionist(d.id)}
                                             className="w-full bg-[#a5d391]/10 border border-[#a5d391]/30 text-[#a5d391] hover:bg-[#a5d391] hover:text-black transition-all py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                                         >
                                             <span className="material-symbols-outlined text-sm">event</span> Book Consultation
@@ -1250,23 +1250,23 @@ const Appointments = () => {
                         </div>
 
                         <form onSubmit={handleBookSubmit} className="space-y-4">
-                            {/* Rich Dietitian Selection Cards */}
+                            {/* Rich Nutritionist Selection Cards */}
                             <div>
                                 <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">
-                                    Select Registered Dietitian ({dietitians.length} Available)
+                                    Select Registered Nutritionist ({nutritionists.length} Available)
                                 </label>
 
-                                {dietitians.length > 0 ? (
+                                {nutritionists.length > 0 ? (
                                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                                        {dietitians.map((d) => (
-                                            <div 
+                                        {nutritionists.map((d) => (
+                                            <div
                                                 key={d.id}
-                                                onClick={() => setBookingForm({ ...bookingForm, dietitianId: d.id })}
-                                                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${bookingForm.dietitianId == d.id ? 'bg-[#a5d391]/20 border-[#a5d391] text-white' : 'bg-black/40 border-white/10 text-white/70 hover:border-white/30'}`}
+                                                onClick={() => setBookingForm({ ...bookingForm, nutritionistId: d.id })}
+                                                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${bookingForm.nutritionistId == d.id ? 'bg-[#a5d391]/20 border-[#a5d391] text-white' : 'bg-black/40 border-white/10 text-white/70 hover:border-white/30'}`}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     {Boolean(d.isApproved === true || d.approvalStatus === 'APPROVED' || d.approvalStatus === 'VERIFIED') ? (
-                                                        <div className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 ${bookingForm.dietitianId == d.id ? 'bg-[#a5d391] text-black' : 'bg-white/10 text-white'}`}>
+                                                        <div className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 ${bookingForm.nutritionistId == d.id ? 'bg-[#a5d391] text-black' : 'bg-white/10 text-white'}`}>
                                                             {d.name ? d.name.split(' ').map(n => n[0]).join('') : 'DR'}
                                                         </div>
                                                     ) : (
@@ -1283,31 +1283,31 @@ const Appointments = () => {
                                                                 <span className="px-1.5 py-0.2 rounded-full text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">Pending Approval</span>
                                                             )}
                                                         </div>
-                                                        <div className="text-[10px] text-[#a5d391] truncate">{d.credentials || 'Certified Clinical Dietitian'} • {d.specialization || 'Clinical Health'}</div>
+                                                        <div className="text-[10px] text-[#a5d391] truncate">{d.credentials || 'Certified Clinical Nutritionist'} • {d.specialization || 'Clinical Health'}</div>
                                                         <div className="text-[10px] text-white/40 truncate">{d.email}</div>
                                                     </div>
                                                 </div>
 
-                                                {bookingForm.dietitianId == d.id && (
+                                                {bookingForm.nutritionistId == d.id && (
                                                     <span className="material-symbols-outlined text-[#a5d391] shrink-0">check_circle</span>
                                                 )}
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <select 
-                                        value={bookingForm.dietitianId}
-                                        onChange={(e) => setBookingForm({ ...bookingForm, dietitianId: e.target.value })}
+                                    <select
+                                        value={bookingForm.nutritionistId}
+                                        onChange={(e) => setBookingForm({ ...bookingForm, nutritionistId: e.target.value })}
                                         className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#a5d391]"
                                     >
-                                        <option value="">Dr. Elena Rostova (Lead Clinical Dietitian)</option>
+                                        <option value="">Dr. Elena Rostova (Lead Clinical Nutritionist)</option>
                                     </select>
                                 )}
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Consultation Topic</label>
-                                <input 
+                                <input
                                     type="text"
                                     value={bookingForm.title}
                                     onChange={(e) => setBookingForm({ ...bookingForm, title: e.target.value })}
@@ -1323,7 +1323,7 @@ const Appointments = () => {
                                         <span>Consultation Date</span>
                                         <span className="text-[10px] text-[#a5d391] font-normal lowercase">(today onwards)</span>
                                     </label>
-                                    <input 
+                                    <input
                                         type="date"
                                         min={new Date().toISOString().split('T')[0]}
                                         value={bookingForm.date}
@@ -1341,7 +1341,7 @@ const Appointments = () => {
 
                                 <div>
                                     <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Time Slot</label>
-                                    <select 
+                                    <select
                                         value={bookingForm.time}
                                         onChange={(e) => setBookingForm({ ...bookingForm, time: e.target.value })}
                                         className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#a5d391]"
@@ -1357,7 +1357,7 @@ const Appointments = () => {
 
                             <div>
                                 <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Session Type</label>
-                                <select 
+                                <select
                                     value={bookingForm.sessionType}
                                     onChange={(e) => setBookingForm({ ...bookingForm, sessionType: e.target.value })}
                                     className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#a5d391]"
@@ -1370,8 +1370,8 @@ const Appointments = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Notes / Questions for Dietitian</label>
-                                <textarea 
+                                <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Notes / Questions for Nutritionist</label>
+                                <textarea
                                     rows="2"
                                     value={bookingForm.notes}
                                     onChange={(e) => setBookingForm({ ...bookingForm, notes: e.target.value })}
@@ -1421,7 +1421,7 @@ const Appointments = () => {
                                         <span className="text-[11px] text-white/50">Custom Amount:</span>
                                         <div className="relative flex-1">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs font-mono">₹</span>
-                                            <input 
+                                            <input
                                                 type="number"
                                                 min="1"
                                                 step="any"
@@ -1494,14 +1494,14 @@ const Appointments = () => {
                             </div>
 
                             <div className="flex justify-end gap-3 pt-2">
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setIsBookingModalOpen(false)}
                                     className="px-5 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white text-xs font-bold cursor-pointer"
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={isPayingWithWallet}
                                     className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg flex items-center gap-2 ${
@@ -1541,7 +1541,7 @@ const Appointments = () => {
                             <div>
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                                     isConfirmedOrApproved(selectedAppointment.status)
-                                        ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' 
+                                        ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
                                         : (selectedAppointment.status || '').toUpperCase() === 'CANCELLED'
                                         ? 'bg-red-500/20 text-red-300 border border-red-500/30'
                                         : (selectedAppointment.status || '').toUpperCase() === 'REJECTED'
@@ -1561,10 +1561,10 @@ const Appointments = () => {
                         </div>
 
                         <div className="space-y-3">
-                            {((selectedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (selectedAppointment.notes || '').toLowerCase().includes('declined by dietitian')) && (
+                            {((selectedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (selectedAppointment.notes || '').toLowerCase().includes('declined by nutritionist')) && (
                                 <div className="bg-amber-500/15 border border-amber-500/35 rounded-2xl p-3.5 text-xs text-amber-200 flex items-center gap-2 font-medium">
                                     <span className="material-symbols-outlined text-amber-400 text-base shrink-0">info</span>
-                                    <span>Disclaimer: Cancellation request was declined by the dietitian. The session remains confirmed.</span>
+                                    <span>Disclaimer: Cancellation request was declined by the nutritionist. The session remains confirmed.</span>
                                 </div>
                             )}
 
@@ -1580,7 +1580,7 @@ const Appointments = () => {
 
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1">
                                 <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Assigned Specialist</div>
-                                <div className="text-sm font-bold text-white">{selectedAppointment.dietitianName || primaryDietitian.name}</div>
+                                <div className="text-sm font-bold text-white">{selectedAppointment.nutritionistName || primaryNutritionist.name}</div>
                             </div>
 
                             {selectedAppointment.notes && (
@@ -1593,7 +1593,7 @@ const Appointments = () => {
 
                         <div className="flex flex-wrap justify-between items-center gap-3 pt-2">
                             {canDeleteAppointment(selectedAppointment) ? (
-                                <button 
+                                <button
                                     onClick={() => handleDeleteHistoryItem(null, selectedAppointment)}
                                     className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
                                 >
@@ -1604,19 +1604,19 @@ const Appointments = () => {
                                 (selectedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED' ? (
                                     <div className="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-500/10 px-4 py-2.5 rounded-xl border border-amber-500/30 font-bold">
                                         <span className="material-symbols-outlined text-sm animate-pulse">hourglass_top</span>
-                                        <span>Cancellation Requested (Awaiting Dietitian)</span>
+                                        <span>Cancellation Requested (Awaiting Nutritionist)</span>
                                     </div>
                                 ) : isConfirmedOrApproved(selectedAppointment.status) ? (
-                                    <button 
+                                    <button
                                         onClick={() => setCancelPromptModal({ open: true, appointmentId: selectedAppointment.id })}
                                         className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500 hover:text-black transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-                                        title="Request cancellation from dietitian. Note: Money will not be refunded."
+                                        title="Request cancellation from nutritionist. Note: Money will not be refunded."
                                     >
                                         <span className="material-symbols-outlined text-sm">schedule_send</span>
                                         <span>Request to Cancel</span>
                                     </button>
                                 ) : (selectedAppointment.status || '').toUpperCase() !== 'CANCELLED' && (selectedAppointment.status || '').toUpperCase() !== 'REJECTED' ? (
-                                    <button 
+                                    <button
                                         onClick={() => handleCancelAppointment(selectedAppointment.id)}
                                         className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
                                     >
@@ -1633,14 +1633,14 @@ const Appointments = () => {
 
                             <div className="flex gap-2">
                                 {!isDatePassed(selectedAppointment.appointmentTime) && (selectedAppointment.status || '').toUpperCase() !== 'CANCELLED' && (
-                                    <Link 
+                                    <Link
                                         to="/virtual-room"
                                         className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer flex items-center gap-1"
                                     >
                                         <span className="material-symbols-outlined text-sm">videocam</span> Join Room
                                     </Link>
                                 )}
-                                <button 
+                                <button
                                     onClick={() => setSelectedAppointment(null)}
                                     className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
                                 >
@@ -1732,7 +1732,7 @@ const Appointments = () => {
                         </div>
 
                         <p className="text-xs text-white/70 leading-relaxed">
-                            Since this consultation has already been approved and reserved by your dietitian, submitting this request will notify the dietitian to cancel the scheduled session. Money cannot be refunded.
+                            Since this consultation has already been approved and reserved by your nutritionist, submitting this request will notify the nutritionist to cancel the scheduled session. Money cannot be refunded.
                         </p>
 
                         <div className="flex gap-3 pt-2">

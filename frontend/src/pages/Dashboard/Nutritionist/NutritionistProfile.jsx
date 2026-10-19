@@ -8,7 +8,7 @@ const NutritionistProfile = () => {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    
+
     // Personal & Professional Profile Form Fields
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -75,7 +75,7 @@ const NutritionistProfile = () => {
                     setSpecializationDetail(data.specialization);
                 }
             }
-            setCredentials(data.credentials || 'Registered Dietitian (RD) • M.Sc. Clinical Nutrition');
+            setCredentials(data.credentials || 'Registered Nutritionist (RD) • M.Sc. Clinical Nutrition');
             setLicenseNumber(data.licenseNumber || 'RD-84920-IN');
             setYearsOfExperience(data.yearsOfExperience || '7+ Years Experience');
             setConsultationFee(data.consultationFee || '₹1,500 / Session');
@@ -94,9 +94,9 @@ const NutritionistProfile = () => {
         e.preventDefault();
         setSaving(true);
         setMessage({ text: '', type: '' });
-        
-        const combinedSpecialization = specializationDetail 
-            ? `${specializationCategory} • ${specializationDetail}` 
+
+        const combinedSpecialization = specializationDetail
+            ? `${specializationCategory} • ${specializationDetail}`
             : specializationCategory;
 
         try {
@@ -133,7 +133,7 @@ const NutritionistProfile = () => {
     }
 
     const isApproved = Boolean(profile?.isApproved === true || profile?.approvalStatus === 'APPROVED' || profile?.approvalStatus === 'VERIFIED');
-    const fullName = `${firstName} ${lastName}`.trim() || registeredEmail || user?.email || 'Certified Dietitian';
+    const fullName = `${firstName} ${lastName}`.trim() || registeredEmail || user?.email || 'Certified Nutritionist';
 
     return (
         <div className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full space-y-8 animate-fadeIn">
@@ -155,7 +155,7 @@ const NutritionistProfile = () => {
                             <h1 className="text-2xl font-bold text-white font-hero-display tracking-tight">{fullName}</h1>
                             <span className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border ${isApproved ? 'bg-[#a5d391]/20 text-[#a5d391] border-[#a5d391]/40' : 'bg-amber-500/20 text-amber-300 border-amber-500/40'}`}>
                                 <BadgeCheck className="w-3.5 h-3.5" />
-                                {isApproved ? 'Verified Clinical Dietitian' : 'Pending Admin Verification'}
+                                {isApproved ? 'Verified Clinical Nutritionist' : 'Pending Admin Verification'}
                             </span>
                         </div>
                         <p className="text-white/50 text-xs mt-1">
@@ -171,7 +171,7 @@ const NutritionistProfile = () => {
                     </div>
                 </div>
             </div>
-            
+
             {!isApproved && (
                 <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl animate-fadeIn">
                     <div className="flex items-center gap-3">
@@ -181,7 +181,7 @@ const NutritionistProfile = () => {
                         <div>
                             <h4 className="font-bold text-sm text-white">License Verification Pending Approval</h4>
                             <p className="text-xs text-amber-300/80 mt-0.5">
-                                Your dietitian license credentials are currently awaiting approval from system administrators.
+                                Your nutritionist license credentials are currently awaiting approval from system administrators.
                             </p>
                         </div>
                     </div>
@@ -193,8 +193,8 @@ const NutritionistProfile = () => {
 
             {message.text && (
                 <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-lg animate-fadeIn ${
-                    message.type === 'success' 
-                        ? 'bg-[#a5d391]/10 border border-[#a5d391]/30 text-[#a5d391]' 
+                    message.type === 'success'
+                        ? 'bg-[#a5d391]/10 border border-[#a5d391]/30 text-[#a5d391]'
                         : 'bg-red-500/10 border border-red-500/30 text-red-400'
                 }`}>
                     {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : null}
@@ -203,7 +203,7 @@ const NutritionistProfile = () => {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                
+
                 {/* Main Profile Editor Form (Left 2 Columns) */}
                 <div className="lg:col-span-2 bg-[#090d16]/90 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-2xl space-y-6">
                     <div className="flex items-center gap-2 border-b border-white/10 pb-4">
@@ -212,7 +212,7 @@ const NutritionistProfile = () => {
                     </div>
 
                     <form onSubmit={handleSave} className="space-y-6">
-                        
+
                         {/* Registered Email (Read-Only) */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -224,9 +224,9 @@ const NutritionistProfile = () => {
                                     Verified Account Email
                                 </span>
                             </div>
-                            <input 
-                                type="email" 
-                                value={registeredEmail || user?.email || ''} 
+                            <input
+                                type="email"
+                                value={registeredEmail || user?.email || ''}
                                 disabled
                                 className="w-full bg-[#0d121c]/60 border border-white/10 rounded-xl py-3 px-4 text-xs text-white/60 font-semibold focus:outline-none cursor-not-allowed"
                             />
@@ -239,9 +239,9 @@ const NutritionistProfile = () => {
                                     <User className="w-3.5 h-3.5 text-[#a5d391]" />
                                     First Name
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={firstName} 
+                                <input
+                                    type="text"
+                                    value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
                                     required
@@ -252,9 +252,9 @@ const NutritionistProfile = () => {
                                     <User className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Last Name
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={lastName} 
+                                <input
+                                    type="text"
+                                    value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
                                 />
@@ -268,11 +268,11 @@ const NutritionistProfile = () => {
                                     <Calendar className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Age (Years)
                                 </label>
-                                <input 
-                                    type="number" 
-                                    min="18" 
+                                <input
+                                    type="number"
+                                    min="18"
                                     max="100"
-                                    value={age} 
+                                    value={age}
                                     onChange={(e) => setAge(e.target.value)}
                                     placeholder="e.g. 32"
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
@@ -283,7 +283,7 @@ const NutritionistProfile = () => {
                                     <User className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Gender
                                 </label>
-                                <select 
+                                <select
                                     value={gender}
                                     onChange={(e) => setGender(e.target.value)}
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all cursor-pointer"
@@ -303,7 +303,7 @@ const NutritionistProfile = () => {
                                     <Award className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Primary Clinical Specialization
                                 </label>
-                                <select 
+                                <select
                                     value={specializationCategory}
                                     onChange={(e) => setSpecializationCategory(e.target.value)}
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all cursor-pointer"
@@ -322,9 +322,9 @@ const NutritionistProfile = () => {
                                     <Sparkles className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Sub-Focus / Keyword Tag
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={specializationDetail} 
+                                <input
+                                    type="text"
+                                    value={specializationDetail}
                                     onChange={(e) => setSpecializationDetail(e.target.value)}
                                     placeholder="e.g. Insulin Resistance, VO2 Max Protocols"
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
@@ -339,11 +339,11 @@ const NutritionistProfile = () => {
                                     <Shield className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Academic Degrees & Titles
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={credentials} 
+                                <input
+                                    type="text"
+                                    value={credentials}
                                     onChange={(e) => setCredentials(e.target.value)}
-                                    placeholder="e.g. Registered Dietitian (RD), M.Sc. Nutrition"
+                                    placeholder="e.g. Registered Nutritionist (RD), M.Sc. Nutrition"
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
                                     required
                                 />
@@ -353,9 +353,9 @@ const NutritionistProfile = () => {
                                     <BadgeCheck className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Medical License / Reg Number
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={licenseNumber} 
+                                <input
+                                    type="text"
+                                    value={licenseNumber}
                                     onChange={(e) => setLicenseNumber(e.target.value)}
                                     placeholder="e.g. RD-84920-IN"
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
@@ -370,9 +370,9 @@ const NutritionistProfile = () => {
                                     <Clock className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Clinical Experience
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={yearsOfExperience} 
+                                <input
+                                    type="text"
+                                    value={yearsOfExperience}
                                     onChange={(e) => setYearsOfExperience(e.target.value)}
                                     placeholder="e.g. 7+ Years Exp."
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
@@ -383,9 +383,9 @@ const NutritionistProfile = () => {
                                     <DollarSign className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Consultation Rate
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={consultationFee} 
+                                <input
+                                    type="text"
+                                    value={consultationFee}
                                     onChange={(e) => setConsultationFee(e.target.value)}
                                     placeholder="e.g. ₹1,500 / Session"
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
@@ -396,9 +396,9 @@ const NutritionistProfile = () => {
                                     <Globe className="w-3.5 h-3.5 text-[#a5d391]" />
                                     Languages
                                 </label>
-                                <input 
-                                    type="text" 
-                                    value={languages} 
+                                <input
+                                    type="text"
+                                    value={languages}
                                     onChange={(e) => setLanguages(e.target.value)}
                                     placeholder="e.g. English, Hindi"
                                     className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
@@ -412,9 +412,9 @@ const NutritionistProfile = () => {
                                 <Clock className="w-3.5 h-3.5 text-[#a5d391]" />
                                 Weekly Consultation Availability & Slot Hours
                             </label>
-                            <input 
-                                type="text" 
-                                value={availability} 
+                            <input
+                                type="text"
+                                value={availability}
                                 onChange={(e) => setAvailability(e.target.value)}
                                 placeholder="e.g. Mon-Fri | 09:00 AM - 05:00 PM EST"
                                 className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all"
@@ -427,8 +427,8 @@ const NutritionistProfile = () => {
                                 <Stethoscope className="w-3.5 h-3.5 text-[#a5d391]" />
                                 Professional Bio & Patient Philosophy
                             </label>
-                            <textarea 
-                                value={bio} 
+                            <textarea
+                                value={bio}
                                 onChange={(e) => setBio(e.target.value)}
                                 placeholder="Describe your medical nutrition background, clinical methodologies, and patient care philosophy..."
                                 className="w-full h-32 bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-xs text-white font-semibold focus:border-[#a5d391] focus:outline-none transition-all resize-none leading-relaxed"
@@ -436,8 +436,8 @@ const NutritionistProfile = () => {
                         </div>
 
                         <div className="pt-2 flex justify-end">
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 disabled={saving}
                                 className="px-8 py-3.5 rounded-full font-bold text-xs uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer"
                             >
@@ -491,7 +491,7 @@ const NutritionistProfile = () => {
                                             <span className="material-symbols-outlined text-amber-300 text-base shrink-0 animate-pulse" title="Pending Admin Approval">hourglass_empty</span>
                                         )}
                                     </div>
-                                    <div className="text-[#a5d391] text-xs font-bold truncate mt-0.5">{credentials || 'Certified Clinical Dietitian'}</div>
+                                    <div className="text-[#a5d391] text-xs font-bold truncate mt-0.5">{credentials || 'Certified Clinical Nutritionist'}</div>
                                     <div className="text-white/60 text-[11px] font-medium truncate">{specializationCategory}</div>
                                     {specializationDetail && (
                                         <div className="text-white/40 text-[10px] italic truncate">"{specializationDetail}"</div>

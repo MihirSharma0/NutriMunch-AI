@@ -11,7 +11,7 @@ const DEFAULT_SEEDS = [];
 const DashboardHome = () => {
     const { user, token } = useContext(AuthContext);
     const [clinicalDirectives, setClinicalDirectives] = useState([]);
-    
+
     // Diet Plan from Nutritionist state
     const [plansList, setPlansList] = useState([]);
     const [selectedPlanId, setSelectedPlanId] = useState(null);
@@ -19,7 +19,7 @@ const DashboardHome = () => {
     const [isSyncingTargets, setIsSyncingTargets] = useState(false);
     const [syncSuccess, setSyncSuccess] = useState(false);
     const [isConsultationChatOpen, setIsConsultationChatOpen] = useState(false);
-    
+
     // User Profile Targets
     const [currentUserTargets, setCurrentUserTargets] = useState({
         calories: 2100,
@@ -61,7 +61,7 @@ const DashboardHome = () => {
                 const storedDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
                 const storedNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
                 const localDirectives = [...storedDirectives, ...storedNotifs.filter(n => n.title && n.title.includes('Clinical Directive'))];
-                
+
                 const allDirectives = [...backendDirectives, ...localDirectives];
                 const uniqueDirectives = Array.from(new Map(allDirectives.map(item => [item.id, item])).values())
                     .filter(item => !deletedIds.has(String(item.id)));
@@ -347,7 +347,7 @@ const DashboardHome = () => {
             setCurrentUserTargets(localTargets);
             localStorage.setItem('nutrimunch_user_targets', JSON.stringify(localTargets));
             localStorage.setItem('nutrimunch_active_diet_plan', JSON.stringify(targetPlan));
-            
+
             window.dispatchEvent(new Event('nutrimunch_profile_updated'));
             window.dispatchEvent(new Event('nutrimunch_macro_targets_updated'));
             window.dispatchEvent(new Event('storage'));
@@ -383,7 +383,7 @@ const DashboardHome = () => {
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#a5d391]/15 hover:bg-[#a5d391]/25 border border-[#a5d391]/30 text-[#a5d391] text-xs font-bold uppercase tracking-wider backdrop-blur-md cursor-pointer transition-all shadow-[0_0_15px_rgba(165,211,145,0.2)]"
                     >
                         <span className="material-symbols-outlined text-sm">forum</span>
-                        <span>Dietitian Live Chat</span>
+                        <span>Nutritionist Live Chat</span>
                     </button>
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/70 text-xs font-bold uppercase tracking-widest backdrop-blur-md">
                         <span className="w-2 h-2 rounded-full bg-[#a5d391] animate-pulse"></span>
@@ -392,14 +392,14 @@ const DashboardHome = () => {
                 </div>
             </div>
 
-            {/* Active Clinical Directives from Dietitian */}
+            {/* Active Clinical Directives from Nutritionist */}
             {clinicalDirectives.length > 0 && (
                 <div className="mb-8 bg-gradient-to-r from-emerald-950/60 via-[#0d131f] to-[#080b12] border border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl space-y-4 relative overflow-hidden animate-fadeIn">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-[#a5d391]/10 blur-3xl pointer-events-none"></div>
                     <div className="flex items-center justify-between border-b border-white/10 pb-3">
                         <div className="flex items-center gap-2.5 text-[#a5d391]">
                             <span className="material-symbols-outlined text-2xl">health_and_safety</span>
-                            <h2 className="text-base font-bold font-hero-display tracking-tight text-white">Active Clinical Directives from Dietitian</h2>
+                            <h2 className="text-base font-bold font-hero-display tracking-tight text-white">Active Clinical Directives from Nutritionist</h2>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -442,7 +442,7 @@ const DashboardHome = () => {
                     </div>
                 </div>
             )}
-            
+
             {/* Top Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 flex items-center justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
@@ -459,7 +459,7 @@ const DashboardHome = () => {
                         <span className="material-symbols-outlined text-[#a5d391]">local_fire_department</span>
                     </div>
                 </div>
-                
+
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 flex items-center justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div>
                         <div className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Hydration Target</div>
@@ -476,9 +476,9 @@ const DashboardHome = () => {
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 flex items-center justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div>
                         <div className="text-white/40 text-xs font-bold uppercase tracking-widest mb-2">Clinical Care</div>
-                        <div className="text-lg font-bold font-hero-display">{activeDietPlan?.dietitianName || 'No Assigned Dietitian'}</div>
-                        {activeDietPlan?.dietitianEmail && (
-                            <div className="text-[11px] text-[#a5d391] font-mono">{activeDietPlan.dietitianEmail}</div>
+                        <div className="text-lg font-bold font-hero-display">{activeDietPlan?.nutritionistName || 'No Assigned Nutritionist'}</div>
+                        {activeDietPlan?.nutritionistEmail && (
+                            <div className="text-[11px] text-[#a5d391] font-mono">{activeDietPlan.nutritionistEmail}</div>
                         )}
                         <div className="text-xs text-[#a5d391] mt-0.5 flex items-center gap-1">
                             <span className={`w-1.5 h-1.5 rounded-full ${activeDietPlan ? 'bg-[#a5d391] animate-pulse' : 'bg-white/30'}`}></span>
@@ -489,7 +489,7 @@ const DashboardHome = () => {
                         type="button"
                         onClick={() => setIsConsultationChatOpen(true)}
                         className="w-12 h-12 bg-[#a5d391]/15 hover:bg-[#a5d391] text-[#a5d391] hover:text-black rounded-2xl flex items-center justify-center border border-[#a5d391]/30 transition-all cursor-pointer shadow-md"
-                        title="Chat with Dietitian"
+                        title="Chat with Nutritionist"
                     >
                         <span className="material-symbols-outlined">forum</span>
                     </button>
@@ -499,7 +499,7 @@ const DashboardHome = () => {
             {/* PRESCRIBED DIET PLAN FROM NUTRITIONIST SHOWCASE SECTION */}
             <div className="mb-12 bg-gradient-to-br from-[#0d131f] via-[#080b12] to-[#111a14] border border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 shadow-[0_0_60px_rgba(165,211,145,0.15)] relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-[#a5d391]/10 blur-[100px] pointer-events-none"></div>
-                
+
                 {activeDietPlan ? (
                     <>
                         {/* Protocol Header & Selector */}
@@ -507,7 +507,7 @@ const DashboardHome = () => {
                     <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                isPlanExclusive 
+                                isPlanExclusive
                                     ? 'bg-[#a5d391] text-black border-[#a5d391] shadow-[0_0_15px_rgba(165,211,145,0.4)]'
                                     : 'bg-emerald-500/15 text-[#a5d391] border-[#a5d391]/40'
                             }`}>
@@ -517,9 +517,9 @@ const DashboardHome = () => {
                                 {activeDietPlan?.dietType || 'High-Protein Metabolic'}
                             </span>
                             <span className="text-white/40 text-xs">
-                                Formulated by <strong className="text-white">{activeDietPlan?.dietitianName || 'Dietitian Mihir Sharma'}</strong>
-                                {activeDietPlan?.dietitianEmail && (
-                                    <span className="text-[#a5d391] font-mono ml-1">({activeDietPlan.dietitianEmail})</span>
+                                Formulated by <strong className="text-white">{activeDietPlan?.nutritionistName || 'Nutritionist Mihir Sharma'}</strong>
+                                {activeDietPlan?.nutritionistEmail && (
+                                    <span className="text-[#a5d391] font-mono ml-1">({activeDietPlan.nutritionistEmail})</span>
                                 )}
                             </span>
                         </div>
@@ -588,7 +588,7 @@ const DashboardHome = () => {
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-xs font-black uppercase tracking-widest text-[#a5d391] flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-sm">tune</span>
-                            <span>Daily Requirements Formulated by Dietitian (5–7 Parameters)</span>
+                            <span>Daily Requirements Formulated by Nutritionist (5–7 Parameters)</span>
                         </h3>
                         <span className="text-[11px] text-white/40">Directly synchronized with your daily goals</span>
                     </div>
@@ -641,7 +641,7 @@ const DashboardHome = () => {
                     </div>
                 </div>
 
-                {/* Multiple Plans Switcher Pills (If Dietitian formulated more than 1 plan) */}
+                {/* Multiple Plans Switcher Pills (If Nutritionist formulated more than 1 plan) */}
                 {plansList.length > 1 && (
                     <div className="my-5 p-4 rounded-2xl bg-black/50 border border-white/10">
                         <div className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2.5">
@@ -711,7 +711,7 @@ const DashboardHome = () => {
                         </div>
                         <h3 className="text-2xl font-bold font-hero-display text-white">No Prescribed Diet Protocol Active</h3>
                         <p className="text-xs sm:text-sm text-white/50 max-w-md mx-auto leading-relaxed">
-                            Your clinical dietitian hasn't published an active nutrition protocol for your profile yet, or previous plans have been archived. When a new protocol is deployed, it will synchronize here automatically.
+                            Your clinical nutritionist hasn't published an active nutrition protocol for your profile yet, or previous plans have been archived. When a new protocol is deployed, it will synchronize here automatically.
                         </p>
                         <div className="flex items-center justify-center gap-3 pt-2">
                             <button
@@ -720,7 +720,7 @@ const DashboardHome = () => {
                                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all shadow-md cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-sm">forum</span>
-                                <span>Message Clinical Dietitian</span>
+                                <span>Message Clinical Nutritionist</span>
                             </button>
                             <Link
                                 to="/diet-plans"
@@ -766,7 +766,7 @@ const DashboardHome = () => {
                         <h3 className="font-bold text-lg font-hero-display text-white">AI Generative Insights</h3>
                     </div>
                     <p className="text-white/70 text-sm leading-relaxed">
-                        Biometric feedback confirms high recovery adherence. Your current macro formulation from <strong>{activeDietPlan?.dietitianName || 'Dietitian Mihir Sharma'}</strong> is currently yielding optimal glycemic balance with steady sustained energy.
+                        Biometric feedback confirms high recovery adherence. Your current macro formulation from <strong>{activeDietPlan?.nutritionistName || 'Nutritionist Mihir Sharma'}</strong> is currently yielding optimal glycemic balance with steady sustained energy.
                     </p>
                     <div className="mt-5 flex items-center gap-3">
                         <Link to="/progress" className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl hover:bg-white transition-all shadow-md">
@@ -777,11 +777,11 @@ const DashboardHome = () => {
                             onClick={() => setIsConsultationChatOpen(true)}
                             className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all"
                         >
-                            Consult Dietitian
+                            Consult Nutritionist
                         </button>
                     </div>
                 </div>
-                
+
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 shadow-xl">
                     <h3 className="font-bold text-lg mb-6 font-hero-display text-white">Biometric Sync Status</h3>
                     <ul className="space-y-4">

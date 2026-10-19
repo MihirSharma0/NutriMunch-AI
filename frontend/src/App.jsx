@@ -30,18 +30,18 @@ import AiImageAnalyzer from './pages/Dashboard/User/AiImageAnalyzer';
 import VirtualRoom from './pages/VirtualRoom';
 
 // Nutritionist Dashboard Layout & Pages
-import DietitianHome from './pages/Dashboard/Dietitian/DietitianHome';
-import ClientManagement from './pages/Dashboard/Dietitian/ClientManagement';
-import DietPlanBuilder from './pages/Dashboard/Dietitian/DietPlanBuilder';
-import AppointmentManagement from './pages/Dashboard/Dietitian/AppointmentManagement';
-import DietitianReports from './pages/Dashboard/Dietitian/DietitianReports';
+import NutritionistHome from './pages/Dashboard/Nutritionist/NutritionistHome';
+import ClientManagement from './pages/Dashboard/Nutritionist/ClientManagement';
+import DietPlanBuilder from './pages/Dashboard/Nutritionist/DietPlanBuilder';
+import AppointmentManagement from './pages/Dashboard/Nutritionist/AppointmentManagement';
+import NutritionistReports from './pages/Dashboard/Nutritionist/NutritionistReports';
 import NutritionistProfile from './pages/Dashboard/Nutritionist/NutritionistProfile';
 
 // Admin Dashboard Layout & Pages
 import AdminHome from './pages/Dashboard/Admin/AdminHome';
 import UserManagement from './pages/Dashboard/Admin/UserManagement';
 import SqlConsole from './pages/Dashboard/Admin/SqlConsole';
-import DietitianManagement from './pages/Dashboard/Admin/DietitianManagement';
+import NutritionistManagement from './pages/Dashboard/Admin/NutritionistManagement';
 import PaymentManagement from './pages/Dashboard/Admin/PaymentManagement';
 import AdminProfile from './pages/Dashboard/Admin/AdminProfile';
 import DietPlanManagement from './pages/Dashboard/Admin/DietPlanManagement';
@@ -84,7 +84,7 @@ function App() {
             <Route path="/verify-otp" element={<VerifyOtp />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            
+
             <Route path="/" element={<GlobalLayout />}>
               <Route index element={<Home />} />
               <Route path="about" element={<About />} />
@@ -92,7 +92,7 @@ function App() {
               <Route path="roles" element={<UserRoles />} />
               <Route path="testimonials" element={<Testimonials />} />
               <Route path="contact" element={<Contact />} />
-              
+
               {/* User Platform Feature Routes */}
               <Route path="profile" element={<Profile />} />
               <Route path="ai-diet" element={<AiDietGenerator />} />
@@ -121,12 +121,12 @@ function App() {
               <Route path="dashboard/user/diet-plans" element={<DietPlans />} />
 
               {/* Nutritionist Platform Routes */}
-              <Route path="dashboard/nutritionist" element={<DietitianHome />} />
+              <Route path="dashboard/nutritionist" element={<NutritionistHome />} />
               <Route path="dashboard/nutritionist/profile" element={<NutritionistProfile />} />
               <Route path="dashboard/nutritionist/clients" element={<ClientManagement />} />
               <Route path="dashboard/nutritionist/builder" element={<DietPlanBuilder />} />
               <Route path="dashboard/nutritionist/schedule" element={<AppointmentManagement />} />
-              <Route path="dashboard/nutritionist/reports" element={<DietitianReports />} />
+              <Route path="dashboard/nutritionist/reports" element={<NutritionistReports />} />
 
               {/* Admin Platform Routes */}
               <Route path="dashboard/admin" element={<AdminHome />} />
@@ -134,7 +134,7 @@ function App() {
               <Route path="dashboard/admin/profile" element={<AdminProfile />} />
               <Route path="dashboard/admin/users" element={<UserManagement />} />
               <Route path="dashboard/admin/sql" element={<SqlConsole />} />
-              <Route path="dashboard/admin/dietitians" element={<DietitianManagement />} />
+              <Route path="dashboard/admin/nutritionists" element={<NutritionistManagement />} />
               <Route path="dashboard/admin/testimonials" element={<TestimonialManagement />} />
               <Route path="dashboard/admin/payments" element={<PaymentManagement />} />
               <Route path="transactions" element={<TransactionHistory />} />

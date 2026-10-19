@@ -23,9 +23,9 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getMyAppointments(userDetails.getId(), userDetails.getUser().getRole()));
     }
 
-    @GetMapping("/dietitians")
-    public ResponseEntity<List<Map<String, Object>>> getAvailableDietitians() {
-        return ResponseEntity.ok(appointmentService.getAvailableDietitians());
+    @GetMapping("/nutritionists")
+    public ResponseEntity<List<Map<String, Object>>> getAvailableNutritionists() {
+        return ResponseEntity.ok(appointmentService.getAvailableNutritionists());
     }
 
     @PostMapping("/book")

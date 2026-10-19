@@ -38,7 +38,7 @@ const TestimonialManagement = () => {
                               (t.content || t.quote || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                               (t.programResult || t.result || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesRole = filterRole === 'ALL' || (filterRole === 'USER' && (t.authorRole?.includes('User') || !t.authorRole)) ||
-                            (filterRole === 'NUTRITIONIST' && t.authorRole?.includes('Dietitian'));
+                            (filterRole === 'NUTRITIONIST' && t.authorRole?.includes('Nutritionist'));
         return matchesSearch && matchesRole;
     });
 
@@ -75,8 +75,8 @@ const TestimonialManagement = () => {
                 {/* Search input */}
                 <div className="relative w-full sm:w-80">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-sm">search</span>
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Search by author, content, or result..."
@@ -92,7 +92,7 @@ const TestimonialManagement = () => {
                             onClick={() => setFilterRole(role)}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${filterRole === role ? 'bg-[#a5d391] text-[#080b12] shadow-md shadow-[#a5d391]/20' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
                         >
-                            {role === 'ALL' ? 'All Roles' : (role === 'USER' ? 'Standard Users' : 'Dietitians')}
+                            {role === 'ALL' ? 'All Roles' : (role === 'USER' ? 'Standard Users' : 'Nutritionists')}
                         </button>
                     ))}
                 </div>
@@ -111,9 +111,9 @@ const TestimonialManagement = () => {
                             <div>
                                 <div className="flex items-start justify-between gap-4 mb-4">
                                     <div className="flex items-center gap-3">
-                                        <img 
-                                            src={test.avatarUrl || test.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(test.authorName || test.name)}&background=a5d391&color=000`} 
-                                            alt="Avatar" 
+                                        <img
+                                            src={test.avatarUrl || test.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(test.authorName || test.name)}&background=a5d391&color=000`}
+                                            alt="Avatar"
                                             className="w-12 h-12 rounded-full object-cover border border-white/20"
                                         />
                                         <div>
@@ -149,7 +149,7 @@ const TestimonialManagement = () => {
                                 </span>
 
                                 <div className="flex items-center gap-2">
-                                    <button 
+                                    <button
                                         onClick={() => handleToggleStatus(test)}
                                         className="px-3 py-1.5 bg-white/5 hover:bg-white/15 text-white/80 text-xs font-bold rounded-xl border border-white/10 transition-colors flex items-center gap-1 cursor-pointer"
                                     >
@@ -157,7 +157,7 @@ const TestimonialManagement = () => {
                                         {test.status === 'APPROVED' ? 'Unpublish' : 'Approve'}
                                     </button>
 
-                                    <button 
+                                    <button
                                         onClick={() => handleDelete(test.id, test.authorName || test.name)}
                                         className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold rounded-xl border border-rose-500/20 transition-colors flex items-center gap-1 cursor-pointer"
                                     >

@@ -9,11 +9,11 @@ public class AppointmentDto {
     private Long userId;
     private String userName;
     private String userEmail;
-    private Long dietitianId;
-    private String dietitianName;
-    private String dietitianEmail;
-    private String dietitianCredentials;
-    private String dietitianSpecialization;
+    private Long nutritionistId;
+    private String nutritionistName;
+    private String nutritionistEmail;
+    private String nutritionistCredentials;
+    private String nutritionistSpecialization;
     private LocalDateTime appointmentTime;
     private String status;
     private String meetingLink;

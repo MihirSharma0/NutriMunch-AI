@@ -6,13 +6,13 @@ const VirtualRoom = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);
 
-    const isDietitian = user?.role && (
-        String(user.role).toUpperCase().includes('DIETITIAN') || 
+    const isNutritionist = user?.role && (
+        String(user.role).toUpperCase().includes('NUTRITIONIST') ||
         String(user.role).toUpperCase().includes('NUTRITIONIST')
     );
 
-    const schedulePath = isDietitian ? '/dashboard/nutritionist/schedule' : '/appointments';
-    const scheduleLabel = isDietitian ? 'View Schedule' : 'View Appointments';
+    const schedulePath = isNutritionist ? '/dashboard/nutritionist/schedule' : '/appointments';
+    const scheduleLabel = isNutritionist ? 'View Schedule' : 'View Appointments';
 
     return (
         <div className="w-full max-w-4xl mx-auto py-12 px-4 sm:px-6">

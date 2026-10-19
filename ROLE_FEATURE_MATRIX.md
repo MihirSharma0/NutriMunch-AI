@@ -89,9 +89,9 @@ redirect the visitor to login or registration.
 | Virtual consultation room | `/virtual-room` or `/room` |
 | Transactions and wallet history | `/transactions` or `/dashboard/user/transactions` |
 
-## Nutritionist / dietitian
+## Nutritionist / nutritionist
 
-The application treats `NUTRITIONIST` and `DIETITIAN` as the same clinical
+The application treats `NUTRITIONIST` and `NUTRITIONIST` as the same clinical
 feature role.
 
 ### Home page content
@@ -155,7 +155,7 @@ The dashboard consultation summary loads appointments from
 - Administration workspace messaging
 - Admin Dashboard
 - Diet Plan Management
-- User and Dietitian Management
+- User and Nutritionist Management
 - Payment Operations
 - Platform Administration & Controls call-to-action
 - Platform operations and system metrics
@@ -178,7 +178,7 @@ The dashboard consultation summary loads appointments from
 #### User Administration
 
 - User Directory & Roles — `/dashboard/admin/users`
-- Dietitian Verification — `/dashboard/admin/dietitians`
+- Nutritionist Verification — `/dashboard/admin/nutritionists`
 
 #### Additional navigation
 
@@ -192,7 +192,7 @@ The dashboard consultation summary loads appointments from
 | Admin home and system core | `/dashboard/admin` |
 | All stored diet plan management | `/dashboard/admin/diet-plans` |
 | User directory and role management | `/dashboard/admin/users` |
-| Nutritionist/dietitian verification | `/dashboard/admin/dietitians` |
+| Nutritionist/nutritionist verification | `/dashboard/admin/nutritionists` |
 | SQL console | `/dashboard/admin/sql` |
 | Payment management and wallet operations | `/dashboard/admin/payments` |
 | Transaction history | `/dashboard/admin/transactions` |
@@ -231,11 +231,11 @@ one role, subject to backend authentication and authorization:
 The home page uses the authenticated role to change its content:
 
 - Guests and users see personal AI nutrition features.
-- Nutritionists and dietitians see clinical workflow features.
+- Nutritionists and nutritionists see clinical workflow features.
 - Administrators see system management features.
 - The final CTA also changes its destination:
   - User: `/dashboard/user/appointments`
-  - Nutritionist/dietitian: `/dashboard/nutritionist/schedule`
+  - Nutritionist/nutritionist: `/dashboard/nutritionist/schedule`
   - Admin: `/dashboard/admin`
 
 ## Important implementation notes

@@ -99,12 +99,12 @@ This document provides an audited breakdown of all features across the 4 user ro
 
 ---
 
-## 🩺 3. Certified Nutritionist / Dietitian Role (`ROLE_NUTRITIONIST`)
+## 🩺 3. Certified Nutritionist / Nutritionist Role (`ROLE_NUTRITIONIST`)
 
 ### ✅ Real / Working Features:
 1. **Appointment Management**:
    - 🔗 **Test URL:** [http://localhost:5173/dashboard/nutritionist/schedule](http://localhost:5173/dashboard/nutritionist/schedule)
-   - 💻 **Frontend Component:** [`AppointmentManagement.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Dietitian/AppointmentManagement.jsx)
+   - 💻 **Frontend Component:** [`AppointmentManagement.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Nutritionist/AppointmentManagement.jsx)
    - ⚙️ **Backend Controller:** [`AppointmentController.java`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/backend/src/main/java/com/nutrition/controller/AppointmentController.java)
    - **Details:** View incoming patient consultation requests, accept appointments, and reject requests via backend APIs.
 
@@ -120,19 +120,19 @@ This document provides an audited breakdown of all features across the 4 user ro
    - **Details:** Certified features stay locked until approved by Admin.
 
 ### ⚠️ Decorative / Show-Only Sections:
-1. **Dietitian Dashboard Stats Bar**:
+1. **Nutritionist Dashboard Stats Bar**:
    - 🔗 **Test URL:** [http://localhost:5173/dashboard/nutritionist](http://localhost:5173/dashboard/nutritionist)
-   - 💻 **Frontend Component:** [`DietitianHome.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Dietitian/DietitianHome.jsx)
+   - 💻 **Frontend Component:** [`NutritionistHome.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Nutritionist/NutritionistHome.jsx)
    - **Details:** Overview KPI cards showing Active Clients (`14`), Pending Requests (`3`), Hours This Week (`28`) are hardcoded summary numbers.
 
 2. **Client Roster Data**:
    - 🔗 **Test URL:** [http://localhost:5173/dashboard/nutritionist/clients](http://localhost:5173/dashboard/nutritionist/clients)
-   - 💻 **Frontend Component:** [`ClientManagement.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Dietitian/ClientManagement.jsx)
+   - 💻 **Frontend Component:** [`ClientManagement.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Nutritionist/ClientManagement.jsx)
    - **Details:** Displays patient profiles and health histories using structured frontend mock data.
 
 3. **Diet Plan Builder**:
    - 🔗 **Test URL:** [http://localhost:5173/dashboard/nutritionist/builder](http://localhost:5173/dashboard/nutritionist/builder)
-   - 💻 **Frontend Component:** [`DietPlanBuilder.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Dietitian/DietPlanBuilder.jsx)
+   - 💻 **Frontend Component:** [`DietPlanBuilder.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx)
    - **Details:** Interactive UI for building prescription meal plans; clicking "Assign to Client" displays a success modal rather than linking to a specific patient ID in the database.
 
 ---
@@ -146,9 +146,9 @@ This document provides an audited breakdown of all features across the 4 user ro
    - ⚙️ **Backend Controller:** [`AdminController.java`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/backend/src/main/java/com/nutrition/controller/AdminController.java)
    - **Details:** View all users, search by Name/Email, filter by Role (`ALL`, `USER`, `NUTRITIONIST`, `ADMIN`), filter by Status (`VERIFIED`, `PENDING OTP`), change user roles, delete users, and reset passwords via backend endpoints.
 
-2. **Dietitian Verification Portal**:
-   - 🔗 **Test URL:** [http://localhost:5173/dashboard/admin/dietitians](http://localhost:5173/dashboard/admin/dietitians)
-   - 💻 **Frontend Component:** [`DietitianManagement.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Admin/DietitianManagement.jsx)
+2. **Nutritionist Verification Portal**:
+   - 🔗 **Test URL:** [http://localhost:5173/dashboard/admin/nutritionists](http://localhost:5173/dashboard/admin/nutritionists)
+   - 💻 **Frontend Component:** [`NutritionistManagement.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Admin/NutritionistManagement.jsx)
    - ⚙️ **Backend Controller:** [`AdminController.java`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/backend/src/main/java/com/nutrition/controller/AdminController.java)
    - **Details:** Approve or suspend nutritionist verification applications.
 
@@ -168,7 +168,7 @@ This document provides an audited breakdown of all features across the 4 user ro
 1. **Admin Overview KPI Counters**:
    - 🔗 **Test URL:** [http://localhost:5173/dashboard/admin](http://localhost:5173/dashboard/admin)
    - 💻 **Frontend Component:** [`AdminHome.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Admin/AdminHome.jsx)
-   - **Details:** System stats (Active Users `1,284`, Active Dietitians `42`, AI Queries Today `8,920`, System Uptime `99.9%`) are static KPI counters.
+   - **Details:** System stats (Active Users `1,284`, Active Nutritionists `42`, AI Queries Today `8,920`, System Uptime `99.9%`) are static KPI counters.
 
 2. **Payment Management Page**:
    - 🔗 **Test URL:** [http://localhost:5173/dashboard/admin/payments](http://localhost:5173/dashboard/admin/payments)
@@ -177,5 +177,5 @@ This document provides an audited breakdown of all features across the 4 user ro
 
 ---
 
-- **File Location:** [`AUDIT_SHOW_VS_REAL_FEATURES.md`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/AUDIT_SHOW_VS_REAL_FEATURES.md)  
-- **Last Updated:** October 10, 2026  
+- **File Location:** [`AUDIT_SHOW_VS_REAL_FEATURES.md`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/AUDIT_SHOW_VS_REAL_FEATURES.md)
+- **Last Updated:** October 10, 2026

@@ -385,7 +385,7 @@ const DietPlans = () => {
                         className="bg-[#0d131f] border border-[#a5d391]/40 hover:border-[#a5d391] text-[#a5d391] hover:text-white px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow-md flex items-center gap-2 cursor-pointer"
                     >
                         <span className="material-symbols-outlined text-base">forum</span>
-                        <span>Dietitian Chat</span>
+                        <span>Nutritionist Chat</span>
                     </button>
                 </div>
             </div>
@@ -455,13 +455,13 @@ const DietPlans = () => {
                             </h4>
                             <p className="text-white/50 text-xs">
                                 {plansList.length === 0
-                                    ? 'Your dietitian has not deployed any clinical diet plans yet, or previous plans have been removed.'
+                                    ? 'Your nutritionist has not deployed any clinical diet plans yet, or previous plans have been removed.'
                                     : 'Switch to All Formulated Protocols to view your complete clinical library.'}
                             </p>
                             {plansList.length > 0 && (
-                                <button 
-                                    type="button" 
-                                    onClick={() => setFilterScope('ALL')} 
+                                <button
+                                    type="button"
+                                    onClick={() => setFilterScope('ALL')}
                                     className="px-5 py-2.5 bg-[#a5d391] text-black font-bold text-xs rounded-xl shadow-lg hover:bg-white transition-all cursor-pointer"
                                 >
                                     View All Protocols ({plansList.length})
@@ -523,10 +523,10 @@ const DietPlans = () => {
                                         <div>{plan.dietType || 'Clinical Protocol'}</div>
                                         <div className="flex items-center gap-1 text-white/70">
                                             <span className="material-symbols-outlined text-[12px] text-[#a5d391]">badge</span>
-                                            <span>By <strong className="text-white font-medium">{plan.dietitianName || 'Dietitian'}</strong></span>
-                                            {plan.dietitianEmail && (
-                                                <span className="text-[#a5d391] font-mono text-[10px] truncate max-w-[170px]" title={plan.dietitianEmail}>
-                                                    ({plan.dietitianEmail})
+                                            <span>By <strong className="text-white font-medium">{plan.nutritionistName || 'Nutritionist'}</strong></span>
+                                            {plan.nutritionistEmail && (
+                                                <span className="text-[#a5d391] font-mono text-[10px] truncate max-w-[170px]" title={plan.nutritionistEmail}>
+                                                    ({plan.nutritionistEmail})
                                                 </span>
                                             )}
                                         </div>
@@ -625,9 +625,9 @@ const DietPlans = () => {
                                 <div className="text-xs font-bold text-[#a5d391] uppercase tracking-widest flex items-center gap-2">
                                     <span>Nutritionist Formulation Comments</span>
                                     <span className="text-[10px] text-white/40 font-normal flex items-center gap-1">
-                                        • Prescribed by <strong className="text-white/80">{selectedPlan?.dietitianName || 'Dietitian'}</strong>
-                                        {selectedPlan?.dietitianEmail && (
-                                            <span className="text-[#a5d391] font-mono">({selectedPlan.dietitianEmail})</span>
+                                        • Prescribed by <strong className="text-white/80">{selectedPlan?.nutritionistName || 'Nutritionist'}</strong>
+                                        {selectedPlan?.nutritionistEmail && (
+                                            <span className="text-[#a5d391] font-mono">({selectedPlan.nutritionistEmail})</span>
                                         )}
                                     </span>
                                 </div>
@@ -649,7 +649,7 @@ const DietPlans = () => {
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 relative overflow-hidden shadow-xl">
                         <div className="absolute top-0 right-0 w-48 h-48 bg-[#a5d391]/10 blur-[70px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                        
+
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 relative z-10 gap-4">
                             <div>
                                 <h2 className="text-2xl font-bold mb-1 font-hero-display text-white">
@@ -788,7 +788,7 @@ const DietPlans = () => {
                             Grocery List
                         </h3>
                         <p className="text-white/50 text-xs mb-4">Auto-compiled from this protocol schedule.</p>
-                        
+
                         <div className="space-y-2.5 mb-6 text-xs">
                             <div className="flex items-center gap-3">
                                 <input type="checkbox" className="accent-[#a5d391] w-4 h-4 rounded cursor-pointer" defaultChecked />
@@ -808,7 +808,7 @@ const DietPlans = () => {
                             </div>
                         </div>
 
-                        <button 
+                        <button
                             type="button"
                             onClick={() => showToast('Grocery list exported to clipboard!')}
                             className="w-full bg-[#080b12]/80 border border-white/10 hover:border-[#a5d391]/30 text-white font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
@@ -835,7 +835,7 @@ const DietPlans = () => {
                         className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all cursor-pointer shadow-lg"
                     >
                         <span className="material-symbols-outlined text-base">forum</span>
-                        <span>Chat With Your Dietitian</span>
+                        <span>Chat With Your Nutritionist</span>
                     </button>
                 </div>
             )}
@@ -855,9 +855,9 @@ const DietPlans = () => {
                                     {planToImport.title || planToImport.planTitle}
                                 </h3>
                                 <p className="text-xs text-white/50">
-                                    Prescribed by <strong className="text-white">{planToImport.dietitianName || 'Dietitian'}</strong>
-                                    {planToImport.dietitianEmail && (
-                                        <span className="text-[#a5d391] font-mono ml-1">({planToImport.dietitianEmail})</span>
+                                    Prescribed by <strong className="text-white">{planToImport.nutritionistName || 'Nutritionist'}</strong>
+                                    {planToImport.nutritionistEmail && (
+                                        <span className="text-[#a5d391] font-mono ml-1">({planToImport.nutritionistEmail})</span>
                                     )} • {planToImport.dietType || 'Clinical Protocol'}
                                 </p>
                             </div>
@@ -951,7 +951,7 @@ const DietPlans = () => {
                             {planToImport.nutritionistNotes && (
                                 <div className="p-4 bg-gradient-to-r from-[#0d131f] to-black border border-white/10 rounded-2xl space-y-1">
                                     <span className="text-[10px] font-bold text-[#a5d391] uppercase tracking-wider block">
-                                        Dietitian Formulation Directive:
+                                        Nutritionist Formulation Directive:
                                     </span>
                                     <p className="text-white/80 italic leading-relaxed">
                                         "{planToImport.nutritionistNotes}"
@@ -1015,7 +1015,7 @@ const DietPlans = () => {
                     isOpen={isChatOpen}
                     onClose={() => setIsChatOpen(false)}
                     currentUser={user}
-                    targetPatient={{ dietitianName: selectedPlan?.dietitianName || 'Dietitian Mihir Sharma' }}
+                    targetPatient={{ nutritionistName: selectedPlan?.nutritionistName || 'Nutritionist Mihir Sharma' }}
                 />
             )}
         </div>

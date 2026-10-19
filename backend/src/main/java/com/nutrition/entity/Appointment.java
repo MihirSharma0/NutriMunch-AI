@@ -18,17 +18,17 @@ public class Appointment {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dietitian_id")
-    private User dietitian;
+    @JoinColumn(name = "nutritionist_id")
+    private User nutritionist;
 
     @Column(nullable = false)
     private LocalDateTime appointmentTime;
 
     private String title;
     private String sessionType;
-    private String status = "Requested"; 
+    private String status = "Requested";
     private String meetingLink;
-    
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

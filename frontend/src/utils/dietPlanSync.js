@@ -207,7 +207,7 @@ export const normalizeAndDeduplicatePlans = ({
         if (deletedTitles.has(title.toLowerCase())) {
             return;
         }
-        
+
         // Scope resolution:
         // If targetMode or scope is EXCLUSIVE -> EXCLUSIVE.
         // If targetMode or scope is GENERAL -> GENERAL.
@@ -239,7 +239,7 @@ export const normalizeAndDeduplicatePlans = ({
             if (!isNaN(parsed)) timestamp = parsed;
         }
 
-        const dietitianEmail = item.dietitianEmail || item.authorEmail || (item.author && item.author.includes('@') ? item.author : '');
+        const nutritionistEmail = item.nutritionistEmail || item.authorEmail || (item.author && item.author.includes('@') ? item.author : '');
 
         normalized.push({
             ...item,
@@ -247,7 +247,7 @@ export const normalizeAndDeduplicatePlans = ({
             title,
             planTitle: title,
             scope,
-            dietitianEmail: dietitianEmail || item.dietitianEmail || '',
+            nutritionistEmail: nutritionistEmail || item.nutritionistEmail || '',
             isExclusiveForUser: isMyExclusive,
             timestamp
         });

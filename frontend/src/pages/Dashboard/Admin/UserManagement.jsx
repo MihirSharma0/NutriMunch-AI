@@ -8,7 +8,7 @@ const UserManagement = () => {
     const [filterRole, setFilterRole] = useState('ALL');
     const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL' | 'VERIFIED' | 'PENDING_OTP'
     const [searchQuery, setSearchQuery] = useState('');
-    
+
     // Password reset modal state
     const [selectedUser, setSelectedUser] = useState(null);
     const [newPassword, setNewPassword] = useState('');
@@ -39,7 +39,7 @@ const UserManagement = () => {
                 await api.delete(`/admin/users/${id}`);
                 setUsers(users.filter(u => u.id !== id));
 
-                // If user/dietitian is deleted, purge all their associated diet plans & local caches
+                // If user/nutritionist is deleted, purge all their associated diet plans & local caches
                 if (targetUser) {
                     const uEmail = (targetUser.email || '').toLowerCase().trim();
                     const uIdStr = String(id);
@@ -50,10 +50,10 @@ const UserManagement = () => {
                             const parsed = JSON.parse(rawHistory);
                             const cleaned = parsed.filter(p => {
                                 const pTarget = String(p.targetUserId || '');
-                                const pDietitianId = String(p.dietitianId || '');
-                                const pAuthor = (p.author || p.dietitianName || '').toLowerCase().trim();
-                                const pEmail = (p.dietitianEmail || '').toLowerCase().trim();
-                                return pTarget !== uIdStr && pDietitianId !== uIdStr && pEmail !== uEmail && !pAuthor.includes(uEmail);
+                                const pNutritionistId = String(p.nutritionistId || '');
+                                const pAuthor = (p.author || p.nutritionistName || '').toLowerCase().trim();
+                                const pEmail = (p.nutritionistEmail || '').toLowerCase().trim();
+                                return pTarget !== uIdStr && pNutritionistId !== uIdStr && pEmail !== uEmail && !pAuthor.includes(uEmail);
                             });
                             localStorage.setItem('nutrimunch_diet_plans_history', JSON.stringify(cleaned));
                         }
@@ -73,8 +73,8 @@ const UserManagement = () => {
                         const rawGen = localStorage.getItem('nutrimunch_general_diet_plan');
                         if (rawGen) {
                             const gen = JSON.parse(rawGen);
-                            const gEmail = (gen.dietitianEmail || '').toLowerCase().trim();
-                            const gAuthor = (gen.author || gen.dietitianName || '').toLowerCase().trim();
+                            const gEmail = (gen.nutritionistEmail || '').toLowerCase().trim();
+                            const gAuthor = (gen.author || gen.nutritionistName || '').toLowerCase().trim();
                             if (gEmail === uEmail || gAuthor.includes(uEmail)) {
                                 localStorage.removeItem('nutrimunch_general_diet_plan');
                             }
@@ -95,7 +95,7 @@ const UserManagement = () => {
     const changeRole = async (id, newRole) => {
         try {
             await api.put(`/admin/users/${id}/role`, { role: newRole });
-            
+
             // 1. Instantly update local table state
             setUsers(prev => prev.map(u => u.id === id ? { ...u, role: newRole } : u));
 
@@ -110,7 +110,7 @@ const UserManagement = () => {
                 }
             } catch (e) {}
 
-            // 3. Dispatch global events so DietitianManagement, Navbar, Sidebar, etc. immediately re-fetch or update
+            // 3. Dispatch global events so NutritionistManagement, Navbar, Sidebar, etc. immediately re-fetch or update
             window.dispatchEvent(new Event('nutrimunch_role_updated'));
             window.dispatchEvent(new Event('storage'));
 
@@ -201,25 +201,25 @@ const UserManagement = () => {
                     </div>
                     <h1 className="text-4xl font-bold font-hero-display text-white">User Management</h1>
                     <p className="text-white/60 text-sm mt-1 font-light">
-                        View all registered users, filter by role or OTP status, search by name/email, and verify dietitian credentials.
+                        View all registered users, filter by role or OTP status, search by name/email, and verify nutritionist credentials.
                     </p>
                 </div>
 
                 {/* Sub-Menu Navigation Tabs */}
                 <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 shrink-0">
-                    <Link 
-                        to="/dashboard/admin/users" 
+                    <Link
+                        to="/dashboard/admin/users"
                         className="px-4 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-[#080b12] shadow-md shadow-[#a5d391]/20 flex items-center gap-2 transition-all"
                     >
                         <span className="material-symbols-outlined text-sm">manage_accounts</span>
                         User Directory
                     </Link>
-                    <Link 
-                        to="/dashboard/admin/dietitians" 
+                    <Link
+                        to="/dashboard/admin/nutritionists"
                         className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-2 transition-all"
                     >
                         <span className="material-symbols-outlined text-sm">badge</span>
-                        Dietitian Verification
+                        Nutritionist Verification
                     </Link>
                 </div>
             </div>
@@ -227,11 +227,11 @@ const UserManagement = () => {
             {/* Filter Controls & Search Bar Row */}
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-6 space-y-4 shadow-xl">
                 <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-                    
+
                     {/* Search Bar */}
                     <div className="relative flex-1 min-w-[280px]">
                         <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-lg">search</span>
-                        <input 
+                        <input
                             type="text"
                             placeholder="Search users by name or email address..."
                             value={searchQuery}
@@ -239,7 +239,7 @@ const UserManagement = () => {
                             className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-xs text-white placeholder:text-white/40 outline-none focus:border-[#a5d391] transition-all font-mono"
                         />
                         {searchQuery && (
-                            <button 
+                            <button
                                 onClick={() => setSearchQuery('')}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 cursor-pointer"
                             >
@@ -347,8 +347,8 @@ const UserManagement = () => {
                                                 )}
                                             </td>
                                             <td className="p-5">
-                                                <select 
-                                                    value={user.role} 
+                                                <select
+                                                    value={user.role}
                                                     onChange={(e) => changeRole(user.id, e.target.value)}
                                                     className="bg-black/40 border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#a5d391] font-mono cursor-pointer"
                                                 >

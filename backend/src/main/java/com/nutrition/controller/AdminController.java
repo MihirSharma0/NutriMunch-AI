@@ -115,7 +115,7 @@ public class AdminController {
         return ResponseEntity.ok(userRepository.findByRole(Role.USER));
     }
 
-    @GetMapping({"/nutritionists", "/dietitians"})
+    @GetMapping({"/nutritionists", "/nutritionists"})
     public ResponseEntity<List<Map<String, Object>>> getAllNutritionists() {
         // Automatically cleanup any stale nutritionist profiles for users whose role is no longer NUTRITIONIST
         try {
@@ -140,7 +140,7 @@ public class AdminController {
             map.put("email", u.getEmail());
             map.put("role", u.getRole() != null ? u.getRole().name() : "NUTRITIONIST");
             map.put("verified", false);
-            map.put("credentials", "Certified Clinical Dietitian");
+            map.put("credentials", "Certified Clinical Nutritionist");
             map.put("specialization", "Clinical & Medical Nutrition");
             map.put("licenseNumber", "RD-" + u.getId() + "84920-IN");
             map.put("approvalStatus", "PENDING");
@@ -168,7 +168,7 @@ public class AdminController {
 
         return ResponseEntity.ok(resultList);
     }
-    
+
     @PutMapping("/users/{id}/role")
     public ResponseEntity<User> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
@@ -176,14 +176,14 @@ public class AdminController {
         user.setRole(newRole);
 
         if (newRole == Role.NUTRITIONIST) {
-            // When role is changed to dietitian, their license state should by default be in pending review stage,
+            // When role is changed to nutritionist, their license state should by default be in pending review stage,
             // like a newly formed account for that particular role
             NutritionistProfile profile = nutritionistProfileRepository.findByUserId(id).orElseGet(() -> {
                 NutritionistProfile p = new NutritionistProfile();
                 p.setUser(user);
                 return p;
             });
-            profile.setCredentials("Certified Clinical Dietitian");
+            profile.setCredentials("Certified Clinical Nutritionist");
             profile.setSpecialization("Clinical & Medical Nutrition");
             profile.setLicenseNumber("RD-" + user.getId() + "84920-IN");
             profile.setApprovalStatus("PENDING");
@@ -191,7 +191,7 @@ public class AdminController {
             user.setVerified(false);
         } else {
             // When role is changed away from NUTRITIONIST to USER or ADMIN,
-            // completely remove their dietitian profile so they no longer appear in dietitian verification
+            // completely remove their nutritionist profile so they no longer appear in nutritionist verification
             nutritionistProfileRepository.findByUserId(id).ifPresent(nutritionistProfileRepository::delete);
         }
 
@@ -227,7 +227,7 @@ public class AdminController {
         User user = userRepository.findById(id).orElse(null);
         String userEmail = user != null ? user.getEmail() : null;
 
-        // If any dietitian account is deleted, all of their diet plans and settings are deleted as well
+        // If any nutritionist account is deleted, all of their diet plans and settings are deleted as well
         try {
             dietPlanRepository.deleteByUserId(id);
         } catch (Exception ignored) {}
@@ -241,8 +241,8 @@ public class AdminController {
         userRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
-    
-    @PutMapping({"/nutritionists/{id}/approve", "/dietitians/{id}/verify", "/nutritionists/{id}/verify"})
+
+    @PutMapping({"/nutritionists/{id}/approve", "/nutritionists/{id}/verify", "/nutritionists/{id}/verify"})
     public ResponseEntity<Map<String, Object>> approveNutritionist(@PathVariable Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) {
@@ -254,7 +254,7 @@ public class AdminController {
         if (profile == null && user != null) {
             profile = new NutritionistProfile();
             profile.setUser(user);
-            profile.setCredentials("Certified Clinical Dietitian");
+            profile.setCredentials("Certified Clinical Nutritionist");
             profile.setSpecialization("Clinical & Medical Nutrition");
             profile.setLicenseNumber("RD-84920-IN");
         }
@@ -265,14 +265,14 @@ public class AdminController {
         }
 
         return ResponseEntity.ok(Map.of(
-            "message", "Dietitian verified & approved successfully!",
+            "message", "Nutritionist verified & approved successfully!",
             "id", id,
             "verified", true,
             "approvalStatus", "APPROVED"
         ));
     }
 
-    @PutMapping({"/nutritionists/{id}/revoke", "/dietitians/{id}/revoke"})
+    @PutMapping({"/nutritionists/{id}/revoke", "/nutritionists/{id}/revoke"})
     public ResponseEntity<Map<String, Object>> revokeNutritionist(@PathVariable Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) {
@@ -287,7 +287,7 @@ public class AdminController {
         }
 
         return ResponseEntity.ok(Map.of(
-            "message", "Dietitian verification revoked",
+            "message", "Nutritionist verification revoked",
             "id", id,
             "verified", false,
             "approvalStatus", "PENDING"
@@ -352,7 +352,7 @@ public class AdminController {
 
     /**
      * STEP 2.1: Admin Allocation Endpoint (POST /api/admin/allocate)
-     * Admin allocates funds to a User or Dietitian.
+     * Admin allocates funds to a User or Nutritionist.
      * Creates a single unique ledger entry of type "admin_allocation", updates recipient's balance, and triggers SSE.
      */
     @PostMapping("/allocate")

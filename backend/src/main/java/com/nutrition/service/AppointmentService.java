@@ -39,7 +39,7 @@ public class AppointmentService {
     public List<AppointmentDto> getMyAppointments(Long userId, Role role) {
         List<Appointment> list;
         if (role == Role.NUTRITIONIST) {
-            list = appointmentRepository.findByDietitianIdOrDietitianIsNullOrderByAppointmentTimeDesc(userId);
+            list = appointmentRepository.findByNutritionistIdOrNutritionistIsNullOrderByAppointmentTimeDesc(userId);
             if (list.isEmpty()) {
                 list = appointmentRepository.findAllByOrderByAppointmentTimeDesc();
             }
@@ -51,23 +51,23 @@ public class AppointmentService {
         return list.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
-    public List<Map<String, Object>> getAvailableDietitians() {
+    public List<Map<String, Object>> getAvailableNutritionists() {
         List<User> allUsers = userRepository.findAll();
-        List<User> dietitians = allUsers.stream()
+        List<User> nutritionists = allUsers.stream()
                 .filter(u -> u.getRole() != null && (u.getRole() == Role.NUTRITIONIST || "NUTRITIONIST".equalsIgnoreCase(u.getRole().name())))
                 .collect(Collectors.toList());
 
-        if (dietitians.isEmpty()) {
+        if (nutritionists.isEmpty()) {
             List<NutritionistProfile> profiles = nutritionistProfileRepository.findAll();
             for (NutritionistProfile p : profiles) {
-                if (p.getUser() != null && p.getUser().getRole() == Role.NUTRITIONIST && !dietitians.contains(p.getUser())) {
-                    dietitians.add(p.getUser());
+                if (p.getUser() != null && p.getUser().getRole() == Role.NUTRITIONIST && !nutritionists.contains(p.getUser())) {
+                    nutritionists.add(p.getUser());
                 }
             }
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
-        for (User d : dietitians) {
+        for (User d : nutritionists) {
             Map<String, Object> map = new HashMap<>();
             map.put("id", d.getId());
             String name = (d.getFirstName() != null ? d.getFirstName() : "") + " " + (d.getLastName() != null ? d.getLastName() : "");
@@ -80,7 +80,7 @@ public class AppointmentService {
             Optional<NutritionistProfile> profOpt = nutritionistProfileRepository.findByUserId(d.getId());
             if (profOpt.isPresent()) {
                 NutritionistProfile prof = profOpt.get();
-                map.put("credentials", prof.getCredentials() != null && !prof.getCredentials().trim().isEmpty() ? prof.getCredentials() : "Certified Clinical Dietitian");
+                map.put("credentials", prof.getCredentials() != null && !prof.getCredentials().trim().isEmpty() ? prof.getCredentials() : "Certified Clinical Nutritionist");
                 map.put("specialization", prof.getSpecialization() != null && !prof.getSpecialization().trim().isEmpty() ? prof.getSpecialization() : "Clinical Nutrition");
                 map.put("bio", prof.getBio() != null ? prof.getBio() : "Specialist in evidence-based nutrition protocols.");
                 map.put("yearsOfExperience", prof.getYearsOfExperience() != null ? prof.getYearsOfExperience() : "7+ Years Exp.");
@@ -92,7 +92,7 @@ public class AppointmentService {
                 map.put("approvalStatus", status);
                 map.put("isApproved", "APPROVED".equalsIgnoreCase(status) || "VERIFIED".equalsIgnoreCase(status));
             } else {
-                map.put("credentials", "Certified Clinical Dietitian");
+                map.put("credentials", "Certified Clinical Nutritionist");
                 map.put("specialization", "General Metabolic & Sports Nutrition");
                 map.put("bio", "Specialist in evidence-based nutrition protocols.");
                 map.put("yearsOfExperience", "7+ Years Exp.");
@@ -111,7 +111,7 @@ public class AppointmentService {
     /**
      * STEP 1: ATOMIC BOOKING CREATION WITH ESCROW HOLD (ACID)
      * Deducts funds from user's available balance and locks them in ESCROW / PENDING state.
-     * Dietitian balance is NOT credited until acceptance.
+     * Nutritionist balance is NOT credited until acceptance.
      */
     @Transactional(rollbackFor = Exception.class)
     public AppointmentDto bookAppointment(Long currentUserId, Role role, AppointmentDto dto) {
@@ -123,23 +123,23 @@ public class AppointmentService {
             user = userRepository.findById(currentUserId).orElseThrow(() -> new RuntimeException("User not found"));
         }
 
-        User dietitian = null;
-        if (dto.getDietitianId() != null) {
-            dietitian = userRepository.findById(dto.getDietitianId()).orElse(null);
+        User nutritionist = null;
+        if (dto.getNutritionistId() != null) {
+            nutritionist = userRepository.findById(dto.getNutritionistId()).orElse(null);
         } else if (role == Role.NUTRITIONIST) {
-            dietitian = userRepository.findById(currentUserId).orElse(null);
+            nutritionist = userRepository.findById(currentUserId).orElse(null);
         } else {
             List<User> nutritionists = userRepository.findByRole(Role.NUTRITIONIST);
             if (!nutritionists.isEmpty()) {
-                dietitian = nutritionists.get(0);
+                nutritionist = nutritionists.get(0);
             }
         }
 
         // Calculate session fee
         BigDecimal fee = dto.getSessionFee();
         if (fee == null || fee.compareTo(BigDecimal.ZERO) <= 0) {
-            if (dietitian != null) {
-                Optional<NutritionistProfile> profOpt = nutritionistProfileRepository.findByUserId(dietitian.getId());
+            if (nutritionist != null) {
+                Optional<NutritionistProfile> profOpt = nutritionistProfileRepository.findByUserId(nutritionist.getId());
                 if (profOpt.isPresent() && profOpt.get().getConsultationFee() != null) {
                     try {
                         String clean = profOpt.get().getConsultationFee().replaceAll("[^0-9.]", "");
@@ -165,9 +165,9 @@ public class AppointmentService {
             WalletTransaction blockedTx = new WalletTransaction();
             blockedTx.setTransactionReference(failRef);
             blockedTx.setSourceWallet(userWallet);
-            blockedTx.setTargetWallet(dietitian != null ? walletService.getOrCreateWallet(dietitian) : null);
+            blockedTx.setTargetWallet(nutritionist != null ? walletService.getOrCreateWallet(nutritionist) : null);
             blockedTx.setInitiator(user);
-            blockedTx.setRecipient(dietitian);
+            blockedTx.setRecipient(nutritionist);
             blockedTx.setAmount(fee);
             blockedTx.setCurrency(userWallet.getCurrency());
             blockedTx.setTransactionType("ESCROW_HOLD");
@@ -183,7 +183,7 @@ public class AppointmentService {
                     String.format("Insufficient wallet balance. You have ₹%.2f but ₹%.2f is required for appointment escrow.", currentBalance, fee));
         }
 
-        // Execute Escrow Hold: Deduct from user wallet, do NOT credit dietitian yet
+        // Execute Escrow Hold: Deduct from user wallet, do NOT credit nutritionist yet
         BigDecimal userBalBefore = currentBalance;
         BigDecimal userBalAfter = userBalBefore.subtract(fee);
         userWallet.setBalance(userBalAfter);
@@ -193,7 +193,7 @@ public class AppointmentService {
 
         Appointment appointment = new Appointment();
         appointment.setUser(user);
-        appointment.setDietitian(dietitian);
+        appointment.setNutritionist(nutritionist);
         appointment.setAppointmentTime(dto.getAppointmentTime() != null ? dto.getAppointmentTime() : LocalDateTime.now().plusDays(1).withHour(10).withMinute(0));
         appointment.setTitle(dto.getTitle() != null && !dto.getTitle().trim().isEmpty() ? dto.getTitle() : "Clinical Nutrition Consultation");
         appointment.setSessionType(dto.getSessionType() != null && !dto.getSessionType().trim().isEmpty() ? dto.getSessionType() : "Clinical Consultation");
@@ -207,26 +207,26 @@ public class AppointmentService {
         Appointment savedAppointment = appointmentRepository.save(appointment);
 
         // Record Escrow Hold in Audit Ledger
-        Wallet dietitianWallet = dietitian != null ? walletService.getOrCreateWallet(dietitian) : null;
-        BigDecimal dietitianBal = dietitianWallet != null && dietitianWallet.getBalance() != null ? dietitianWallet.getBalance() : BigDecimal.ZERO;
+        Wallet nutritionistWallet = nutritionist != null ? walletService.getOrCreateWallet(nutritionist) : null;
+        BigDecimal nutritionistBal = nutritionistWallet != null && nutritionistWallet.getBalance() != null ? nutritionistWallet.getBalance() : BigDecimal.ZERO;
 
         WalletTransaction holdTx = new WalletTransaction();
         holdTx.setTransactionReference(escrowRef);
         holdTx.setSourceWallet(userWallet);
-        holdTx.setTargetWallet(dietitianWallet);
+        holdTx.setTargetWallet(nutritionistWallet);
         holdTx.setInitiator(user);
-        holdTx.setRecipient(dietitian);
+        holdTx.setRecipient(nutritionist);
         holdTx.setAmount(fee);
         holdTx.setCurrency(userWallet.getCurrency());
         holdTx.setTransactionType("ESCROW_HOLD");
         holdTx.setStatus("HELD");
         holdTx.setAppointmentId(savedAppointment.getId());
         holdTx.setNotes(String.format("Escrow payment hold of ₹%.2f for appointment #%d with %s",
-                fee, savedAppointment.getId(), dietitian != null ? dietitian.getEmail() : "Dietitian"));
+                fee, savedAppointment.getId(), nutritionist != null ? nutritionist.getEmail() : "Nutritionist"));
         holdTx.setSenderBalanceBefore(userBalBefore);
         holdTx.setSenderBalanceAfter(userBalAfter);
-        holdTx.setReceiverBalanceBefore(dietitianBal);
-        holdTx.setReceiverBalanceAfter(dietitianBal); // Dietitian not credited yet!
+        holdTx.setReceiverBalanceBefore(nutritionistBal);
+        holdTx.setReceiverBalanceAfter(nutritionistBal); // Nutritionist not credited yet!
 
         WalletTransaction savedTx = walletTransactionRepository.save(holdTx);
 
@@ -252,14 +252,14 @@ public class AppointmentService {
         holdPayload.put("status", "HELD");
         walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), holdPayload);
 
-        // 2. Appointment update to dietitian & user
+        // 2. Appointment update to nutritionist & user
         Map<String, Object> aptEvent = Map.of(
                 "type", "APPOINTMENT_UPDATED",
                 "action", "REQUESTED",
                 "appointment", resultDto
         );
-        if (dietitian != null) {
-            walletSseService.sendAppointmentUpdate(dietitian.getId(), dietitian.getEmail(), aptEvent);
+        if (nutritionist != null) {
+            walletSseService.sendAppointmentUpdate(nutritionist.getId(), nutritionist.getEmail(), aptEvent);
         }
         walletSseService.sendAppointmentUpdate(user.getId(), user.getEmail(), aptEvent);
 
@@ -284,7 +284,7 @@ public class AppointmentService {
 
     /**
      * STEP 2a & 2b: ATOMIC ESCROW CAPTURE OR COMPENSATING REFUND (ACID & IDEMPOTENT)
-     * - If ACCEPTED / Confirmed: Release funds from ESCROW to dietitian's balance.
+     * - If ACCEPTED / Confirmed: Release funds from ESCROW to nutritionist's balance.
      * - If REJECTED / CANCELLED: Immediately refund locked funds back to user's balance.
      */
     @Transactional(rollbackFor = Exception.class)
@@ -302,19 +302,19 @@ public class AppointmentService {
         if (status != null && !status.trim().isEmpty()) {
             String upperStatus = status.trim().toUpperCase();
 
-            // STEP 2a: Dietitian ACCEPTS the booking (Hold & Capture)
+            // STEP 2a: Nutritionist ACCEPTS the booking (Hold & Capture)
             if ("CONFIRMED".equals(upperStatus) || "ACCEPTED".equals(upperStatus) || "APPROVED".equals(upperStatus)) {
                 // Idempotency check: prevent duplicate escrow capture
                 if ("CAPTURED".equalsIgnoreCase(apt.getEscrowStatus())) {
                     log.info("Appointment #{} escrow already CAPTURED. Skipping duplicate capture.", appointmentId);
                 } else if ("HELD".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
-                    User dietitian = apt.getDietitian();
-                    if (dietitian != null) {
-                        Wallet dietitianWallet = walletService.getOrCreateWalletWithLock(dietitian);
-                        BigDecimal dietitianBalBefore = dietitianWallet.getBalance() != null ? dietitianWallet.getBalance() : BigDecimal.ZERO;
-                        BigDecimal dietitianBalAfter = dietitianBalBefore.add(apt.getEscrowAmount());
-                        dietitianWallet.setBalance(dietitianBalAfter);
-                        walletRepository.save(dietitianWallet);
+                    User nutritionist = apt.getNutritionist();
+                    if (nutritionist != null) {
+                        Wallet nutritionistWallet = walletService.getOrCreateWalletWithLock(nutritionist);
+                        BigDecimal nutritionistBalBefore = nutritionistWallet.getBalance() != null ? nutritionistWallet.getBalance() : BigDecimal.ZERO;
+                        BigDecimal nutritionistBalAfter = nutritionistBalBefore.add(apt.getEscrowAmount());
+                        nutritionistWallet.setBalance(nutritionistBalAfter);
+                        walletRepository.save(nutritionistWallet);
 
                         String captureRef = "ESCROW-REL-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
                         apt.setEscrowStatus("CAPTURED");
@@ -328,19 +328,19 @@ public class AppointmentService {
                         WalletTransaction releaseTx = new WalletTransaction();
                         releaseTx.setTransactionReference(captureRef);
                         releaseTx.setSourceWallet(userWallet);
-                        releaseTx.setTargetWallet(dietitianWallet);
+                        releaseTx.setTargetWallet(nutritionistWallet);
                         releaseTx.setInitiator(user);
-                        releaseTx.setRecipient(dietitian);
+                        releaseTx.setRecipient(nutritionist);
                         releaseTx.setAmount(apt.getEscrowAmount());
-                        releaseTx.setCurrency(dietitianWallet.getCurrency());
+                        releaseTx.setCurrency(nutritionistWallet.getCurrency());
                         releaseTx.setTransactionType("ESCROW_RELEASE");
                         releaseTx.setStatus("SUCCESS");
                         releaseTx.setAppointmentId(apt.getId());
-                        releaseTx.setNotes(String.format("Escrow released to Dietitian [%s] upon appointment #%d confirmation", dietitian.getEmail(), apt.getId()));
+                        releaseTx.setNotes(String.format("Escrow released to Nutritionist [%s] upon appointment #%d confirmation", nutritionist.getEmail(), apt.getId()));
                         releaseTx.setSenderBalanceBefore(userBal);
                         releaseTx.setSenderBalanceAfter(userBal);
-                        releaseTx.setReceiverBalanceBefore(dietitianBalBefore);
-                        releaseTx.setReceiverBalanceAfter(dietitianBalAfter);
+                        releaseTx.setReceiverBalanceBefore(nutritionistBalBefore);
+                        releaseTx.setReceiverBalanceAfter(nutritionistBalAfter);
                         WalletTransaction savedTx = walletTransactionRepository.save(releaseTx);
 
                         // Mark original hold transaction as RELEASED
@@ -355,24 +355,24 @@ public class AppointmentService {
                             } catch (Exception ignored) {}
                         }
 
-                        log.info("ESCROW CAPTURED: Credited ₹{} to Dietitian [{}] (Bal: ₹{} -> ₹{}). Ref: {}",
-                                apt.getEscrowAmount(), dietitian.getEmail(), dietitianBalBefore, dietitianBalAfter, captureRef);
+                        log.info("ESCROW CAPTURED: Credited ₹{} to Nutritionist [{}] (Bal: ₹{} -> ₹{}). Ref: {}",
+                                apt.getEscrowAmount(), nutritionist.getEmail(), nutritionistBalBefore, nutritionistBalAfter, captureRef);
 
-                        // Push SSE to Dietitian
+                        // Push SSE to Nutritionist
                         Map<String, Object> releasePayload = new HashMap<>();
                         releasePayload.put("eventType", "ESCROW_RELEASE");
                         releasePayload.put("type", "ESCROW_RELEASE");
                         releasePayload.put("transactionId", savedTx.getId());
                         releasePayload.put("transactionReference", captureRef);
-                        releasePayload.put("recipientId", dietitian.getId());
-                        releasePayload.put("recipientEmail", dietitian.getEmail());
-                        releasePayload.put("newBalance", dietitianBalAfter);
-                        releasePayload.put("balance", dietitianBalAfter);
+                        releasePayload.put("recipientId", nutritionist.getId());
+                        releasePayload.put("recipientEmail", nutritionist.getEmail());
+                        releasePayload.put("newBalance", nutritionistBalAfter);
+                        releasePayload.put("balance", nutritionistBalAfter);
                         releasePayload.put("amount", apt.getEscrowAmount());
                         releasePayload.put("description", releaseTx.getNotes());
                         releasePayload.put("timestamp", java.time.Instant.now().toString());
                         releasePayload.put("status", "SUCCESS");
-                        walletSseService.sendWalletUpdate(dietitian.getId(), dietitian.getEmail(), releasePayload);
+                        walletSseService.sendWalletUpdate(nutritionist.getId(), nutritionist.getEmail(), releasePayload);
 
                         // Stream to Admin Ledger
                         walletSseService.broadcastToAdmins(Map.of(
@@ -381,11 +381,11 @@ public class AppointmentService {
                                         "id", savedTx.getId(),
                                         "transactionReference", captureRef,
                                         "amount", apt.getEscrowAmount(),
-                                        "currency", dietitianWallet.getCurrency(),
+                                        "currency", nutritionistWallet.getCurrency(),
                                         "transactionType", "ESCROW_RELEASE",
                                         "status", "SUCCESS",
-                                        "receiverBalanceBefore", dietitianBalBefore,
-                                        "receiverBalanceAfter", dietitianBalAfter,
+                                        "receiverBalanceBefore", nutritionistBalBefore,
+                                        "receiverBalanceAfter", nutritionistBalAfter,
                                         "createdAt", savedTx.getCreatedAt() != null ? savedTx.getCreatedAt() : LocalDateTime.now()
                                 )
                         ));
@@ -393,32 +393,32 @@ public class AppointmentService {
                 }
                 apt.setStatus("Confirmed");
 
-            // STEP 2c: Dietitian APPROVES Cancellation Request with Disclaimer: No money will be refunded
+            // STEP 2c: Nutritionist APPROVES Cancellation Request with Disclaimer: No money will be refunded
             } else if ("APPROVE_CANCELLATION_NO_REFUND".equals(upperStatus) ||
                       ("APPROVE_CANCELLATION".equals(upperStatus) && notes != null && notes.toLowerCase().contains("no money will be refunded"))) {
                 apt.setStatus("CANCELLED");
                 if (notes != null && !notes.isBlank()) {
                     apt.setNotes(notes);
                 } else {
-                    apt.setNotes("Cancellation approved by dietitian. Disclaimer: No money will be refunded.");
+                    apt.setNotes("Cancellation approved by nutritionist. Disclaimer: No money will be refunded.");
                 }
-                log.info("Dietitian approved cancellation with disclaimer (no money refunded) for appointment #{}", apt.getId());
+                log.info("Nutritionist approved cancellation with disclaimer (no money refunded) for appointment #{}", apt.getId());
 
-            // STEP 2c-alt: Dietitian APPROVES Cancellation Request and optionally issues refund
+            // STEP 2c-alt: Nutritionist APPROVES Cancellation Request and optionally issues refund
             } else if ("APPROVE_CANCELLATION".equals(upperStatus) || "APPROVE_CANCELLATION_REFUND".equals(upperStatus) || ("CANCELLED".equals(upperStatus) && "CAPTURED".equalsIgnoreCase(apt.getEscrowStatus()))) {
                 if ("CAPTURED".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
-                    User dietitian = apt.getDietitian();
+                    User nutritionist = apt.getNutritionist();
                     User user = apt.getUser();
                     BigDecimal refundAmt = apt.getEscrowAmount();
 
-                    if (dietitian != null && user != null) {
-                        Wallet dietitianWallet = walletService.getOrCreateWalletWithLock(dietitian);
+                    if (nutritionist != null && user != null) {
+                        Wallet nutritionistWallet = walletService.getOrCreateWalletWithLock(nutritionist);
                         Wallet userWallet = walletService.getOrCreateWalletWithLock(user);
 
-                        BigDecimal dietitianBalBefore = dietitianWallet.getBalance() != null ? dietitianWallet.getBalance() : BigDecimal.ZERO;
-                        BigDecimal dietitianBalAfter = dietitianBalBefore.subtract(refundAmt);
-                        dietitianWallet.setBalance(dietitianBalAfter);
-                        walletRepository.save(dietitianWallet);
+                        BigDecimal nutritionistBalBefore = nutritionistWallet.getBalance() != null ? nutritionistWallet.getBalance() : BigDecimal.ZERO;
+                        BigDecimal nutritionistBalAfter = nutritionistBalBefore.subtract(refundAmt);
+                        nutritionistWallet.setBalance(nutritionistBalAfter);
+                        walletRepository.save(nutritionistWallet);
 
                         BigDecimal userBalBefore = userWallet.getBalance() != null ? userWallet.getBalance() : BigDecimal.ZERO;
                         BigDecimal userBalAfter = userBalBefore.add(refundAmt);
@@ -432,41 +432,41 @@ public class AppointmentService {
 
                         WalletTransaction refundTx = new WalletTransaction();
                         refundTx.setTransactionReference(refundRef);
-                        refundTx.setSourceWallet(dietitianWallet);
+                        refundTx.setSourceWallet(nutritionistWallet);
                         refundTx.setTargetWallet(userWallet);
-                        refundTx.setInitiator(dietitian);
+                        refundTx.setInitiator(nutritionist);
                         refundTx.setRecipient(user);
                         refundTx.setAmount(refundAmt);
                         refundTx.setCurrency(userWallet.getCurrency());
                         refundTx.setTransactionType("ESCROW_REFUND");
                         refundTx.setStatus("REFUNDED");
                         refundTx.setAppointmentId(apt.getId());
-                        refundTx.setNotes(String.format("Dietitian [%s] approved cancellation & refunded fee of ₹%.2f back to client [%s]",
-                                dietitian.getEmail(), refundAmt, user.getEmail()));
-                        refundTx.setSenderBalanceBefore(dietitianBalBefore);
-                        refundTx.setSenderBalanceAfter(dietitianBalAfter);
+                        refundTx.setNotes(String.format("Nutritionist [%s] approved cancellation & refunded fee of ₹%.2f back to client [%s]",
+                                nutritionist.getEmail(), refundAmt, user.getEmail()));
+                        refundTx.setSenderBalanceBefore(nutritionistBalBefore);
+                        refundTx.setSenderBalanceAfter(nutritionistBalAfter);
                         refundTx.setReceiverBalanceBefore(userBalBefore);
                         refundTx.setReceiverBalanceAfter(userBalAfter);
                         WalletTransaction savedTx = walletTransactionRepository.save(refundTx);
 
-                        log.info("DIETITIAN APPROVED REFUND: Deducted ₹{} from Dietitian [{}] and refunded to User [{}]. Ref: {}",
-                                refundAmt, dietitian.getEmail(), user.getEmail(), refundRef);
+                        log.info("NUTRITIONIST APPROVED REFUND: Deducted ₹{} from Nutritionist [{}] and refunded to User [{}]. Ref: {}",
+                                refundAmt, nutritionist.getEmail(), user.getEmail(), refundRef);
 
-                        // Push SSE to Dietitian (deduction)
-                        Map<String, Object> dietitianPayload = new HashMap<>();
-                        dietitianPayload.put("eventType", "ESCROW_REFUND");
-                        dietitianPayload.put("type", "ESCROW_REFUND");
-                        dietitianPayload.put("transactionId", savedTx.getId());
-                        dietitianPayload.put("transactionReference", refundRef);
-                        dietitianPayload.put("recipientId", dietitian.getId());
-                        dietitianPayload.put("recipientEmail", dietitian.getEmail());
-                        dietitianPayload.put("newBalance", dietitianBalAfter);
-                        dietitianPayload.put("balance", dietitianBalAfter);
-                        dietitianPayload.put("amount", refundAmt.negate());
-                        dietitianPayload.put("description", "Refunded ₹" + refundAmt + " to client upon approved cancellation");
-                        dietitianPayload.put("timestamp", java.time.Instant.now().toString());
-                        dietitianPayload.put("status", "SUCCESS");
-                        walletSseService.sendWalletUpdate(dietitian.getId(), dietitian.getEmail(), dietitianPayload);
+                        // Push SSE to Nutritionist (deduction)
+                        Map<String, Object> nutritionistPayload = new HashMap<>();
+                        nutritionistPayload.put("eventType", "ESCROW_REFUND");
+                        nutritionistPayload.put("type", "ESCROW_REFUND");
+                        nutritionistPayload.put("transactionId", savedTx.getId());
+                        nutritionistPayload.put("transactionReference", refundRef);
+                        nutritionistPayload.put("recipientId", nutritionist.getId());
+                        nutritionistPayload.put("recipientEmail", nutritionist.getEmail());
+                        nutritionistPayload.put("newBalance", nutritionistBalAfter);
+                        nutritionistPayload.put("balance", nutritionistBalAfter);
+                        nutritionistPayload.put("amount", refundAmt.negate());
+                        nutritionistPayload.put("description", "Refunded ₹" + refundAmt + " to client upon approved cancellation");
+                        nutritionistPayload.put("timestamp", java.time.Instant.now().toString());
+                        nutritionistPayload.put("status", "SUCCESS");
+                        walletSseService.sendWalletUpdate(nutritionist.getId(), nutritionist.getEmail(), nutritionistPayload);
 
                         // Push SSE to User (refund credit)
                         Map<String, Object> userPayload = new HashMap<>();
@@ -479,7 +479,7 @@ public class AppointmentService {
                         userPayload.put("newBalance", userBalAfter);
                         userPayload.put("balance", userBalAfter);
                         userPayload.put("amount", refundAmt);
-                        userPayload.put("description", "Consultation fee of ₹" + refundAmt + " refunded by dietitian");
+                        userPayload.put("description", "Consultation fee of ₹" + refundAmt + " refunded by nutritionist");
                         userPayload.put("timestamp", java.time.Instant.now().toString());
                         userPayload.put("status", "SUCCESS");
                         walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), userPayload);
@@ -494,8 +494,8 @@ public class AppointmentService {
                                         Map.entry("currency", userWallet.getCurrency()),
                                         Map.entry("transactionType", "ESCROW_REFUND"),
                                         Map.entry("status", "REFUNDED"),
-                                        Map.entry("senderBalanceBefore", dietitianBalBefore),
-                                        Map.entry("senderBalanceAfter", dietitianBalAfter),
+                                        Map.entry("senderBalanceBefore", nutritionistBalBefore),
+                                        Map.entry("senderBalanceAfter", nutritionistBalAfter),
                                         Map.entry("receiverBalanceBefore", userBalBefore),
                                         Map.entry("receiverBalanceAfter", userBalAfter),
                                         Map.entry("createdAt", savedTx.getCreatedAt() != null ? savedTx.getCreatedAt() : LocalDateTime.now())
@@ -507,18 +507,18 @@ public class AppointmentService {
                 }
                 apt.setStatus("CANCELLED");
 
-            // STEP 2d: Dietitian DECLINES Cancellation Request
+            // STEP 2d: Nutritionist DECLINES Cancellation Request
             } else if ("DECLINE_CANCELLATION".equals(upperStatus) || "REJECT_CANCELLATION".equals(upperStatus)) {
                 apt.setStatus("Confirmed");
                 if (notes != null && !notes.isBlank()) {
                     apt.setNotes(notes);
                 }
 
-            // STEP 2e: Client Requests Cancellation from Dietitian
+            // STEP 2e: Client Requests Cancellation from Nutritionist
             } else if ("CANCELLATION_REQUESTED".equals(upperStatus) || "REQUEST_CANCEL".equals(upperStatus)) {
                 apt.setStatus("CANCELLATION_REQUESTED");
 
-            // STEP 2b: Dietitian REJECTS unconfirmed booking OR User cancels unconfirmed booking (HELD state)
+            // STEP 2b: Nutritionist REJECTS unconfirmed booking OR User cancels unconfirmed booking (HELD state)
             } else if ("REJECTED".equals(upperStatus) || "CANCELLED".equals(upperStatus) || "DENIED".equals(upperStatus)) {
                 // If appointment was already confirmed, user cannot directly cancel unilaterally
                 if ("Confirmed".equalsIgnoreCase(apt.getStatus()) || "CAPTURED".equalsIgnoreCase(apt.getEscrowStatus())) {
@@ -544,8 +544,8 @@ public class AppointmentService {
         if (updated.getUser() != null) {
             walletSseService.sendAppointmentUpdate(updated.getUser().getId(), updated.getUser().getEmail(), sseEvent);
         }
-        if (updated.getDietitian() != null) {
-            walletSseService.sendAppointmentUpdate(updated.getDietitian().getId(), updated.getDietitian().getEmail(), sseEvent);
+        if (updated.getNutritionist() != null) {
+            walletSseService.sendAppointmentUpdate(updated.getNutritionist().getId(), updated.getNutritionist().getEmail(), sseEvent);
         }
 
         return dtoResult;
@@ -554,8 +554,8 @@ public class AppointmentService {
     /**
      * Client requests to cancel an appointment.
      * - If still in unconfirmed state: immediately cancels with escrow release back to client.
-     * - If already confirmed/accepted by dietitian: transitions state to CANCELLATION_REQUESTED
-     *   for dietitian's review and refund approval.
+     * - If already confirmed/accepted by nutritionist: transitions state to CANCELLATION_REQUESTED
+     *   for nutritionist's review and refund approval.
      */
     @Transactional(rollbackFor = Exception.class)
     public AppointmentDto requestCancellation(Long appointmentId, Long userId, String reason) {
@@ -576,7 +576,7 @@ public class AppointmentService {
             return updateAppointmentStatus(appointmentId, "CANCELLED", null, reason);
         }
 
-        // Already confirmed by dietitian -> Require dietitian approval to refund
+        // Already confirmed by nutritionist -> Require nutritionist approval to refund
         apt.setStatus("CANCELLATION_REQUESTED");
         if (reason != null && !reason.isBlank()) {
             apt.setNotes(apt.getNotes() != null ? apt.getNotes() + " | Cancellation Reason: " + reason : "Cancellation Reason: " + reason);
@@ -593,8 +593,8 @@ public class AppointmentService {
         if (updated.getUser() != null) {
             walletSseService.sendAppointmentUpdate(updated.getUser().getId(), updated.getUser().getEmail(), sseEvent);
         }
-        if (updated.getDietitian() != null) {
-            walletSseService.sendAppointmentUpdate(updated.getDietitian().getId(), updated.getDietitian().getEmail(), sseEvent);
+        if (updated.getNutritionist() != null) {
+            walletSseService.sendAppointmentUpdate(updated.getNutritionist().getId(), updated.getNutritionist().getEmail(), sseEvent);
         }
 
         log.info("Client [{}] submitted cancellation request for confirmed appointment #{}", apt.getUser().getEmail(), apt.getId());
@@ -619,12 +619,12 @@ public class AppointmentService {
         apt.setEscrowStatus("REFUNDED");
         apt.setEscrowTransactionRef(refundRef);
 
-        User dietitian = apt.getDietitian();
+        User nutritionist = apt.getNutritionist();
         WalletTransaction refundTx = new WalletTransaction();
         refundTx.setTransactionReference(refundRef);
         refundTx.setSourceWallet(null);
         refundTx.setTargetWallet(userWallet);
-        refundTx.setInitiator(dietitian != null ? dietitian : user);
+        refundTx.setInitiator(nutritionist != null ? nutritionist : user);
         refundTx.setRecipient(user);
         refundTx.setAmount(apt.getEscrowAmount());
         refundTx.setCurrency(userWallet.getCurrency());
@@ -740,8 +740,8 @@ public class AppointmentService {
             if (apt.getUser() != null) {
                 walletSseService.sendAppointmentUpdate(apt.getUser().getId(), apt.getUser().getEmail(), delEvent);
             }
-            if (apt.getDietitian() != null) {
-                walletSseService.sendAppointmentUpdate(apt.getDietitian().getId(), apt.getDietitian().getEmail(), delEvent);
+            if (apt.getNutritionist() != null) {
+                walletSseService.sendAppointmentUpdate(apt.getNutritionist().getId(), apt.getNutritionist().getEmail(), delEvent);
             }
         }
     }
@@ -754,24 +754,24 @@ public class AppointmentService {
             dto.setUserName((apt.getUser().getFirstName() != null ? apt.getUser().getFirstName() : "") + " " + (apt.getUser().getLastName() != null ? apt.getUser().getLastName() : ""));
             dto.setUserEmail(apt.getUser().getEmail());
         }
-        if (apt.getDietitian() != null) {
-            User d = apt.getDietitian();
-            dto.setDietitianId(d.getId());
+        if (apt.getNutritionist() != null) {
+            User d = apt.getNutritionist();
+            dto.setNutritionistId(d.getId());
             String dName = (d.getFirstName() != null ? d.getFirstName() : "") + " " + (d.getLastName() != null ? d.getLastName() : "");
             if (dName.trim().isEmpty()) {
                 dName = d.getEmail();
             }
-            dto.setDietitianName(dName.trim());
-            dto.setDietitianEmail(d.getEmail());
+            dto.setNutritionistName(dName.trim());
+            dto.setNutritionistEmail(d.getEmail());
 
             Optional<NutritionistProfile> profOpt = nutritionistProfileRepository.findByUserId(d.getId());
             if (profOpt.isPresent()) {
                 NutritionistProfile prof = profOpt.get();
-                dto.setDietitianCredentials(prof.getCredentials() != null && !prof.getCredentials().trim().isEmpty() ? prof.getCredentials() : "Certified Dietitian");
-                dto.setDietitianSpecialization(prof.getSpecialization() != null && !prof.getSpecialization().trim().isEmpty() ? prof.getSpecialization() : "Clinical Nutrition");
+                dto.setNutritionistCredentials(prof.getCredentials() != null && !prof.getCredentials().trim().isEmpty() ? prof.getCredentials() : "Certified Nutritionist");
+                dto.setNutritionistSpecialization(prof.getSpecialization() != null && !prof.getSpecialization().trim().isEmpty() ? prof.getSpecialization() : "Clinical Nutrition");
             } else {
-                dto.setDietitianCredentials("Certified Clinical Dietitian");
-                dto.setDietitianSpecialization("General Metabolic & Sports Nutrition");
+                dto.setNutritionistCredentials("Certified Clinical Nutritionist");
+                dto.setNutritionistSpecialization("General Metabolic & Sports Nutrition");
             }
         }
         dto.setAppointmentTime(apt.getAppointmentTime());

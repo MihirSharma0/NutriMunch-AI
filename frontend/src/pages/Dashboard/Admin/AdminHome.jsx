@@ -75,12 +75,12 @@ const AdminHome = () => {
                 email: editEmail,
                 password: editPassword
             });
-            
+
             setCredentials({
                 email: response.data.email || editEmail,
                 password: response.data.password || editPassword
             });
-            
+
             setUpdateMessage("Admin credentials updated in database!");
             setTimeout(() => {
                 setIsEditModalOpen(false);
@@ -126,15 +126,15 @@ const AdminHome = () => {
                         <div className="flex flex-wrap justify-between items-center gap-2 text-white/50 pb-2 border-b border-white/10">
                             <span className="tracking-wider">MASTER ACCESS</span>
                             <div className="flex items-center gap-3">
-                                <button 
-                                    onClick={handleOpenEditModal} 
+                                <button
+                                    onClick={handleOpenEditModal}
                                     className="text-amber-400 hover:text-amber-300 font-sans text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                                 >
                                     <span className="material-symbols-outlined text-sm">edit</span>
                                     Edit
                                 </button>
-                                <button 
-                                    onClick={handleCopy} 
+                                <button
+                                    onClick={handleCopy}
                                     className="text-[#a5d391] hover:text-white font-sans text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                                 >
                                     <span className="material-symbols-outlined text-sm">{copied ? 'check' : 'content_copy'}</span>
@@ -213,7 +213,7 @@ const AdminHome = () => {
                         </div>
                         <div className="p-7 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 hover:border-sky-400/40 transition-all duration-300 shadow-xl">
                             <h3 className="text-sm text-white/60 font-medium">Active Nutritionists</h3>
-                            <p className="text-4xl font-bold text-sky-400 font-hero-display mt-3">{stats.totalNutritionists || stats.totalDietitians || 0}</p>
+                            <p className="text-4xl font-bold text-sky-400 font-hero-display mt-3">{stats.totalNutritionists || stats.totalNutritionists || 0}</p>
                         </div>
                         <div className="p-7 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 hover:border-amber-400/40 transition-all duration-300 shadow-xl">
                             <h3 className="text-sm text-white/60 font-medium">Total Appointments</h3>

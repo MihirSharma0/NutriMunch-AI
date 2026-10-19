@@ -243,7 +243,7 @@ const AppointmentManagement = () => {
                     },
                     body: JSON.stringify({
                         status: 'APPROVE_CANCELLATION_NO_REFUND',
-                        notes: `Cancellation approved by dietitian. Disclaimer: ${disclaimerText}`
+                        notes: `Cancellation approved by nutritionist. Disclaimer: ${disclaimerText}`
                     })
                 });
 
@@ -281,7 +281,7 @@ const AppointmentManagement = () => {
                     },
                     body: JSON.stringify({
                         status: 'Confirmed',
-                        notes: 'Cancellation request declined by dietitian; session remains confirmed.'
+                        notes: 'Cancellation request declined by nutritionist; session remains confirmed.'
                     })
                 });
 
@@ -290,7 +290,7 @@ const AppointmentManagement = () => {
                 }
             } catch (err) {}
 
-            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? (updated || { ...ev, status: 'Confirmed', notes: 'Cancellation request declined by dietitian; session remains confirmed.' }) : ev));
+            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? (updated || { ...ev, status: 'Confirmed', notes: 'Cancellation request declined by nutritionist; session remains confirmed.' }) : ev));
 
             try {
                 const localApts = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
@@ -828,11 +828,11 @@ const AppointmentManagement = () => {
                                             </div>
                                         </div>
 
-                                        {/* Dietitian disclaimer note input */}
+                                        {/* Nutritionist disclaimer note input */}
                                         <div className="space-y-1.5 bg-white/5 border border-white/10 rounded-2xl p-3.5">
                                             <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider flex items-center gap-1.5">
                                                 <span className="material-symbols-outlined text-xs text-[#a5d391]">gavel</span>
-                                                Dietitian Cancellation Disclaimer:
+                                                Nutritionist Cancellation Disclaimer:
                                             </label>
                                             <input 
                                                 type="text"

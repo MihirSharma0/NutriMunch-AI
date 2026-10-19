@@ -4,7 +4,7 @@ import { AuthContext } from '../../../context/AuthContext';
 
 const ClientManagement = () => {
     const { user, token } = useContext(AuthContext);
-    const dietitianName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Certified Dietitian');
+    const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Certified Nutritionist');
     const initialClients = [
         { id: "442", name: "David Miller", email: "david.m@example.com", role: "USER", roleBadge: "User", age: 45, goal: "Diabetes Management", adherence: 82, status: "Critical", lastSync: "10m ago", weight: "88 kg", glucose: "142 mg/dL", calories: "1,950 kcal", protein: "140g", carbs: "160g", fats: "55g", notes: "Monitored insulin spike post-lunch. Adjusted carb threshold." },
         { id: "8472", name: "Marcus Chen", email: "marcus.c@example.com", role: "USER", roleBadge: "User", age: 32, goal: "Lipid Oxidation & Endurance", adherence: 94, status: "Optimal", lastSync: "5m ago", weight: "76 kg", glucose: "92 mg/dL", calories: "2,650 kcal", protein: "175g", carbs: "310g", fats: "65g", notes: "VO2 max training phase. Excellent carbohydrate timing." },
@@ -134,7 +134,7 @@ const ClientManagement = () => {
     };
 
     const filteredClients = clientsList.filter(client => {
-        // Enforce exclusion of Admin and other Dietitian accounts from dietitian patient roster
+        // Enforce exclusion of Admin and other Nutritionist accounts from nutritionist patient roster
         const r = client.role ? String(client.role).toUpperCase().replace('ROLE_', '') : 'USER';
         if (r !== 'USER') return false;
 
@@ -174,7 +174,7 @@ const ClientManagement = () => {
         if (!directiveText.trim() || !selectedClient) return;
 
         const targetId = selectedClient.userId || selectedClient.id;
-        const directiveTitle = `Clinical Directive from Dietitian ${dietitianName}`;
+        const directiveTitle = `Clinical Directive from Nutritionist ${nutritionistName}`;
         const payload = {
             userId: targetId ? Number(targetId) : null,
             userEmail: selectedClient.email || '',
@@ -455,7 +455,7 @@ const ClientManagement = () => {
                             </div>
                         </div>
 
-                        {/* Dietitian Assessment */}
+                        {/* Nutritionist Assessment */}
                         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
                             <div className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">Assessment Notes</div>
                             <p className="text-xs text-white/80 italic leading-snug">"{selectedClient.notes}"</p>

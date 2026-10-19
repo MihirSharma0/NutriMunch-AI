@@ -6,8 +6,8 @@ import { fetchAllTestimonials, saveTestimonial, deleteTestimonial, getLocalTesti
 const getVerifiedRoleForUser = (user) => {
     if (!user || !user.role) return 'Standard User';
     const r = String(user.role).toUpperCase();
-    if (r === 'ROLE_NUTRITIONIST' || r === 'NUTRITIONIST' || r === 'DIETITIAN') {
-        return 'Certified Dietitian';
+    if (r === 'ROLE_NUTRITIONIST' || r === 'NUTRITIONIST') {
+        return 'Certified Nutritionist';
     }
     if (r === 'ROLE_ADMIN' || r === 'ADMIN') {
         return 'Platform Administrator';

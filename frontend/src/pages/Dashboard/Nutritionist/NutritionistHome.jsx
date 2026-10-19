@@ -4,7 +4,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api from '../../../api/axios';
 
-const DietitianHome = () => {
+const NutritionistHome = () => {
     const { user } = useContext(AuthContext);
     const [walletBalance, setWalletBalance] = useState(null);
     const [upcomingConsultations, setUpcomingConsultations] = useState([]);
@@ -433,4 +433,4 @@ const DietitianHome = () => {
     );
 };
 
-export default DietitianHome;
+export default NutritionistHome;

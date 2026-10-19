@@ -11,8 +11,8 @@ import java.util.Optional;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
     List<Appointment> findByUserIdOrderByAppointmentTimeDesc(Long userId);
-    List<Appointment> findByDietitianIdOrderByAppointmentTimeDesc(Long dietitianId);
-    List<Appointment> findByDietitianIdOrDietitianIsNullOrderByAppointmentTimeDesc(Long dietitianId);
+    List<Appointment> findByNutritionistIdOrderByAppointmentTimeDesc(Long nutritionistId);
+    List<Appointment> findByNutritionistIdOrNutritionistIsNullOrderByAppointmentTimeDesc(Long nutritionistId);
     List<Appointment> findAllByOrderByAppointmentTimeDesc();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

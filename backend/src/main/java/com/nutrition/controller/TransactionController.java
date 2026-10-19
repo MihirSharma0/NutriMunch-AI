@@ -21,7 +21,7 @@ public class TransactionController {
 
     /**
      * STEP 4: Transaction History API (GET /api/transactions)
-     * Fetches all ledger records tied to the authenticated user/dietitian/admin.
+     * Fetches all ledger records tied to the authenticated user/nutritionist/admin.
      */
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getTransactions(
@@ -43,7 +43,7 @@ public class TransactionController {
             return ResponseEntity.ok(walletService.getAllTransactionsLedger());
         }
 
-        // Standard user or dietitian: always scope strictly to self
+        // Standard user or nutritionist: always scope strictly to self
         return ResponseEntity.ok(walletService.getUserTransactionHistory(myId));
     }
 }

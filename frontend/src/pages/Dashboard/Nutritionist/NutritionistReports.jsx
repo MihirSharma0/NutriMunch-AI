@@ -6,7 +6,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-const DietitianReports = () => {
+const NutritionistReports = () => {
     const data = {
         labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
         datasets: [
@@ -141,4 +141,4 @@ const DietitianReports = () => {
     );
 };
 
-export default DietitianReports;
+export default NutritionistReports;

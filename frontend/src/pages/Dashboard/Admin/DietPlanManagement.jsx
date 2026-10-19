@@ -218,14 +218,14 @@ const DietPlanManagement = () => {
 
     const filteredPlans = plans.filter(p => {
         const title = (p.title || p.planTitle || '').toLowerCase();
-        const author = (p.dietitianName || '').toLowerCase();
-        const email = (p.dietitianEmail || '').toLowerCase();
+        const author = (p.nutritionistName || '').toLowerCase();
+        const email = (p.nutritionistEmail || '').toLowerCase();
         const target = (p.targetUserName || '').toLowerCase();
         const notes = (p.nutritionistNotes || '').toLowerCase();
         const search = searchTerm.toLowerCase();
 
         const matchesSearch = title.includes(search) || author.includes(search) || email.includes(search) || target.includes(search) || notes.includes(search);
-        
+
         if (scopeFilter === 'GENERAL') {
             return matchesSearch && (p.scope === 'GENERAL' || p.targetMode === 'GENERAL');
         }
@@ -417,11 +417,11 @@ const DietPlanManagement = () => {
                                         <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-white/50">
                                             <div className="flex items-center gap-1.5">
                                                 <span className="material-symbols-outlined text-xs text-[#a5d391]">stethoscope</span>
-                                                <span>{plan.dietitianName || 'Dietitian Specialist'}</span>
+                                                <span>{plan.nutritionistName || 'Nutritionist Specialist'}</span>
                                             </div>
-                                            {plan.dietitianEmail && (
-                                                <div className="text-[10px] text-[#a5d391] font-mono pl-4 truncate max-w-[220px]" title={plan.dietitianEmail}>
-                                                    {plan.dietitianEmail}
+                                            {plan.nutritionistEmail && (
+                                                <div className="text-[10px] text-[#a5d391] font-mono pl-4 truncate max-w-[220px]" title={plan.nutritionistEmail}>
+                                                    {plan.nutritionistEmail}
                                                 </div>
                                             )}
                                         </div>
@@ -530,10 +530,10 @@ const DietPlanManagement = () => {
                             </div>
                             <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
                                 <span className="text-[10px] text-white/50 block font-bold">FORMULATOR</span>
-                                <span className="text-xs font-bold text-white mt-0.5 block">{selectedPlan.dietitianName || 'Specialist'}</span>
-                                {selectedPlan.dietitianEmail && (
-                                    <span className="text-[10px] text-[#a5d391] font-mono block mt-0.5 truncate" title={selectedPlan.dietitianEmail}>
-                                        {selectedPlan.dietitianEmail}
+                                <span className="text-xs font-bold text-white mt-0.5 block">{selectedPlan.nutritionistName || 'Specialist'}</span>
+                                {selectedPlan.nutritionistEmail && (
+                                    <span className="text-[10px] text-[#a5d391] font-mono block mt-0.5 truncate" title={selectedPlan.nutritionistEmail}>
+                                        {selectedPlan.nutritionistEmail}
                                     </span>
                                 )}
                             </div>
@@ -647,11 +647,11 @@ const DietPlanManagement = () => {
                                     "{planToDelete.title || planToDelete.planTitle}"
                                 </div>
                                 <div className="text-white/50 text-[10px] font-mono">
-                                    ID: #{planToDelete.id} • {planToDelete.calories} kcal • {planToDelete.dietitianName || 'Dietitian'}{planToDelete.dietitianEmail ? ` (${planToDelete.dietitianEmail})` : ''}
+                                    ID: #{planToDelete.id} • {planToDelete.calories} kcal • {planToDelete.nutritionistName || 'Nutritionist'}{planToDelete.nutritionistEmail ? ` (${planToDelete.nutritionistEmail})` : ''}
                                 </div>
                             </div>
                             <p className="text-red-300 font-bold">
-                                ⚠️ This action will permanently remove this protocol from MySQL database, in-memory cache, dietitian history vaults, and all user dashboards.
+                                ⚠️ This action will permanently remove this protocol from MySQL database, in-memory cache, nutritionist history vaults, and all user dashboards.
                             </p>
                         </div>
 

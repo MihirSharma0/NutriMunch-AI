@@ -26,10 +26,10 @@ const getModalServicesForRole = (user) => {
                     path: '/dashboard/admin/users'
                 },
                 {
-                    title: 'Dietitian Management',
+                    title: 'Nutritionist Management',
                     desc: 'Review and verify nutritionist credentials, profiles, and consultation status.',
                     icon: 'medical_services',
-                    path: '/dashboard/admin/dietitians'
+                    path: '/dashboard/admin/nutritionists'
                 },
                 {
                     title: 'Platform Analytics',
@@ -65,10 +65,10 @@ const getModalServicesForRole = (user) => {
         };
     }
 
-    if (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') {
+    if (rawRole === 'NUTRITIONIST') {
         return {
             modalTitle: 'Nutritionist Workspace & Clinical Tools',
-            modalBadge: 'Dietitian Tools',
+            modalBadge: 'Nutritionist Tools',
             items: [
                 {
                     title: 'Overview Console',
@@ -101,7 +101,7 @@ const getModalServicesForRole = (user) => {
                     path: '/dashboard/nutritionist/reports'
                 },
                 {
-                    title: 'Dietitian Profile',
+                    title: 'Nutritionist Profile',
                     desc: 'Manage your clinical bio, consultation fee, specializations, and schedule.',
                     icon: 'badge',
                     path: '/dashboard/nutritionist/profile'
@@ -147,7 +147,7 @@ const getModalServicesForRole = (user) => {
             },
             {
                 title: 'Expert Consultations',
-                desc: 'Book one-on-one virtual consultations with certified dietitians and nutritionists.',
+                desc: 'Book one-on-one virtual consultations with certified nutritionists and nutritionists.',
                 icon: 'support_agent',
                 path: '/appointments'
             },
@@ -200,7 +200,7 @@ const ServicesOverview = () => {
             path: '/dashboard/admin/diet-plans'
         },
         {
-            title: 'User & Dietitian Management',
+            title: 'User & Nutritionist Management',
             desc: 'Manage accounts, roles, verification, and nutritionist access across the platform.',
             icon: 'manage_accounts',
             path: '/dashboard/admin/users'
@@ -212,7 +212,7 @@ const ServicesOverview = () => {
             path: '/dashboard/admin/payments'
         }
     ]
-        : rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN'
+        : rawRole === 'NUTRITIONIST'
             ? [
         {
             title: 'Clinical Dashboard',
@@ -260,7 +260,7 @@ const ServicesOverview = () => {
         },
         {
             title: 'Appointments & Consultations',
-            desc: 'Book one-on-one virtual consultations with certified dietitians and nutritionists.',
+            desc: 'Book one-on-one virtual consultations with certified nutritionists and nutritionists.',
             icon: 'support_agent',
             path: '/appointments'
         }
@@ -281,7 +281,7 @@ const ServicesOverview = () => {
                             From personalized calorie tracking to automated AI diet generation, our smart tools are tailored to your unique lifestyle and fitness goals.
                         </p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setShowModal(true)}
                         className="text-on-background border border-outline-variant/50 hover:border-primary hover:text-primary px-8 py-4 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 group shadow-lg"
                     >
@@ -292,8 +292,8 @@ const ServicesOverview = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {featuredServices.map((service, idx) => (
-                        <div 
-                            key={idx} 
+                        <div
+                            key={idx}
                             onClick={() => navigate(service.path)}
                             className="bg-white shadow-xl shadow-black/5 border border-outline-variant/30 rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-6 group hover:border-primary/50 transition-all cursor-pointer"
                         >
@@ -318,14 +318,14 @@ const ServicesOverview = () => {
             {typeof document !== 'undefined' && createPortal(
                 <AnimatePresence>
                     {showModal && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 z-[999999] flex flex-col items-center justify-start pt-24 pb-6 px-4 bg-[#080b12]/90 backdrop-blur-md overflow-hidden"
                             onClick={() => setShowModal(false)}
                         >
-                            <motion.div 
+                            <motion.div
                                 initial={{ scale: 0.95, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.95, opacity: 0 }}
@@ -345,7 +345,7 @@ const ServicesOverview = () => {
                                         <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#a5d391]/10 text-[#a5d391] border border-[#a5d391]/30">
                                             {modalData.modalBadge}
                                         </span>
-                                        <button 
+                                        <button
                                             onClick={() => setShowModal(false)}
                                             className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
                                         >
@@ -357,7 +357,7 @@ const ServicesOverview = () => {
                                 {/* Services Grid (Compact Scrollable Body) */}
                                 <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#a5d391]/40 [&::-webkit-scrollbar-thumb]:rounded-full">
                                     {modalData.items.map((item, idx) => (
-                                        <div 
+                                        <div
                                             key={idx}
                                             onClick={() => {
                                                 setShowModal(false);
@@ -385,7 +385,7 @@ const ServicesOverview = () => {
                                 {/* Footer Section */}
                                 <div className="shrink-0 mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-white/50">
                                     <span>Click any tool to navigate directly.</span>
-                                    <button 
+                                    <button
                                         onClick={() => setShowModal(false)}
                                         className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
                                     >

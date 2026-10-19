@@ -211,7 +211,7 @@ const PaymentManagement = () => {
         .filter(r => r.role === 'USER')
         .reduce((sum, r) => sum + (parseFloat(r.balance) || 0), 0);
     const nutritionistRoleAvailableBalance = recipients
-        .filter(r => r.role === 'NUTRITIONIST' || r.role === 'DIETITIAN')
+        .filter(r => r.role === 'NUTRITIONIST')
         .reduce((sum, r) => sum + (parseFloat(r.balance) || 0), 0);
 
     const handleSelectRecipient = (recId) => {
@@ -227,7 +227,7 @@ const PaymentManagement = () => {
         }
         const uId = String(activeRecipient.id || '');
         const uEmail = (activeRecipient.email || '').toLowerCase();
-        const isNutri = activeRecipient.role === 'NUTRITIONIST' || activeRecipient.role === 'DIETITIAN';
+        const isNutri = activeRecipient.role === 'NUTRITIONIST';
 
         const settledAptIds = new Set();
         let escrowHeldSum = 0;

@@ -24,8 +24,8 @@ const SEED_HISTORY_PLANS = [
         calcium: 1000,
         vitD: 15,
         vitC: 90,
-        dietitianName: "Dietitian Mihir Sharma",
-        dietitianEmail: "sharmamihir012@gmail.com",
+        nutritionistName: "Nutritionist Mihir Sharma",
+        nutritionistEmail: "sharmamihir012@gmail.com",
         deployedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
         nutritionistNotes: "Maintain strict meal cadence. Hydrate with 500ml water upon waking. Emphasize bioavailable whole-food protein.",
         meals: [
@@ -54,8 +54,8 @@ const SEED_HISTORY_PLANS = [
         calcium: 1100,
         vitD: 20,
         vitC: 85,
-        dietitianName: "Dietitian Mihir Sharma",
-        dietitianEmail: "sharmamihir012@gmail.com",
+        nutritionistName: "Nutritionist Mihir Sharma",
+        nutritionistEmail: "sharmamihir012@gmail.com",
         deployedAt: new Date(Date.now() - 86400000).toISOString(),
         nutritionistNotes: "Carbohydrates strictly limited under 35g net to sustain ketosis. Electrolytes and magnesium supplementation prioritized.",
         meals: [
@@ -84,8 +84,8 @@ const SEED_HISTORY_PLANS = [
         calcium: 1000,
         vitD: 15,
         vitC: 90,
-        dietitianName: "Dietitian Mihir Sharma",
-        dietitianEmail: "sharmamihir012@gmail.com",
+        nutritionistName: "Nutritionist Mihir Sharma",
+        nutritionistEmail: "sharmamihir012@gmail.com",
         deployedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
         nutritionistNotes: "Formulated for David's diabetes management. Post-prandial glucose stabilized. Maintain 15-minute post-meal walk.",
         meals: [
@@ -98,8 +98,8 @@ const SEED_HISTORY_PLANS = [
 
 const DietPlanBuilder = () => {
     const { user, token } = useContext(AuthContext);
-    const dietitianName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Dietitian Mihir Sharma');
-    const dietitianEmail = user?.email || (user?.username && user.username.includes('@') ? user.username : 'sharmamihir012@gmail.com');
+    const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Nutritionist Mihir Sharma');
+    const nutritionistEmail = user?.email || (user?.username && user.username.includes('@') ? user.username : 'sharmamihir012@gmail.com');
 
     // Navigation Tab: 'STUDIO' (Diet Builder Studio) or 'HISTORY' (Formulated Diet Plans History Vault)
     const [activeTab, setActiveTab] = useState('STUDIO');
@@ -474,11 +474,11 @@ const DietPlanBuilder = () => {
             vitC: Number(planForm.vitC || 90),
             dietType: planForm.dietType,
             nutritionistNotes: planForm.nutritionistNotes,
-            dietitianName: dietitianName,
-            dietitianEmail: dietitianEmail,
-            author: dietitianName,
-            authorEmail: dietitianEmail,
-            dietitianId: user?.id || null,
+            nutritionistName: nutritionistName,
+            nutritionistEmail: nutritionistEmail,
+            author: nutritionistName,
+            authorEmail: nutritionistEmail,
+            nutritionistId: user?.id || null,
             deployedAt: currentTimestamp,
             meals: meals
         };
@@ -526,7 +526,7 @@ const DietPlanBuilder = () => {
                 const generalNotif = {
                     id: `diet_notif_${Date.now()}`,
                     title: `New Nutritional Protocol Published`,
-                    message: `Dietitian ${dietitianName} published a new nutritional protocol: "${planForm.planTitle}". Check your diet plans to link it.`,
+                    message: `Nutritionist ${nutritionistName} published a new nutritional protocol: "${planForm.planTitle}". Check your diet plans to link it.`,
                     time: 'Just now',
                     icon: 'restaurant_menu',
                     type: 'DIET_PLAN',
@@ -591,7 +591,7 @@ const DietPlanBuilder = () => {
                 const planNotification = {
                     id: `plan_notif_${Date.now()}`,
                     title: `Exclusive Diet Plan Formulated`,
-                    message: `Dietitian ${dietitianName} formulated an exclusive diet plan: "${planForm.planTitle}". Review and link to your daily requirements.`,
+                    message: `Nutritionist ${nutritionistName} formulated an exclusive diet plan: "${planForm.planTitle}". Review and link to your daily requirements.`,
                     time: 'Just now',
                     icon: 'restaurant_menu',
                     type: 'EXCLUSIVE_PLAN',
@@ -1583,10 +1583,10 @@ const DietPlanBuilder = () => {
                                                         </span>
                                                         <div className="flex items-center gap-1.5 text-xs text-white/60 pt-0.5">
                                                             <span className="material-symbols-outlined text-[13px] text-[#a5d391]">badge</span>
-                                                            <span>Formulator: <strong className="text-white font-medium">{plan.dietitianName || 'Dietitian'}</strong></span>
-                                                            {plan.dietitianEmail && (
-                                                                <span className="text-[#a5d391] font-mono text-[11px] truncate max-w-[200px]" title={plan.dietitianEmail}>
-                                                                    ({plan.dietitianEmail})
+                                                            <span>Formulator: <strong className="text-white font-medium">{plan.nutritionistName || 'Nutritionist'}</strong></span>
+                                                            {plan.nutritionistEmail && (
+                                                                <span className="text-[#a5d391] font-mono text-[11px] truncate max-w-[200px]" title={plan.nutritionistEmail}>
+                                                                    ({plan.nutritionistEmail})
                                                                 </span>
                                                             )}
                                                         </div>
@@ -1691,9 +1691,9 @@ const DietPlanBuilder = () => {
                                     </span>
                                 </div>
                                 <p className="text-xs text-white/50">
-                                    Formulated by <strong className="text-white">{selectedHistoryPlan.dietitianName || 'Dietitian'}</strong>
-                                    {selectedHistoryPlan.dietitianEmail && (
-                                        <span className="text-[#a5d391] font-mono ml-1">({selectedHistoryPlan.dietitianEmail})</span>
+                                    Formulated by <strong className="text-white">{selectedHistoryPlan.nutritionistName || 'Nutritionist'}</strong>
+                                    {selectedHistoryPlan.nutritionistEmail && (
+                                        <span className="text-[#a5d391] font-mono ml-1">({selectedHistoryPlan.nutritionistEmail})</span>
                                     )} • {selectedHistoryPlan.dietType}
                                 </p>
                             </div>
