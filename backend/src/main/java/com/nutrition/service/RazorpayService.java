@@ -63,7 +63,8 @@ public class RazorpayService {
 
             int responseCode = conn.getResponseCode();
             if (responseCode >= 200 && responseCode < 300) {
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
                     StringBuilder response = new StringBuilder();
                     String line;
                     while ((line = br.readLine()) != null) {
@@ -79,7 +80,8 @@ public class RazorpayService {
                 log.warn("Razorpay API returned code: {}, falling back to simulated test order", responseCode);
             }
         } catch (Exception e) {
-            log.warn("Could not reach Razorpay live endpoint ({}). Generating simulated test order ID.", e.getMessage());
+            log.warn("Could not reach Razorpay live endpoint ({}). Generating simulated test order ID.",
+                    e.getMessage());
         }
 
         if (orderId == null || orderId.trim().isEmpty()) {
@@ -111,7 +113,8 @@ public class RazorpayService {
             StringBuilder hexString = new StringBuilder();
             for (byte b : hash) {
                 String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
+                if (hex.length() == 1)
+                    hexString.append('0');
                 hexString.append(hex);
             }
             return hexString.toString().equalsIgnoreCase(signature);

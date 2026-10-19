@@ -7,6 +7,7 @@ import com.nutrition.repository.DietPlanRepository;
 import com.nutrition.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,11 +35,12 @@ public class DietPlanService {
         User user = userRepository.findById(userId).orElseThrow();
         DietPlan plan = new DietPlan();
         plan.setUser(user);
-        plan.setGeneratedDate(request.getGeneratedDate());
+        plan.setGeneratedDate(request.getGeneratedDate() != null ? request.getGeneratedDate() : LocalDate.now());
         plan.setTotalCalories(request.getTotalCalories() != null ? request.getTotalCalories() : 2000);
         plan.setProteinG(request.getProteinG() != null ? request.getProteinG() : 150);
         plan.setCarbsG(request.getCarbsG() != null ? request.getCarbsG() : 200);
         plan.setFatG(request.getFatG() != null ? request.getFatG() : 65);
+        plan.setWaterTargetLiters(request.getWaterTargetLiters() != null ? request.getWaterTargetLiters() : 2.5);
         plan.setMealsJson(request.getMealsJson());
 
         return mapToDto(dietPlanRepository.save(plan));
@@ -66,6 +68,7 @@ public class DietPlanService {
         dto.setProteinG(plan.getProteinG());
         dto.setCarbsG(plan.getCarbsG());
         dto.setFatG(plan.getFatG());
+        dto.setWaterTargetLiters(plan.getWaterTargetLiters());
         dto.setMealsJson(plan.getMealsJson());
         return dto;
     }

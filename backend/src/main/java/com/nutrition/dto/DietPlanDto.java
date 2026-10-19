@@ -12,5 +12,6 @@ public class DietPlanDto {
     private Integer proteinG;
     private Integer carbsG;
     private Integer fatG;
+    private Double waterTargetLiters;
     private String mealsJson;
 }

@@ -31,7 +31,7 @@ const deduplicateTransactions = (list) => {
             const exEmail = (existing.recipient?.email || '').toLowerCase();
             const exId = String(existing.recipient?.id || '');
             const sameRecipient = (recipientId && exId && recipientId === exId) ||
-                                  (recipientEmail && exEmail && recipientEmail === exEmail);
+                (recipientEmail && exEmail && recipientEmail === exEmail);
             const sameAmount = Math.abs(amount - Number(existing.amount || 0)) < 0.01;
             const sameStatus = status === String(existing.status || '').toUpperCase();
             const exTime = new Date(existing.createdAt || 0).getTime();
@@ -166,7 +166,7 @@ const PaymentManagement = () => {
             let storedLedger = [];
             try {
                 storedLedger = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
-            } catch (e) {}
+            } catch (e) { }
 
             // Deduplicate: merge backend records (canonical) with any unsaved stored items
             const uniqueLedger = deduplicateTransactions([...backendLedger, ...storedLedger]);
@@ -175,7 +175,7 @@ const PaymentManagement = () => {
             // Clean up localStorage to permanently eliminate duplicate garbage
             try {
                 localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(uniqueLedger));
-            } catch (e) {}
+            } catch (e) { }
 
             // Auto-select first recipient if none selected
             if (loadedRecipients.length > 0 && !selectedRecipientId) {
@@ -281,7 +281,7 @@ const PaymentManagement = () => {
 
             const isHold = type.includes('ESCROW_HOLD') || type.includes('ESCROW_LOCK');
             const isSettled = (parsedAptId && settledAptIds.has(parsedAptId)) ||
-                              ['RELEASED', 'CAPTURED', 'REFUNDED', 'CANCELLED', 'LOW_BALANCE', 'FAILED'].includes(status);
+                ['RELEASED', 'CAPTURED', 'REFUNDED', 'CANCELLED', 'LOW_BALANCE', 'FAILED'].includes(status);
 
             if (isHold && status === 'HELD' && !isSettled) {
                 if (!isNutri && isInitiator) {
@@ -438,7 +438,7 @@ const PaymentManagement = () => {
                             const prevL = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
                             const updatedL = deduplicateTransactions([canonicalCancelTx, ...prevL]);
                             localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(updatedL));
-                        } catch (e) {}
+                        } catch (e) { }
 
                         showToast('info', `Transaction of ₹${amountNum.toFixed(2)} to ${recipient.name} was cancelled.`);
                     }
@@ -477,7 +477,7 @@ const PaymentManagement = () => {
                             balance: newCalculatedBalance,
                             newBalance: newCalculatedBalance
                         });
-                    } catch (e) {}
+                    } catch (e) { }
 
                     let finalServerBalance = newCalculatedBalance;
                     let txnRef = null;
@@ -548,7 +548,7 @@ const PaymentManagement = () => {
                         const prevL = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
                         const updatedL = deduplicateTransactions([canonicalTx, ...prevL]);
                         localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(updatedL));
-                    } catch (e) {}
+                    } catch (e) { }
 
                     localStorage.setItem(`nutrimunch_wallet_balance_id_${selectedRecipientId}`, String(finalServerBalance));
                     localStorage.setItem(`nutrimunch_wallet_balance_${selectedRecipientId}`, String(finalServerBalance));
@@ -570,7 +570,7 @@ const PaymentManagement = () => {
                             balance: finalServerBalance,
                             newBalance: finalServerBalance
                         });
-                    } catch (e) {}
+                    } catch (e) { }
 
                     setRecipients(prev => prev.map(r => {
                         if (String(r.id) === String(selectedRecipientId)) {
@@ -655,7 +655,7 @@ const PaymentManagement = () => {
                     const prevL = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
                     const updatedL = deduplicateTransactions([canonicalFailTx, ...prevL]);
                     localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(updatedL));
-                } catch (e) {}
+                } catch (e) { }
 
                 showToast('error', `Payment Failed: ${failReason}`);
             });
@@ -697,7 +697,7 @@ const PaymentManagement = () => {
                 const prevL = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
                 const updatedL = deduplicateTransactions([failTx, ...prevL]);
                 localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(updatedL));
-            } catch (e) {}
+            } catch (e) { }
             showToast('error', failReason);
         }
     };
@@ -716,7 +716,7 @@ const PaymentManagement = () => {
             const initEmail = (tx.initiator?.email || '').toLowerCase();
 
             const isMatch = (uId && (recId === uId || initId === uId)) ||
-                            (uEmail && (recEmail === uEmail || initEmail === uEmail));
+                (uEmail && (recEmail === uEmail || initEmail === uEmail));
             if (!isMatch) return false;
         }
 
@@ -812,16 +812,14 @@ const PaymentManagement = () => {
 
             {/* Notification Toast */}
             {feedbackToast && (
-                <div className={`p-4 rounded-2xl border backdrop-blur-xl animate-in fade-in duration-200 flex items-start gap-3 shadow-2xl ${
-                    feedbackToast.type === 'success'
+                <div className={`p-4 rounded-2xl border backdrop-blur-xl animate-in fade-in duration-200 flex items-start gap-3 shadow-2xl ${feedbackToast.type === 'success'
                         ? 'bg-emerald-950/80 border-[#a5d391] text-white shadow-[0_0_30px_rgba(165,211,145,0.25)]'
                         : feedbackToast.type === 'info'
                             ? 'bg-amber-950/80 border-amber-500/80 text-amber-200 shadow-[0_0_30px_rgba(245,158,11,0.25)]'
                             : 'bg-rose-950/80 border-rose-500 text-rose-200 shadow-[0_0_30px_rgba(244,63,94,0.25)]'
-                }`}>
-                    <span className={`material-symbols-outlined text-2xl shrink-0 ${
-                        feedbackToast.type === 'success' ? 'text-[#a5d391]' : feedbackToast.type === 'info' ? 'text-amber-400' : 'text-rose-400'
                     }`}>
+                    <span className={`material-symbols-outlined text-2xl shrink-0 ${feedbackToast.type === 'success' ? 'text-[#a5d391]' : feedbackToast.type === 'info' ? 'text-amber-400' : 'text-rose-400'
+                        }`}>
                         {feedbackToast.type === 'success' ? 'check_circle' : feedbackToast.type === 'info' ? 'info' : 'error'}
                     </span>
                     <div className="flex-1 text-xs">
@@ -932,18 +930,16 @@ const PaymentManagement = () => {
                                         key={tab.key}
                                         type="button"
                                         onClick={() => setRecipientTypeFilter(tab.key)}
-                                        className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                                            recipientTypeFilter === tab.key
+                                        className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${recipientTypeFilter === tab.key
                                                 ? 'bg-[#a5d391] text-black shadow-sm'
                                                 : 'text-white/50 hover:text-white'
-                                        }`}
+                                            }`}
                                     >
                                         <span>{tab.label}</span>
-                                        <span className={`text-[10px] font-mono px-1 rounded ${
-                                            recipientTypeFilter === tab.key
+                                        <span className={`text-[10px] font-mono px-1 rounded ${recipientTypeFilter === tab.key
                                                 ? 'bg-black/15 text-black font-black'
                                                 : 'bg-white/10 text-[#a5d391]'
-                                        }`}>
+                                            }`}>
                                             ₹{tab.bal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                         </span>
                                     </button>
@@ -978,28 +974,25 @@ const PaymentManagement = () => {
                                         <div
                                             key={r.id}
                                             onClick={() => handleSelectRecipient(String(r.id))}
-                                            className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                                                isSelected
+                                            className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${isSelected
                                                     ? 'bg-[#a5d391]/15 border-[#a5d391] shadow-[0_0_15px_rgba(165,211,145,0.2)]'
                                                     : 'bg-[#080b12]/60 hover:bg-white/5 border-white/10'
-                                            }`}
+                                                }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
-                                                    r.role === 'NUTRITIONIST'
+                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${r.role === 'NUTRITIONIST'
                                                         ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                                                         : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
-                                                }`}>
+                                                    }`}>
                                                     {r.name ? r.name.charAt(0).toUpperCase() : 'U'}
                                                 </div>
                                                 <div>
                                                     <div className="font-bold text-xs text-white flex items-center gap-2">
                                                         <span>{r.name || 'Unnamed Account'}</span>
-                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                                            r.role === 'NUTRITIONIST'
+                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${r.role === 'NUTRITIONIST'
                                                                 ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
                                                                 : 'bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30'
-                                                        }`}>
+                                                            }`}>
                                                             {r.role}
                                                         </span>
                                                     </div>
@@ -1086,11 +1079,10 @@ const PaymentManagement = () => {
                                         key={amt}
                                         type="button"
                                         onClick={() => setCustomAmount(String(amt))}
-                                        className={`py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                                            String(customAmount) === String(amt)
+                                        className={`py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${String(customAmount) === String(amt)
                                                 ? 'bg-[#a5d391] text-black border-[#a5d391] shadow-sm'
                                                 : 'bg-white/5 hover:bg-white/10 text-white/70 border-white/10'
-                                        }`}
+                                            }`}
                                     >
                                         ₹{amt}
                                     </button>
@@ -1156,11 +1148,10 @@ const PaymentManagement = () => {
                         <button
                             type="submit"
                             disabled={isProcessingPayment || !activeRecipient}
-                            className={`w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg ${
-                                isProcessingPayment
+                            className={`w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg ${isProcessingPayment
                                     ? 'bg-white/20 text-white/50 cursor-not-allowed'
                                     : 'bg-gradient-to-r from-[#a5d391] to-emerald-400 hover:from-white hover:to-white text-black shadow-[0_0_25px_rgba(165,211,145,0.4)] hover:scale-[1.01]'
-                            }`}
+                                }`}
                         >
                             <span className="material-symbols-outlined text-base">credit_score</span>
                             <span>{isProcessingPayment ? 'Processing Razorpay Checkout...' : `Launch Razorpay Test Checkout (₹${customAmount || 0})`}</span>
@@ -1259,11 +1250,10 @@ const PaymentManagement = () => {
                                     <span className="font-bold text-white text-sm">
                                         Filtering Ledger for: {activeRecipient.name}
                                     </span>
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                        activeRecipient.role === 'NUTRITIONIST'
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${activeRecipient.role === 'NUTRITIONIST'
                                             ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                                             : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
-                                    }`}>
+                                        }`}>
                                         {activeRecipient.role}
                                     </span>
                                     <span className="text-[10px] text-white/40">

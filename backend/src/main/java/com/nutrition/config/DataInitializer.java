@@ -29,7 +29,8 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createOrUpdateAdmin(String email, String password) {
-        if (email == null || email.isBlank()) return;
+        if (email == null || email.isBlank())
+            return;
         User admin = userRepository.findByEmail(email).orElse(null);
 
         if (admin == null) {

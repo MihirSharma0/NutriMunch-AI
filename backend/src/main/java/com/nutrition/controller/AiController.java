@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class AiController {
 
@@ -25,7 +24,10 @@ public class AiController {
         return ResponseEntity.ok(Map.of("plan", plan));
     }
 
-    /** Validates a single custom user-typed value (health goal or dietary restriction) via AI. */
+    /**
+     * Validates a single custom user-typed value (health goal or dietary
+     * restriction) via AI.
+     */
     @PostMapping("/validate-custom-input")
     public ResponseEntity<Map<String, Object>> validateCustomInput(@RequestBody Map<String, String> request) {
         String value = request.get("value");
@@ -57,9 +59,12 @@ public class AiController {
 
     @SuppressWarnings("unchecked")
     private String resolveStringOrList(Object value) {
-        if (value == null) return "";
-        if (value instanceof String) return (String) value;
-        if (value instanceof List) return String.join(", ", (List<String>) value);
+        if (value == null)
+            return "";
+        if (value instanceof String)
+            return (String) value;
+        if (value instanceof List)
+            return String.join(", ", (List<String>) value);
         return value.toString();
     }
 }

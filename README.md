@@ -92,7 +92,12 @@ cd Nutrition-AI-Minor-Project
    DB_URL=jdbc:mysql://localhost:3306/nutrition_db?createDatabaseIfNotExist=true&sslMode=REQUIRED
    DB_USERNAME=root
    DB_PASSWORD=password
+
+   # Google Gemini API (required for live AI diet plans)
+   GEMMA_API_KEY=your-google-ai-studio-key
+   GEMMA_MODEL=gemini-2.0-flash
    ```
+   The deterministic nutrition plan is used only when the Gemini API is unavailable.
 3. Run the Spring Boot application:
    ```bash
    ./mvnw clean spring-boot:run

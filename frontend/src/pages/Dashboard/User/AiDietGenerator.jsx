@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import api from '../../../api/axios';
 
 /* ─── Predefined Tag Pools ─────────────────────────────────────────── */
@@ -52,6 +52,10 @@ const renderIconPath = (name) => {
       return <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />;
     case 'restaurant_menu':
       return <path d="M18 2.01 6 2c-1.1 0-2 .89-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.11-.9-1.99-2-1.99zM9 19H7v-5H5v-5c0-1.65 1.35-3 3-3s3 1.35 3 3v5h-2v5zm5 0h-2V5h5v2h-3v2h3v2h-3z" />;
+    case 'save':
+      return <path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM6 5h9v4H6V5z" />;
+    case 'sync_alt':
+      return <path d="m3 7 4-4 4 4H8v6H6V7H3zm18 10-4 4-4-4h3v-6h2v6h3z" />;
     default:
       return <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />;
   }
@@ -66,7 +70,15 @@ const Icon = ({ name, size = 18, style = {} }) => {
 };
 
 /* ─── TagInput Component ────────────────────────────────────────────── */
-const TagInput = ({ label, iconName, accentColor, predefined, selected, onSelect, onRemove, customInput, onCustomChange, onCustomAdd, validating, validationResult, onClearValidation, categoryLabel, allowCustom = true, withAiValidation = true }) => {
+const TagInput = ({
+  label,
+  iconName,
+  accentColor,
+  predefined,
+  selected,
+  onSelect,
+  onRemove,
+}) => {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const dropRef = useRef(null);
@@ -129,54 +141,64 @@ const TagInput = ({ label, iconName, accentColor, predefined, selected, onSelect
             ))}
           </div>
         )}
-        {open && filtered.length === 0 && search.trim().length > 0 && (
+        {open && filtered.length === 0 && search.length > 0 && (
           <div className="aidg-dropdown">
-            {allowCustom ? (
-              <button
-                className="aidg-dropdown-item aidg-dropdown-custom-add"
-                type="button"
-                onClick={() => {
-                  const term = search.trim();
-                  setSearch('');
-                  setOpen(false);
-                  if (withAiValidation && onCustomAdd) {
-                    onCustomAdd(term);
-                  } else {
-                    onSelect(term);
-                  }
-                }}
-                disabled={validating}
-                style={{ color: accentColor }}
-              >
-                <Icon name="add_circle" size={16} style={{ color: accentColor }} />
-                {validating ? 'Validating…' : (withAiValidation ? `Add "${search.trim()}" (Validate with AI)` : `Add "${search.trim()}"`)}
-              </button>
-            ) : (
-              <div className="aidg-dropdown-empty">No matching {label.toLowerCase()} found</div>
-            )}
+            <div className="aidg-dropdown-empty">
+              No matching {label.toLowerCase()} found
+            </div>
           </div>
         )}
       </div>
-
-      {/* Validation banner */}
-      {validationResult && (
-        <div className={`aidg-validation-banner ${validationResult.valid ? 'valid' : 'invalid'}`}>
-          <Icon name={validationResult.valid ? 'check_circle' : 'cancel'} size={16} />
-          <div>
-            <strong>{validationResult.valid ? 'Accepted' : 'Rejected'}:</strong>{' '}
-            {validationResult.reason}
-            {validationResult.valid && validationResult.normalized && (
-              <span className="aidg-normalized"> → <em>"{validationResult.normalized}"</em></span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 /* ─── Plan Renderer ─────────────────────────────────────────────────── */
-const PlanDisplay = ({ plan }) => {
+const PlanDisplay = ({ plan, planData }) => {
+  if (planData) {
+    return (
+      <div className="aidg-plan-body">
+        <div className="aidg-plan-section">
+          <h3 className="aidg-plan-section-title">Daily Macro &amp; Nutritional Targets</h3>
+          <div className="aidg-target-summary">
+            <span><b>{planData.targets.calories}</b> kcal</span>
+            <span><b>{planData.targets.protein}g</b> protein</span>
+            <span><b>{planData.targets.carbs}g</b> carbs</span>
+            <span><b>{planData.targets.fats}g</b> fats</span>
+            <span><b>{planData.targets.waterLiters}L</b> water</span>
+            <span><b>{planData.targets.fiber}g</b> fiber</span>
+            <span><b>{planData.targets.iron}mg</b> iron</span>
+          </div>
+        </div>
+        <div className="aidg-plan-section">
+          <h3 className="aidg-plan-section-title">Nutritionist Clinical Notes &amp; Formulation Comments</h3>
+          <pre className="aidg-plan-pre">{planData.nutritionistNotes}</pre>
+        </div>
+        <div className="aidg-plan-section">
+          <h3 className="aidg-plan-section-title">Daily Meal Schedule &amp; Formulation</h3>
+          <div className="aidg-meal-list">
+            {planData.meals.map((meal, index) => (
+              <div className="aidg-meal-row" key={`${meal.name}-${index}`}>
+                <div>
+                  <strong>{index + 1}. {meal.mealType || meal.name}</strong>
+                  <span>{meal.time} • {meal.name}</span>
+                  <small>{meal.ingredients}</small>
+                </div>
+                <div className="aidg-meal-macros">
+                  <b>{meal.calories} kcal</b>
+                  <span>{meal.protein}P / {meal.carbs}C / {meal.fats}F</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="aidg-plan-section">
+          <h3 className="aidg-plan-section-title">Clinical Allergy Safeguards &amp; Additional Guidance</h3>
+          <pre className="aidg-plan-pre">{planData.planText}</pre>
+        </div>
+      </div>
+    );
+  }
   const sections = plan.split(/\n(?=#+\s|\*\*[A-Z])/).filter(Boolean);
   if (sections.length <= 1) {
     // Fallback: split by double newlines
@@ -211,13 +233,17 @@ const PlanDisplay = ({ plan }) => {
 /* ─── Main ──────────────────────────────────────────────────────────── */
 const AiDietGenerator = () => {
   const [selectedGoals, setSelectedGoals] = useState([]);
-  const [selectedRestrictions, setSelectedRestrictions] = useState([]);
-  const [customRestriction, setCustomRestriction] = useState('');
-  const [validatingRestriction, setValidatingRestriction] = useState(false);
-  const [restrictionValidation, setRestrictionValidation] = useState(null);
 
+  const [selectedRestrictions, setSelectedRestrictions] = useState([]);
+
+  const [planHeading, setPlanHeading] = useState('');
   const [plan, setPlan] = useState('');
+  const [planData, setPlanData] = useState(null);
+  const [planTargets, setPlanTargets] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -226,63 +252,96 @@ const AiDietGenerator = () => {
   };
   const removeTag = (list, setList, tag) => setList(list.filter(t => t !== tag));
 
-  const doValidate = useCallback(async (value, category) => {
+  const extractTarget = (text, labels, fallback) => {
+    const labelPattern = labels.join('|');
+    const match = text.match(new RegExp(`(?:${labelPattern})[^\\d]*(\\d+(?:\\.\\d+)?)`, 'i'));
+    return match ? Number(match[1]) : fallback;
+  };
+
+  const getPlanTargets = (text) => ({
+    calories: Math.round(extractTarget(text, ['Daily Energy Intake', 'Calories'], 2000)),
+    protein: Math.round(extractTarget(text, ['Protein'], 120)),
+    carbs: Math.round(extractTarget(text, ['Carbohydrates', 'Carbs'], 200)),
+    fats: Math.round(extractTarget(text, ['Healthy Dietary Fats', 'Fats', 'Fat'], 65)),
+    water: extractTarget(text, ['Minimum', 'Daily Water', 'Water'], 2.5)
+  });
+
+  const parsePlanResponse = (text) => {
     try {
-      const { data } = await api.post('/ai/validate-custom-input', { value: value.trim(), category });
-      return data;
-    } catch (err) {
-      // If the backend returns an error response with payload, use it
-      if (err.response?.data?.reason || err.response?.data?.reasoning) {
+      const cleaned = text.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+      const parsed = JSON.parse(cleaned);
+      if (parsed?.targets && Array.isArray(parsed.meals)) {
         return {
-          valid: Boolean(err.response.data.valid || err.response.data.is_valid),
-          normalized: err.response.data.normalized || value.trim(),
-          reason: err.response.data.reason || err.response.data.reasoning,
-          category: err.response.data.matched_category || err.response.data.category || 'Allergies & Dietary Restrictions',
+          ...parsed,
+          targets: {
+            calories: Number(parsed.targets.calories || 2000),
+            protein: Number(parsed.targets.protein || 120),
+            carbs: Number(parsed.targets.carbs || 200),
+            fats: Number(parsed.targets.fats || 65),
+            waterLiters: Number(parsed.targets.waterLiters || 2.5),
+            fiber: Number(parsed.targets.fiber || 28),
+            iron: Number(parsed.targets.iron || 18),
+            calcium: Number(parsed.targets.calcium || 1000),
+            vitD: Number(parsed.targets.vitD || 15),
+            vitC: Number(parsed.targets.vitC || 90)
+          },
+          meals: parsed.meals.map((meal, index) => ({
+            id: index + 1,
+            ...meal,
+            calories: Number(meal.calories || 0),
+            protein: Number(meal.protein || 0),
+            carbs: Number(meal.carbs || 0),
+            fats: Number(meal.fats || 0)
+          }))
         };
       }
+    } catch (e) {
+      // Deterministic fallback plans are markdown and are normalized below.
+    }
+    const targets = getPlanTargets(text);
+    return {
+      title: `AI ${selectedGoals.join(' & ')} Protocol`,
+      dietType: 'AI Personalized Nutrition Protocol',
+      targets: { ...targets, waterLiters: targets.water, fiber: 28, iron: 18, calcium: 1000, vitD: 15, vitC: 90 },
+      nutritionistNotes: 'Follow the scheduled meal timings and maintain the recommended hydration intake.',
+      meals: createNutritionistFormatMeals(text, targets),
+      planText: text
+    };
+  };
 
-      // Offline fallback: reject clear junk / non-diet strings
-      const lower = value.toLowerCase().trim();
-      const rejectList = ['movie', 'film', 'song', 'music', 'game', 'video', 'book', 'car', 'phone', 'computer', 'coding', 'travel', 'clothing', 'shopping', 'money', 'crypto', 'stock', 'politics', 'weapon', 'party', 'test', 'asdf'];
-      if (rejectList.some(w => lower.includes(w)) || lower.length < 2 || /^\d+$/.test(lower) || lower.startsWith('http')) {
-        return {
-          valid: false,
-          normalized: '',
-          reason: `Rejected: "${value.trim()}" is not a recognized dietary restriction or allergen.`,
-          category: 'INVALID',
-        };
-      }
-
-      // Format as title case
-      const normalized = value.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  const createNutritionistFormatMeals = (text, targets) => {
+    const headings = [...text.matchAll(/^###\s+(.+)$/gm)];
+    const mealHeadings = headings
+      .map((match, sourceIndex) => ({ match, sourceIndex }))
+      .filter(({ match: [, heading] }) =>
+        /(early morning|breakfast|booster|lunch|evening|dinner|bedtime)/i.test(heading)
+      );
+    const shares = [0.08, 0.22, 0.12, 0.25, 0.12, 0.17, 0.04];
+    return mealHeadings.map(({ match: [fullMatch, heading], sourceIndex }, index) => {
+      const start = fullMatch.length + text.indexOf(fullMatch);
+      const nextHeading = headings[sourceIndex + 1];
+      const end = nextHeading ? text.indexOf(nextHeading[0], start) : text.length;
+      const ingredients = text.slice(start, end).replace(/\n+/g, ' ').replace(/[-*]/g, '').trim();
+      const timing = heading.match(/\(([^)]+)\)/)?.[1] || 'Scheduled';
+      const mealType = heading.replace(/\s*\([^)]*\)/, '').replace(/[^\w\s&-]/g, '').trim();
+      const share = shares[index] || 1 / Math.max(mealHeadings.length, 1);
       return {
-        valid: true,
-        normalized,
-        reason: 'Accepted as a custom dietary item.',
-        category: 'Allergies & Dietary Restrictions',
+        id: index + 1,
+        time: timing,
+        name: mealType,
+        mealType,
+        ingredients: ingredients || 'Personalized meal recommendations',
+        calories: Math.round(targets.calories * share),
+        protein: Math.round(targets.protein * share),
+        carbs: Math.round(targets.carbs * share),
+        fats: Math.round(targets.fats * share)
       };
-    }
-  }, []);
-
-
-  const handleAddCustomRestriction = useCallback(async (directVal) => {
-    const val = (typeof directVal === 'string' ? directVal : customRestriction).trim();
-    if (!val) return;
-    setValidatingRestriction(true);
-    setRestrictionValidation(null);
-    const result = await doValidate(val, 'restriction');
-    setRestrictionValidation(result);
-    if (result.valid) {
-      addTag(selectedRestrictions, setSelectedRestrictions, result.normalized || val);
-      setCustomRestriction('');
-      setTimeout(() => setRestrictionValidation(null), 4000);
-    }
-    setValidatingRestriction(false);
-  }, [customRestriction, selectedRestrictions, doValidate]);
+    });
+  };
 
   const generatePlan = async (e) => {
     e.preventDefault();
-    if (selectedGoals.length === 0) { setError('Please select or add at least one health goal.'); return; }
+    if (selectedGoals.length === 0) { setError('Please select at least one health goal.'); return; }
     setError('');
     setLoading(true);
     setPlan('');
@@ -291,13 +350,116 @@ const AiDietGenerator = () => {
         goals: selectedGoals,
         allergies: selectedRestrictions,
       });
-      setPlan(data.plan || 'No plan returned. Please try again.');
-    } catch {
-      setPlan('Failed to generate diet plan. Please try again later.');
+      const generatedPlan = data.plan || '';
+      setPlan(generatedPlan || 'No plan returned. Please try again.');
+      const structuredPlan = parsePlanResponse(generatedPlan);
+      setPlanData(structuredPlan);
+      setPlanTargets({
+        calories: structuredPlan.targets.calories,
+        protein: structuredPlan.targets.protein,
+        carbs: structuredPlan.targets.carbs,
+        fats: structuredPlan.targets.fats,
+        water: structuredPlan.targets.waterLiters,
+        fiber: structuredPlan.targets.fiber,
+        iron: structuredPlan.targets.iron,
+        calcium: structuredPlan.targets.calcium,
+        vitD: structuredPlan.targets.vitD,
+        vitC: structuredPlan.targets.vitC
+      });
+      setSaved(false);
+    } catch (requestError) {
+      const backendMessage = requestError?.response?.data?.message;
+      setError(backendMessage || 'Failed to generate the diet plan. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
+
+  const savePlan = async () => {
+    if (!plan || !planTargets) return;
+    const heading = planHeading.trim();
+    if (!heading) {
+      setError('Enter a personalized heading before saving this diet plan.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await api.post('/diet-plans/me/save-ai', {
+        generatedDate: new Date().toISOString().slice(0, 10),
+        totalCalories: planTargets.calories,
+        proteinG: planTargets.protein,
+        carbsG: planTargets.carbs,
+        fatG: planTargets.fats,
+        waterTargetLiters: planTargets.water,
+        mealsJson: JSON.stringify({
+          source: 'AI_DIET_GENERATOR',
+          title: heading,
+          dietType: planData.dietType,
+          goals: selectedGoals,
+          allergies: selectedRestrictions,
+          nutritionistNotes: planData.nutritionistNotes,
+          targets: planData.targets,
+          meals: planData.meals,
+          planText: planData.planText
+        })
+      });
+      setSaved(true);
+    } catch (requestError) {
+      const responseData = requestError?.response?.data;
+      const backendMessage = responseData?.message || responseData?.error;
+      setError(requestError?.response?.status === 401
+        ? 'Please sign in to save this diet plan.'
+        : backendMessage || 'Could not save this diet plan. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const importTargetValues = async (targets) => {
+    if (!targets) return;
+    setImporting(true);
+    setError('');
+    const payload = {
+      isCustomTargets: true,
+      dailyCaloriesTarget: targets.calories,
+      proteinTarget: targets.protein,
+      carbsTarget: targets.carbs,
+      fatsTarget: targets.fats,
+      dailyWaterTargetLiters: targets.water,
+      dailyFiberTargetG: targets.fiber,
+      ironTargetMg: targets.iron,
+      calciumTargetMg: targets.calcium,
+      vitDTargetMcg: targets.vitD,
+      vitCTargetMg: targets.vitC
+    };
+    try {
+      await api.put('/profiles/me', payload);
+      localStorage.setItem('nutrimunch_user_targets', JSON.stringify({
+        calories: targets.calories,
+        protein: targets.protein,
+        carbs: targets.carbs,
+        fats: targets.fats,
+        water: targets.water,
+        fiber: targets.fiber,
+        iron: targets.iron,
+        calcium: targets.calcium,
+        vitD: targets.vitD,
+        vitC: targets.vitC
+      }));
+      localStorage.setItem('nutrimunch_water_target_liters', String(targets.water));
+      window.dispatchEvent(new Event('nutrimunch_profile_updated'));
+      window.dispatchEvent(new Event('storage'));
+    } catch (requestError) {
+      setError(requestError?.response?.status === 401
+        ? 'Please sign in to import daily targets.'
+        : 'Could not import daily targets. Please try again.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const importTargets = () => importTargetValues(planTargets);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(plan);
@@ -322,12 +484,27 @@ const AiDietGenerator = () => {
         </div>
 
         <form onSubmit={generatePlan} className="aidg-form">
+          <div className="aidg-field">
+            <label className="aidg-label" style={{ color: '#a5d391' }}>
+              <Icon name="receipt_long" size={18} />
+              Personalized Plan Heading
+            </label>
+            <input
+              className="aidg-heading-input"
+              value={planHeading}
+              onChange={event => setPlanHeading(event.target.value)}
+              placeholder="e.g. Mihir's Weight Gain Protocol"
+              maxLength={120}
+            />
+            <span className="aidg-heading-help">This heading is used when the plan is saved in Diet Plans.</span>
+          </div>
+
+          <div className="aidg-divider" />
+
           <TagInput
             label="Health Goals"
             iconName="flag"
             accentColor="#a5d391"
-            categoryLabel="goal"
-            allowCustom={false}
             predefined={PREDEFINED_GOALS}
             selected={selectedGoals}
             onSelect={t => addTag(selectedGoals, setSelectedGoals, t)}
@@ -340,17 +517,10 @@ const AiDietGenerator = () => {
             label="Allergies & Dietary Restrictions"
             iconName="no_food"
             accentColor="#ffb764"
-            categoryLabel="restriction"
             predefined={PREDEFINED_RESTRICTIONS}
             selected={selectedRestrictions}
             onSelect={t => addTag(selectedRestrictions, setSelectedRestrictions, t)}
             onRemove={t => removeTag(selectedRestrictions, setSelectedRestrictions, t)}
-            customInput={customRestriction}
-            onCustomChange={setCustomRestriction}
-            onCustomAdd={handleAddCustomRestriction}
-            validating={validatingRestriction}
-            validationResult={restrictionValidation}
-            onClearValidation={() => setRestrictionValidation(null)}
           />
 
           {error && (
@@ -384,10 +554,20 @@ const AiDietGenerator = () => {
             <div className="aidg-result-header">
               <Icon name="receipt_long" size={22} style={{ color: '#a5d391' }} />
               <h2 className="aidg-result-title">Your Personalized Diet Plan</h2>
-              <button className="aidg-copy-btn" type="button" onClick={handleCopy}>
-                <Icon name="content_copy" size={15} />
-                {copied ? 'Copied!' : 'Copy'}
-              </button>
+              <div className="aidg-result-actions">
+                <button className="aidg-action-btn" type="button" onClick={savePlan} disabled={saving || saved}>
+                  <Icon name={saved ? 'check_circle' : 'save'} size={15} />
+                  {saving ? 'Saving…' : saved ? 'Saved' : 'Save Plan'}
+                </button>
+                <button className="aidg-action-btn aidg-import-btn" type="button" onClick={importTargets} disabled={importing}>
+                  <Icon name="sync_alt" size={15} />
+                  {importing ? 'Importing…' : 'Import Targets'}
+                </button>
+                <button className="aidg-copy-btn" type="button" onClick={handleCopy}>
+                  <Icon name="content_copy" size={15} />
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
             </div>
 
             <div className="aidg-result-tags">
@@ -395,7 +575,7 @@ const AiDietGenerator = () => {
               {selectedRestrictions.map(r => <span key={r} className="aidg-result-tag restriction">{r}</span>)}
             </div>
 
-            <PlanDisplay plan={plan} />
+            <PlanDisplay plan={plan} planData={planData} />
           </div>
         )}
       </div>
@@ -466,6 +646,21 @@ const CSS = `
   flex-direction: column;
   gap: 10px;
 }
+.aidg-heading-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(165,211,145,0.25);
+  border-radius: 12px;
+  background: rgba(0,0,0,0.2);
+  color: #fff;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.aidg-heading-input:focus { border-color: rgba(165,211,145,0.75); }
+.aidg-heading-input::placeholder { color: rgba(255,255,255,0.32); }
+.aidg-heading-help { color: rgba(255,255,255,0.38); font-size: 11px; }
 .aidg-label {
   display: flex;
   align-items: center;
@@ -725,6 +920,34 @@ const CSS = `
   margin: 0;
   flex: 1;
 }
+.aidg-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.aidg-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(165,211,145,0.13);
+  border: 1px solid rgba(165,211,145,0.28);
+  color: #a5d391;
+  border-radius: 9px;
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+.aidg-action-btn:hover:not(:disabled) { background: #a5d391; color: #071204; }
+.aidg-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.aidg-import-btn {
+  color: #67d8f5;
+  border-color: rgba(103,216,245,0.28);
+  background: rgba(103,216,245,0.1);
+}
 .aidg-copy-btn {
   display: inline-flex;
   align-items: center;
@@ -757,6 +980,43 @@ const CSS = `
 }
 .aidg-result-tag.goal   { background: rgba(165,211,145,0.1); border-color: rgba(165,211,145,0.22); color: #a5d391; }
 .aidg-result-tag.restriction { background: rgba(255,183,100,0.09); border-color: rgba(255,183,100,0.22); color: #ffb764; }
+.aidg-target-summary {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+.aidg-target-summary span {
+  background: rgba(255,255,255,0.04);
+  border-radius: 9px;
+  padding: 8px 5px;
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  font-size: 10px;
+}
+.aidg-target-summary b { display: block; color: #fff; font-size: 12px; margin-bottom: 2px; }
+.aidg-meal-list { display: flex; flex-direction: column; gap: 9px; }
+.aidg-meal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 12px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+}
+.aidg-meal-row strong, .aidg-meal-row span, .aidg-meal-row small { display: block; }
+.aidg-meal-row strong { color: #fff; font-size: 12px; }
+.aidg-meal-row span { color: #a5d391; font-size: 10px; margin-top: 3px; }
+.aidg-meal-row small { color: rgba(255,255,255,0.5); font-size: 11px; margin-top: 5px; }
+.aidg-meal-macros { text-align: right; white-space: nowrap; }
+.aidg-meal-macros b { color: #fff; font-size: 12px; }
+.aidg-meal-macros span { color: rgba(255,255,255,0.5); font-size: 10px; }
+@media (max-width: 700px) {
+  .aidg-target-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aidg-meal-row { align-items: flex-start; flex-direction: column; }
+  .aidg-meal-macros { text-align: left; }
+}
 
 .aidg-plan-body { display: flex; flex-direction: column; gap: 14px; }
 .aidg-plan-section {

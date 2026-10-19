@@ -55,6 +55,16 @@ public class DietPlanController {
         return ResponseEntity.ok(dietPlanService.generateMockDietPlan(userDetails.getId(), dto));
     }
 
+    @PostMapping("/me/save-ai")
+    public ResponseEntity<DietPlanDto> saveAiDietPlan(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody DietPlanDto dto) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(dietPlanService.generateMockDietPlan(userDetails.getId(), dto));
+    }
+
     @PostMapping("/deploy")
     public ResponseEntity<java.util.Map<String, Object>> deployPlan(@RequestBody java.util.Map<String, Object> planData) {
         if (planData != null && planData.get("id") != null) {
@@ -114,4 +124,3 @@ public class DietPlanController {
         return ResponseEntity.ok(deployedPlansStore);
     }
 }
-

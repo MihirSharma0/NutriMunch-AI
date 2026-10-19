@@ -29,6 +29,9 @@ public class DietPlan {
     @Column(name = "fat_g")
     private Integer fatG;
 
+    @Column(name = "water_target_liters")
+    private Double waterTargetLiters;
+
     @Column(columnDefinition = "TEXT")
     private String mealsJson; 
 
