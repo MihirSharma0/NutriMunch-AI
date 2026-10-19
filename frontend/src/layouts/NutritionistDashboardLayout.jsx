@@ -11,6 +11,7 @@ const NutritionistDashboardLayout = () => {
     const { user, logout } = useContext(AuthContext);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [walletBalance, setWalletBalance] = useState(null);
+    const [walletToast, setWalletToast] = useState(null);
 
     const userKeyId = user?.id || user?.userId;
     const userKeyEmail = user?.email?.toLowerCase();
@@ -97,11 +98,24 @@ const NutritionistDashboardLayout = () => {
                     setWalletBalance(newBal);
                     if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
                     if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+
+                    // Live SSE Toast Notification
+                    if (e.detail.amount !== undefined && e.detail.amount !== null && Number(e.detail.amount) !== 0) {
+                        const amtNum = Number(e.detail.amount);
+                        const sign = amtNum > 0 ? '+' : '';
+                        const desc = e.detail.description || e.detail.notes || (amtNum > 0 ? 'Consultation Fee Credited' : 'Funds Adjusted');
+                        setWalletToast({
+                            text: `${desc}: ${sign}₹${Math.abs(amtNum).toFixed(2)} (New Balance: ₹${newBal.toFixed(2)})`,
+                            isPositive: amtNum > 0
+                        });
+                        setTimeout(() => setWalletToast(null), 4000);
+                    }
                     return;
                 }
             }
         };
 
+        window.addEventListener('wallet_update', handleWalletUpdate);
         window.addEventListener('wallet_updated', handleWalletUpdate);
         window.addEventListener('storage', handleWalletUpdate);
 
@@ -140,6 +154,7 @@ const NutritionistDashboardLayout = () => {
         });
 
         return () => {
+            window.removeEventListener('wallet_update', handleWalletUpdate);
             window.removeEventListener('wallet_updated', handleWalletUpdate);
             window.removeEventListener('storage', handleWalletUpdate);
             if (bc) bc.close();
@@ -163,6 +178,7 @@ const NutritionistDashboardLayout = () => {
         { name: "Client Roster", path: "/dashboard/nutritionist/clients", icon: "group" },
         { name: "Diet Builder", path: "/dashboard/nutritionist/builder", icon: "restaurant_menu" },
         { name: "Schedule & Bookings", path: "/dashboard/nutritionist/schedule", icon: "event" },
+        { name: "Earnings & Ledger", path: "/dashboard/nutritionist/transactions", icon: "receipt_long" },
         { name: "Clinical Reports", path: "/dashboard/nutritionist/reports", icon: "lab_profile" },
         { name: "Stories & Ratings", path: "/testimonials", icon: "rate_review" },
         { name: "Platform Roles Matrix", path: "/user-roles", icon: "grid_view" }
@@ -236,14 +252,15 @@ const NutritionistDashboardLayout = () => {
                     <div className="flex items-center gap-4 sm:gap-6">
                         {/* Live Nutritionist Wallet Balance */}
                         {walletBalance !== null && (
-                            <div 
-                                title="Nutritionist Earnings Wallet"
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#a5d391]/10 border border-[#a5d391]/30 text-white text-xs font-bold shadow-sm"
+                            <Link 
+                                to="/dashboard/nutritionist/transactions"
+                                title="Nutritionist Earnings Wallet — Click to view Transaction History & Ledger"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#a5d391]/10 border border-[#a5d391]/30 hover:border-[#a5d391]/60 text-white text-xs font-bold shadow-sm transition-all group cursor-pointer"
                             >
-                                <span className="material-symbols-outlined text-[#a5d391] text-base">account_balance_wallet</span>
+                                <span className="material-symbols-outlined text-[#a5d391] text-base group-hover:scale-110 transition-transform">account_balance_wallet</span>
                                 <span className="text-white/60 font-normal text-[11px] hidden sm:inline">Earnings:</span>
                                 <span className="text-[#a5d391] font-mono tracking-tight font-bold">₹{walletBalance.toFixed(2)}</span>
-                            </div>
+                            </Link>
                         )}
 
                         <button className="relative text-white/60 hover:text-white transition-colors bg-white/5 w-10 h-10 rounded-full flex items-center justify-center border border-white/10 hover:border-white/30 backdrop-blur-md">
@@ -317,6 +334,16 @@ const NutritionistDashboardLayout = () => {
                             </button>
                         </div>
                     </aside>
+                </div>
+            )}
+
+            {/* Real-time Wallet SSE Notification Toast */}
+            {walletToast && (
+                <div className="fixed top-20 right-8 z-[9999] bg-[#0c121e]/95 backdrop-blur-md border border-[#a5d391]/40 text-white px-5 py-3 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-3 animate-bounce">
+                    <span className={`material-symbols-outlined text-xl ${walletToast.isPositive ? 'text-[#a5d391]' : 'text-amber-400'}`}>
+                        {walletToast.isPositive ? 'add_circle' : 'account_balance_wallet'}
+                    </span>
+                    <span className="text-xs font-bold tracking-wide">{walletToast.text}</span>
                 </div>
             )}
         </div>

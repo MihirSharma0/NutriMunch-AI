@@ -174,22 +174,32 @@ const DietitianHome = () => {
                     </div>
                 </div>
 
-                {/* Live App Wallet Earnings Card */}
-                <div className="bg-gradient-to-br from-[#a5d391]/15 via-white/5 to-transparent backdrop-blur-xl border border-[#a5d391]/30 rounded-[2.5rem] p-5 flex flex-col justify-between shadow-[0_0_20px_rgba(165,211,145,0.15)]">
+                {/* Live App Wallet Earnings Card - Clickable Hyperlink to Nutritionist Transaction History */}
+                <Link
+                    to="/dashboard/nutritionist/transactions"
+                    className="bg-gradient-to-br from-[#a5d391]/15 via-white/5 to-transparent backdrop-blur-xl border border-[#a5d391]/30 rounded-[2.5rem] p-5 flex flex-col justify-between shadow-[0_0_20px_rgba(165,211,145,0.15)] hover:border-[#a5d391] hover:scale-[1.02] transition-all cursor-pointer group block"
+                    title="Click to view full transaction ledger and session earnings"
+                >
                     <div className="flex justify-between items-start mb-4">
                         <div className="text-[#a5d391] text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-pulse"></span>
                             Wallet Earnings
                         </div>
-                        <span className="material-symbols-outlined text-[#a5d391] text-[20px]">account_balance_wallet</span>
+                        <div className="flex items-center gap-1 text-[#a5d391] group-hover:translate-x-0.5 transition-transform">
+                            <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+                            <span className="material-symbols-outlined text-sm opacity-60">arrow_forward</span>
+                        </div>
                     </div>
                     <div>
                         <div className="text-3xl font-bold font-hero-display text-[#a5d391] font-mono">
                             {walletBalance !== null ? `₹${parseFloat(walletBalance).toFixed(2)}` : '₹0.00'}
                         </div>
-                        <div className="text-xs text-white/60 mt-1">Direct session credits</div>
+                        <div className="text-xs text-white/60 mt-1 flex items-center justify-between">
+                            <span>Direct session credits</span>
+                            <span className="text-[#a5d391] font-bold text-[10px] uppercase tracking-wider group-hover:underline">View History →</span>
+                        </div>
                     </div>
-                </div>
+                </Link>
 
                 <div className="bg-red-500/10 backdrop-blur-xl border border-red-500/30 rounded-[2.5rem] p-5 flex flex-col justify-between shadow-[0_0_25px_rgba(239,68,68,0.15)]">
                     <div className="flex justify-between items-start mb-4">

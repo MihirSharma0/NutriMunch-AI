@@ -102,21 +102,66 @@ public class WalletSseService {
         }
 
         if (targetEmitters.isEmpty()) {
-            log.debug("No active SSE listeners for userId={} email={}", userId, email);
+            log.info("No active SSE listeners for userId={} email={}. (Balance updated in database/ledger)", userId, email);
             return;
         }
 
-        log.info("Pushing SSE wallet update to {} listener(s) for userId={} email={}", targetEmitters.size(), userId, email);
+        // Ensure standardized fields exist in payload
+        if (!data.containsKey("timestamp")) {
+            data.put("timestamp", java.time.Instant.now().toString());
+        }
+        if (!data.containsKey("eventType")) {
+            data.put("eventType", "WALLET_UPDATED");
+        }
+        if (!data.containsKey("balance") && data.containsKey("newBalance")) {
+            data.put("balance", data.get("newBalance"));
+        } else if (!data.containsKey("newBalance") && data.containsKey("balance")) {
+            data.put("newBalance", data.get("balance"));
+        }
+
+        log.info("Pushing SSE wallet_update to {} listener(s) for userId={} email={}", targetEmitters.size(), userId, email);
         for (SseEmitter emitter : targetEmitters) {
             try {
                 emitter.send(SseEmitter.event()
+                        .name("wallet_update")
+                        .data(data));
+                emitter.send(SseEmitter.event()
                         .name("WALLET_UPDATED")
+                        .data(data));
+                emitter.send(SseEmitter.event()
                         .data(data));
             } catch (Exception e) {
                 log.warn("Failed to send SSE wallet update, removing dead emitter: {}", e.getMessage());
                 removeEmitter(userId, email, false, emitter);
             }
         }
+    }
+
+    public void sendWalletUpdate(Long userId, com.nutrition.entity.WalletTransaction transaction, java.math.BigDecimal newBalance, String eventType) {
+        Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("eventType", eventType != null ? eventType : "WALLET_UPDATED");
+        if (transaction != null) {
+            payload.put("transactionId", transaction.getId());
+            payload.put("transactionReference", transaction.getTransactionReference());
+            payload.put("type", transaction.getTransactionType());
+            payload.put("amount", transaction.getAmount());
+            payload.put("description", transaction.getNotes() != null ? transaction.getNotes() : "");
+        } else {
+            payload.put("transactionId", null);
+            payload.put("type", eventType != null ? eventType : "WALLET_UPDATED");
+            payload.put("amount", java.math.BigDecimal.ZERO);
+            payload.put("description", "Wallet balance updated");
+        }
+        payload.put("balance", newBalance);
+        payload.put("newBalance", newBalance);
+        payload.put("timestamp", java.time.Instant.now().toString());
+        payload.put("recipientId", userId);
+        String email = null;
+        if (transaction != null && transaction.getRecipient() != null) {
+            email = transaction.getRecipient().getEmail();
+            payload.put("recipientEmail", email);
+        }
+        sendWalletUpdate(userId, email, payload);
     }
 
     public void sendAppointmentUpdate(Long userId, String email, Map<String, Object> data) {
@@ -140,6 +185,9 @@ public class WalletSseService {
         for (SseEmitter emitter : targetEmitters) {
             try {
                 emitter.send(SseEmitter.event()
+                        .name("appointment_updated")
+                        .data(data));
+                emitter.send(SseEmitter.event()
                         .name("APPOINTMENT_UPDATED")
                         .data(data));
             } catch (Exception e) {
@@ -152,6 +200,9 @@ public class WalletSseService {
         if (adminEmitters.isEmpty()) return;
         for (SseEmitter emitter : adminEmitters) {
             try {
+                emitter.send(SseEmitter.event()
+                        .name("ledger_updated")
+                        .data(data));
                 emitter.send(SseEmitter.event()
                         .name("LEDGER_UPDATED")
                         .data(data));

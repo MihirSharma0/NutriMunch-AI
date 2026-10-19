@@ -1,10 +1,22 @@
-import React from 'react';
+import React, { useContext, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 import Starfield from '../components/Starfield';
+import { AuthContext } from '../context/AuthContext';
+import { subscribeWalletSse } from '../utils/walletSse';
 
 const GlobalLayout = () => {
+    const { user } = useContext(AuthContext);
+
+    useEffect(() => {
+        if (!user) return;
+        const unsubscribe = subscribeWalletSse(user);
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user?.id, user?.userId, user?.email]);
+
     return (
         <div className="flex flex-col min-h-screen relative overflow-hidden bg-[#080b12] text-white selection:bg-[#a3e635]/30 selection:text-white">
             <Starfield />

@@ -55,6 +55,15 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.updateAppointmentStatus(id, status, meetingLink, notes));
     }
 
+    @PostMapping("/{id}/request-cancel")
+    public ResponseEntity<AppointmentDto> requestCancellation(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody(required = false) Map<String, String> body) {
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(appointmentService.requestCancellation(id, userDetails.getId(), reason));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
         appointmentService.deleteAppointment(id);

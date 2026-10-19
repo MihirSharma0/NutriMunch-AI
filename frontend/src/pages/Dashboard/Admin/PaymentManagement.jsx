@@ -73,19 +73,43 @@ const PaymentManagement = () => {
     // Ledger Table Filters
     const [ledgerTypeFilter, setLedgerTypeFilter] = useState('ALL'); // 'ALL' | 'ADMIN_CREDIT_ALLOCATION' | 'SERVICE_PAYMENT'
     const [ledgerStatusFilter, setLedgerStatusFilter] = useState('ALL'); // 'ALL' | 'SUCCESS' | 'LOW_BALANCE'
+    const [ledgerUserFilter, setLedgerUserFilter] = useState('ALL'); // 'ALL' or user ID string
     const [ledgerSearch, setLedgerSearch] = useState('');
 
     useEffect(() => {
         fetchRecipientsAndLedger();
 
-        // Connect Server-Sent Events stream for live ledger and wallet updates
-        const unsubscribeSse = subscribeWalletSse(user, null, (ledgerPayload) => {
-            if (ledgerPayload?.transaction) {
-                setLedger(prev => deduplicateTransactions([ledgerPayload.transaction, ...prev]));
+        const handleLiveLedger = (ledgerPayload) => {
+            if (!ledgerPayload) return;
+            const txn = ledgerPayload.transaction;
+            if (txn) {
+                setLedger(prev => deduplicateTransactions([txn, ...prev]));
             }
-        });
+            const recId = ledgerPayload.recipientId || txn?.recipient?.id;
+            const newBal = ledgerPayload.newBalance ?? txn?.balanceAfter;
+            if (recId && newBal !== undefined && newBal !== null) {
+                setRecipients(prev => prev.map(r => String(r.id) === String(recId) ? { ...r, balance: Number(newBal) } : r));
+            }
+            if (txn) {
+                const recName = txn.recipientName || txn.recipient?.name || 'Account';
+                const amtStr = txn.amount ? `₹${Number(txn.amount).toFixed(2)}` : '';
+                showToast('info', `Real-time Ledger Update: ${txn.transactionType || 'Transaction'} ${amtStr} for ${recName}`);
+            }
+        };
+
+        const onLedgerEvent = (e) => {
+            if (e?.detail) handleLiveLedger(e.detail);
+        };
+
+        window.addEventListener('ledger_updated', onLedgerEvent);
+        window.addEventListener('LEDGER_UPDATED', onLedgerEvent);
+
+        // Connect Server-Sent Events stream for live ledger and wallet updates
+        const unsubscribeSse = subscribeWalletSse(user, null, handleLiveLedger);
 
         return () => {
+            window.removeEventListener('ledger_updated', onLedgerEvent);
+            window.removeEventListener('LEDGER_UPDATED', onLedgerEvent);
             unsubscribeSse();
         };
     }, [user]);
@@ -180,6 +204,108 @@ const PaymentManagement = () => {
     });
 
     const activeRecipient = recipients.find(r => String(r.id) === String(selectedRecipientId));
+
+    // Live available balances by role
+    const allRolesAvailableBalance = recipients.reduce((sum, r) => sum + (parseFloat(r.balance) || 0), 0);
+    const userRoleAvailableBalance = recipients
+        .filter(r => r.role === 'USER')
+        .reduce((sum, r) => sum + (parseFloat(r.balance) || 0), 0);
+    const nutritionistRoleAvailableBalance = recipients
+        .filter(r => r.role === 'NUTRITIONIST' || r.role === 'DIETITIAN')
+        .reduce((sum, r) => sum + (parseFloat(r.balance) || 0), 0);
+
+    const handleSelectRecipient = (recId) => {
+        const idStr = String(recId);
+        setSelectedRecipientId(idStr);
+        setLedgerUserFilter(idStr);
+    };
+
+    // Calculate Credit, Debit, Escrow, and Balance for active recipient
+    const activeRecipientMetrics = React.useMemo(() => {
+        if (!activeRecipient) {
+            return { balance: 0, credits: 0, debits: 0, escrow: 0 };
+        }
+        const uId = String(activeRecipient.id || '');
+        const uEmail = (activeRecipient.email || '').toLowerCase();
+        const isNutri = activeRecipient.role === 'NUTRITIONIST' || activeRecipient.role === 'DIETITIAN';
+
+        const settledAptIds = new Set();
+        let escrowHeldSum = 0;
+        let escrowSettledSum = 0;
+
+        ledger.forEach(tx => {
+            const type = String(tx.transactionType || tx.type || '').toUpperCase();
+            const status = String(tx.status || '').toUpperCase();
+            const amt = parseFloat(tx.amount || 0);
+            const aptId = tx.appointmentId ? String(tx.appointmentId) : null;
+            const notes = String(tx.notes || '');
+            const aptMatch = notes.match(/appointment\s*#?(\d+)/i);
+            const parsedAptId = aptId || (aptMatch ? aptMatch[1] : null);
+
+            const isRelease = type.includes('ESCROW_RELEASE') || type.includes('CAPTURE');
+            const isRefund = type.includes('ESCROW_REFUND') || status === 'REFUNDED';
+
+            if ((isRelease || isRefund) && parsedAptId) {
+                settledAptIds.add(parsedAptId);
+            }
+            if (type.includes('ESCROW_HOLD') || type.includes('ESCROW_LOCK')) {
+                escrowHeldSum += amt;
+            }
+            if (isRelease || isRefund) {
+                escrowSettledSum += amt;
+            }
+        });
+
+        let credits = 0;
+        let debits = 0;
+        let escrow = 0;
+
+        ledger.forEach(tx => {
+            const amt = parseFloat(tx.amount || 0);
+            const status = String(tx.status || '').toUpperCase();
+            const type = String(tx.transactionType || tx.type || '').toUpperCase();
+            const recId = String(tx.recipient?.id || tx.recipientId || '');
+            const recEmail = (tx.recipient?.email || '').toLowerCase();
+            const initId = String(tx.initiator?.id || tx.initiatorId || '');
+            const initEmail = (tx.initiator?.email || '').toLowerCase();
+
+            const isRecipient = (uId && recId === uId) || (uEmail && recEmail === uEmail);
+            const isInitiator = (uId && initId === uId) || (uEmail && initEmail === uEmail);
+
+            if (!isRecipient && !isInitiator) return;
+
+            const aptId = tx.appointmentId ? String(tx.appointmentId) : null;
+            const notes = String(tx.notes || '');
+            const aptMatch = notes.match(/appointment\s*#?(\d+)/i);
+            const parsedAptId = aptId || (aptMatch ? aptMatch[1] : null);
+
+            const isHold = type.includes('ESCROW_HOLD') || type.includes('ESCROW_LOCK');
+            const isSettled = (parsedAptId && settledAptIds.has(parsedAptId)) ||
+                              ['RELEASED', 'CAPTURED', 'REFUNDED', 'CANCELLED', 'LOW_BALANCE', 'FAILED'].includes(status);
+
+            if (isHold && status === 'HELD' && !isSettled) {
+                if (!isNutri && isInitiator) {
+                    escrow += amt;
+                } else if (isNutri && isRecipient) {
+                    escrow += amt;
+                }
+            } else if (isRecipient && ['SUCCESS', 'COMPLETED', 'REFUNDED'].includes(status)) {
+                credits += amt;
+            } else if (isInitiator && ['SUCCESS', 'COMPLETED'].includes(status) && !isHold) {
+                debits += amt;
+            }
+        });
+
+        const netEscrow = Math.max(0, escrowHeldSum - escrowSettledSum);
+        if (escrow > netEscrow) escrow = netEscrow;
+
+        return {
+            balance: parseFloat(activeRecipient.balance || 0),
+            credits,
+            debits,
+            escrow
+        };
+    }, [activeRecipient, ledger]);
 
     // Handle Razorpay Test Mode Simulation Payment
     const handleInitiateCreditAllocation = async (e) => {
@@ -578,8 +704,44 @@ const PaymentManagement = () => {
 
     // Filtered Ledger Transactions
     const filteredLedger = ledger.filter(tx => {
-        const matchesType = ledgerTypeFilter === 'ALL' || tx.transactionType === ledgerTypeFilter;
-        const matchesStatus = ledgerStatusFilter === 'ALL' || tx.status === ledgerStatusFilter;
+        // User match if ledgerUserFilter is set
+        if (ledgerUserFilter && ledgerUserFilter !== 'ALL') {
+            const uId = String(ledgerUserFilter);
+            const userObj = recipients.find(r => String(r.id) === uId);
+            const uEmail = userObj?.email ? userObj.email.toLowerCase() : null;
+
+            const recId = String(tx.recipient?.id || tx.recipientId || '');
+            const recEmail = (tx.recipient?.email || '').toLowerCase();
+            const initId = String(tx.initiator?.id || tx.initiatorId || '');
+            const initEmail = (tx.initiator?.email || '').toLowerCase();
+
+            const isMatch = (uId && (recId === uId || initId === uId)) ||
+                            (uEmail && (recEmail === uEmail || initEmail === uEmail));
+            if (!isMatch) return false;
+        }
+
+        const rawType = String(tx.transactionType || tx.type || '').toUpperCase();
+        let matchesType = ledgerTypeFilter === 'ALL';
+        if (!matchesType) {
+            const filterUpper = ledgerTypeFilter.toUpperCase();
+            if (filterUpper === 'ADMIN_CREDIT_ALLOCATION') {
+                matchesType = rawType === 'ADMIN_CREDIT_ALLOCATION' || rawType === 'ADMIN_ALLOCATION' || rawType.includes('ALLOC') || rawType.includes('TOPUP');
+            } else {
+                matchesType = rawType === filterUpper;
+            }
+        }
+
+        const rawStatus = String(tx.status || '').toUpperCase();
+        let matchesStatus = ledgerStatusFilter === 'ALL';
+        if (!matchesStatus) {
+            const filterStat = ledgerStatusFilter.toUpperCase();
+            if (filterStat === 'SUCCESS' || filterStat === 'COMPLETED') {
+                matchesStatus = rawStatus === 'SUCCESS' || rawStatus === 'COMPLETED';
+            } else {
+                matchesStatus = rawStatus === filterStat;
+            }
+        }
+
         const matchesSearch = !ledgerSearch ||
             (tx.transactionReference && tx.transactionReference.toLowerCase().includes(ledgerSearch.toLowerCase())) ||
             (tx.notes && tx.notes.toLowerCase().includes(ledgerSearch.toLowerCase())) ||
@@ -590,15 +752,23 @@ const PaymentManagement = () => {
 
     // Overview Stats
     const totalAllocatedAmount = ledger
-        .filter(t => t.transactionType === 'ADMIN_CREDIT_ALLOCATION' && t.status === 'SUCCESS')
+        .filter(t => {
+            const ty = String(t.transactionType || t.type || '').toUpperCase();
+            const st = String(t.status || '').toUpperCase();
+            return (ty.includes('ALLOC') || ty.includes('TOPUP')) && (st === 'SUCCESS' || st === 'COMPLETED');
+        })
         .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
     const totalServiceVolume = ledger
-        .filter(t => t.transactionType === 'SERVICE_PAYMENT' && t.status === 'SUCCESS')
+        .filter(t => {
+            const ty = String(t.transactionType || t.type || '').toUpperCase();
+            const st = String(t.status || '').toUpperCase();
+            return (ty === 'SERVICE_PAYMENT' || ty === 'TRANSFER' || ty === 'ESCROW_RELEASE') && (st === 'SUCCESS' || st === 'COMPLETED');
+        })
         .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
     const totalLowBalanceBlocked = ledger
-        .filter(t => t.status === 'LOW_BALANCE')
+        .filter(t => String(t.status || '').toUpperCase() === 'LOW_BALANCE')
         .length;
 
     const totalFailedOrCancelled = ledger
@@ -751,20 +921,31 @@ const PaymentManagement = () => {
                                 1. Select Recipient Account
                             </label>
 
-                            {/* Recipient Role Filter Tabs */}
-                            <div className="flex items-center bg-[#080b12] border border-white/10 rounded-xl p-0.5 text-[11px]">
-                                {['ALL', 'USER', 'NUTRITIONIST'].map(role => (
+                            {/* Recipient Role Filter Tabs with Available Balances */}
+                            <div className="flex items-center bg-[#080b12] border border-white/10 rounded-xl p-0.5 text-[11px] overflow-x-auto">
+                                {[
+                                    { key: 'ALL', label: 'All', bal: allRolesAvailableBalance },
+                                    { key: 'USER', label: 'Users', bal: userRoleAvailableBalance },
+                                    { key: 'NUTRITIONIST', label: 'Nutritionists', bal: nutritionistRoleAvailableBalance }
+                                ].map(tab => (
                                     <button
-                                        key={role}
+                                        key={tab.key}
                                         type="button"
-                                        onClick={() => setRecipientTypeFilter(role)}
-                                        className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                            recipientTypeFilter === role
+                                        onClick={() => setRecipientTypeFilter(tab.key)}
+                                        className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                                            recipientTypeFilter === tab.key
                                                 ? 'bg-[#a5d391] text-black shadow-sm'
                                                 : 'text-white/50 hover:text-white'
                                         }`}
                                     >
-                                        {role === 'ALL' ? 'All' : (role === 'USER' ? 'Users' : 'Nutritionists')}
+                                        <span>{tab.label}</span>
+                                        <span className={`text-[10px] font-mono px-1 rounded ${
+                                            recipientTypeFilter === tab.key
+                                                ? 'bg-black/15 text-black font-black'
+                                                : 'bg-white/10 text-[#a5d391]'
+                                        }`}>
+                                            ₹{tab.bal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                        </span>
                                     </button>
                                 ))}
                             </div>
@@ -796,7 +977,7 @@ const PaymentManagement = () => {
                                     return (
                                         <div
                                             key={r.id}
-                                            onClick={() => setSelectedRecipientId(String(r.id))}
+                                            onClick={() => handleSelectRecipient(String(r.id))}
                                             className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                                                 isSelected
                                                     ? 'bg-[#a5d391]/15 border-[#a5d391] shadow-[0_0_15px_rgba(165,211,145,0.2)]'
@@ -827,7 +1008,7 @@ const PaymentManagement = () => {
                                             </div>
 
                                             <div className="text-right">
-                                                <div className="text-[10px] uppercase font-bold text-white/40">Current Bal.</div>
+                                                <div className="text-[10px] uppercase font-bold text-white/40">Available Bal.</div>
                                                 <div className="font-mono font-bold text-xs text-[#a5d391]">
                                                     ₹{parseFloat(r.balance || 0).toFixed(2)}
                                                 </div>
@@ -837,6 +1018,58 @@ const PaymentManagement = () => {
                                 })
                             )}
                         </div>
+
+                        {/* Selected Recipient Financial Breakdown (Credit, Debit, Escrow, Available) */}
+                        {activeRecipient && (
+                            <div className="p-3.5 rounded-2xl bg-[#080b12]/90 border border-[#a5d391]/30 shadow-lg space-y-2 animate-in fade-in">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-[#a5d391] animate-pulse"></span>
+                                        <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+                                            {activeRecipient.name} Financial Breakdown
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const el = document.getElementById('audit-transaction-ledger');
+                                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                        }}
+                                        className="text-[10px] font-bold text-[#a5d391] hover:underline flex items-center gap-0.5 cursor-pointer"
+                                    >
+                                        <span>Audit Ledger</span>
+                                        <span className="material-symbols-outlined text-xs">south</span>
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div className="p-2 rounded-xl bg-white/5 border border-[#a5d391]/25">
+                                        <div className="text-[9px] text-white/50 font-bold uppercase">Available Bal</div>
+                                        <div className="text-xs font-bold font-mono text-[#a5d391] mt-0.5">
+                                            ₹{activeRecipientMetrics.balance.toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="p-2 rounded-xl bg-white/5 border border-emerald-500/25">
+                                        <div className="text-[9px] text-white/50 font-bold uppercase">Credit (Inflow)</div>
+                                        <div className="text-xs font-bold font-mono text-emerald-400 mt-0.5">
+                                            +₹{activeRecipientMetrics.credits.toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="p-2 rounded-xl bg-white/5 border border-rose-500/25">
+                                        <div className="text-[9px] text-white/50 font-bold uppercase">Debit (Outflow)</div>
+                                        <div className="text-xs font-bold font-mono text-rose-400 mt-0.5">
+                                            -₹{activeRecipientMetrics.debits.toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="p-2 rounded-xl bg-white/5 border border-amber-500/25">
+                                        <div className="text-[9px] text-white/50 font-bold uppercase">Escrow Held</div>
+                                        <div className="text-xs font-bold font-mono text-amber-300 mt-0.5">
+                                            ₹{activeRecipientMetrics.escrow.toFixed(2)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right: Amount & Checkout Trigger */}
@@ -937,7 +1170,7 @@ const PaymentManagement = () => {
             </div>
 
             {/* SECTION 2: AUDIT TRANSACTION LEDGER */}
-            <div className="bg-[#0c121e] border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl space-y-6">
+            <div id="audit-transaction-ledger" className="bg-[#0c121e] border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
                     <div>
                         <span className="text-[#a5d391] text-[10px] font-black uppercase tracking-widest block mb-1">
@@ -956,6 +1189,21 @@ const PaymentManagement = () => {
 
                     {/* Table Filters */}
                     <div className="flex flex-wrap items-center gap-2">
+                        {/* Account Filter */}
+                        <select
+                            value={ledgerUserFilter}
+                            onChange={(e) => setLedgerUserFilter(e.target.value)}
+                            className="bg-[#080b12] border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white outline-none cursor-pointer max-w-[180px] sm:max-w-[220px]"
+                            title="Filter ledger by specific user account"
+                        >
+                            <option value="ALL">All Accounts (Platform-Wide)</option>
+                            {recipients.map(r => (
+                                <option key={r.id} value={String(r.id)}>
+                                    {r.name} ({r.role}) — ₹{parseFloat(r.balance || 0).toFixed(0)}
+                                </option>
+                            ))}
+                        </select>
+
                         {/* Type Filter */}
                         <select
                             value={ledgerTypeFilter}
@@ -968,6 +1216,7 @@ const PaymentManagement = () => {
                             <option value="ESCROW_RELEASE">Escrow Release</option>
                             <option value="ESCROW_REFUND">Escrow Refund</option>
                             <option value="SERVICE_PAYMENT">Service Payments</option>
+                            <option value="TRANSFER">Direct Transfers</option>
                         </select>
 
                         {/* Status Filter */}
@@ -998,6 +1247,49 @@ const PaymentManagement = () => {
                     </div>
                 </div>
 
+                {/* Active Recipient Ledger Filter Banner */}
+                {ledgerUserFilter !== 'ALL' && activeRecipient && (
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-[#a5d391]/15 via-white/5 to-transparent border border-[#a5d391]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl animate-in fade-in">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-[#a5d391]/20 border border-[#a5d391]/40 flex items-center justify-center font-bold text-sm text-[#a5d391]">
+                                {activeRecipient.name ? activeRecipient.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-sm">
+                                        Filtering Ledger for: {activeRecipient.name}
+                                    </span>
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                        activeRecipient.role === 'NUTRITIONIST'
+                                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                            : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
+                                    }`}>
+                                        {activeRecipient.role}
+                                    </span>
+                                    <span className="text-[10px] text-white/40">
+                                        ({filteredLedger.length} matching record{filteredLedger.length === 1 ? '' : 's'})
+                                    </span>
+                                </div>
+                                <div className="text-xs text-white/60 flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 font-mono">
+                                    <span>Available: <strong className="text-[#a5d391]">₹{activeRecipientMetrics.balance.toFixed(2)}</strong></span>
+                                    <span>Credits: <strong className="text-emerald-400">+₹{activeRecipientMetrics.credits.toFixed(2)}</strong></span>
+                                    <span>Debits: <strong className="text-rose-400">-₹{activeRecipientMetrics.debits.toFixed(2)}</strong></span>
+                                    <span>Escrow: <strong className="text-amber-300">₹{activeRecipientMetrics.escrow.toFixed(2)}</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setLedgerUserFilter('ALL')}
+                            className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 self-start sm:self-auto shadow-sm"
+                        >
+                            <span className="material-symbols-outlined text-sm">clear_all</span>
+                            <span>Show All Platform Transactions</span>
+                        </button>
+                    </div>
+                )}
+
                 {/* Ledger Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
@@ -1007,7 +1299,8 @@ const PaymentManagement = () => {
                                 <th className="pb-3 px-3">Transaction Type</th>
                                 <th className="pb-3 px-3">Initiator (Sender)</th>
                                 <th className="pb-3 px-3">Recipient (Receiver)</th>
-                                <th className="pb-3 px-3">Amount</th>
+                                <th className="pb-3 px-3 text-rose-400 font-bold">Debit (-)</th>
+                                <th className="pb-3 px-3 text-emerald-400 font-bold">Credit (+)</th>
                                 <th className="pb-3 px-3">Status</th>
                                 <th className="pb-3 px-3">Balance Audit (Before → After)</th>
                                 <th className="pb-3 px-3">Audit Memo</th>
@@ -1016,7 +1309,7 @@ const PaymentManagement = () => {
                         <tbody className="divide-y divide-white/5">
                             {filteredLedger.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="text-center py-8 text-white/40 text-xs">
+                                    <td colSpan="9" className="text-center py-8 text-white/40 text-xs">
                                         No ledger transactions match the active filter criteria.
                                     </td>
                                 </tr>
@@ -1050,27 +1343,27 @@ const PaymentManagement = () => {
                                                 {isAllocation ? (
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
                                                         <span className="material-symbols-outlined text-xs">add_circle</span>
-                                                        <span>Allocation</span>
+                                                        <span>Credit (Allocation)</span>
                                                     </span>
                                                 ) : tx.transactionType === 'ESCROW_HOLD' ? (
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                                                         <span className="material-symbols-outlined text-xs">lock</span>
-                                                        <span>Escrow Hold</span>
+                                                        <span>Debit (Escrow Hold)</span>
                                                     </span>
                                                 ) : tx.transactionType === 'ESCROW_RELEASE' ? (
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                                                         <span className="material-symbols-outlined text-xs">lock_open</span>
-                                                        <span>Escrow Release</span>
+                                                        <span>Credit (Escrow Release)</span>
                                                     </span>
                                                 ) : tx.transactionType === 'ESCROW_REFUND' ? (
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
                                                         <span className="material-symbols-outlined text-xs">replay</span>
-                                                        <span>Escrow Refund</span>
+                                                        <span>Credit (Refund)</span>
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                                                         <span className="material-symbols-outlined text-xs">sync_alt</span>
-                                                        <span>Service Payment</span>
+                                                        <span>Debit / Credit (Transfer)</span>
                                                     </span>
                                                 )}
                                             </td>
@@ -1092,10 +1385,10 @@ const PaymentManagement = () => {
                                                 {tx.recipient ? (
                                                     <div>
                                                         <div className="font-bold text-white text-xs flex items-center gap-1.5">
-                                                             <span>{tx.recipient.name || 'Account'}</span>
-                                                             <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-white/10 text-white/60">
-                                                                 {tx.recipient.role}
-                                                             </span>
+                                                            <span>{tx.recipient.name || 'Account'}</span>
+                                                            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-white/10 text-white/60">
+                                                                {tx.recipient.role}
+                                                            </span>
                                                         </div>
                                                         <div className="text-[10px] text-white/40">{tx.recipient.email}</div>
                                                     </div>
@@ -1104,17 +1397,73 @@ const PaymentManagement = () => {
                                                 )}
                                             </td>
 
-                                            {/* Amount */}
+                                            {/* Debit (-) */}
                                             <td className="py-3.5 px-3">
-                                                <div className={`font-mono font-bold text-xs ${
-                                                    isSuccess || tx.status === 'HELD' || tx.status === 'REFUNDED'
-                                                        ? 'text-[#a5d391]'
-                                                        : tx.status === 'CANCELLED'
-                                                            ? 'text-amber-400/80 line-through'
-                                                            : 'text-rose-400/80 line-through'
-                                                }`}>
-                                                    ₹{parseFloat(tx.amount || 0).toFixed(2)}
-                                                </div>
+                                                {(() => {
+                                                    const amt = parseFloat(tx.amount || 0);
+                                                    if (ledgerUserFilter !== 'ALL') {
+                                                        const uId = String(ledgerUserFilter);
+                                                        const userObj = recipients.find(r => String(r.id) === uId);
+                                                        const uEmail = userObj?.email ? userObj.email.toLowerCase() : null;
+                                                        const initId = String(tx.initiator?.id || tx.initiatorId || '');
+                                                        const initEmail = (tx.initiator?.email || '').toLowerCase();
+                                                        const isUserInitiator = (uId && initId === uId) || (uEmail && initEmail === uEmail);
+
+                                                        if (isUserInitiator) {
+                                                            return (
+                                                                <span className="font-mono font-bold text-xs text-rose-400">
+                                                                    -₹{amt.toFixed(2)}
+                                                                </span>
+                                                            );
+                                                        }
+                                                        return <span className="text-white/20 font-normal">—</span>;
+                                                    }
+
+                                                    if (tx.transactionType === 'ADMIN_CREDIT_ALLOCATION') {
+                                                        return <span className="text-white/20 font-normal">—</span>;
+                                                    }
+                                                    if (tx.initiator) {
+                                                        return (
+                                                            <span className={`font-mono font-bold text-xs ${tx.status === 'FAILED' || tx.status === 'CANCELLED' ? 'text-rose-400/50 line-through' : 'text-rose-400'}`}>
+                                                                -₹{amt.toFixed(2)}
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return <span className="text-white/20 font-normal">—</span>;
+                                                })()}
+                                            </td>
+
+                                            {/* Credit (+) */}
+                                            <td className="py-3.5 px-3">
+                                                {(() => {
+                                                    const amt = parseFloat(tx.amount || 0);
+                                                    if (ledgerUserFilter !== 'ALL') {
+                                                        const uId = String(ledgerUserFilter);
+                                                        const userObj = recipients.find(r => String(r.id) === uId);
+                                                        const uEmail = userObj?.email ? userObj.email.toLowerCase() : null;
+                                                        const recId = String(tx.recipient?.id || tx.recipientId || '');
+                                                        const recEmail = (tx.recipient?.email || '').toLowerCase();
+                                                        const isUserRecipient = (uId && recId === uId) || (uEmail && recEmail === uEmail);
+
+                                                        if (isUserRecipient) {
+                                                            return (
+                                                                <span className="font-mono font-bold text-xs text-emerald-400">
+                                                                    +₹{amt.toFixed(2)}
+                                                                </span>
+                                                            );
+                                                        }
+                                                        return <span className="text-white/20 font-normal">—</span>;
+                                                    }
+
+                                                    if (tx.recipient) {
+                                                        return (
+                                                            <span className={`font-mono font-bold text-xs ${tx.status === 'FAILED' || tx.status === 'CANCELLED' ? 'text-emerald-400/50 line-through' : 'text-emerald-400'}`}>
+                                                                +₹{amt.toFixed(2)}
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return <span className="text-white/20 font-normal">—</span>;
+                                                })()}
                                             </td>
 
                                             {/* Status */}

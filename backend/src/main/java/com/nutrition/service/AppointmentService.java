@@ -154,7 +154,7 @@ public class AppointmentService {
             fee = new BigDecimal("500.00");
         }
 
-        Wallet userWallet = walletService.getOrCreateWallet(user);
+        Wallet userWallet = walletService.getOrCreateWalletWithLock(user);
         BigDecimal currentBalance = userWallet.getBalance() != null ? userWallet.getBalance() : BigDecimal.ZERO;
 
         // Check if user has sufficient balance for escrow hold
@@ -237,16 +237,20 @@ public class AppointmentService {
 
         // Emit real-time SSE updates
         // 1. User wallet update
-        walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), Map.of(
-                "type", "WALLET_UPDATED",
-                "recipientId", user.getId(),
-                "recipientEmail", user.getEmail(),
-                "newBalance", userBalAfter,
-                "balance", userBalAfter,
-                "amount", fee,
-                "transactionReference", escrowRef,
-                "status", "HELD"
-        ));
+        Map<String, Object> holdPayload = new HashMap<>();
+        holdPayload.put("eventType", "ESCROW_HOLD");
+        holdPayload.put("type", "ESCROW_HOLD");
+        holdPayload.put("transactionId", savedTx.getId());
+        holdPayload.put("transactionReference", escrowRef);
+        holdPayload.put("recipientId", user.getId());
+        holdPayload.put("recipientEmail", user.getEmail());
+        holdPayload.put("newBalance", userBalAfter);
+        holdPayload.put("balance", userBalAfter);
+        holdPayload.put("amount", fee.negate());
+        holdPayload.put("description", holdTx.getNotes());
+        holdPayload.put("timestamp", java.time.Instant.now().toString());
+        holdPayload.put("status", "HELD");
+        walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), holdPayload);
 
         // 2. Appointment update to dietitian & user
         Map<String, Object> aptEvent = Map.of(
@@ -285,7 +289,7 @@ public class AppointmentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public AppointmentDto updateAppointmentStatus(Long appointmentId, String status, String meetingLink, String notes) {
-        Appointment apt = appointmentRepository.findById(appointmentId)
+        Appointment apt = appointmentRepository.findByIdWithLock(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found: " + appointmentId));
 
         if (meetingLink != null && !meetingLink.trim().isEmpty()) {
@@ -306,7 +310,7 @@ public class AppointmentService {
                 } else if ("HELD".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
                     User dietitian = apt.getDietitian();
                     if (dietitian != null) {
-                        Wallet dietitianWallet = walletService.getOrCreateWallet(dietitian);
+                        Wallet dietitianWallet = walletService.getOrCreateWalletWithLock(dietitian);
                         BigDecimal dietitianBalBefore = dietitianWallet.getBalance() != null ? dietitianWallet.getBalance() : BigDecimal.ZERO;
                         BigDecimal dietitianBalAfter = dietitianBalBefore.add(apt.getEscrowAmount());
                         dietitianWallet.setBalance(dietitianBalAfter);
@@ -339,20 +343,36 @@ public class AppointmentService {
                         releaseTx.setReceiverBalanceAfter(dietitianBalAfter);
                         WalletTransaction savedTx = walletTransactionRepository.save(releaseTx);
 
+                        // Mark original hold transaction as RELEASED
+                        if (apt.getId() != null) {
+                            try {
+                                walletTransactionRepository.findAll().stream()
+                                        .filter(tx -> apt.getId().equals(tx.getAppointmentId()) && "ESCROW_HOLD".equalsIgnoreCase(tx.getTransactionType()))
+                                        .forEach(tx -> {
+                                            tx.setStatus("RELEASED");
+                                            walletTransactionRepository.save(tx);
+                                        });
+                            } catch (Exception ignored) {}
+                        }
+
                         log.info("ESCROW CAPTURED: Credited ₹{} to Dietitian [{}] (Bal: ₹{} -> ₹{}). Ref: {}",
                                 apt.getEscrowAmount(), dietitian.getEmail(), dietitianBalBefore, dietitianBalAfter, captureRef);
 
                         // Push SSE to Dietitian
-                        walletSseService.sendWalletUpdate(dietitian.getId(), dietitian.getEmail(), Map.of(
-                                "type", "WALLET_UPDATED",
-                                "recipientId", dietitian.getId(),
-                                "recipientEmail", dietitian.getEmail(),
-                                "newBalance", dietitianBalAfter,
-                                "balance", dietitianBalAfter,
-                                "amount", apt.getEscrowAmount(),
-                                "transactionReference", captureRef,
-                                "status", "SUCCESS"
-                        ));
+                        Map<String, Object> releasePayload = new HashMap<>();
+                        releasePayload.put("eventType", "ESCROW_RELEASE");
+                        releasePayload.put("type", "ESCROW_RELEASE");
+                        releasePayload.put("transactionId", savedTx.getId());
+                        releasePayload.put("transactionReference", captureRef);
+                        releasePayload.put("recipientId", dietitian.getId());
+                        releasePayload.put("recipientEmail", dietitian.getEmail());
+                        releasePayload.put("newBalance", dietitianBalAfter);
+                        releasePayload.put("balance", dietitianBalAfter);
+                        releasePayload.put("amount", apt.getEscrowAmount());
+                        releasePayload.put("description", releaseTx.getNotes());
+                        releasePayload.put("timestamp", java.time.Instant.now().toString());
+                        releasePayload.put("status", "SUCCESS");
+                        walletSseService.sendWalletUpdate(dietitian.getId(), dietitian.getEmail(), releasePayload);
 
                         // Stream to Admin Ledger
                         walletSseService.broadcastToAdmins(Map.of(
@@ -373,60 +393,96 @@ public class AppointmentService {
                 }
                 apt.setStatus("Confirmed");
 
-            // STEP 2b: Dietitian REJECTS or User CANCELS (Automated Compensating Refund)
-            } else if ("REJECTED".equals(upperStatus) || "CANCELLED".equals(upperStatus) || "DENIED".equals(upperStatus)) {
-                // Idempotency check: prevent duplicate refund
-                if ("REFUNDED".equalsIgnoreCase(apt.getEscrowStatus())) {
-                    log.info("Appointment #{} escrow already REFUNDED. Skipping duplicate refund.", appointmentId);
-                } else if ("HELD".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
+            // STEP 2c: Dietitian APPROVES Cancellation Request with Disclaimer: No money will be refunded
+            } else if ("APPROVE_CANCELLATION_NO_REFUND".equals(upperStatus) ||
+                      ("APPROVE_CANCELLATION".equals(upperStatus) && notes != null && notes.toLowerCase().contains("no money will be refunded"))) {
+                apt.setStatus("CANCELLED");
+                if (notes != null && !notes.isBlank()) {
+                    apt.setNotes(notes);
+                } else {
+                    apt.setNotes("Cancellation approved by dietitian. Disclaimer: No money will be refunded.");
+                }
+                log.info("Dietitian approved cancellation with disclaimer (no money refunded) for appointment #{}", apt.getId());
+
+            // STEP 2c-alt: Dietitian APPROVES Cancellation Request and optionally issues refund
+            } else if ("APPROVE_CANCELLATION".equals(upperStatus) || "APPROVE_CANCELLATION_REFUND".equals(upperStatus) || ("CANCELLED".equals(upperStatus) && "CAPTURED".equalsIgnoreCase(apt.getEscrowStatus()))) {
+                if ("CAPTURED".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    User dietitian = apt.getDietitian();
                     User user = apt.getUser();
-                    if (user != null) {
-                        Wallet userWallet = walletService.getOrCreateWallet(user);
+                    BigDecimal refundAmt = apt.getEscrowAmount();
+
+                    if (dietitian != null && user != null) {
+                        Wallet dietitianWallet = walletService.getOrCreateWalletWithLock(dietitian);
+                        Wallet userWallet = walletService.getOrCreateWalletWithLock(user);
+
+                        BigDecimal dietitianBalBefore = dietitianWallet.getBalance() != null ? dietitianWallet.getBalance() : BigDecimal.ZERO;
+                        BigDecimal dietitianBalAfter = dietitianBalBefore.subtract(refundAmt);
+                        dietitianWallet.setBalance(dietitianBalAfter);
+                        walletRepository.save(dietitianWallet);
+
                         BigDecimal userBalBefore = userWallet.getBalance() != null ? userWallet.getBalance() : BigDecimal.ZERO;
-                        BigDecimal userBalAfter = userBalBefore.add(apt.getEscrowAmount());
+                        BigDecimal userBalAfter = userBalBefore.add(refundAmt);
                         userWallet.setBalance(userBalAfter);
                         walletRepository.save(userWallet);
 
-                        String refundRef = "ESCROW-REFUND-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+                        String refundRef = "TXN-REFUND-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
                         apt.setEscrowStatus("REFUNDED");
                         apt.setEscrowTransactionRef(refundRef);
-
-                        // Audit Ledger Entry
-                        User dietitian = apt.getDietitian();
-                        Wallet dietitianWallet = dietitian != null ? walletService.getOrCreateWallet(dietitian) : null;
-                        BigDecimal dietitianBal = dietitianWallet != null && dietitianWallet.getBalance() != null ? dietitianWallet.getBalance() : BigDecimal.ZERO;
+                        apt.setStatus("CANCELLED");
 
                         WalletTransaction refundTx = new WalletTransaction();
                         refundTx.setTransactionReference(refundRef);
-                        refundTx.setSourceWallet(null);
+                        refundTx.setSourceWallet(dietitianWallet);
                         refundTx.setTargetWallet(userWallet);
-                        refundTx.setInitiator(dietitian != null ? dietitian : user);
+                        refundTx.setInitiator(dietitian);
                         refundTx.setRecipient(user);
-                        refundTx.setAmount(apt.getEscrowAmount());
+                        refundTx.setAmount(refundAmt);
                         refundTx.setCurrency(userWallet.getCurrency());
                         refundTx.setTransactionType("ESCROW_REFUND");
                         refundTx.setStatus("REFUNDED");
                         refundTx.setAppointmentId(apt.getId());
-                        refundTx.setNotes(String.format("Compensating transaction: Refunded escrow of ₹%.2f for %s appointment #%d",
-                                apt.getEscrowAmount(), upperStatus, apt.getId()));
+                        refundTx.setNotes(String.format("Dietitian [%s] approved cancellation & refunded fee of ₹%.2f back to client [%s]",
+                                dietitian.getEmail(), refundAmt, user.getEmail()));
+                        refundTx.setSenderBalanceBefore(dietitianBalBefore);
+                        refundTx.setSenderBalanceAfter(dietitianBalAfter);
                         refundTx.setReceiverBalanceBefore(userBalBefore);
                         refundTx.setReceiverBalanceAfter(userBalAfter);
                         WalletTransaction savedTx = walletTransactionRepository.save(refundTx);
 
-                        log.info("ESCROW REFUNDED: Refunded ₹{} to User [{}] (Bal: ₹{} -> ₹{}). Ref: {}",
-                                apt.getEscrowAmount(), user.getEmail(), userBalBefore, userBalAfter, refundRef);
+                        log.info("DIETITIAN APPROVED REFUND: Deducted ₹{} from Dietitian [{}] and refunded to User [{}]. Ref: {}",
+                                refundAmt, dietitian.getEmail(), user.getEmail(), refundRef);
 
-                        // Push SSE to User
-                        walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), Map.of(
-                                "type", "WALLET_UPDATED",
-                                "recipientId", user.getId(),
-                                "recipientEmail", user.getEmail(),
-                                "newBalance", userBalAfter,
-                                "balance", userBalAfter,
-                                "amount", apt.getEscrowAmount(),
-                                "transactionReference", refundRef,
-                                "status", "REFUNDED"
-                        ));
+                        // Push SSE to Dietitian (deduction)
+                        Map<String, Object> dietitianPayload = new HashMap<>();
+                        dietitianPayload.put("eventType", "ESCROW_REFUND");
+                        dietitianPayload.put("type", "ESCROW_REFUND");
+                        dietitianPayload.put("transactionId", savedTx.getId());
+                        dietitianPayload.put("transactionReference", refundRef);
+                        dietitianPayload.put("recipientId", dietitian.getId());
+                        dietitianPayload.put("recipientEmail", dietitian.getEmail());
+                        dietitianPayload.put("newBalance", dietitianBalAfter);
+                        dietitianPayload.put("balance", dietitianBalAfter);
+                        dietitianPayload.put("amount", refundAmt.negate());
+                        dietitianPayload.put("description", "Refunded ₹" + refundAmt + " to client upon approved cancellation");
+                        dietitianPayload.put("timestamp", java.time.Instant.now().toString());
+                        dietitianPayload.put("status", "SUCCESS");
+                        walletSseService.sendWalletUpdate(dietitian.getId(), dietitian.getEmail(), dietitianPayload);
+
+                        // Push SSE to User (refund credit)
+                        Map<String, Object> userPayload = new HashMap<>();
+                        userPayload.put("eventType", "ESCROW_REFUND");
+                        userPayload.put("type", "ESCROW_REFUND");
+                        userPayload.put("transactionId", savedTx.getId());
+                        userPayload.put("transactionReference", refundRef);
+                        userPayload.put("recipientId", user.getId());
+                        userPayload.put("recipientEmail", user.getEmail());
+                        userPayload.put("newBalance", userBalAfter);
+                        userPayload.put("balance", userBalAfter);
+                        userPayload.put("amount", refundAmt);
+                        userPayload.put("description", "Consultation fee of ₹" + refundAmt + " refunded by dietitian");
+                        userPayload.put("timestamp", java.time.Instant.now().toString());
+                        userPayload.put("status", "SUCCESS");
+                        walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), userPayload);
 
                         // Stream to Admin Ledger
                         walletSseService.broadcastToAdmins(Map.of(
@@ -434,18 +490,43 @@ public class AppointmentService {
                                 "transaction", Map.of(
                                         "id", savedTx.getId(),
                                         "transactionReference", refundRef,
-                                        "amount", apt.getEscrowAmount(),
+                                        "amount", refundAmt,
                                         "currency", userWallet.getCurrency(),
                                         "transactionType", "ESCROW_REFUND",
                                         "status", "REFUNDED",
+                                        "senderBalanceBefore", dietitianBalBefore,
+                                        "senderBalanceAfter", dietitianBalAfter,
                                         "receiverBalanceBefore", userBalBefore,
                                         "receiverBalanceAfter", userBalAfter,
                                         "createdAt", savedTx.getCreatedAt() != null ? savedTx.getCreatedAt() : LocalDateTime.now()
                                 )
                         ));
                     }
+                } else if ("HELD".equalsIgnoreCase(apt.getEscrowStatus())) {
+                    refundEscrowHoldToUser(apt, "CANCELLED");
                 }
-                apt.setStatus("REJECTED".equals(upperStatus) || "DENIED".equals(upperStatus) ? "REJECTED" : "CANCELLED");
+                apt.setStatus("CANCELLED");
+
+            // STEP 2d: Dietitian DECLINES Cancellation Request
+            } else if ("DECLINE_CANCELLATION".equals(upperStatus) || "REJECT_CANCELLATION".equals(upperStatus)) {
+                apt.setStatus("Confirmed");
+                if (notes != null && !notes.isBlank()) {
+                    apt.setNotes(notes);
+                }
+
+            // STEP 2e: Client Requests Cancellation from Dietitian
+            } else if ("CANCELLATION_REQUESTED".equals(upperStatus) || "REQUEST_CANCEL".equals(upperStatus)) {
+                apt.setStatus("CANCELLATION_REQUESTED");
+
+            // STEP 2b: Dietitian REJECTS unconfirmed booking OR User cancels unconfirmed booking (HELD state)
+            } else if ("REJECTED".equals(upperStatus) || "CANCELLED".equals(upperStatus) || "DENIED".equals(upperStatus)) {
+                // If appointment was already confirmed, user cannot directly cancel unilaterally
+                if ("Confirmed".equalsIgnoreCase(apt.getStatus()) || "CAPTURED".equalsIgnoreCase(apt.getEscrowStatus())) {
+                    apt.setStatus("CANCELLATION_REQUESTED");
+                } else {
+                    refundEscrowHoldToUser(apt, upperStatus);
+                    apt.setStatus("REJECTED".equals(upperStatus) || "DENIED".equals(upperStatus) ? "REJECTED" : "CANCELLED");
+                }
             } else {
                 apt.setStatus(status);
             }
@@ -471,16 +552,147 @@ public class AppointmentService {
     }
 
     /**
+     * Client requests to cancel an appointment.
+     * - If still in unconfirmed state: immediately cancels with escrow release back to client.
+     * - If already confirmed/accepted by dietitian: transitions state to CANCELLATION_REQUESTED
+     *   for dietitian's review and refund approval.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public AppointmentDto requestCancellation(Long appointmentId, Long userId, String reason) {
+        Appointment apt = appointmentRepository.findByIdWithLock(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found: " + appointmentId));
+
+        if (apt.getUser() == null || !apt.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: Only the booking client can request cancellation.");
+        }
+
+        String currentStatus = apt.getStatus() != null ? apt.getStatus().toUpperCase() : "";
+        if ("CANCELLED".equals(currentStatus) || "REJECTED".equals(currentStatus)) {
+            return mapToDto(apt);
+        }
+
+        // If unconfirmed, process direct refund immediately
+        if (!"CONFIRMED".equals(currentStatus) && !"ACCEPTED".equals(currentStatus) && !"CAPTURED".equalsIgnoreCase(apt.getEscrowStatus())) {
+            return updateAppointmentStatus(appointmentId, "CANCELLED", null, reason);
+        }
+
+        // Already confirmed by dietitian -> Require dietitian approval to refund
+        apt.setStatus("CANCELLATION_REQUESTED");
+        if (reason != null && !reason.isBlank()) {
+            apt.setNotes(apt.getNotes() != null ? apt.getNotes() + " | Cancellation Reason: " + reason : "Cancellation Reason: " + reason);
+        }
+
+        Appointment updated = appointmentRepository.save(apt);
+        AppointmentDto dtoResult = mapToDto(updated);
+
+        Map<String, Object> sseEvent = Map.of(
+                "type", "APPOINTMENT_UPDATED",
+                "action", "CANCELLATION_REQUESTED",
+                "appointment", dtoResult
+        );
+        if (updated.getUser() != null) {
+            walletSseService.sendAppointmentUpdate(updated.getUser().getId(), updated.getUser().getEmail(), sseEvent);
+        }
+        if (updated.getDietitian() != null) {
+            walletSseService.sendAppointmentUpdate(updated.getDietitian().getId(), updated.getDietitian().getEmail(), sseEvent);
+        }
+
+        log.info("Client [{}] submitted cancellation request for confirmed appointment #{}", apt.getUser().getEmail(), apt.getId());
+        return dtoResult;
+    }
+
+    private void refundEscrowHoldToUser(Appointment apt, String finalStatus) {
+        if ("REFUNDED".equalsIgnoreCase(apt.getEscrowStatus())) return;
+        if (!"HELD".equalsIgnoreCase(apt.getEscrowStatus())) return;
+        if (apt.getEscrowAmount() == null || apt.getEscrowAmount().compareTo(BigDecimal.ZERO) <= 0) return;
+
+        User user = apt.getUser();
+        if (user == null) return;
+
+        Wallet userWallet = walletService.getOrCreateWalletWithLock(user);
+        BigDecimal userBalBefore = userWallet.getBalance() != null ? userWallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal userBalAfter = userBalBefore.add(apt.getEscrowAmount());
+        userWallet.setBalance(userBalAfter);
+        walletRepository.save(userWallet);
+
+        String refundRef = "ESCROW-REFUND-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        apt.setEscrowStatus("REFUNDED");
+        apt.setEscrowTransactionRef(refundRef);
+
+        User dietitian = apt.getDietitian();
+        WalletTransaction refundTx = new WalletTransaction();
+        refundTx.setTransactionReference(refundRef);
+        refundTx.setSourceWallet(null);
+        refundTx.setTargetWallet(userWallet);
+        refundTx.setInitiator(dietitian != null ? dietitian : user);
+        refundTx.setRecipient(user);
+        refundTx.setAmount(apt.getEscrowAmount());
+        refundTx.setCurrency(userWallet.getCurrency());
+        refundTx.setTransactionType("ESCROW_REFUND");
+        refundTx.setStatus("REFUNDED");
+        refundTx.setAppointmentId(apt.getId());
+        refundTx.setNotes(String.format("Compensating transaction: Refunded escrow of ₹%.2f for %s appointment #%d",
+                apt.getEscrowAmount(), finalStatus, apt.getId()));
+        refundTx.setReceiverBalanceBefore(userBalBefore);
+        refundTx.setReceiverBalanceAfter(userBalAfter);
+        WalletTransaction savedTx = walletTransactionRepository.save(refundTx);
+
+        // Mark original hold transaction as REFUNDED
+        if (apt.getId() != null) {
+            try {
+                walletTransactionRepository.findAll().stream()
+                        .filter(tx -> apt.getId().equals(tx.getAppointmentId()) && "ESCROW_HOLD".equalsIgnoreCase(tx.getTransactionType()))
+                        .forEach(tx -> {
+                            tx.setStatus("REFUNDED");
+                            walletTransactionRepository.save(tx);
+                        });
+            } catch (Exception ignored) {}
+        }
+
+        // Push SSE to User
+        Map<String, Object> refundPayload = new HashMap<>();
+        refundPayload.put("eventType", "ESCROW_REFUND");
+        refundPayload.put("type", "ESCROW_REFUND");
+        refundPayload.put("transactionId", savedTx.getId());
+        refundPayload.put("transactionReference", refundRef);
+        refundPayload.put("recipientId", user.getId());
+        refundPayload.put("recipientEmail", user.getEmail());
+        refundPayload.put("newBalance", userBalAfter);
+        refundPayload.put("balance", userBalAfter);
+        refundPayload.put("amount", apt.getEscrowAmount());
+        refundPayload.put("description", refundTx.getNotes());
+        refundPayload.put("timestamp", java.time.Instant.now().toString());
+        refundPayload.put("status", "REFUNDED");
+        walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), refundPayload);
+
+        // Stream to Admin Ledger
+        walletSseService.broadcastToAdmins(Map.of(
+                "type", "LEDGER_UPDATED",
+                "transaction", Map.of(
+                        "id", savedTx.getId(),
+                        "transactionReference", refundRef,
+                        "amount", apt.getEscrowAmount(),
+                        "currency", userWallet.getCurrency(),
+                        "transactionType", "ESCROW_REFUND",
+                        "status", "REFUNDED",
+                        "receiverBalanceBefore", userBalBefore,
+                        "receiverBalanceAfter", userBalAfter,
+                        "createdAt", savedTx.getCreatedAt() != null ? savedTx.getCreatedAt() : LocalDateTime.now()
+                )
+        ));
+    }
+
+    /**
      * Delete appointment with automated compensating refund if escrow is currently HELD.
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteAppointment(Long appointmentId) {
-        Appointment apt = appointmentRepository.findById(appointmentId).orElse(null);
+        Appointment apt = appointmentRepository.findByIdWithLock(appointmentId).orElse(null);
         if (apt != null) {
             if ("HELD".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
                 User user = apt.getUser();
                 if (user != null) {
-                    Wallet userWallet = walletService.getOrCreateWallet(user);
+                    Wallet userWallet = walletService.getOrCreateWalletWithLock(user);
                     BigDecimal userBalBefore = userWallet.getBalance() != null ? userWallet.getBalance() : BigDecimal.ZERO;
                     BigDecimal userBalAfter = userBalBefore.add(apt.getEscrowAmount());
                     userWallet.setBalance(userBalAfter);
@@ -501,16 +713,20 @@ public class AppointmentService {
                     refundTx.setReceiverBalanceAfter(userBalAfter);
                     walletTransactionRepository.save(refundTx);
 
-                    walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), Map.of(
-                            "type", "WALLET_UPDATED",
-                            "recipientId", user.getId(),
-                            "recipientEmail", user.getEmail(),
-                            "newBalance", userBalAfter,
-                            "balance", userBalAfter,
-                            "amount", apt.getEscrowAmount(),
-                            "transactionReference", refundRef,
-                            "status", "REFUNDED"
-                    ));
+                    Map<String, Object> delRefundPayload = new HashMap<>();
+                    delRefundPayload.put("eventType", "ESCROW_REFUND");
+                    delRefundPayload.put("type", "ESCROW_REFUND");
+                    delRefundPayload.put("transactionId", refundTx.getId());
+                    delRefundPayload.put("transactionReference", refundRef);
+                    delRefundPayload.put("recipientId", user.getId());
+                    delRefundPayload.put("recipientEmail", user.getEmail());
+                    delRefundPayload.put("newBalance", userBalAfter);
+                    delRefundPayload.put("balance", userBalAfter);
+                    delRefundPayload.put("amount", apt.getEscrowAmount());
+                    delRefundPayload.put("description", refundTx.getNotes());
+                    delRefundPayload.put("timestamp", java.time.Instant.now().toString());
+                    delRefundPayload.put("status", "REFUNDED");
+                    walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), delRefundPayload);
                 }
             }
 

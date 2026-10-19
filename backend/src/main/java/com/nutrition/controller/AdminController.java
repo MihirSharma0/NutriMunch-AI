@@ -33,6 +33,7 @@ public class AdminController {
     private final SystemSettingService systemSettingService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
+    private final com.nutrition.service.WalletService walletService;
 
     @org.springframework.beans.factory.annotation.Value("${app.admin.email:admin@nutrimunch.com}")
     private String configuredAdminEmail;
@@ -347,5 +348,30 @@ public class AdminController {
             result.put("error", e.getMessage());
             return ResponseEntity.ok(result);
         }
+    }
+
+    /**
+     * STEP 2.1: Admin Allocation Endpoint (POST /api/admin/allocate)
+     * Admin allocates funds to a User or Dietitian.
+     * Creates a single unique ledger entry of type "admin_allocation", updates recipient's balance, and triggers SSE.
+     */
+    @PostMapping("/allocate")
+    public ResponseEntity<Map<String, Object>> allocateFunds(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails userDetails,
+            @RequestBody Map<String, Object> payload) {
+        Long recipientId = payload.get("recipientId") != null
+                ? Long.valueOf(payload.get("recipientId").toString())
+                : (payload.get("receiver_id") != null ? Long.valueOf(payload.get("receiver_id").toString()) : null);
+        java.math.BigDecimal amount = payload.get("amount") != null
+                ? new java.math.BigDecimal(payload.get("amount").toString())
+                : java.math.BigDecimal.ZERO;
+        String notes = payload.get("notes") != null ? payload.get("notes").toString() : null;
+
+        if (recipientId == null || amount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("message", "recipientId and positive amount are required"));
+        }
+
+        Long adminId = (userDetails != null && userDetails.getId() != null) ? userDetails.getId() : null;
+        return ResponseEntity.ok(walletService.adminAllocate(adminId, recipientId, amount, notes));
     }
 }

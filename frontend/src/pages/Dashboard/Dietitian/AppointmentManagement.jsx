@@ -20,6 +20,7 @@ const AppointmentManagement = () => {
     // Consultation Chat Modal
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [chatTargetPatient, setChatTargetPatient] = useState(null);
+    const [cancellationDisclaimer, setCancellationDisclaimer] = useState('No money will be refunded');
 
     const handleOpenChatFromAppointment = (patientObj) => {
         const target = {
@@ -225,6 +226,83 @@ const AppointmentManagement = () => {
         } catch (err) {
             console.error('Failed to deny appointment:', err);
             showToast('Error denying appointment.');
+        }
+    };
+
+    const handleApproveCancellation = async (id, e) => {
+        if (e) e.stopPropagation();
+        try {
+            const disclaimerText = cancellationDisclaimer?.trim() || 'No money will be refunded';
+            let updated = null;
+            try {
+                const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        status: 'APPROVE_CANCELLATION_NO_REFUND',
+                        notes: `Cancellation approved by dietitian. Disclaimer: ${disclaimerText}`
+                    })
+                });
+
+                if (res.ok) {
+                    updated = await res.json();
+                }
+            } catch (err) {}
+
+            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? (updated || { ...ev, status: 'CANCELLED', notes: `Disclaimer: ${disclaimerText}` }) : ev));
+
+            try {
+                const localApts = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
+                const updatedLocal = localApts.map(a => String(a.id) === String(id) ? { ...a, status: 'CANCELLED', notes: `Disclaimer: ${disclaimerText}` } : a);
+                localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updatedLocal));
+            } catch (e) {}
+
+            if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
+            showToast(`Cancellation approved. Disclaimer: ${disclaimerText}`);
+        } catch (err) {
+            console.error('Failed to approve cancellation:', err);
+            showToast('Error approving cancellation.');
+        }
+    };
+
+    const handleDeclineCancellation = async (id, e) => {
+        if (e) e.stopPropagation();
+        try {
+            let updated = null;
+            try {
+                const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        status: 'Confirmed',
+                        notes: 'Cancellation request declined by dietitian; session remains confirmed.'
+                    })
+                });
+
+                if (res.ok) {
+                    updated = await res.json();
+                }
+            } catch (err) {}
+
+            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? (updated || { ...ev, status: 'Confirmed', notes: 'Cancellation request declined by dietitian; session remains confirmed.' }) : ev));
+
+            try {
+                const localApts = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
+                const updatedLocal = localApts.map(a => String(a.id) === String(id) ? { ...a, status: 'Confirmed' } : a);
+                localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updatedLocal));
+            } catch (e) {}
+
+            if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
+            showToast('Cancellation request declined. Session remains confirmed.');
+        } catch (err) {
+            console.error('Failed to decline cancellation:', err);
+            showToast('Error declining cancellation.');
         }
     };
 
@@ -508,7 +586,8 @@ const AppointmentManagement = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {filteredEvents.map(event => {
                                 const st = String(event.status || '').toUpperCase();
-                                const isPending = st.includes('REQUEST') || st.includes('PENDING') || event.status === 'Pending Review';
+                                const isCancelRequested = st === 'CANCELLATION_REQUESTED';
+                                const isPending = !isCancelRequested && (st.includes('REQUEST') || st.includes('PENDING') || event.status === 'Pending Review');
                                 const isCancelled = st === 'CANCELLED';
                                 const isRejected = st === 'REJECTED';
 
@@ -517,7 +596,9 @@ const AppointmentManagement = () => {
                                         key={event.id}
                                         onClick={() => setSelectedEvent(event)}
                                         className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${
-                                            isPending 
+                                            isCancelRequested
+                                                ? 'bg-amber-500/15 border-amber-500/50 hover:border-amber-400 shadow-lg'
+                                                : isPending 
                                                 ? 'bg-amber-500/10 border-amber-500/40 hover:border-amber-500/70 shadow-lg' 
                                                 : isCancelled || isRejected
                                                 ? 'bg-red-500/10 border-red-500/20' 
@@ -528,7 +609,9 @@ const AppointmentManagement = () => {
                                             <div>
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                                                        isPending 
+                                                        isCancelRequested
+                                                            ? 'bg-amber-500/30 text-amber-300 border border-amber-500/50 animate-pulse'
+                                                            : isPending 
                                                             ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40 animate-pulse' 
                                                             : isCancelled 
                                                             ? 'bg-red-500/20 text-red-300 border border-red-500/30' 
@@ -536,7 +619,7 @@ const AppointmentManagement = () => {
                                                             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                                                             : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
                                                     }`}>
-                                                        {isPending ? 'Requested' : (event.status || 'Scheduled')}
+                                                        {isCancelRequested ? 'Cancel Requested' : isPending ? 'Requested' : (event.status || 'Scheduled')}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-base font-bold text-white mt-2 group-hover:text-[#a5d391] transition-colors">{event.title || 'Clinical Consultation'}</h3>
@@ -726,9 +809,71 @@ const AppointmentManagement = () => {
                             </div>
 
                             {/* Modal Footer Buttons */}
-                            <div className="flex flex-wrap justify-between items-center gap-3 pt-3 border-t border-white/10 w-full">
-                                {(String(selectedEvent.status || '').toUpperCase().includes('REQUEST') || String(selectedEvent.status || '').toUpperCase().includes('PENDING') || selectedEvent.status === 'Pending Review') ? (
-                                    <>
+                            <div className="flex flex-col gap-3 pt-3 border-t border-white/10 w-full">
+                                {String(selectedEvent.status || '').toUpperCase() === 'CANCELLATION_REQUESTED' ? (
+                                    <div className="w-full space-y-3">
+                                        <div className="bg-amber-500/15 border border-amber-500/40 rounded-2xl p-4 flex items-start gap-3 shadow-md">
+                                            <span className="material-symbols-outlined text-amber-400 text-2xl mt-0.5">report_problem</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-xs font-bold text-amber-300 uppercase tracking-widest">
+                                                    Patient Cancellation Request
+                                                </div>
+                                                <p className="text-xs text-white/80 mt-1">
+                                                    The patient has requested to cancel this confirmed consultation session.
+                                                </p>
+                                                <div className="mt-2.5 bg-amber-500/20 border border-amber-500/40 rounded-xl px-3 py-2 text-xs text-amber-200 font-semibold flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-amber-400 text-base">info</span>
+                                                    <span>Disclaimer: No money will be refunded.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Dietitian disclaimer note input */}
+                                        <div className="space-y-1.5 bg-white/5 border border-white/10 rounded-2xl p-3.5">
+                                            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-xs text-[#a5d391]">gavel</span>
+                                                Dietitian Cancellation Disclaimer:
+                                            </label>
+                                            <input 
+                                                type="text"
+                                                value={cancellationDisclaimer}
+                                                onChange={(e) => setCancellationDisclaimer(e.target.value)}
+                                                placeholder="No money will be refunded"
+                                                className="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#a5d391] transition-all"
+                                            />
+                                            <p className="text-[10px] text-white/50">
+                                                This disclaimer will be written to the consultation record and displayed to the patient.
+                                            </p>
+                                        </div>
+
+                                        <div className="flex flex-wrap justify-between items-center gap-3">
+                                            <button 
+                                                onClick={(e) => handleApproveCancellation(selectedEvent.id, e)}
+                                                className="px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                                                title="Approve cancellation with disclaimer (no money will be refunded)"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">check_circle</span>
+                                                Approve Cancellation
+                                            </button>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={(e) => handleDeclineCancellation(selectedEvent.id, e)}
+                                                    className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">close</span>
+                                                    Decline Request
+                                                </button>
+                                                <button 
+                                                    onClick={() => setSelectedEvent(null)}
+                                                    className="px-5 py-2.5 rounded-xl bg-white/5 text-white/60 hover:text-white text-xs font-bold transition-all cursor-pointer"
+                                                >
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (String(selectedEvent.status || '').toUpperCase() === 'REQUESTED' || (String(selectedEvent.status || '').toUpperCase().includes('REQUEST') && String(selectedEvent.status || '').toUpperCase() !== 'CANCELLATION_REQUESTED') || String(selectedEvent.status || '').toUpperCase().includes('PENDING') || selectedEvent.status === 'Pending Review') ? (
+                                    <div className="flex flex-wrap justify-between items-center gap-3 w-full">
                                         <button 
                                             onClick={(e) => handleDenyEvent(selectedEvent.id, e)}
                                             className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
@@ -752,9 +897,9 @@ const AppointmentManagement = () => {
                                                 Close
                                             </button>
                                         </div>
-                                    </>
+                                    </div>
                                 ) : (
-                                    <>
+                                    <div className="flex flex-wrap justify-between items-center gap-3 w-full">
                                         <button 
                                             onClick={(e) => handleCancelEvent(selectedEvent.id, e)}
                                             className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer"
@@ -779,7 +924,7 @@ const AppointmentManagement = () => {
                                                 Close
                                             </button>
                                         </div>
-                                    </>
+                                    </div>
                                 )}
                             </div>
                         </div>

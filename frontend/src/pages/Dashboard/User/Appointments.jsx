@@ -4,6 +4,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api, { API_BASE_URL } from '../../../api/axios';
 import ConsultationChatModal from '../../../components/ConsultationChatModal';
+import { subscribeWalletSse } from '../../../utils/walletSse';
 
 const Appointments = () => {
     const { user, token } = useContext(AuthContext);
@@ -48,6 +49,8 @@ const Appointments = () => {
     const [sessionFee, setSessionFee] = useState(500);
     const [isPayingWithWallet, setIsPayingWithWallet] = useState(false);
     const [guardBlockedModal, setGuardBlockedModal] = useState(null);
+    const [cancelPromptModal, setCancelPromptModal] = useState({ open: false, appointmentId: null });
+    const [selectedCardId, setSelectedCardId] = useState(null);
 
     const [bookingForm, setBookingForm] = useState({
         dietitianId: '',
@@ -159,7 +162,7 @@ const Appointments = () => {
                 return;
             }
             if (eventData.appointment) {
-                const updatedApt = eventData.appointment;
+                const updatedApt = normalizeAppointment(eventData.appointment);
                 setAppointments(prev => {
                     const exists = prev.some(a => String(a.id) === String(updatedApt.id));
                     let next;
@@ -177,9 +180,18 @@ const Appointments = () => {
             }
         };
 
+        window.addEventListener('wallet_update', handleWalletUpdated);
         window.addEventListener('wallet_updated', handleWalletUpdated);
         window.addEventListener('storage', handleWalletUpdated);
         window.addEventListener('appointment_updated', handleAppointmentUpdated);
+
+        // Connect persistent SSE stream for live real-time wallet push
+        const unsubscribeSse = subscribeWalletSse(user, (newBal, data) => {
+            const numBal = Number(newBal);
+            if (!isNaN(numBal)) {
+                setWallet(prev => ({ ...(prev || {}), balance: numBal, currency: 'INR' }));
+            }
+        });
 
         let bc;
         try {
@@ -211,6 +223,8 @@ const Appointments = () => {
         } catch (e) {}
 
         return () => {
+            if (unsubscribeSse) unsubscribeSse();
+            window.removeEventListener('wallet_update', handleWalletUpdated);
             window.removeEventListener('wallet_updated', handleWalletUpdated);
             window.removeEventListener('storage', handleWalletUpdated);
             window.removeEventListener('appointment_updated', handleAppointmentUpdated);
@@ -229,6 +243,26 @@ const Appointments = () => {
         };
     }, [isBookingModalOpen, selectedAppointment]);
 
+
+    // Helper to check if appointment status is confirmed/active
+    const isConfirmedOrApproved = (st) => {
+        const s = String(st || '').toUpperCase();
+        return s === 'CONFIRMED' || s === 'ACCEPTED' || s === 'SCHEDULED' || s === 'APPROVED' || s === 'DECLINE_CANCELLATION';
+    };
+
+    // Helper to normalize any declined cancellations back to confirmed status with disclaimer notes
+    const normalizeAppointment = (apt) => {
+        if (!apt) return apt;
+        const st = String(apt.status || '').toUpperCase();
+        if (st === 'DECLINE_CANCELLATION' || st === 'REJECT_CANCELLATION') {
+            return {
+                ...apt,
+                status: 'Confirmed',
+                notes: apt.notes || 'Cancellation request declined by dietitian; session remains confirmed.'
+            };
+        }
+        return apt;
+    };
 
     // Helper to check if appointment date/time has passed
     const isDatePassed = (dateStr) => {
@@ -369,7 +403,9 @@ const Appointments = () => {
                 merged = Array.from(map.values());
             }
 
-            const activeAppointments = merged.filter(item => !deletedIds.has(String(item.id)));
+            const activeAppointments = merged
+                .filter(item => !deletedIds.has(String(item.id)))
+                .map(normalizeAppointment);
             activeAppointments.sort((a, b) => new Date(b.appointmentTime) - new Date(a.appointmentTime));
             setAppointments(activeAppointments);
         } catch (err) {
@@ -501,9 +537,18 @@ const Appointments = () => {
         }
     };
 
-    // Marks an upcoming session as cancelled (triggers compensating escrow refund)
+    // Marks an upcoming session as cancelled (triggers compensating escrow refund if unconfirmed)
     const handleCancelAppointment = async (id) => {
         const stringId = String(id);
+        const appt = appointments.find(a => String(a.id) === stringId);
+        const statusUpper = (appt?.status || '').toUpperCase();
+
+        // If approved by dietitian, user CANNOT cancel unilaterally
+        if (isConfirmedOrApproved(statusUpper)) {
+            setCancelPromptModal({ open: true, appointmentId: id });
+            return;
+        }
+
         const updated = appointments.map(a => String(a.id) === stringId ? { ...a, status: 'CANCELLED', escrowStatus: 'REFUNDED' } : a);
         setAppointments(updated);
         try {
@@ -525,6 +570,36 @@ const Appointments = () => {
         }
 
         showToast('Consultation session cancelled. Locked escrow funds automatically refunded to your wallet.');
+    };
+
+    // Submits request to cancel to the dietitian once session is approved
+    const handleRequestCancellation = async (id) => {
+        const stringId = String(id);
+        const appt = appointments.find(a => String(a.id) === stringId);
+
+        const updated = appointments.map(a => String(a.id) === stringId ? { ...a, status: 'CANCELLATION_REQUESTED' } : a);
+        setAppointments(updated);
+        try {
+            localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updated));
+        } catch (e) {}
+
+        if (selectedAppointment && String(selectedAppointment.id) === stringId) {
+            setSelectedAppointment(prev => prev ? { ...prev, status: 'CANCELLATION_REQUESTED' } : null);
+        }
+
+        if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
+            api.post(`/appointments/${id}/request-cancel`, { reason: 'Client requested cancellation. Notice: No money will be refunded.' })
+                .then(res => {
+                    if (res.data) {
+                        setAppointments(prev => prev.map(a => String(a.id) === stringId ? { ...a, ...res.data } : a));
+                    }
+                })
+                .catch(() => {
+                    api.put(`/appointments/${id}/status`, { status: 'CANCELLATION_REQUESTED', notes: 'Client requested cancellation. Notice: No money will be refunded.' }).catch(() => {});
+                });
+        }
+
+        showToast('Cancellation request submitted. The consultation will be cancelled, but the money will not be refunded.');
     };
 
     // Delete record (Allowed for past dates OR future sessions cancelled/rejected)
@@ -615,6 +690,10 @@ const Appointments = () => {
     });
     const featuredUpcoming = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
 
+    const activeDisplayedAppointment = (selectedCardId ? appointments.find(a => String(a.id) === String(selectedCardId)) : null)
+        || featuredUpcoming 
+        || (appointments.length > 0 ? appointments[0] : null);
+
     const deletableAppointmentsCount = appointments.filter(a => canDeleteAppointment(a)).length;
     const upcomingOrOngoingCount = appointments.filter(a => !isDatePassed(a.appointmentTime) && (a.status || '').toUpperCase() !== 'CANCELLED' && (a.status || '').toUpperCase() !== 'REJECTED').length;
     const completedCount = appointments.filter(a => (a.status || '').toUpperCase() === 'COMPLETED').length;
@@ -662,18 +741,25 @@ const Appointments = () => {
                     <p className="text-white/50 text-xs sm:text-sm">Schedule and review 1-on-1 virtual sessions with registered clinical nutritionists.</p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                    {/* Live Wallet Card */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-3 backdrop-blur-md">
-                        <div className="w-8 h-8 rounded-xl bg-[#a5d391]/20 flex items-center justify-center text-[#a5d391]">
+                    {/* Live Wallet Card with direct link to Transaction History */}
+                    <Link 
+                        to="/transactions"
+                        title="App Wallet Balance — Click to view Transaction History & Ledger"
+                        className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/50 rounded-2xl px-4 py-2 flex items-center gap-3 backdrop-blur-md transition-all cursor-pointer group shadow-sm hover:shadow-[0_0_15px_rgba(165,211,145,0.15)]"
+                    >
+                        <div className="w-8 h-8 rounded-xl bg-[#a5d391]/20 group-hover:bg-[#a5d391]/30 flex items-center justify-center text-[#a5d391] transition-colors">
                             <span className="material-symbols-outlined text-lg">account_balance_wallet</span>
                         </div>
                         <div>
-                            <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider">App Wallet</div>
+                            <div className="text-[10px] text-white/50 group-hover:text-white uppercase font-bold tracking-wider flex items-center gap-1 transition-colors">
+                                App Wallet
+                                <span className="material-symbols-outlined text-[12px] text-[#a5d391]">receipt_long</span>
+                            </div>
                             <div className="text-sm font-bold font-mono text-[#a5d391]">
                                 {walletLoading ? '...' : `₹${Number(wallet.balance || 0).toFixed(2)}`}
                             </div>
                         </div>
-                    </div>
+                    </Link>
 
                     <button 
                         onClick={() => setIsBookingModalOpen(true)}
@@ -689,69 +775,152 @@ const Appointments = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Left Content */}
                 <div className="lg:col-span-2 space-y-6">
-                    <h2 className="text-lg font-bold font-hero-display text-white/70 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#a5d391]">stars</span>
-                        Upcoming Consultation
-                    </h2>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-bold font-hero-display text-white/70 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#a5d391]">stars</span>
+                            {selectedCardId ? 'Selected Consultation Details' : 'Upcoming Consultation'}
+                        </h2>
+                        {selectedCardId && featuredUpcoming && String(selectedCardId) !== String(featuredUpcoming.id) && (
+                            <button
+                                type="button"
+                                onClick={() => setSelectedCardId(featuredUpcoming.id)}
+                                className="text-xs text-[#a5d391] hover:text-white font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-sm">replay</span>
+                                Show Next Upcoming
+                            </button>
+                        )}
+                    </div>
 
                     {loading ? (
                         <div className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] text-center text-white/50">
                             Loading consultation schedule...
                         </div>
-                    ) : featuredUpcoming ? (
+                    ) : activeDisplayedAppointment ? (
                         <div className="bg-gradient-to-r from-[#a5d391]/10 via-white/5 to-[#080b12] backdrop-blur-xl border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 flex flex-col md:flex-row gap-6 items-center shadow-xl relative overflow-hidden">
                             <div className="bg-[#080b12]/90 border border-white/10 rounded-2xl p-4 text-center min-w-[110px] shrink-0 shadow-lg">
                                 <div className="text-[#a5d391] font-bold text-xs uppercase tracking-widest mb-1">
-                                    {formatDate(featuredUpcoming.appointmentTime).month}
+                                    {formatDate(activeDisplayedAppointment.appointmentTime).month}
                                 </div>
                                 <div className="text-3xl font-bold font-hero-display text-white">
-                                    {formatDate(featuredUpcoming.appointmentTime).day}
+                                    {formatDate(activeDisplayedAppointment.appointmentTime).day}
                                 </div>
                                 <div className="text-white/40 text-xs mt-1">
-                                    {formatDate(featuredUpcoming.appointmentTime).time}
+                                    {formatDate(activeDisplayedAppointment.appointmentTime).time}
                                 </div>
                             </div>
 
                             <div className="flex-grow text-center md:text-left">
                                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
                                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                                        (featuredUpcoming.status || '').toUpperCase() === 'CONFIRMED' || (featuredUpcoming.status || '').toUpperCase() === 'SCHEDULED' || (featuredUpcoming.status || '').toUpperCase() === 'APPROVED' 
+                                        (activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED'
+                                            ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                                            : (activeDisplayedAppointment.status || '').toUpperCase() === 'REJECTED'
+                                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                            : (activeDisplayedAppointment.status || '').toUpperCase() === 'COMPLETED'
+                                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                            : (activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED'
+                                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                                            : isConfirmedOrApproved(activeDisplayedAppointment.status) 
                                             ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' 
-                                            : (featuredUpcoming.status || '').toUpperCase() === 'REQUESTED' || (featuredUpcoming.status || '').toUpperCase().includes('PENDING')
+                                            : (activeDisplayedAppointment.status || '').toUpperCase() === 'REQUESTED' || (activeDisplayedAppointment.status || '').toUpperCase().includes('PENDING')
                                             ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
                                             : 'bg-white/10 text-white/80 border border-white/20'
                                     }`}>
-                                        {((featuredUpcoming.status || '').toUpperCase() === 'REQUESTED' || (featuredUpcoming.status || '').toUpperCase().includes('PENDING')) ? 'Requested' : (featuredUpcoming.status || 'Requested')}
+                                        {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED'
+                                            ? 'Cancelled'
+                                            : (activeDisplayedAppointment.status || '').toUpperCase() === 'REJECTED'
+                                            ? 'Rejected'
+                                            : (activeDisplayedAppointment.status || '').toUpperCase() === 'COMPLETED'
+                                            ? 'Completed'
+                                            : (activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED'
+                                            ? 'Cancellation Requested'
+                                            : isConfirmedOrApproved(activeDisplayedAppointment.status) 
+                                            ? 'Confirmed' 
+                                            : ((activeDisplayedAppointment.status || '').toUpperCase() === 'REQUESTED' || (activeDisplayedAppointment.status || '').toUpperCase().includes('PENDING')) ? 'Requested' : (activeDisplayedAppointment.status || 'Requested')}
                                     </span>
-                                    <span className="text-xs text-white/40 font-semibold">• {featuredUpcoming.sessionType || 'Clinical Consultation'}</span>
+                                    <span className="text-xs text-white/40 font-semibold">• {activeDisplayedAppointment.sessionType || 'Clinical Consultation'}</span>
                                 </div>
 
-                                <h3 className="font-bold text-xl mb-1 font-hero-display text-white">{featuredUpcoming.title || 'Metabolic Baseline Review'}</h3>
-                                <p className="text-white/60 text-sm mb-4">
-                                    Nutritionist: <span className="text-white font-semibold">{featuredUpcoming.dietitianName || primaryDietitian.name}</span>
-                                    {featuredUpcoming.notes ? ` — "${featuredUpcoming.notes}"` : ''}
+                                <h3 className="font-bold text-xl mb-1 font-hero-display text-white">{activeDisplayedAppointment.title || 'Metabolic Baseline Review'}</h3>
+                                <p className="text-white/60 text-sm mb-2">
+                                    Nutritionist: <span className="text-white font-semibold">{activeDisplayedAppointment.dietitianName || primaryDietitian.name}</span>
+                                    {activeDisplayedAppointment.notes ? ` — "${activeDisplayedAppointment.notes}"` : ''}
                                 </p>
 
+                                {((activeDisplayedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (activeDisplayedAppointment.notes || '').toLowerCase().includes('declined by dietitian')) && (
+                                    <div className="mb-4 bg-amber-500/15 border border-amber-500/35 rounded-xl px-3.5 py-2 text-xs text-amber-200 flex items-center gap-2 font-medium">
+                                        <span className="material-symbols-outlined text-amber-400 text-base shrink-0">info</span>
+                                        <span>Disclaimer: Cancellation request was declined by the dietitian. The consultation remains scheduled and confirmed.</span>
+                                    </div>
+                                )}
+
                                 <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsChatOpen(true)}
-                                        className="bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.2)] cursor-pointer"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">forum</span> Chat with Dietitian
-                                    </button>
-                                    <Link 
-                                        to="/virtual-room" 
-                                        className="bg-[#a5d391] text-black px-5 py-2.5 rounded-full text-xs font-bold hover:bg-white transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">videocam</span> Join Virtual Room
-                                    </Link>
-                                    <button 
-                                        onClick={() => handleCancelAppointment(featuredUpcoming.id)}
-                                        className="border border-red-500/30 text-red-300 hover:bg-red-500 hover:text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer"
-                                    >
-                                        Cancel Session
-                                    </button>
+                                    {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED' ? (
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <div className="bg-red-500/15 text-red-300 border border-red-500/30 px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                                                <span className="material-symbols-outlined text-sm">cancel</span>
+                                                <span>Session Cancelled</span>
+                                            </div>
+                                            {canDeleteAppointment(activeDisplayedAppointment) && (
+                                                <button 
+                                                    onClick={() => handleDeleteHistoryItem(null, activeDisplayedAppointment)}
+                                                    className="border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                                    Delete Record
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (activeDisplayedAppointment.status || '').toUpperCase() === 'COMPLETED' ? (
+                                        <div className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                                            <span>Session Completed</span>
+                                        </div>
+                                    ) : (activeDisplayedAppointment.status || '').toUpperCase() === 'REJECTED' ? (
+                                        <div className="bg-rose-500/20 text-rose-300 border border-rose-500/30 px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5">
+                                            <span className="material-symbols-outlined text-sm">do_not_disturb</span>
+                                            <span>Session Rejected by Nutritionist</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsChatOpen(true)}
+                                                className="bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.2)] cursor-pointer"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">forum</span> Chat with Dietitian
+                                            </button>
+                                            <Link 
+                                                to="/virtual-room" 
+                                                className="bg-[#a5d391] text-black px-5 py-2.5 rounded-full text-xs font-bold hover:bg-white transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">videocam</span> Join Virtual Room
+                                            </Link>
+                                            {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED' ? (
+                                                <div className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                                                    <span className="material-symbols-outlined text-sm animate-pulse">hourglass_top</span>
+                                                    <span>Cancellation Requested (Awaiting Dietitian)</span>
+                                                </div>
+                                            ) : isConfirmedOrApproved(activeDisplayedAppointment.status) ? (
+                                                <button 
+                                                    onClick={() => setCancelPromptModal({ open: true, appointmentId: activeDisplayedAppointment.id })}
+                                                    className="border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-black px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                                                    title="Request cancellation from dietitian. Note: Money will not be refunded."
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">schedule_send</span>
+                                                    <span>Request to Cancel</span>
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => handleCancelAppointment(activeDisplayedAppointment.id)}
+                                                    className="border border-red-500/30 text-red-300 hover:bg-red-500 hover:text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer"
+                                                >
+                                                    Cancel Session
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -867,11 +1036,16 @@ const Appointments = () => {
                                     const dt = formatDate(item.appointmentTime);
                                     const passed = isDatePassed(item.appointmentTime);
                                     const upper = (item.status || '').toUpperCase();
+                                    const isSelected = String(item.id) === String(activeDisplayedAppointment?.id);
                                     return (
                                         <div 
                                             key={item.id} 
-                                            onClick={() => setSelectedAppointment(item)}
-                                            className="p-5 sm:p-6 flex items-center justify-between gap-4 hover:bg-white/5 transition-colors cursor-pointer group"
+                                            onClick={() => setSelectedCardId(item.id)}
+                                            className={`p-5 sm:p-6 flex items-center justify-between gap-4 transition-all cursor-pointer group ${
+                                                isSelected 
+                                                    ? 'bg-white/10 border-l-4 border-l-[#a5d391] shadow-lg' 
+                                                    : 'hover:bg-white/5 border-l-4 border-l-transparent'
+                                            }`}
                                         >
                                             <div className="flex items-center gap-4 min-w-0">
                                                 <div className="w-11 h-11 rounded-2xl bg-[#080b12] border border-white/10 flex flex-col items-center justify-center shrink-0 shadow-inner">
@@ -909,7 +1083,12 @@ const Appointments = () => {
                                                         <span className="material-symbols-outlined text-xs">do_not_disturb</span>
                                                         Rejected
                                                     </span>
-                                                ) : upper === 'ONGOING' || (!passed && upper === 'CONFIRMED') ? (
+                                                ) : upper === 'CANCELLATION_REQUESTED' ? (
+                                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 shadow-sm">
+                                                        <span className="material-symbols-outlined text-xs animate-pulse">hourglass_top</span>
+                                                        Cancel Pending
+                                                    </span>
+                                                ) : upper === 'ONGOING' || (!passed && (upper === 'CONFIRMED' || upper === 'SCHEDULED' || upper === 'APPROVED' || upper === 'DECLINE_CANCELLATION')) ? (
                                                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 animate-pulse">
                                                         <span className="material-symbols-outlined text-xs">timer</span>
                                                         {upper === 'ONGOING' ? 'Ongoing' : 'Upcoming'}
@@ -951,6 +1130,12 @@ const Appointments = () => {
                                                     >
                                                         <span className="material-symbols-outlined text-base">lock</span>
                                                     </div>
+                                                )}
+
+                                                {isSelected && (
+                                                    <span className="hidden md:inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30">
+                                                        Active View
+                                                    </span>
                                                 )}
 
                                                 <span className="material-symbols-outlined text-white/30 group-hover:text-white transition-colors text-base hidden sm:inline">chevron_right</span>
@@ -1355,7 +1540,7 @@ const Appointments = () => {
                         <div className="flex justify-between items-start border-b border-white/10 pb-4">
                             <div>
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                                    (selectedAppointment.status || '').toUpperCase() === 'CONFIRMED' || (selectedAppointment.status || '').toUpperCase() === 'SCHEDULED' || (selectedAppointment.status || '').toUpperCase() === 'APPROVED' 
+                                    isConfirmedOrApproved(selectedAppointment.status)
                                         ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' 
                                         : (selectedAppointment.status || '').toUpperCase() === 'CANCELLED'
                                         ? 'bg-red-500/20 text-red-300 border border-red-500/30'
@@ -1365,7 +1550,7 @@ const Appointments = () => {
                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                                         : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                                 }`}>
-                                    {((selectedAppointment.status || '').toUpperCase() === 'REQUESTED' || (selectedAppointment.status || '').toUpperCase().includes('PENDING')) ? 'Requested' : (selectedAppointment.status || 'Requested')}
+                                    {isConfirmedOrApproved(selectedAppointment.status) ? 'Confirmed' : ((selectedAppointment.status || '').toUpperCase() === 'REQUESTED' || (selectedAppointment.status || '').toUpperCase().includes('PENDING')) ? 'Requested' : (selectedAppointment.status || 'Requested')}
                                 </span>
                                 <h3 className="text-xl font-bold text-white mt-2 font-hero-display">{selectedAppointment.title || 'Consultation Session'}</h3>
                                 <p className="text-xs text-[#a5d391] font-semibold">{selectedAppointment.sessionType || 'Clinical Consultation'}</p>
@@ -1376,6 +1561,13 @@ const Appointments = () => {
                         </div>
 
                         <div className="space-y-3">
+                            {((selectedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (selectedAppointment.notes || '').toLowerCase().includes('declined by dietitian')) && (
+                                <div className="bg-amber-500/15 border border-amber-500/35 rounded-2xl p-3.5 text-xs text-amber-200 flex items-center gap-2 font-medium">
+                                    <span className="material-symbols-outlined text-amber-400 text-base shrink-0">info</span>
+                                    <span>Disclaimer: Cancellation request was declined by the dietitian. The session remains confirmed.</span>
+                                </div>
+                            )}
+
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3">
                                 <span className="material-symbols-outlined text-2xl text-[#a5d391]">schedule</span>
                                 <div>
@@ -1409,13 +1601,27 @@ const Appointments = () => {
                                     <span>Delete Record</span>
                                 </button>
                             ) : (
-                                (selectedAppointment.status || '').toUpperCase() !== 'CANCELLED' && (selectedAppointment.status || '').toUpperCase() !== 'REJECTED' ? (
+                                (selectedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED' ? (
+                                    <div className="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-500/10 px-4 py-2.5 rounded-xl border border-amber-500/30 font-bold">
+                                        <span className="material-symbols-outlined text-sm animate-pulse">hourglass_top</span>
+                                        <span>Cancellation Requested (Awaiting Dietitian)</span>
+                                    </div>
+                                ) : isConfirmedOrApproved(selectedAppointment.status) ? (
+                                    <button 
+                                        onClick={() => setCancelPromptModal({ open: true, appointmentId: selectedAppointment.id })}
+                                        className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500 hover:text-black transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                                        title="Request cancellation from dietitian. Note: Money will not be refunded."
+                                    >
+                                        <span className="material-symbols-outlined text-sm">schedule_send</span>
+                                        <span>Request to Cancel</span>
+                                    </button>
+                                ) : (selectedAppointment.status || '').toUpperCase() !== 'CANCELLED' && (selectedAppointment.status || '').toUpperCase() !== 'REJECTED' ? (
                                     <button 
                                         onClick={() => handleCancelAppointment(selectedAppointment.id)}
                                         className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
                                     >
                                         <span className="material-symbols-outlined text-sm">event_busy</span>
-                                        <span>Cancel Consultation</span>
+                                        <span>Cancel Booking</span>
                                     </button>
                                 ) : (
                                     <div className="flex items-center gap-1.5 text-xs text-white/40 bg-white/5 px-3 py-2 rounded-xl border border-white/10">
@@ -1496,6 +1702,58 @@ const Appointments = () => {
                                 className="w-full py-3 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg"
                             >
                                 Acknowledge &amp; Return
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Request Cancellation Confirmation Pop-up */}
+            {cancelPromptModal.open && (
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fadeIn">
+                    <div className="bg-[#121612] border-2 border-amber-500/60 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full relative shadow-[0_0_50px_rgba(245,158,11,0.3)] space-y-5">
+                        <div className="flex items-center gap-3 border-b border-amber-500/20 pb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                                <span className="material-symbols-outlined text-3xl">warning</span>
+                            </div>
+                            <div>
+                                <div className="text-xs font-black uppercase tracking-widest text-amber-400">Important Policy</div>
+                                <h3 className="text-lg font-bold text-white font-hero-display">Request to Cancel</h3>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-xs">
+                            <div className="flex items-start gap-2.5">
+                                <span className="material-symbols-outlined text-amber-400 text-lg shrink-0 mt-0.5">info</span>
+                                <p className="text-amber-200/90 font-medium leading-relaxed">
+                                    The consultation will be cancelled, but the money will not be refunded.
+                                </p>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-white/70 leading-relaxed">
+                            Since this consultation has already been approved and reserved by your dietitian, submitting this request will notify the dietitian to cancel the scheduled session. Money cannot be refunded.
+                        </p>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setCancelPromptModal({ open: false, appointmentId: null })}
+                                className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                                Keep Session
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const targetId = cancelPromptModal.appointmentId;
+                                    setCancelPromptModal({ open: false, appointmentId: null });
+                                    if (targetId) handleRequestCancellation(targetId);
+                                }}
+                                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5"
+                            >
+                                <span className="material-symbols-outlined text-sm">schedule_send</span>
+                                Confirm Request
                             </button>
                         </div>
                     </div>

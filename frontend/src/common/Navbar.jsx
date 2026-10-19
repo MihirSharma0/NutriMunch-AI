@@ -55,6 +55,11 @@ export const getNavItemsForRole = (user) => {
         { label: 'Health Reports', path: '/reports', icon: 'lab_profile', desc: 'Export clinical biometrics & progress cards' }
     ];
 
+    const consultationSubMenu = [
+        { label: 'Appointments', path: '/appointments', icon: 'calendar_month', desc: 'Schedule & review 1-on-1 sessions with nutritionists' },
+        { label: 'Transactions', path: '/transactions', icon: 'receipt_long', desc: 'Wallet balance, payment history & escrow audit' }
+    ];
+
     const userAiSubMenu = [
         { label: 'AI Diet Generator', path: '/ai-diet', icon: 'magic_button', desc: 'Generate instant macro-balanced meal plans' },
         { label: 'AI Food Analyzer', path: '/ai-image', icon: 'center_focus_strong', desc: 'Scan food photos for calories & macro breakdown' },
@@ -97,7 +102,7 @@ export const getNavItemsForRole = (user) => {
         { label: 'Home', path: '/' },
         { label: 'Platform Features', subMenu: userAiSubMenu, headerTitle: 'AI Platform Suite' },
         { label: 'Diet & Progress', subMenu: dietProgressSubMenu, headerTitle: 'Diet & Health Tracking' },
-        { label: 'Appointments', path: '/appointments' },
+        { label: 'Consultation', subMenu: consultationSubMenu, headerTitle: 'Consultations & Billing' },
         { label: 'Testimonials', path: '/testimonials' },
         { label: 'Contact', path: '/contact' }
     ];
@@ -134,42 +139,19 @@ const Navbar = () => {
         return () => window.removeEventListener('nutrimunch_open_chat', handleOpenChat);
     }, []);
 
-    const [isForceCollapsed, setIsForceCollapsed] = useState(false);
     const navContainerRef = useRef(null);
-    const desktopMenuRef = useRef(null);
-    const rightActionsRef = useRef(null);
     const dropdownRef = useRef(null);
     const notificationRef = useRef(null);
-    const menuWidthRef = useRef(640);
 
     useEffect(() => {
-        const checkCollision = () => {
-            if (desktopMenuRef.current && desktopMenuRef.current.offsetWidth > 100) {
-                menuWidthRef.current = desktopMenuRef.current.offsetWidth;
-            }
-
-            if (!navContainerRef.current) return;
-            const containerWidth = navContainerRef.current.offsetWidth;
-            const rightWidth = rightActionsRef.current ? rightActionsRef.current.offsetWidth : 230;
-            // Point where consultation chat icon touches the Contact menu:
-            // Logo (~150px) + Menu (~640px) + Right controls (~230px) + Container padding (48px) + safety buffer (16px)
-            const minRequiredWidth = 150 + (menuWidthRef.current || 640) + rightWidth + 48 + 16;
-
-            if (containerWidth < minRequiredWidth || window.innerWidth < 1024) {
-                setIsForceCollapsed(true);
-            } else {
-                setIsForceCollapsed(false);
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setIsMenuOpen(false);
             }
         };
-
-        checkCollision();
-        const timer = setTimeout(checkCollision, 50);
-        window.addEventListener('resize', checkCollision);
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener('resize', checkCollision);
-        };
-    }, [user, location.pathname]);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const navItems = getNavItemsForRole(user);
     const rawRole = user?.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'GUEST';
@@ -502,11 +484,8 @@ const Navbar = () => {
 
                     {/* Desktop Navigation Items Container */}
                     <div 
-                        ref={(el) => {
-                            dropdownRef.current = el;
-                            desktopMenuRef.current = el;
-                        }} 
-                        className={`${isForceCollapsed ? '!hidden' : 'hidden lg:flex'} items-center gap-0.5 xl:gap-1 bg-white/5 rounded-full px-3.5 py-1 border border-white/10 mx-1 xl:mx-2 shrink-0 shadow-inner`}
+                        ref={dropdownRef} 
+                        className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-white/5 rounded-full px-2.5 xl:px-3.5 py-1 border border-white/10 mx-1 xl:mx-2 shrink-0 shadow-inner"
                     >
                         {(() => {
                             const isStandaloneActive = navItems.some(nav => !nav.subMenu && checkIsActive(location.pathname, nav.path));
@@ -577,7 +556,7 @@ const Navbar = () => {
                     </div>
 
                     {/* Right User Actions & Controls (Notifications, Mobile Toggle, Login/Profile) */}
-                    <div ref={rightActionsRef} className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 shrink-0">
                         {/* Consultation Chat Button (when user is logged in) */}
                         {user && (
                             <button
@@ -707,10 +686,10 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* Mobile & Dynamic Collision Menu Toggle Button (Hamburger / Close) */}
+                        {/* Mobile Menu Toggle Button (Hamburger / Close) */}
                         <button
                             type="button"
-                            className={`${isForceCollapsed ? '!flex' : 'lg:hidden flex'} w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm`}
+                            className="lg:hidden flex w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm"
                             onClick={() => setIsMenuOpen(prev => !prev)}
                             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
                             aria-expanded={isMenuOpen}
@@ -775,8 +754,8 @@ const Navbar = () => {
                     </div>
                 </div>
 
-                {/* Mobile & Collapsed dropdown panel */}
-                <div className={`${isForceCollapsed ? 'block' : 'lg:hidden block'} grid transition-all duration-300 ease-in-out ${isMenuOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                {/* Mobile Dropdown Panel */}
+                <div className={`lg:hidden block grid transition-all duration-300 ease-in-out ${isMenuOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                     <div className="overflow-hidden">
                         <div className="px-5 pb-6 pt-2 border-t border-white/10 flex flex-col gap-1">
                             {navItems.map(item => {

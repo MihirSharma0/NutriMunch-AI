@@ -53,6 +53,7 @@ import PaymentManagement from './pages/Dashboard/Admin/PaymentManagement';
 import AdminAnalytics from './pages/Dashboard/Admin/AdminAnalytics';
 import AdminProfile from './pages/Dashboard/Admin/AdminProfile';
 import DietPlanManagement from './pages/Dashboard/Admin/DietPlanManagement';
+import TransactionHistory from './pages/Dashboard/Shared/TransactionHistory';
 import TestimonialManagement from './pages/Dashboard/Admin/TestimonialManagement';
 
 import { useEffect } from 'react';
@@ -145,7 +146,10 @@ function App() {
               <Route path="dashboard/admin/dietitians" element={<DietitianManagement />} />
               <Route path="dashboard/admin/testimonials" element={<TestimonialManagement />} />
               <Route path="dashboard/admin/payments" element={<PaymentManagement />} />
-              <Route path="dashboard/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="transactions" element={<TransactionHistory />} />
+              <Route path="dashboard/user/transactions" element={<TransactionHistory />} />
+              <Route path="dashboard/nutritionist/transactions" element={<TransactionHistory />} />
+              <Route path="dashboard/admin/transactions" element={<TransactionHistory />} />
 
               <Route path="*" element={<NotFound />} />
             </Route>

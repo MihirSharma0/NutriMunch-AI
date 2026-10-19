@@ -49,6 +49,24 @@ public class WalletService {
         return wallet;
     }
 
+    public Wallet getOrCreateWalletWithLock(User user) {
+        if (user == null || user.getId() == null) {
+            return getOrCreateWallet(user);
+        }
+        Wallet wallet = walletRepository.findByUserIdWithLock(user.getId()).orElseGet(() -> {
+            Wallet newWallet = new Wallet();
+            newWallet.setUser(user);
+            newWallet.setBalance(BigDecimal.ZERO);
+            newWallet.setCurrency("INR");
+            return walletRepository.save(newWallet);
+        });
+        if (wallet.getBalance() == null) {
+            wallet.setBalance(BigDecimal.ZERO);
+            wallet = walletRepository.save(wallet);
+        }
+        return wallet;
+    }
+
     public Map<String, Object> getWalletInfo(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
@@ -60,6 +78,7 @@ public class WalletService {
 
         // Auto-reconcile with ledger transactions
         try {
+            List<WalletTransaction> transactions = walletTransactionRepository.findAllByOrderByCreatedAtDesc();
             BigDecimal totalCredits = transactions.stream()
                     .filter(tx -> tx.getRecipient() != null && (tx.getRecipient().getId().equals(targetUserId) 
                             || (userEmail != null && userEmail.equalsIgnoreCase(tx.getRecipient().getEmail()))
@@ -168,7 +187,7 @@ public class WalletService {
         return response;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> verifyAndCreditAdminAllocation(
             Long adminId,
             Long recipientId,
@@ -231,13 +250,17 @@ public class WalletService {
 
         // Push real-time Server-Sent Event (SSE) directly to recipient's live dashboard
         Map<String, Object> ssePayload = new HashMap<>();
-        ssePayload.put("type", "WALLET_UPDATED");
+        ssePayload.put("eventType", "ADMIN_CREDIT");
+        ssePayload.put("type", "ADMIN_CREDIT_ALLOCATION");
+        ssePayload.put("transactionId", savedTx.getId());
+        ssePayload.put("transactionReference", reference);
         ssePayload.put("recipientId", recipient.getId());
         ssePayload.put("recipientEmail", recipient.getEmail());
         ssePayload.put("newBalance", receiverBalanceAfter);
         ssePayload.put("balance", receiverBalanceAfter);
         ssePayload.put("amount", amount);
-        ssePayload.put("transactionReference", reference);
+        ssePayload.put("description", notes != null && !notes.isBlank() ? notes : "Admin credit allocation via Razorpay test mode");
+        ssePayload.put("timestamp", java.time.Instant.now().toString());
         ssePayload.put("status", "SUCCESS");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
@@ -262,7 +285,7 @@ public class WalletService {
         return result;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> syncRecipientBalance(Long adminId, Long recipientId, BigDecimal targetBalance, String notes) {
         if (targetBalance == null || targetBalance.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Target balance cannot be negative");
@@ -301,7 +324,31 @@ public class WalletService {
             tx.setNotes(notes != null && !notes.isBlank() ? notes : "Admin direct balance synchronization to DB");
             tx.setReceiverBalanceBefore(currentBalance);
             tx.setReceiverBalanceAfter(targetBalance);
-            walletTransactionRepository.save(tx);
+            WalletTransaction savedTx = walletTransactionRepository.save(tx);
+            Map<String, Object> txMap = mapTransactionToMap(savedTx);
+
+            // Push real-time Server-Sent Event (SSE) to recipient
+            String eventType = diff.compareTo(BigDecimal.ZERO) >= 0 ? "ADMIN_CREDIT" : "ADMIN_DEBIT";
+            Map<String, Object> ssePayload = new HashMap<>();
+            ssePayload.put("eventType", eventType);
+            ssePayload.put("type", tx.getTransactionType());
+            ssePayload.put("transactionId", savedTx.getId());
+            ssePayload.put("transactionReference", reference);
+            ssePayload.put("recipientId", recipient.getId());
+            ssePayload.put("recipientEmail", recipient.getEmail());
+            ssePayload.put("newBalance", targetBalance);
+            ssePayload.put("balance", targetBalance);
+            ssePayload.put("amount", diff);
+            ssePayload.put("description", tx.getNotes());
+            ssePayload.put("timestamp", java.time.Instant.now().toString());
+            ssePayload.put("status", "SUCCESS");
+            ssePayload.put("transaction", txMap);
+            walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+
+            walletSseService.broadcastToAdmins(Map.of(
+                    "type", "LEDGER_UPDATED",
+                    "transaction", txMap
+            ));
         }
 
         Map<String, Object> res = new HashMap<>();
@@ -309,21 +356,277 @@ public class WalletService {
         res.put("recipientId", recipient.getId());
         res.put("email", recipient.getEmail());
         res.put("balance", wallet.getBalance());
-
-        // Push real-time Server-Sent Event (SSE) to recipient
-        walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), Map.of(
-                "type", "WALLET_UPDATED",
-                "recipientId", recipient.getId(),
-                "recipientEmail", recipient.getEmail(),
-                "newBalance", wallet.getBalance(),
-                "balance", wallet.getBalance(),
-                "status", "SUCCESS"
-        ));
-
         return res;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> adminManualTopup(Long adminId, Long recipientId, BigDecimal amount, String notes) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Top-up amount must be strictly positive");
+        }
+        User recipient = userRepository.findById(recipientId)
+                .orElseThrow(() -> new IllegalArgumentException("Recipient not found with id: " + recipientId));
+        User admin = adminId != null ? userRepository.findById(adminId).orElse(null) : null;
+        if (admin == null) {
+            admin = userRepository.findByRole(Role.ADMIN).stream().findFirst().orElse(null);
+        }
+
+        Wallet wallet = getOrCreateWallet(recipient);
+        BigDecimal before = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal after = before.add(amount);
+        wallet.setBalance(after);
+        walletRepository.save(wallet);
+
+        String reference = "TXN-TOPUP-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        WalletTransaction tx = new WalletTransaction();
+        tx.setTransactionReference(reference);
+        tx.setTargetWallet(wallet);
+        tx.setInitiator(admin);
+        tx.setRecipient(recipient);
+        tx.setAmount(amount);
+        tx.setCurrency(wallet.getCurrency());
+        tx.setTransactionType("ADMIN_MANUAL_TOPUP");
+        tx.setStatus("SUCCESS");
+        tx.setNotes(notes != null && !notes.isBlank() ? notes : "Administrator manual credit top-up");
+        tx.setReceiverBalanceBefore(before);
+        tx.setReceiverBalanceAfter(after);
+        WalletTransaction savedTx = walletTransactionRepository.save(tx);
+        Map<String, Object> txMap = mapTransactionToMap(savedTx);
+
+        Map<String, Object> ssePayload = new HashMap<>();
+        ssePayload.put("eventType", "ADMIN_CREDIT");
+        ssePayload.put("type", "ADMIN_MANUAL_TOPUP");
+        ssePayload.put("transactionId", savedTx.getId());
+        ssePayload.put("transactionReference", reference);
+        ssePayload.put("recipientId", recipient.getId());
+        ssePayload.put("recipientEmail", recipient.getEmail());
+        ssePayload.put("newBalance", after);
+        ssePayload.put("balance", after);
+        ssePayload.put("amount", amount);
+        ssePayload.put("description", tx.getNotes());
+        ssePayload.put("timestamp", java.time.Instant.now().toString());
+        ssePayload.put("status", "SUCCESS");
+        ssePayload.put("transaction", txMap);
+        walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+
+        walletSseService.broadcastToAdmins(Map.of(
+                "type", "LEDGER_UPDATED",
+                "transaction", txMap
+        ));
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("status", "SUCCESS");
+        res.put("transactionReference", reference);
+        res.put("recipientId", recipient.getId());
+        res.put("previousBalance", before);
+        res.put("newBalance", after);
+        res.put("transaction", txMap);
+        return res;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> adminAllocate(Long adminId, Long recipientId, BigDecimal amount, String notes) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Allocation amount must be strictly positive");
+        }
+        User recipient = userRepository.findById(recipientId)
+                .orElseThrow(() -> new IllegalArgumentException("Recipient not found with id: " + recipientId));
+        User admin = adminId != null ? userRepository.findById(adminId).orElse(null) : null;
+        if (admin == null) {
+            admin = userRepository.findByRole(Role.ADMIN).stream().findFirst().orElse(null);
+        }
+
+        // Concurrency control: Pessimistic write lock on target wallet
+        Wallet wallet = getOrCreateWalletWithLock(recipient);
+        BigDecimal before = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal after = before.add(amount);
+        wallet.setBalance(after);
+        walletRepository.save(wallet);
+
+        String reference = "TXN-ALLOC-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        WalletTransaction tx = new WalletTransaction();
+        tx.setTransactionReference(reference);
+        tx.setTargetWallet(wallet);
+        tx.setInitiator(admin);
+        tx.setRecipient(recipient);
+        tx.setAmount(amount);
+        tx.setCurrency(wallet.getCurrency());
+        tx.setTransactionType("admin_allocation");
+        tx.setStatus("completed");
+        tx.setNotes(notes != null && !notes.isBlank() ? notes : "Administrator allocation");
+        tx.setReceiverBalanceBefore(before);
+        tx.setReceiverBalanceAfter(after);
+        WalletTransaction savedTx = walletTransactionRepository.save(tx);
+        Map<String, Object> txMap = mapTransactionToMap(savedTx);
+
+        // Immediate Server-Sent Event (SSE) dispatch
+        Map<String, Object> ssePayload = new HashMap<>();
+        ssePayload.put("eventType", "ADMIN_CREDIT");
+        ssePayload.put("type", "admin_allocation");
+        ssePayload.put("transactionType", "admin_allocation");
+        ssePayload.put("transactionId", savedTx.getId());
+        ssePayload.put("transactionReference", reference);
+        ssePayload.put("recipientId", recipient.getId());
+        ssePayload.put("recipientEmail", recipient.getEmail());
+        ssePayload.put("newBalance", after);
+        ssePayload.put("balance", after);
+        ssePayload.put("amount", amount);
+        ssePayload.put("description", tx.getNotes());
+        ssePayload.put("message", String.format("Admin allocated ₹%.2f to your wallet", amount));
+        ssePayload.put("timestamp", java.time.Instant.now().toString());
+        ssePayload.put("status", "completed");
+        ssePayload.put("transaction", txMap);
+        walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+
+        walletSseService.broadcastToAdmins(Map.of(
+                "type", "LEDGER_UPDATED",
+                "transaction", txMap
+        ));
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("status", "completed");
+        res.put("transactionReference", reference);
+        res.put("recipientId", recipient.getId());
+        res.put("previousBalance", before);
+        res.put("newBalance", after);
+        res.put("transaction", txMap);
+        return res;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> adminBonusCredit(Long adminId, Long recipientId, BigDecimal amount, String notes) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Bonus credit amount must be strictly positive");
+        }
+        User recipient = userRepository.findById(recipientId)
+                .orElseThrow(() -> new IllegalArgumentException("Recipient not found with id: " + recipientId));
+        User admin = adminId != null ? userRepository.findById(adminId).orElse(null) : null;
+        if (admin == null) {
+            admin = userRepository.findByRole(Role.ADMIN).stream().findFirst().orElse(null);
+        }
+
+        Wallet wallet = getOrCreateWallet(recipient);
+        BigDecimal before = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal after = before.add(amount);
+        wallet.setBalance(after);
+        walletRepository.save(wallet);
+
+        String reference = "TXN-BONUS-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        WalletTransaction tx = new WalletTransaction();
+        tx.setTransactionReference(reference);
+        tx.setTargetWallet(wallet);
+        tx.setInitiator(admin);
+        tx.setRecipient(recipient);
+        tx.setAmount(amount);
+        tx.setCurrency(wallet.getCurrency());
+        tx.setTransactionType("BONUS_CREDIT");
+        tx.setStatus("SUCCESS");
+        tx.setNotes(notes != null && !notes.isBlank() ? notes : "Promotional or incentive bonus credit");
+        tx.setReceiverBalanceBefore(before);
+        tx.setReceiverBalanceAfter(after);
+        WalletTransaction savedTx = walletTransactionRepository.save(tx);
+        Map<String, Object> txMap = mapTransactionToMap(savedTx);
+
+        Map<String, Object> ssePayload = new HashMap<>();
+        ssePayload.put("eventType", "ADMIN_CREDIT");
+        ssePayload.put("type", "BONUS_CREDIT");
+        ssePayload.put("transactionId", savedTx.getId());
+        ssePayload.put("transactionReference", reference);
+        ssePayload.put("recipientId", recipient.getId());
+        ssePayload.put("recipientEmail", recipient.getEmail());
+        ssePayload.put("newBalance", after);
+        ssePayload.put("balance", after);
+        ssePayload.put("amount", amount);
+        ssePayload.put("description", tx.getNotes());
+        ssePayload.put("timestamp", java.time.Instant.now().toString());
+        ssePayload.put("status", "SUCCESS");
+        ssePayload.put("transaction", txMap);
+        walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+
+        walletSseService.broadcastToAdmins(Map.of(
+                "type", "LEDGER_UPDATED",
+                "transaction", txMap
+        ));
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("status", "SUCCESS");
+        res.put("transactionReference", reference);
+        res.put("recipientId", recipient.getId());
+        res.put("previousBalance", before);
+        res.put("newBalance", after);
+        res.put("transaction", txMap);
+        return res;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> adminPlatformDeduction(Long adminId, Long recipientId, BigDecimal amount, String notes) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Deduction amount must be strictly positive");
+        }
+        User recipient = userRepository.findById(recipientId)
+                .orElseThrow(() -> new IllegalArgumentException("Recipient not found with id: " + recipientId));
+        User admin = adminId != null ? userRepository.findById(adminId).orElse(null) : null;
+        if (admin == null) {
+            admin = userRepository.findByRole(Role.ADMIN).stream().findFirst().orElse(null);
+        }
+
+        Wallet wallet = getOrCreateWallet(recipient);
+        BigDecimal before = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal after = before.subtract(amount);
+        if (after.compareTo(BigDecimal.ZERO) < 0) {
+            after = BigDecimal.ZERO;
+        }
+        wallet.setBalance(after);
+        walletRepository.save(wallet);
+
+        String reference = "TXN-DEDUCT-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        WalletTransaction tx = new WalletTransaction();
+        tx.setTransactionReference(reference);
+        tx.setTargetWallet(wallet);
+        tx.setInitiator(admin);
+        tx.setRecipient(recipient);
+        tx.setAmount(amount);
+        tx.setCurrency(wallet.getCurrency());
+        tx.setTransactionType("PLATFORM_DEDUCTION");
+        tx.setStatus("SUCCESS");
+        tx.setNotes(notes != null && !notes.isBlank() ? notes : "Administrative fee or platform balance adjustment deduction");
+        tx.setReceiverBalanceBefore(before);
+        tx.setReceiverBalanceAfter(after);
+        WalletTransaction savedTx = walletTransactionRepository.save(tx);
+        Map<String, Object> txMap = mapTransactionToMap(savedTx);
+
+        Map<String, Object> ssePayload = new HashMap<>();
+        ssePayload.put("eventType", "ADMIN_DEBIT");
+        ssePayload.put("type", "PLATFORM_DEDUCTION");
+        ssePayload.put("transactionId", savedTx.getId());
+        ssePayload.put("transactionReference", reference);
+        ssePayload.put("recipientId", recipient.getId());
+        ssePayload.put("recipientEmail", recipient.getEmail());
+        ssePayload.put("newBalance", after);
+        ssePayload.put("balance", after);
+        ssePayload.put("amount", amount.negate());
+        ssePayload.put("description", tx.getNotes());
+        ssePayload.put("timestamp", java.time.Instant.now().toString());
+        ssePayload.put("status", "SUCCESS");
+        ssePayload.put("transaction", txMap);
+        walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+
+        walletSseService.broadcastToAdmins(Map.of(
+                "type", "LEDGER_UPDATED",
+                "transaction", txMap
+        ));
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("status", "SUCCESS");
+        res.put("transactionReference", reference);
+        res.put("recipientId", recipient.getId());
+        res.put("previousBalance", before);
+        res.put("newBalance", after);
+        res.put("transaction", txMap);
+        return res;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> recordFailedOrCancelledTransaction(
             Long adminId,
             Long recipientId,
@@ -378,7 +681,7 @@ public class WalletService {
     /**
      * Checkout Balance Validation & Precise Deduction ("Low Balance" Guard)
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> transferForServicePayment(
             Long senderUserId,
             Long recipientNutritionistId,
@@ -396,8 +699,8 @@ public class WalletService {
         User nutritionist = userRepository.findById(recipientNutritionistId)
                 .orElseThrow(() -> new RuntimeException("Nutritionist recipient not found: " + recipientNutritionistId));
 
-        Wallet senderWallet = getOrCreateWallet(sender);
-        Wallet nutritionistWallet = getOrCreateWallet(nutritionist);
+        Wallet senderWallet = getOrCreateWalletWithLock(sender);
+        Wallet nutritionistWallet = getOrCreateWalletWithLock(nutritionist);
 
         BigDecimal currentBalance = senderWallet.getBalance();
 
@@ -479,28 +782,38 @@ public class WalletService {
         Map<String, Object> txMap = mapTransactionToMap(savedTx);
 
         // Push real-time SSE update to sender user
-        walletSseService.sendWalletUpdate(sender.getId(), sender.getEmail(), Map.of(
-                "type", "WALLET_UPDATED",
-                "recipientId", sender.getId(),
-                "recipientEmail", sender.getEmail(),
-                "newBalance", senderBalanceAfter,
-                "balance", senderBalanceAfter,
-                "amount", servicePrice,
-                "transactionReference", successRef,
-                "status", "SUCCESS"
-        ));
+        Map<String, Object> senderPayload = new HashMap<>();
+        senderPayload.put("eventType", "ADMIN_DEBIT");
+        senderPayload.put("type", "SERVICE_PAYMENT");
+        senderPayload.put("transactionId", savedTx.getId());
+        senderPayload.put("transactionReference", successRef);
+        senderPayload.put("recipientId", sender.getId());
+        senderPayload.put("recipientEmail", sender.getEmail());
+        senderPayload.put("newBalance", senderBalanceAfter);
+        senderPayload.put("balance", senderBalanceAfter);
+        senderPayload.put("amount", servicePrice.negate());
+        senderPayload.put("description", successTx.getNotes());
+        senderPayload.put("timestamp", java.time.Instant.now().toString());
+        senderPayload.put("status", "SUCCESS");
+        senderPayload.put("transaction", txMap);
+        walletSseService.sendWalletUpdate(sender.getId(), sender.getEmail(), senderPayload);
 
         // Push real-time SSE update to recipient nutritionist
-        walletSseService.sendWalletUpdate(nutritionist.getId(), nutritionist.getEmail(), Map.of(
-                "type", "WALLET_UPDATED",
-                "recipientId", nutritionist.getId(),
-                "recipientEmail", nutritionist.getEmail(),
-                "newBalance", receiverBalanceAfter,
-                "balance", receiverBalanceAfter,
-                "amount", servicePrice,
-                "transactionReference", successRef,
-                "status", "SUCCESS"
-        ));
+        Map<String, Object> nutriPayload = new HashMap<>();
+        nutriPayload.put("eventType", "ADMIN_CREDIT");
+        nutriPayload.put("type", "SERVICE_PAYMENT");
+        nutriPayload.put("transactionId", savedTx.getId());
+        nutriPayload.put("transactionReference", successRef);
+        nutriPayload.put("recipientId", nutritionist.getId());
+        nutriPayload.put("recipientEmail", nutritionist.getEmail());
+        nutriPayload.put("newBalance", receiverBalanceAfter);
+        nutriPayload.put("balance", receiverBalanceAfter);
+        nutriPayload.put("amount", servicePrice);
+        nutriPayload.put("description", successTx.getNotes());
+        nutriPayload.put("timestamp", java.time.Instant.now().toString());
+        nutriPayload.put("status", "SUCCESS");
+        nutriPayload.put("transaction", txMap);
+        walletSseService.sendWalletUpdate(nutritionist.getId(), nutritionist.getEmail(), nutriPayload);
 
         // Stream to admin ledger
         walletSseService.broadcastToAdmins(Map.of(
@@ -546,6 +859,14 @@ public class WalletService {
         map.put("receiverBalanceBefore", tx.getReceiverBalanceBefore());
         map.put("receiverBalanceAfter", tx.getReceiverBalanceAfter());
         map.put("createdAt", tx.getCreatedAt());
+        map.put("created_at", tx.getCreatedAt());
+        map.put("type", tx.getTransactionType());
+        map.put("related_booking_id", tx.getAppointmentId());
+        map.put("relatedBookingId", tx.getAppointmentId());
+        map.put("sender_id", tx.getInitiator() != null ? tx.getInitiator().getId() : null);
+        map.put("senderId", tx.getInitiator() != null ? tx.getInitiator().getId() : null);
+        map.put("receiver_id", tx.getRecipient() != null ? tx.getRecipient().getId() : null);
+        map.put("receiverId", tx.getRecipient() != null ? tx.getRecipient().getId() : null);
 
         if (tx.getInitiator() != null) {
             Map<String, Object> initMap = new HashMap<>();

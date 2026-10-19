@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
 import FeatureGate from '../../../components/FeatureGate';
+import { subscribeWalletSse } from '../../../utils/walletSse';
 
 const PREDEFINED_ALLERGENS = [
     { id: 'Nuts', label: 'Nuts & Peanuts', icon: '🥜' },
@@ -207,8 +208,16 @@ const Profile = () => {
             }
         };
 
+        window.addEventListener('wallet_update', handleWalletUpdated);
         window.addEventListener('wallet_updated', handleWalletUpdated);
         window.addEventListener('storage', handleWalletUpdated);
+
+        const unsubscribeSse = subscribeWalletSse(user, (newBal) => {
+            const numBal = Number(newBal);
+            if (!isNaN(numBal)) {
+                setWalletBalance(numBal);
+            }
+        });
 
         let bc;
         try {
@@ -240,6 +249,8 @@ const Profile = () => {
         } catch (e) {}
 
         return () => {
+            if (unsubscribeSse) unsubscribeSse();
+            window.removeEventListener('wallet_update', handleWalletUpdated);
             window.removeEventListener('wallet_updated', handleWalletUpdated);
             window.removeEventListener('storage', handleWalletUpdated);
             if (bc) bc.close();
@@ -702,13 +713,14 @@ const Profile = () => {
                 <div className="flex flex-wrap gap-2 justify-center md:justify-end items-center">
                     {/* Live App Wallet Balance Badge */}
                     <Link
-                        to="/appointments"
-                        title="View App Wallet & Consultations"
-                        className="bg-[#080b12]/90 hover:bg-white/10 px-4 py-2.5 rounded-2xl border border-[#a5d391]/30 text-center shadow-[0_0_15px_rgba(165,211,145,0.15)] flex flex-col justify-center transition-all cursor-pointer group"
+                        to="/transactions"
+                        title="View App Wallet & Transaction History"
+                        className="bg-[#080b12]/90 hover:bg-white/10 px-4 py-2.5 rounded-2xl border border-[#a5d391]/30 hover:border-[#a5d391]/60 text-center shadow-[0_0_15px_rgba(165,211,145,0.15)] flex flex-col justify-center transition-all cursor-pointer group"
                     >
                         <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider flex items-center justify-center gap-1 group-hover:text-[#a5d391] transition-colors">
                             <span className="material-symbols-outlined text-[13px] text-[#a5d391]">account_balance_wallet</span>
                             App Wallet
+                            <span className="material-symbols-outlined text-[11px] text-[#a5d391]">receipt_long</span>
                         </div>
                         <div className="text-sm font-bold font-mono text-[#a5d391]">
                             {walletLoading ? '...' : `₹${Number(walletBalance || 0).toFixed(2)}`}

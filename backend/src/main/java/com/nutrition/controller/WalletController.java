@@ -37,7 +37,14 @@ public class WalletController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(value = "userId", required = false) Long paramUserId,
             @RequestParam(value = "email", required = false) String paramEmail,
-            @RequestParam(value = "role", required = false) String paramRole) {
+            @RequestParam(value = "role", required = false) String paramRole,
+            jakarta.servlet.http.HttpServletResponse response) {
+
+        // Prevent proxy buffering (Nginx, Cloudflare, AWS ALB) & Chrome pipeline stalls
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache, no-transform");
+        response.setHeader("Connection", "keep-alive");
+        response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
 
         Long targetUserId = null;
         String targetEmail = null;
@@ -56,6 +63,18 @@ public class WalletController {
         }
         if ("ADMIN".equalsIgnoreCase(paramRole)) {
             isAdmin = true;
+        }
+
+        if (targetUserId == null && targetEmail != null && !targetEmail.isBlank()) {
+            User found = userRepository.findByEmail(targetEmail).orElse(null);
+            if (found != null) {
+                targetUserId = found.getId();
+            }
+        } else if ((targetEmail == null || targetEmail.isBlank()) && targetUserId != null) {
+            User found = userRepository.findById(targetUserId).orElse(null);
+            if (found != null) {
+                targetEmail = found.getEmail();
+            }
         }
 
         return walletSseService.subscribe(targetUserId, targetEmail, isAdmin);
@@ -257,6 +276,48 @@ public class WalletController {
         Map<String, Object> result = walletService.recordFailedOrCancelledTransaction(
                 adminId, recipientId, amount, status, reason, orderId, paymentId);
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/admin/manual-topup")
+    public ResponseEntity<Map<String, Object>> manualTopup(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody Map<String, Object> payload) {
+        Long recipientId = payload.get("recipientId") != null ? Long.valueOf(payload.get("recipientId").toString()) : null;
+        BigDecimal amount = payload.get("amount") != null ? new BigDecimal(payload.get("amount").toString()) : BigDecimal.ZERO;
+        String notes = payload.get("notes") != null ? payload.get("notes").toString() : null;
+        if (recipientId == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("message", "recipientId and positive amount are required"));
+        }
+        Long adminId = (userDetails != null && userDetails.getId() != null) ? userDetails.getId() : null;
+        return ResponseEntity.ok(walletService.adminManualTopup(adminId, recipientId, amount, notes));
+    }
+
+    @PostMapping("/admin/bonus-credit")
+    public ResponseEntity<Map<String, Object>> bonusCredit(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody Map<String, Object> payload) {
+        Long recipientId = payload.get("recipientId") != null ? Long.valueOf(payload.get("recipientId").toString()) : null;
+        BigDecimal amount = payload.get("amount") != null ? new BigDecimal(payload.get("amount").toString()) : BigDecimal.ZERO;
+        String notes = payload.get("notes") != null ? payload.get("notes").toString() : null;
+        if (recipientId == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("message", "recipientId and positive amount are required"));
+        }
+        Long adminId = (userDetails != null && userDetails.getId() != null) ? userDetails.getId() : null;
+        return ResponseEntity.ok(walletService.adminBonusCredit(adminId, recipientId, amount, notes));
+    }
+
+    @PostMapping("/admin/platform-deduction")
+    public ResponseEntity<Map<String, Object>> platformDeduction(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody Map<String, Object> payload) {
+        Long recipientId = payload.get("recipientId") != null ? Long.valueOf(payload.get("recipientId").toString()) : null;
+        BigDecimal amount = payload.get("amount") != null ? new BigDecimal(payload.get("amount").toString()) : BigDecimal.ZERO;
+        String notes = payload.get("notes") != null ? payload.get("notes").toString() : null;
+        if (recipientId == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("message", "recipientId and positive amount are required"));
+        }
+        Long adminId = (userDetails != null && userDetails.getId() != null) ? userDetails.getId() : null;
+        return ResponseEntity.ok(walletService.adminPlatformDeduction(adminId, recipientId, amount, notes));
     }
 
     @GetMapping("/admin/ledger")

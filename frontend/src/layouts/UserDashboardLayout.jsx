@@ -39,6 +39,7 @@ const UserDashboardLayout = () => {
     };
 
     const [walletBalance, setWalletBalance] = useState(() => resolveWalletBalance());
+    const [walletToast, setWalletToast] = useState(null);
 
     const loadWallet = async () => {
         try {
@@ -116,11 +117,24 @@ const UserDashboardLayout = () => {
                     setWalletBalance(newBal);
                     if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
                     if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+
+                    // Show live SSE update toast
+                    if (e.detail.amount !== undefined && e.detail.amount !== null && Number(e.detail.amount) !== 0) {
+                        const amtNum = Number(e.detail.amount);
+                        const sign = amtNum > 0 ? '+' : '';
+                        const desc = e.detail.description || e.detail.notes || (amtNum > 0 ? 'Credits Added' : 'Funds Deducted');
+                        setWalletToast({
+                            text: `${desc}: ${sign}₹${Math.abs(amtNum).toFixed(2)} (New Balance: ₹${newBal.toFixed(2)})`,
+                            isPositive: amtNum > 0
+                        });
+                        setTimeout(() => setWalletToast(null), 4000);
+                    }
                     return;
                 }
             }
         };
 
+        window.addEventListener('wallet_update', handleWalletUpdate);
         window.addEventListener('wallet_updated', handleWalletUpdate);
         window.addEventListener('storage', handleWalletUpdate);
 
@@ -154,11 +168,22 @@ const UserDashboardLayout = () => {
         } catch (e) {}
 
         // Connect Server-Sent Events (SSE) stream for live push updates
-        const unsubscribeSse = subscribeWalletSse(user, (newBal) => {
+        const unsubscribeSse = subscribeWalletSse(user, (newBal, data) => {
             setWalletBalance(newBal);
+            if (data?.amount !== undefined && data?.amount !== null && Number(data.amount) !== 0) {
+                const amtNum = Number(data.amount);
+                const sign = amtNum > 0 ? '+' : '';
+                const desc = data.description || data.notes || (amtNum > 0 ? 'Credits Added' : 'Funds Deducted');
+                setWalletToast({
+                    text: `${desc}: ${sign}₹${Math.abs(amtNum).toFixed(2)} (New Balance: ₹${newBal.toFixed(2)})`,
+                    isPositive: amtNum > 0
+                });
+                setTimeout(() => setWalletToast(null), 4000);
+            }
         });
 
         return () => {
+            window.removeEventListener('wallet_update', handleWalletUpdate);
             window.removeEventListener('wallet_updated', handleWalletUpdate);
             window.removeEventListener('storage', handleWalletUpdate);
             if (bc) bc.close();
@@ -178,6 +203,7 @@ const UserDashboardLayout = () => {
         { name: "Progress Tracking", path: "/dashboard/user/progress", icon: "monitoring" },
         { name: "Diet Plans", path: "/dashboard/user/diet-plans", icon: "restaurant_menu" },
         { name: "Appointments", path: "/dashboard/user/appointments", icon: "calendar_month" },
+        { name: "Transaction History", path: "/dashboard/user/transactions", icon: "receipt_long" },
         { name: "Reports", path: "/dashboard/user/reports", icon: "lab_profile" },
         { name: "AI Chat Assistant", path: "/dashboard/user/ai-chat", icon: "smart_toy" },
         { name: "AI Diet Generator", path: "/dashboard/user/ai-diet", icon: "magic_button" },
@@ -261,8 +287,8 @@ const UserDashboardLayout = () => {
                         {/* Live Wallet Balance Pill */}
                         {walletBalance !== null && (
                             <Link 
-                                to="/dashboard/user/appointments"
-                                title="App Wallet Balance — Click to view & book sessions"
+                                to="/dashboard/user/transactions"
+                                title="App Wallet Balance — Click to view Transaction History & Ledger"
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#a5d391]/10 border border-[#a5d391]/30 hover:border-[#a5d391]/60 text-white text-xs font-bold transition-all shadow-sm group cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-[#a5d391] text-base group-hover:scale-110 transition-transform">account_balance_wallet</span>
@@ -369,6 +395,16 @@ const UserDashboardLayout = () => {
                             </button>
                         </div>
                     </aside>
+                </div>
+            )}
+
+            {/* Real-time Wallet SSE Notification Toast */}
+            {walletToast && (
+                <div className="fixed top-20 right-8 z-[9999] bg-[#0c121e]/95 backdrop-blur-md border border-[#a5d391]/40 text-white px-5 py-3 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-3 animate-bounce">
+                    <span className={`material-symbols-outlined text-xl ${walletToast.isPositive ? 'text-[#a5d391]' : 'text-amber-400'}`}>
+                        {walletToast.isPositive ? 'add_circle' : 'account_balance_wallet'}
+                    </span>
+                    <span className="text-xs font-bold tracking-wide">{walletToast.text}</span>
                 </div>
             )}
 
