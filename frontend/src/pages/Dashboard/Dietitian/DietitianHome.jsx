@@ -1,4 +1,5 @@
 import React, { useContext } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 
@@ -142,11 +143,29 @@ const DietitianHome = () => {
                                 </div>
                                 <div>
                                     {consult.status === 'completed' && <span className="material-symbols-outlined text-[#a5d391] text-sm">check_circle</span>}
-                                    {consult.status === 'next' && <button className="bg-[#a5d391] text-black text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-white transition-colors cursor-pointer shadow-[0_0_15px_rgba(165,211,145,0.3)]">Join</button>}
+                                    {consult.status === 'next' && (
+                                        <Link 
+                                            to="/virtual-room" 
+                                            className="bg-[#a5d391] text-black text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-white transition-colors cursor-pointer shadow-[0_0_15px_rgba(165,211,145,0.3)] inline-block"
+                                        >
+                                            Join Room
+                                        </Link>
+                                    )}
                                     {consult.status === 'pending' && <span className="material-symbols-outlined text-white/30 text-sm">schedule</span>}
                                 </div>
                             </div>
                         ))}
+                    </div>
+
+                    <div className="mt-5 pt-4 border-t border-white/10 flex justify-end">
+                        <Link
+                            to="/dashboard/nutritionist/schedule"
+                            className="bg-[#a5d391]/15 hover:bg-[#a5d391] text-[#a5d391] hover:text-black border border-[#a5d391]/30 font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                        >
+                            <span className="material-symbols-outlined text-sm">calendar_month</span>
+                            <span>View Schedule</span>
+                            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                        </Link>
                     </div>
                 </div>
             </div>

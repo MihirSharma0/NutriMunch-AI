@@ -18,7 +18,11 @@ const NutritionistDashboardLayout = () => {
 
     const navItems = [
         { name: "Command Center", path: "/dashboard/nutritionist", icon: "monitoring" },
+        { name: "AI Diet Generator", path: "/ai-diet", icon: "magic_button" },
+        { name: "AI Food Analyzer", path: "/ai-image", icon: "center_focus_strong" },
+        { name: "AI Health Companion", path: "/ai-chat", icon: "smart_toy" },
         { name: "Clinical Profile", path: "/dashboard/nutritionist/profile", icon: "badge" },
+        { name: "Client Roster", path: "/dashboard/nutritionist/clients", icon: "group" },
         { name: "Diet Builder", path: "/dashboard/nutritionist/builder", icon: "restaurant_menu" },
         { name: "Schedule & Bookings", path: "/dashboard/nutritionist/schedule", icon: "event" },
         { name: "Clinical Reports", path: "/dashboard/nutritionist/reports", icon: "lab_profile" },

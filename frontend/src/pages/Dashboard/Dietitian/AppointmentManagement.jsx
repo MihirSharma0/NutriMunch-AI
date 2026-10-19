@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import { API_BASE_URL } from '../../../api/axios';
 import ConsultationChatModal from '../../../components/ConsultationChatModal';
@@ -732,15 +733,13 @@ const AppointmentManagement = () => {
 
                                         <div className="flex gap-2">
                                             {(selectedEvent.status === 'SCHEDULED' || (selectedEvent.status || '').toUpperCase() === 'CONFIRMED') && (
-                                                <a 
-                                                    href={selectedEvent.meetingLink || "https://meet.google.com/nutri-ai-session"}
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
+                                                <Link 
+                                                    to="/virtual-room"
                                                     className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                                                 >
                                                     <span className="material-symbols-outlined text-sm">videocam</span>
                                                     Join Session
-                                                </a>
+                                                </Link>
                                             )}
                                             <button 
                                                 onClick={() => setSelectedEvent(null)}

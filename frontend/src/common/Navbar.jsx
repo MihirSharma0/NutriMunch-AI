@@ -54,12 +54,20 @@ export const getNavItemsForRole = (user) => {
         { label: 'AI Health Companion', path: '/ai-chat', icon: 'smart_toy', desc: '24/7 AI nutrition assistant chat' }
     ];
 
+    const dietitianPlatformSubMenu = [
+        { label: 'Clinical Command Core', path: '/dashboard/nutritionist', icon: 'dashboard', desc: 'Real-time patient monitoring & algorithmic oversight' },
+        { label: 'AI Diet Generator', path: '/ai-diet', icon: 'magic_button', desc: 'Generate instant macro-balanced meal plans' },
+        { label: 'AI Food Analyzer', path: '/ai-image', icon: 'center_focus_strong', desc: 'Scan food photos for calories & macro breakdown' },
+        { label: 'AI Health Companion', path: '/ai-chat', icon: 'smart_toy', desc: '24/7 AI nutrition assistant chat' }
+    ];
+
     const rawRole = user.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'USER';
 
     if (rawRole === 'ADMIN') {
         return [
             { label: 'Home', path: '/' },
             { label: 'System Core', path: '/dashboard/admin' },
+            { label: 'Platform Features', subMenu: userAiSubMenu, headerTitle: 'AI Platform Suite' },
             { label: 'User Management', subMenu: userManagementSubMenu, headerTitle: 'User Administration' },
             { label: 'Testimonials', path: '/dashboard/admin/testimonials' },
             { label: 'Analytics', path: '/dashboard/admin/analytics' },
@@ -71,7 +79,7 @@ export const getNavItemsForRole = (user) => {
     if (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') {
         return [
             { label: 'Home', path: '/' },
-            { label: 'Clinical Core', path: '/dashboard/nutritionist' },
+            { label: 'Platform Features', subMenu: dietitianPlatformSubMenu, headerTitle: 'Platform Features' },
             { label: 'Client & Schedule', subMenu: clientManagementSubMenu, headerTitle: 'Client Management' },
             { label: 'Diet & Reports', subMenu: clinicalToolsSubMenu, headerTitle: 'Clinical Protocols' },
             { label: 'Testimonials', path: '/testimonials' },
@@ -107,6 +115,19 @@ const Navbar = () => {
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+    const [chatTargetPatient, setChatTargetPatient] = useState(null);
+
+    // Global listener so any component or notification can open chat with a specific patient
+    useEffect(() => {
+        const handleOpenChat = (e) => {
+            if (e.detail?.targetPatient) {
+                setChatTargetPatient(e.detail.targetPatient);
+            }
+            setIsChatModalOpen(true);
+        };
+        window.addEventListener('nutrimunch_open_chat', handleOpenChat);
+        return () => window.removeEventListener('nutrimunch_open_chat', handleOpenChat);
+    }, []);
 
     const dropdownRef = useRef(null);
     const notificationRef = useRef(null);
@@ -142,15 +163,17 @@ const Navbar = () => {
                     });
                     if (res.ok) {
                         const data = await res.json();
-                        backendNotifs = data.map(n => ({
-                            id: n.id,
-                            title: n.title,
-                            message: n.message,
-                            time: n.timeAgo || 'Just now',
-                            icon: n.icon || 'notifications',
-                            path: n.path || '/progress',
-                            read: Boolean(n.readStatus) || readIds.has(String(n.id))
-                        }));
+                        backendNotifs = data
+                            .filter(n => n.type !== 'CONSULTATION_MSG')
+                            .map(n => ({
+                                id: n.id,
+                                title: n.title,
+                                message: n.message,
+                                time: n.timeAgo || 'Just now',
+                                icon: n.icon || 'notifications',
+                                path: n.path || '/progress',
+                                read: Boolean(n.readStatus) || readIds.has(String(n.id))
+                            }));
                     }
                 } catch (err) {
                     console.error("Error fetching backend notifications", err);
@@ -161,16 +184,44 @@ const Navbar = () => {
             try {
                 const stored = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
                 if (stored && Array.isArray(stored)) {
-                    localNotifs = stored.map(n => ({
-                        ...n,
-                        read: Boolean(n.read) || readIds.has(String(n.id))
-                    }));
+                    localNotifs = stored
+                        .filter(n => n.type !== 'CONSULTATION_MSG')
+                        .map(n => ({
+                            ...n,
+                            read: Boolean(n.read) || readIds.has(String(n.id))
+                        }));
                 }
             } catch (e) {}
 
             const realNotifs = [...backendNotifs, ...localNotifs];
+            const currentUserId = String(user?.id || user?.userId || '');
+            const currentUserEmail = user?.email?.toLowerCase() || '';
+            const isDietitian = rawRole.includes('DIETITIAN') || rawRole.includes('NUTRITIONIST');
+
             const uniqueReal = Array.from(new Map(realNotifs.map(item => [item.id, item])).values())
                 .filter(item => !deletedIds.has(String(item.id)))
+                .filter(item => {
+                    // Receiver filtering for targeted chat / exclusive notifications:
+                    if (item.targetUserId) {
+                        const targetId = String(item.targetUserId);
+                        const targetEmail = item.targetUserEmail?.toLowerCase();
+                        // For patients: only show if directed to me
+                        if (!isDietitian) {
+                            return targetId === currentUserId || (targetEmail && targetEmail === currentUserEmail);
+                        }
+                        // For dietitians: do not show their own outgoing message to patient as an incoming notification!
+                        if (isDietitian && item.type === 'CONSULTATION_CHAT') {
+                            return false;
+                        }
+                    }
+                    if (item.targetPatientId) {
+                        // Message sent by patient to dietitians: only dietitians should see this!
+                        if (!isDietitian) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
                 .map(item => ({
                     ...item,
                     read: Boolean(item.read) || readIds.has(String(item.id))
@@ -180,7 +231,7 @@ const Navbar = () => {
         };
 
         loadNotifications();
-        const interval = setInterval(loadNotifications, 10000);
+        const interval = setInterval(loadNotifications, 3000);
         window.addEventListener('nutrimunch_notification_added', loadNotifications);
         window.addEventListener('storage', loadNotifications);
         window.addEventListener('focus', loadNotifications);
@@ -191,8 +242,28 @@ const Navbar = () => {
             bc.onmessage = (event) => {
                 loadNotifications();
                 if (event.data?.payload) {
-                    setToastNotification(event.data.payload);
-                    setTimeout(() => setToastNotification(null), 8000);
+                    const p = event.data.payload;
+                    const isDietitian = rawRole.includes('DIETITIAN') || rawRole.includes('NUTRITIONIST');
+                    const myId = String(user?.id || user?.userId || '');
+                    const myEmail = user?.email?.toLowerCase() || '';
+
+                    // Only show floating toast if this user is the intended receiver:
+                    let shouldShowToast = true;
+                    if (p.targetUserId) {
+                        if (!isDietitian) {
+                            shouldShowToast = String(p.targetUserId) === myId || (p.targetUserEmail && p.targetUserEmail.toLowerCase() === myEmail);
+                        } else if (p.type === 'CONSULTATION_CHAT') {
+                            shouldShowToast = false;
+                        }
+                    }
+                    if (p.targetPatientId && !isDietitian) {
+                        shouldShowToast = false;
+                    }
+
+                    if (shouldShowToast) {
+                        setToastNotification(p);
+                        setTimeout(() => setToastNotification(null), 8000);
+                    }
                 }
             };
         } catch (e) {}
@@ -252,6 +323,36 @@ const Navbar = () => {
             }
         } catch (e) {}
         setIsNotificationOpen(false);
+
+        // DIRECT NAVIGATION LOGIC - deep link directly to the exact page/modal!
+        if (
+            item.type === 'CONSULTATION_CHAT' || 
+            item.type === 'CONSULTATION_REQUEST' || 
+            item.path === 'chat' || 
+            (item.title && (item.title.toLowerCase().includes('message') || item.title.toLowerCase().includes('consultation')))
+        ) {
+            if (item.targetPatientId || item.targetUserId) {
+                setChatTargetPatient({
+                    id: String(item.targetPatientId || item.targetUserId),
+                    userId: String(item.targetPatientId || item.targetUserId),
+                    name: item.targetPatientName || item.targetUserName || 'Patient'
+                });
+            }
+            setIsChatModalOpen(true);
+            return;
+        }
+
+        if (item.type === 'DIET_PLAN' || item.type === 'EXCLUSIVE_PLAN' || item.path?.includes('diet-plan')) {
+            navigate('/diet-plans');
+            return;
+        }
+
+        if (item.type === 'APPOINTMENT' || item.path?.includes('appointment')) {
+            const isDietitian = rawRole.includes('DIETITIAN') || rawRole.includes('NUTRITIONIST');
+            navigate(isDietitian ? '/dashboard/dietitian/appointments' : '/appointments');
+            return;
+        }
+
         if (item.path) {
             navigate(item.path);
         }
@@ -351,7 +452,8 @@ const Navbar = () => {
         : '/profile';
 
     return (
-        <div className="fixed top-4 left-4 right-4 z-50 pointer-events-none">
+        <>
+            <div className="fixed top-4 left-4 right-4 z-50 pointer-events-none">
             <nav className="mx-auto max-w-7xl bg-[#080b12]/85 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-3xl overflow-visible shadow-2xl pointer-events-auto">
                 <div className="flex justify-between items-center px-3 sm:px-6 py-2.5 sm:py-3">
                     <Link to="/" className="font-headline-lg text-lg sm:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0">
@@ -689,6 +791,7 @@ const Navbar = () => {
                     </div>
                 </div>
             </nav>
+        </div>
 
             {/* Real-Time Push Notification Toast Banner */}
             {toastNotification && (
@@ -716,10 +819,17 @@ const Navbar = () => {
                             <h4 className="text-sm font-bold text-white truncate">{toastNotification.title || 'Live Update Received'}</h4>
                             <p className="text-xs text-white/70 line-clamp-2 mt-0.5">{toastNotification.message}</p>
                             <div className="mt-3 flex items-center gap-3">
-                                {toastNotification.type === 'CONSULTATION_CHAT' ? (
+                                {toastNotification.type === 'CONSULTATION_CHAT' || toastNotification.path === 'chat' ? (
                                     <button
                                         type="button"
                                         onClick={() => {
+                                            if (toastNotification.targetPatientId || toastNotification.targetUserId) {
+                                                setChatTargetPatient({
+                                                    id: String(toastNotification.targetPatientId || toastNotification.targetUserId),
+                                                    userId: String(toastNotification.targetPatientId || toastNotification.targetUserId),
+                                                    name: toastNotification.targetPatientName || toastNotification.targetUserName || 'Patient'
+                                                });
+                                            }
                                             handleDismissToast();
                                             setIsChatModalOpen(true);
                                         }}
@@ -730,7 +840,7 @@ const Navbar = () => {
                                     </button>
                                 ) : (
                                     <Link
-                                        to={toastNotification.path || "/diet-plans"}
+                                        to={toastNotification.path || (toastNotification.type === 'DIET_PLAN' || toastNotification.type === 'EXCLUSIVE_PLAN' ? "/diet-plans" : "/progress")}
                                         onClick={handleDismissToast}
                                         className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
                                     >
@@ -755,11 +865,15 @@ const Navbar = () => {
             {isChatModalOpen && (
                 <ConsultationChatModal
                     isOpen={isChatModalOpen}
-                    onClose={() => setIsChatModalOpen(false)}
+                    onClose={() => {
+                        setIsChatModalOpen(false);
+                        setChatTargetPatient(null);
+                    }}
                     currentUser={user}
+                    targetPatient={chatTargetPatient}
                 />
             )}
-        </div>
+        </>
     );
 };
 

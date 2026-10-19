@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import api, { API_BASE_URL } from '../api/axios';
+import { createPortal } from 'react-dom';
+import api from '../api/axios';
 
 const DEFAULT_PATIENTS = [
     { id: "442", userId: "442", name: "David Miller", email: "david.m@example.com", goal: "Diabetes Management" },
@@ -33,6 +34,32 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
     // Patient roster for Nutritionist view
     const [patientList, setPatientList] = useState(DEFAULT_PATIENTS);
     const [selectedPatient, setSelectedPatient] = useState(targetPatient || DEFAULT_PATIENTS[0]);
+    const [platformDietitianName, setPlatformDietitianName] = useState('Dietitian Niraj Shaw');
+    const [currentDietitianName, setCurrentDietitianName] = useState('');
+    const [incomingRequest, setIncomingRequest] = useState(null);
+
+    // Fetch verified platform dietitians
+    useEffect(() => {
+        api.get('/admin/dietitians')
+            .then(res => {
+                if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+                    // Look for active dietitian or take first
+                    const activeD = res.data.find(d => {
+                        const fullName = `${d.firstName || ''} ${d.lastName || ''}`.toLowerCase();
+                        return fullName.includes('niraj') || fullName.includes('dietitian');
+                    }) || res.data[0];
+
+                    const name = (activeD.firstName || activeD.lastName) 
+                        ? `${activeD.firstName || ''} ${activeD.lastName || ''}`.trim() 
+                        : (activeD.name || activeD.email?.split('@')[0]);
+
+                    if (name) {
+                        setPlatformDietitianName(name.toLowerCase().startsWith('dietitian') ? name : `Dietitian ${name}`);
+                    }
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     // Update selected patient if prop changes
     useEffect(() => {
@@ -67,15 +94,15 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
     // Determine active patient ID and names
     const patientId = isNutritionist
         ? String(selectedPatient?.userId || selectedPatient?.id || '442')
-        : String(activeUser?.userId || activeUser?.id || 'me');
+        : String(activeUser?.userId || activeUser?.id || activeUser?.email?.split('@')[0] || 'me');
 
     const patientName = isNutritionist
         ? (selectedPatient?.name || selectedPatient?.firstName || 'Patient')
         : (activeUser?.firstName ? `${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || 'Patient'));
 
     const dietitianName = isNutritionist
-        ? (activeUser?.firstName ? `${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || 'Dietitian Mihir Sharma'))
-        : (selectedPatient?.dietitianName || targetPatient?.dietitianName || 'Dietitian Mihir Sharma');
+        ? (activeUser?.firstName ? `Dietitian ${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || 'Dietitian Niraj Shaw'))
+        : (currentDietitianName || platformDietitianName || 'Dietitian Niraj Shaw');
 
     const [messages, setMessages] = useState([]);
     const [sessionStatus, setSessionStatus] = useState('NOT_STARTED'); // 'NOT_STARTED', 'ACTIVE', 'ENDED'
@@ -85,59 +112,53 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
     const messagesEndRef = useRef(null);
     const activeKeyRef = useRef(null);
 
-    // Load Chat Session with unified resolution
-    const loadChatSession = () => {
+    // Load Chat Session with unified resolution (localStorage + backend database bridge)
+    const loadChatSession = async () => {
         try {
             const allChats = JSON.parse(localStorage.getItem('nutrimunch_consultation_chats') || '{}');
             let currentSession = null;
             let resolvedKey = null;
 
+            const targetId = isNutritionist
+                ? String(selectedPatient?.userId || selectedPatient?.id || patientId)
+                : String(activeUser?.userId || activeUser?.id || '');
+            const targetEmail = isNutritionist
+                ? selectedPatient?.email?.toLowerCase()
+                : activeUser?.email?.toLowerCase();
+            const myName = (!isNutritionist && activeUser)
+                ? (activeUser?.firstName ? `${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || '')).toLowerCase()
+                : '';
+
             if (isNutritionist) {
-                const targetId = String(selectedPatient?.userId || selectedPatient?.id || patientId);
-                const targetEmail = selectedPatient?.email?.toLowerCase();
-                
-                if (allChats[targetId]) {
+                if (targetId && allChats[targetId]) {
                     currentSession = allChats[targetId];
                     resolvedKey = targetId;
                 } else if (targetEmail && allChats[targetEmail]) {
                     currentSession = allChats[targetEmail];
                     resolvedKey = targetEmail;
-                } else if (allChats['nutrimunch_active_consultation']) {
+                } else if (allChats['nutrimunch_active_consultation'] && String(allChats['nutrimunch_active_consultation']?.patientId) === targetId) {
                     currentSession = allChats['nutrimunch_active_consultation'];
                     resolvedKey = 'nutrimunch_active_consultation';
                 }
             } else {
                 // Patient session resolution:
-                const myId = String(activeUser?.userId || activeUser?.id || '');
-                const myEmail = activeUser?.email?.toLowerCase();
-                const myName = (activeUser?.firstName ? `${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || '')).toLowerCase();
-
-                // 1. Direct key matches
-                if (myId && allChats[myId]) {
-                    currentSession = allChats[myId];
-                    resolvedKey = myId;
-                } else if (myEmail && allChats[myEmail]) {
-                    currentSession = allChats[myEmail];
-                    resolvedKey = myEmail;
-                } else if (allChats['nutrimunch_active_consultation']) {
-                    currentSession = allChats['nutrimunch_active_consultation'];
-                    resolvedKey = 'nutrimunch_active_consultation';
-                } else if (allChats['me']) {
-                    currentSession = allChats['me'];
-                    resolvedKey = 'me';
+                if (targetId && allChats[targetId]) {
+                    currentSession = allChats[targetId];
+                    resolvedKey = targetId;
+                } else if (targetEmail && allChats[targetEmail]) {
+                    currentSession = allChats[targetEmail];
+                    resolvedKey = targetEmail;
                 }
 
-                // 2. Scan all sessions for email, id, or name
                 if (!currentSession) {
-                    const sessionEntries = Object.entries(allChats);
-                    for (const [k, s] of sessionEntries) {
+                    for (const [k, s] of Object.entries(allChats)) {
                         if (!s) continue;
-                        if (myId && String(s.patientId) === myId) {
+                        if (targetId && String(s.patientId) === targetId) {
                             currentSession = s;
                             resolvedKey = k;
                             break;
                         }
-                        if (myEmail && s.patientEmail?.toLowerCase() === myEmail) {
+                        if (targetEmail && s.patientEmail?.toLowerCase() === targetEmail) {
                             currentSession = s;
                             resolvedKey = k;
                             break;
@@ -150,12 +171,14 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                     }
                 }
 
-                // 3. Fallback to global active consultation or last session
-                if (!currentSession) {
-                    const sessionList = Object.values(allChats);
-                    if (sessionList.length > 0) {
-                        currentSession = sessionList[sessionList.length - 1];
+                // Fallback to active consultation
+                if (!currentSession || (!currentSession.messages?.length && currentSession.sessionStatus !== 'ACTIVE')) {
+                    if (allChats['nutrimunch_active_consultation'] && (allChats['nutrimunch_active_consultation'].sessionStatus === 'ACTIVE' || allChats['nutrimunch_active_consultation'].messages?.length > 0)) {
+                        currentSession = allChats['nutrimunch_active_consultation'];
                         resolvedKey = 'nutrimunch_active_consultation';
+                    } else if (allChats['me'] && (allChats['me'].sessionStatus === 'ACTIVE' || allChats['me'].messages?.length > 0)) {
+                        currentSession = allChats['me'];
+                        resolvedKey = 'me';
                     }
                 }
             }
@@ -163,12 +186,75 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
             activeKeyRef.current = resolvedKey;
 
             if (currentSession) {
-                setSessionStatus(currentSession.sessionStatus || 'NOT_STARTED');
+                setSessionStatus(currentSession.sessionStatus || 'ACTIVE');
                 setMessages(currentSession.messages || []);
-            } else {
-                setSessionStatus('NOT_STARTED');
-                setMessages([]);
+                const resolvedDietitian = currentSession.dietitianName || 
+                    currentSession.messages?.slice().reverse().find(m => m.sender === 'nutritionist')?.senderName;
+                if (resolvedDietitian) {
+                    setCurrentDietitianName(resolvedDietitian.toLowerCase().startsWith('dietitian') ? resolvedDietitian : `Dietitian ${resolvedDietitian}`);
+                }
             }
+
+            // Sync with backend notifications database (bridges across incognito / multi-browser / multi-window)
+            try {
+                const res = await api.get('/notifications/me');
+                if (res.data && Array.isArray(res.data)) {
+                    // Check for incoming consultation requests for Nutritionist
+                    if (isNutritionist) {
+                        const reqNotifs = res.data.filter(n => n.type === 'CONSULTATION_REQUEST' && n.message);
+                        if (reqNotifs.length > 0) {
+                            try {
+                                const reqData = JSON.parse(reqNotifs[0].message);
+                                if (reqData && String(reqData.patientId) !== String(targetId)) {
+                                    setIncomingRequest(reqData);
+                                } else {
+                                    setIncomingRequest(null);
+                                }
+                            } catch (e) {}
+                        }
+                    }
+
+                    // Check for consultation chat state updates
+                    const chatNotifs = res.data.filter(n => n.type === 'CONSULTATION_MSG' && n.message);
+                    if (chatNotifs.length > 0) {
+                        for (const n of chatNotifs) {
+                            try {
+                                const backendSession = JSON.parse(n.message);
+                                if (!backendSession || !Array.isArray(backendSession.messages)) continue;
+
+                                const matches = isNutritionist
+                                    ? String(backendSession.patientId) === String(targetId) || (targetEmail && backendSession.patientEmail?.toLowerCase() === targetEmail)
+                                    : String(backendSession.patientId) === String(targetId) || 
+                                      (targetEmail && backendSession.patientEmail?.toLowerCase() === targetEmail) || 
+                                      (myName && backendSession.patientName?.toLowerCase() === myName) ||
+                                      (backendSession.sessionStatus === 'ACTIVE') ||
+                                      (!targetId && backendSession.messages.length > 0);
+
+                                if (matches) {
+                                    const currCount = currentSession?.messages?.length || 0;
+                                    if (backendSession.messages.length >= currCount || backendSession.sessionStatus !== sessionStatus) {
+                                        setMessages(backendSession.messages);
+                                        setSessionStatus(backendSession.sessionStatus || 'ACTIVE');
+                                        const resolvedDietitian = backendSession.dietitianName || 
+                                            backendSession.messages.slice().reverse().find(m => m.sender === 'nutritionist')?.senderName;
+                                        if (resolvedDietitian) {
+                                            setCurrentDietitianName(resolvedDietitian.toLowerCase().startsWith('dietitian') ? resolvedDietitian : `Dietitian ${resolvedDietitian}`);
+                                        }
+
+                                        // Update local caches
+                                        if (targetId) allChats[targetId] = backendSession;
+                                        if (targetEmail) allChats[targetEmail] = backendSession;
+                                        allChats['nutrimunch_active_consultation'] = backendSession;
+                                        allChats['me'] = backendSession;
+                                        localStorage.setItem('nutrimunch_consultation_chats', JSON.stringify(allChats));
+                                    }
+                                    break;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+            } catch (err) {}
         } catch (e) {
             console.error('Error loading consultation chat:', e);
         }
@@ -196,10 +282,10 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         window.addEventListener('nutrimunch_chat_updated', handleUpdate);
         window.addEventListener('storage', handleUpdate);
 
-        // Active polling every 1.5 seconds for instant multi-tab sync
+        // Active polling every 1 second for instant multi-window / multi-tab / incognito sync
         const pollInterval = setInterval(() => {
             loadChatSession();
-        }, 1500);
+        }, 1000);
 
         return () => {
             if (bc) bc.close();
@@ -214,7 +300,27 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, sessionStatus]);
 
-    // Universal Save helper ensuring bidirectional sync across all keys
+    // Handle Escape key to close modal and body scroll lock
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose?.();
+            }
+        };
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose]);
+
+    // Universal Save helper ensuring bidirectional sync across all keys and backend database
     const saveSession = (status, updatedMessages) => {
         try {
             const allChats = JSON.parse(localStorage.getItem('nutrimunch_consultation_chats') || '{}');
@@ -253,33 +359,50 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
             // Broadcast real-time update
             try {
                 const bc = new BroadcastChannel('nutrimunch_consultation_chat_channel');
-                bc.postMessage({ type: 'CHAT_STATE_CHANGED', patientId: targetPatientId, status: status, timestamp: Date.now() });
+                bc.postMessage({ type: 'CHAT_STATE_CHANGED', session: sessionData });
                 bc.close();
             } catch (err) {}
 
             window.dispatchEvent(new Event('nutrimunch_chat_updated'));
             window.dispatchEvent(new Event('storage'));
+
+            // Sync to backend notifications API so Incognito / cross-browser tabs sync instantly
+            try {
+                const numId = parseInt(targetPatientId, 10);
+                api.post('/notifications/send', {
+                    userId: isNaN(numId) ? null : numId,
+                    userEmail: targetEmail || null,
+                    type: 'CONSULTATION_MSG',
+                    title: `CONSULTATION_${targetPatientId}`,
+                    message: JSON.stringify(sessionData),
+                    path: String(targetPatientId)
+                }).catch(() => {});
+            } catch (err) {}
         } catch (e) {
             console.error('Error saving chat session:', e);
         }
     };
 
-    // Nutritionist Initiates Chat
+    // Explicit Initiate Chat
     const handleInitiateChat = () => {
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const initMessage = {
             id: `sys_${Date.now()}`,
             sender: 'system',
-            text: `Consultation chat session initiated by Dietitian ${dietitianName}. Real-time communication channel is now active.`,
+            text: isNutritionist
+                ? `Consultation chat session initiated by ${dietitianName}. Real-time communication channel is now active.`
+                : `Consultation session opened with ${dietitianName}. You can now send live clinical guidance messages.`,
             time: timestamp
         };
 
         const updated = messages.length > 0 ? [...messages, initMessage] : [
             {
                 id: `msg_welcome_${Date.now()}`,
-                sender: 'nutritionist',
-                senderName: dietitianName,
-                text: `Hello ${patientName}, I've initiated your live clinical consultation chat. How are you progressing with your nutrition and daily macro targets?`,
+                sender: isNutritionist ? 'nutritionist' : 'user',
+                senderName: isNutritionist ? dietitianName : patientName,
+                text: isNutritionist
+                    ? `Hello ${patientName}, I've initiated your live clinical consultation chat. How are you progressing with your nutrition and daily macro targets?`
+                    : `Hello ${dietitianName}, I've opened this consultation chat to discuss my nutrition targets and meal plans.`,
                 time: timestamp
             }
         ];
@@ -288,12 +411,14 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         setMessages(updated);
         saveSession('ACTIVE', updated);
 
-        // Notify user via platform notification toast
+        // Toast notification
         try {
             const chatNotification = {
                 id: `chat_notif_${Date.now()}`,
                 title: `Live Consultation Chat Initiated`,
-                message: `Dietitian ${dietitianName} has opened an active consultation chat with you.`,
+                message: isNutritionist
+                    ? `Dietitian ${dietitianName} has opened an active consultation chat with you.`
+                    : `Patient ${patientName} has initiated a live consultation session with you.`,
                 time: 'Just now',
                 icon: 'forum',
                 type: 'CONSULTATION_CHAT',
@@ -306,14 +431,22 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         } catch (e) {}
     };
 
-    // Patient sends consultation request to nutritionist
+    // Patient sends consultation request / ping to nutritionist
     const handleSendPatientRequest = () => {
         setRequestPingSent(true);
+        const reqData = {
+            id: `req_${Date.now()}`,
+            patientId: patientId,
+            patientName: patientName,
+            patientEmail: activeUser?.email || '',
+            time: 'Just now'
+        };
+
         try {
             const notif = {
                 id: `req_notif_${Date.now()}`,
                 title: `Consultation Chat Requested`,
-                message: `Patient ${patientName} has requested you to initiate a live consultation chat session.`,
+                message: `Patient ${patientName} (#${patientId}) has requested you to initiate a live consultation chat session.`,
                 time: 'Just now',
                 icon: 'forum',
                 type: 'CONSULTATION_REQUEST',
@@ -323,8 +456,35 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
             localStorage.setItem('nutrimunch_user_notifications', JSON.stringify([notif, ...existingNotifs]));
             window.dispatchEvent(new Event('nutrimunch_notification_added'));
             window.dispatchEvent(new Event('storage'));
+
+            api.post('/notifications/send', {
+                type: 'CONSULTATION_REQUEST',
+                title: `Consultation Chat Requested by ${patientName}`,
+                message: JSON.stringify(reqData),
+                path: String(patientId)
+            }).catch(() => {});
         } catch (e) {}
         setTimeout(() => setRequestPingSent(false), 5000);
+    };
+
+    // Dietitian accepts incoming patient request
+    const handleAcceptRequest = (req) => {
+        const found = patientList.find(p => String(p.userId || p.id) === String(req.patientId));
+        if (found) {
+            setSelectedPatient(found);
+        } else {
+            const newP = {
+                id: String(req.patientId),
+                userId: String(req.patientId),
+                name: req.patientName || 'Patient User',
+                email: req.patientEmail || 'patient@nutrimunch.com',
+                goal: 'Clinical Guidance & Review'
+            };
+            setPatientList(prev => [newP, ...prev]);
+            setSelectedPatient(newP);
+        }
+        setIncomingRequest(null);
+        handleInitiateChat();
     };
 
     // Nutritionist Ends Chat
@@ -333,7 +493,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         const endMessage = {
             id: `sys_end_${Date.now()}`,
             sender: 'system',
-            text: `Consultation session concluded by Dietitian ${dietitianName} at ${timestamp}. The session history is archived.`,
+            text: `Consultation session concluded by ${dietitianName} at ${timestamp}. The session history is archived.`,
             time: timestamp
         };
 
@@ -344,32 +504,92 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         saveSession('ENDED', updated);
     };
 
-    // Send Message
-    const handleSendMessage = (e) => {
+    // Send Message - Seamlessly starts chat for both roles if not already active!
+    const handleSendMessage = (e, customText = null) => {
         e?.preventDefault();
-        if (!inputText.trim()) return;
-        if (sessionStatus !== 'ACTIVE') return;
+        const textToSend = (typeof customText === 'string' ? customText : inputText).trim();
+        if (!textToSend) return;
 
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const newMessage = {
             id: `msg_${Date.now()}`,
             sender: isNutritionist ? 'nutritionist' : 'user',
             senderName: isNutritionist ? dietitianName : patientName,
-            text: inputText.trim(),
+            text: textToSend,
             time: timestamp
         };
 
         const updated = [...messages, newMessage];
         setMessages(updated);
-        setInputText('');
+        setSessionStatus('ACTIVE');
+        if (!customText) setInputText('');
         saveSession('ACTIVE', updated);
+
+        // Notify Receiver in real-time with direct deep-link to chat
+        try {
+            const notifTitle = isNutritionist
+                ? `New Message from ${dietitianName}`
+                : `New Message from ${patientName} (#${patientId})`;
+            const notifMessage = textToSend;
+            const notifPayload = {
+                id: `chat_notif_${Date.now()}`,
+                title: notifTitle,
+                message: notifMessage,
+                time: 'Just now',
+                icon: 'forum',
+                type: 'CONSULTATION_CHAT',
+                path: 'chat',
+                targetUserId: isNutritionist ? String(patientId) : null,
+                targetUserEmail: isNutritionist ? selectedPatient?.email : null,
+                targetPatientId: !isNutritionist ? String(patientId) : null,
+                targetPatientName: !isNutritionist ? patientName : null,
+                read: false
+            };
+
+            // 1. Local storage & window events
+            const existingNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+            localStorage.setItem('nutrimunch_user_notifications', JSON.stringify([notifPayload, ...existingNotifs]));
+            window.dispatchEvent(new Event('nutrimunch_notification_added'));
+            window.dispatchEvent(new Event('storage'));
+
+            // 2. Real-time floating Toast broadcast
+            try {
+                const cbc = new BroadcastChannel('nutrimunch_clinical_channel');
+                cbc.postMessage({ payload: notifPayload });
+                setTimeout(() => { try { cbc.close(); } catch (e) {} }, 500);
+            } catch (e) {}
+
+            // 3. Database persistence for cross-browser / multi-window sync
+            const numPatientId = parseInt(patientId, 10);
+            api.post('/notifications/send', {
+                userId: isNutritionist && !isNaN(numPatientId) ? numPatientId : null,
+                userEmail: isNutritionist ? (selectedPatient?.email || null) : null,
+                title: notifTitle,
+                message: notifMessage,
+                type: 'CONSULTATION_CHAT',
+                icon: 'forum',
+                path: 'chat'
+            }).catch(() => {});
+        } catch (e) {
+            console.error('Error sending chat notification:', e);
+        }
     };
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-start pt-24 sm:pt-28 pb-6 px-3 sm:px-4 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-            <div className="relative w-full max-w-2xl bg-[#080b12] border border-[#a5d391]/40 rounded-[2.5rem] shadow-[0_0_80px_rgba(165,211,145,0.25)] flex flex-col h-[76vh] max-h-[calc(100vh-8.5rem)] overflow-hidden shrink-0 my-auto sm:my-0">
+    const modalContent = (
+        <div 
+            className="fixed inset-0 z-[99999] flex flex-col items-center justify-start pt-20 sm:pt-24 pb-6 px-3 sm:px-4 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn pointer-events-auto"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                    onClose?.();
+                }
+            }}
+        >
+            <div 
+                className="relative w-full max-w-2xl bg-[#080b12] border border-[#a5d391]/40 rounded-[2.5rem] shadow-[0_0_80px_rgba(165,211,145,0.25)] flex flex-col h-[78vh] max-h-[calc(100vh-7.5rem)] overflow-hidden shrink-0 my-auto sm:my-0 pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
                 
                 {/* Header */}
                 <div className="px-5 sm:px-6 py-4 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
@@ -387,15 +607,15 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                                         ? 'bg-[#a5d391]/20 text-[#a5d391] border-[#a5d391]/40 animate-pulse'
                                         : sessionStatus === 'ENDED'
                                         ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                                        : 'bg-white/10 text-white/50 border-white/10'
+                                        : 'bg-[#a5d391]/15 text-[#a5d391] border-[#a5d391]/30'
                                 }`}>
-                                    {sessionStatus === 'ACTIVE' ? 'Live Session' : sessionStatus === 'ENDED' ? 'Concluded' : 'Pending Start'}
+                                    {sessionStatus === 'ACTIVE' ? 'Live Session' : sessionStatus === 'ENDED' ? 'Concluded' : 'Ready to Chat'}
                                 </span>
                             </div>
                             <p className="text-[11px] sm:text-xs text-white/50 truncate">
                                 {isNutritionist 
-                                    ? `Patient ID: #${patientId} • Goal: ${selectedPatient?.goal || 'Metabolic Optimization'}` 
-                                    : `Certified Nutritionist • Real-time clinical guidance`}
+                                    ? `Patient ID: #${patientId} • Goal: ${selectedPatient?.goal || 'General Health & Nutrition'}` 
+                                    : `Certified Nutritionist • Real-time clinical guidance • Patient: ${patientName}`}
                             </p>
                         </div>
                     </div>
@@ -429,13 +649,34 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
 
                         <button
                             type="button"
-                            onClick={onClose}
-                            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onClose?.();
+                            }}
+                            aria-label="Close consultation modal"
+                            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white flex items-center justify-center transition-all cursor-pointer pointer-events-auto shadow-sm"
                         >
                             <span className="material-symbols-outlined text-lg">close</span>
                         </button>
                     </div>
                 </div>
+
+                {/* Incoming Patient Consultation Request Alert for Nutritionist */}
+                {isNutritionist && incomingRequest && (
+                    <div className="px-5 sm:px-6 py-2.5 bg-[#a5d391]/15 border-b border-[#a5d391]/30 flex items-center justify-between gap-3 text-xs text-[#a5d391] shrink-0 animate-in fade-in">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="material-symbols-outlined text-base animate-bounce shrink-0">notifications_active</span>
+                            <span className="truncate"><strong>{incomingRequest.patientName}</strong> (#{incomingRequest.patientId}) has requested a live consultation chat!</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => handleAcceptRequest(incomingRequest)}
+                            className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-[11px] px-3.5 py-1 rounded-full transition-all cursor-pointer whitespace-nowrap shadow-md shrink-0"
+                        >
+                            Open & Initiate
+                        </button>
+                    </div>
+                )}
 
                 {/* Patient Selector Bar for Nutritionist */}
                 {isNutritionist && patientList.length > 1 && (
@@ -480,7 +721,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                             <span className="font-semibold">
                                 {isNutritionist 
                                     ? 'Session concluded. Click "Re-open Chat" above anytime to resume two-way communication.' 
-                                    : 'Consultation concluded by Dietitian. History is archived. Only your Dietitian can initiate a new session.'}
+                                    : 'Consultation concluded by Dietitian. History is archived. You can send a follow-up message below to resume.'}
                             </span>
                         </div>
                         <span className="text-[10px] font-bold uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded-full">Archived</span>
@@ -488,58 +729,86 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                 )}
 
                 {sessionStatus === 'NOT_STARTED' && (
-                    <div className="bg-white/5 border-b border-white/10 px-6 py-2.5 flex items-center justify-between text-xs text-white/60">
+                    <div className="bg-[#a5d391]/10 border-b border-[#a5d391]/20 px-6 py-2.5 flex items-center justify-between text-xs text-[#a5d391]">
                         <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-base text-[#a5d391]">info</span>
+                            <span className="material-symbols-outlined text-base text-[#a5d391]">forum</span>
                             <span>
                                 {isNutritionist 
-                                    ? `Chat not yet initiated with ${patientName}. Click "Initiate Chat" to start.` 
-                                    : 'Awaiting your Dietitian to initiate a consultation chat session.'}
+                                    ? `Direct channel ready with ${patientName}. Type below or click "Initiate Chat".` 
+                                    : `Direct channel ready with ${dietitianName}. Type your message below to start chatting.`}
                             </span>
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-                            {isNutritionist ? 'Action Required' : 'Read-Only'}
-                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#a5d391]/80">Two-Way Live</span>
                     </div>
                 )}
 
                 {/* Messages Body */}
                 <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar bg-gradient-to-b from-transparent via-[#0d131f]/40 to-[#080b12]">
                     {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 my-auto">
-                            <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-[#a5d391]">
+                        <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 my-auto">
+                            <div className="w-16 h-16 rounded-3xl bg-[#a5d391]/10 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391] shadow-[0_0_30px_rgba(165,211,145,0.2)]">
                                 <span className="material-symbols-outlined text-3xl">chat_bubble_outline</span>
                             </div>
-                            <h4 className="text-lg font-bold text-white font-hero-display">
-                                {sessionStatus === 'NOT_STARTED' && isNutritionist
-                                    ? `Initiate Chat with ${patientName}`
-                                    : 'No Messages Yet'}
-                            </h4>
-                            <p className="text-xs text-white/50 max-w-md">
-                                {isNutritionist
-                                    ? `As the certified nutritionist, only you can initiate this consultation chat. Click below to open live messaging with ${patientName}.`
-                                    : 'Your certified dietitian will initiate a chat session when review or follow-up is scheduled. You can also ping your dietitian below.'}
-                            </p>
-                            {isNutritionist && sessionStatus === 'NOT_STARTED' && (
-                                <button
-                                    type="button"
-                                    onClick={handleInitiateChat}
-                                    className="mt-2 bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3 rounded-full transition-all shadow-[0_0_25px_rgba(165,211,145,0.4)] cursor-pointer flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-sm font-bold">play_arrow</span>
-                                    <span>Initiate Consultation Chat Now</span>
-                                </button>
+                            <div>
+                                <h4 className="text-lg font-bold text-white font-hero-display">
+                                    {isNutritionist
+                                        ? `Start Consultation with ${patientName}`
+                                        : `Consultation with ${dietitianName}`}
+                                </h4>
+                                <p className="text-xs text-white/50 max-w-md mt-1">
+                                    {isNutritionist
+                                        ? `Send clinical guidance, macro updates, or review nutritional adherence with ${patientName}.`
+                                        : `Ask your dietitian questions about macro targets, diet adherence, or meal adjustments anytime.`}
+                                </p>
+                            </div>
+
+                            {/* Quick Starter Prompts for Patient */}
+                            {!isNutritionist && (
+                                <div className="w-full max-w-md space-y-2 mt-2">
+                                    <p className="text-[11px] font-bold text-white/60 uppercase tracking-wider text-left">Quick Starters:</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
+                                        {[
+                                            'How do I hit my daily protein target?',
+                                            'Can you review my meal logs this week?',
+                                            'I updated my weight and progress measurements.',
+                                            'Please check my hydration and nutrient intake.'
+                                        ].map((promptText, idx) => (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => handleSendMessage(null, promptText)}
+                                                className="p-2.5 rounded-xl bg-white/5 hover:bg-[#a5d391]/20 hover:border-[#a5d391]/40 border border-white/10 text-white/80 hover:text-white text-xs transition-all cursor-pointer flex items-center justify-between group"
+                                            >
+                                                <span className="truncate pr-1">{promptText}</span>
+                                                <span className="material-symbols-outlined text-xs text-[#a5d391] opacity-0 group-hover:opacity-100 transition-opacity">send</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleSendPatientRequest}
+                                            disabled={requestPingSent}
+                                            className="text-[11px] text-[#a5d391]/80 hover:text-[#a5d391] flex items-center gap-1.5 mx-auto transition-colors cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">notifications_active</span>
+                                            <span>{requestPingSent ? 'Notification Sent to Dietitian' : 'Send Alert Ping to Dietitian'}</span>
+                                        </button>
+                                    </div>
+                                </div>
                             )}
-                            {!isNutritionist && sessionStatus === 'NOT_STARTED' && (
-                                <button
-                                    type="button"
-                                    onClick={handleSendPatientRequest}
-                                    disabled={requestPingSent}
-                                    className="mt-2 bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all cursor-pointer flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-sm font-bold">notifications_active</span>
-                                    <span>{requestPingSent ? 'Notification Dispatched to Dietitian' : 'Notify Dietitian to Open Live Chat'}</span>
-                                </button>
+
+                            {isNutritionist && (
+                                <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleInitiateChat}
+                                        className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3 rounded-full transition-all shadow-[0_0_25px_rgba(165,211,145,0.4)] cursor-pointer flex items-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-sm font-bold">play_arrow</span>
+                                        <span>Initiate Consultation Now</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
                     ) : (
@@ -585,7 +854,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                 </div>
 
                 {/* Quick Action Chips for Nutritionist */}
-                {isNutritionist && sessionStatus === 'ACTIVE' && (
+                {isNutritionist && (
                     <div className="px-6 py-2 bg-black/40 border-t border-white/5 flex items-center gap-2 overflow-x-auto shrink-0 custom-scrollbar">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 whitespace-nowrap">Quick Notes:</span>
                         {[
@@ -606,64 +875,46 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                     </div>
                 )}
 
-                {/* Footer Input Area */}
-                <div className="p-4 sm:p-5 border-t border-white/10 bg-white/5 shrink-0">
-                    {sessionStatus === 'ACTIVE' ? (
-                        <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-                            <input
-                                type="text"
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                placeholder={isNutritionist ? `Message ${patientName}...` : "Type your message to dietitian..."}
-                                className="flex-1 bg-[#080b12] border border-white/15 focus:border-[#a5d391] text-white text-xs sm:text-sm px-4 py-3 rounded-2xl outline-none transition-all placeholder:text-white/40"
-                            />
+                {/* Quick Action Chips for Patient */}
+                {!isNutritionist && messages.length > 0 && (
+                    <div className="px-6 py-2 bg-black/40 border-t border-white/5 flex items-center gap-2 overflow-x-auto shrink-0 custom-scrollbar">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 whitespace-nowrap">Quick Inquiries:</span>
+                        {[
+                            'Can you review my latest meal logs?',
+                            'How can I optimize my protein intake?',
+                            'I have updated my daily activity stats.'
+                        ].map((chip, idx) => (
                             <button
-                                type="submit"
-                                disabled={!inputText.trim()}
-                                className="bg-[#a5d391] hover:bg-white text-black font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-2xl transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5 shrink-0"
+                                key={idx}
+                                type="button"
+                                onClick={() => setInputText(chip)}
+                                className="whitespace-nowrap px-3 py-1 rounded-full bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-[11px] text-white/70 transition-all cursor-pointer"
                             >
-                                <span>Send</span>
-                                <span className="material-symbols-outlined text-sm">send</span>
+                                {chip}
                             </button>
-                        </form>
-                    ) : (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-[#080b12]/60 border border-white/5 rounded-2xl">
-                            <div className="text-xs text-white/50 text-center sm:text-left flex items-center gap-2">
-                                <span className="material-symbols-outlined text-base text-amber-400">
-                                    {isNutritionist ? 'lock_open' : 'block'}
-                                </span>
-                                <span>
-                                    {isNutritionist
-                                        ? sessionStatus === 'ENDED'
-                                            ? `Consultation with ${patientName} is ended. Click "Re-open Chat" to resume.`
-                                            : `Chat not started. Click "Initiate Chat" to begin consultation with ${patientName}.`
-                                        : sessionStatus === 'ENDED'
-                                        ? 'This session has ended. Only your Dietitian can start a new session.'
-                                        : 'Awaiting your Dietitian to initiate the chat session.'}
-                                </span>
-                            </div>
-                            {isNutritionist && (
-                                <button
-                                    type="button"
-                                    onClick={handleInitiateChat}
-                                    className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer whitespace-nowrap"
-                                >
-                                    {sessionStatus === 'ENDED' ? 'Re-open Consultation' : 'Initiate Chat'}
-                                </button>
-                            )}
-                            {!isNutritionist && sessionStatus === 'NOT_STARTED' && (
-                                <button
-                                    type="button"
-                                    onClick={handleSendPatientRequest}
-                                    disabled={requestPingSent}
-                                    className="bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 font-bold text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
-                                >
-                                    <span className="material-symbols-outlined text-sm">notifications_active</span>
-                                    <span>{requestPingSent ? 'Dietitian Pinged' : 'Ping Dietitian to Open Chat'}</span>
-                                </button>
-                            )}
-                        </div>
-                    )}
+                        ))}
+                    </div>
+                )}
+
+                {/* Footer Input Area - ALWAYS ACTIVE AND USABLE FOR BOTH ROLES */}
+                <div className="p-4 sm:p-5 border-t border-white/10 bg-white/5 shrink-0">
+                    <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                        <input
+                            type="text"
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            placeholder={isNutritionist ? `Message ${patientName}...` : `Message ${dietitianName}...`}
+                            className="flex-1 bg-[#080b12] border border-white/15 focus:border-[#a5d391] text-white text-xs sm:text-sm px-4 py-3 rounded-2xl outline-none transition-all placeholder:text-white/40"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!inputText.trim()}
+                            className="bg-[#a5d391] hover:bg-white text-black font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-2xl transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5 shrink-0"
+                        >
+                            <span>Send</span>
+                            <span className="material-symbols-outlined text-sm">send</span>
+                        </button>
+                    </form>
                 </div>
 
                 {/* Confirmation Modal for Ending Chat */}
@@ -676,7 +927,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                             <div>
                                 <h4 className="text-lg font-bold text-white font-hero-display">End Consultation Session?</h4>
                                 <p className="text-xs text-white/60 mt-1 leading-relaxed">
-                                    Concluded sessions prevent the patient from sending additional messages until you initiate a new session. The chat history will remain accessible as an archive.
+                                    Concluded sessions mark the consultation as archived. Either party can resume communication at any time by sending a message or clicking Re-open.
                                 </p>
                             </div>
                             <div className="flex items-center justify-center gap-3 pt-2">
@@ -701,6 +952,8 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
             </div>
         </div>
     );
+
+    return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };
 
 export default ConsultationChatModal;

@@ -214,7 +214,7 @@ const ServicesOverview = () => {
     const modalData = getModalServicesForRole(user);
 
     return (
-        <section className="py-16 sm:py-24 md:py-section-gap relative overflow-hidden z-20">
+        <section className="pt-4 sm:pt-6 pb-16 sm:pb-20 relative overflow-hidden z-20">
             <div className="absolute top-1/2 left-0 w-96 h-96 bg-primary/5 blur-[100px] rounded-full pointer-events-none -translate-y-1/2"></div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-8">

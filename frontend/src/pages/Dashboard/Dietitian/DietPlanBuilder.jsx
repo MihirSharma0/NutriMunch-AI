@@ -522,6 +522,33 @@ const DietPlanBuilder = () => {
                 // Sync to backend API
                 api.post('/diet-plans/deploy', finalDeployedPayload).catch(() => {});
 
+                // Dispatch notification for all platform users
+                const generalNotif = {
+                    id: `diet_notif_${Date.now()}`,
+                    title: `New Nutritional Protocol Published`,
+                    message: `Dietitian ${dietitianName} published a new nutritional protocol: "${planForm.planTitle}". Check your diet plans to link it.`,
+                    time: 'Just now',
+                    icon: 'restaurant_menu',
+                    type: 'DIET_PLAN',
+                    path: '/diet-plans',
+                    read: false
+                };
+                const existingNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+                localStorage.setItem('nutrimunch_user_notifications', JSON.stringify([generalNotif, ...existingNotifs]));
+                window.dispatchEvent(new Event('nutrimunch_notification_added'));
+                try {
+                    const cbc = new BroadcastChannel('nutrimunch_clinical_channel');
+                    cbc.postMessage({ payload: generalNotif });
+                    setTimeout(() => { try { cbc.close(); } catch (e) {} }, 500);
+                } catch (e) {}
+                api.post('/notifications/send', {
+                    title: generalNotif.title,
+                    message: generalNotif.message,
+                    type: 'DIET_PLAN',
+                    icon: 'restaurant_menu',
+                    path: '/diet-plans'
+                }).catch(() => {});
+
                 showToast(`"${planForm.planTitle}" deployed successfully! Saved to history & active for all users.`);
             } else {
                 // EXCLUSIVE DIET PLAN -> Targeted to specific user
@@ -560,7 +587,7 @@ const DietPlanBuilder = () => {
                 localStorage.setItem('nutrimunch_diet_plans_history', JSON.stringify(updatedHistory));
                 window.dispatchEvent(new Event('nutrimunch_diet_history_updated'));
 
-                // Dispatch notification for targeted user
+                // Dispatch notification for targeted user with direct deep link
                 const planNotification = {
                     id: `plan_notif_${Date.now()}`,
                     title: `Exclusive Diet Plan Formulated`,
@@ -568,7 +595,9 @@ const DietPlanBuilder = () => {
                     time: 'Just now',
                     icon: 'restaurant_menu',
                     type: 'EXCLUSIVE_PLAN',
+                    path: '/diet-plans',
                     targetUserId: String(selectedClient.userId || selectedClient.id),
+                    targetUserEmail: selectedClient.email,
                     read: false
                 };
                 const existingNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
@@ -583,8 +612,24 @@ const DietPlanBuilder = () => {
                     setTimeout(() => { try { bc.close(); } catch (err) {} }, 1000);
                 } catch (err) {}
 
-                // Sync to backend API
+                try {
+                    const cbc = new BroadcastChannel('nutrimunch_clinical_channel');
+                    cbc.postMessage({ payload: planNotification });
+                    setTimeout(() => { try { cbc.close(); } catch (e) {} }, 500);
+                } catch (e) {}
+
+                // Sync to backend API database
                 api.post('/diet-plans/deploy', finalDeployedPayload).catch(() => {});
+                const numTargetId = parseInt(selectedClient.userId || selectedClient.id, 10);
+                api.post('/notifications/send', {
+                    userId: isNaN(numTargetId) ? null : numTargetId,
+                    userEmail: selectedClient.email || null,
+                    title: planNotification.title,
+                    message: planNotification.message,
+                    type: 'EXCLUSIVE_PLAN',
+                    icon: 'restaurant_menu',
+                    path: '/diet-plans'
+                }).catch(() => {});
 
                 showToast(`"${planForm.planTitle}" deployed directly for ${selectedClient.name}! Saved to history.`);
             }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import { API_BASE_URL } from '../../../api/axios';
@@ -511,14 +512,12 @@ const Appointments = () => {
                                     >
                                         <span className="material-symbols-outlined text-sm">forum</span> Chat with Dietitian
                                     </button>
-                                    <a 
-                                        href={featuredUpcoming.meetingLink || "https://meet.google.com/nutri-ai-session"} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
+                                    <Link 
+                                        to="/virtual-room" 
                                         className="bg-[#a5d391] text-black px-5 py-2.5 rounded-full text-xs font-bold hover:bg-white transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer"
                                     >
                                         <span className="material-symbols-outlined text-sm">videocam</span> Join Virtual Room
-                                    </a>
+                                    </Link>
                                     <button 
                                         onClick={() => handleCancelAppointment(featuredUpcoming.id)}
                                         className="border border-red-500/30 text-red-300 hover:bg-red-500 hover:text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer"
@@ -1067,14 +1066,12 @@ const Appointments = () => {
 
                             <div className="flex gap-2">
                                 {!isDatePassed(selectedAppointment.appointmentTime) && (selectedAppointment.status || '').toUpperCase() !== 'CANCELLED' && (
-                                    <a 
-                                        href={selectedAppointment.meetingLink || "https://meet.google.com/nutri-ai-session"}
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
+                                    <Link 
+                                        to="/virtual-room"
                                         className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer flex items-center gap-1"
                                     >
                                         <span className="material-symbols-outlined text-sm">videocam</span> Join Room
-                                    </a>
+                                    </Link>
                                 )}
                                 <button 
                                     onClick={() => setSelectedAppointment(null)}

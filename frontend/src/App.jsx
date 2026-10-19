@@ -32,6 +32,7 @@ import Reports from './pages/Dashboard/User/Reports';
 import AiChat from './pages/Dashboard/User/AiChat';
 import AiDietGenerator from './pages/Dashboard/User/AiDietGenerator';
 import AiImageAnalyzer from './pages/Dashboard/User/AiImageAnalyzer';
+import VirtualRoom from './pages/VirtualRoom';
 
 // Nutritionist Dashboard Layout & Pages
 import DietitianHome from './pages/Dashboard/Dietitian/DietitianHome';
@@ -109,6 +110,8 @@ function App() {
               <Route path="appointments" element={<Appointments />} />
               <Route path="reports" element={<Reports />} />
               <Route path="diet-plans" element={<DietPlans />} />
+              <Route path="virtual-room" element={<VirtualRoom />} />
+              <Route path="room" element={<VirtualRoom />} />
 
               {/* User Dashboard Aliases */}
               <Route path="dashboard/user" element={<DashboardHome />} />

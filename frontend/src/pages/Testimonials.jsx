@@ -1,8 +1,6 @@
 import React from 'react';
 import Starfield from '../components/Starfield';
 import ClientTestimonials from './HomeSections/ClientTestimonials';
-import VideoTestimonials from './TestimonialSections/VideoTestimonials';
-import SuccessMetrics from './TestimonialSections/SuccessMetrics';
 import BeforeAfterGallery from './TestimonialSections/BeforeAfterGallery';
 import ShareYourStoryForm from './TestimonialSections/ShareYourStoryForm';
 
@@ -30,10 +28,8 @@ const Testimonials = () => {
                 <ClientTestimonials showHeader={false} showAll={true} />
 
                 {/* Appended Sections */}
-                <SuccessMetrics />
-                <VideoTestimonials />
-                <BeforeAfterGallery />
                 <ShareYourStoryForm />
+                <BeforeAfterGallery />
             </div>
         </div>
     );

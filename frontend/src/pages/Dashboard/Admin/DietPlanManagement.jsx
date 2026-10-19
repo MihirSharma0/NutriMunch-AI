@@ -140,6 +140,33 @@ const DietPlanManagement = () => {
 
             await api.post('/diet-plans/deploy', updated).catch(() => {});
 
+            // Dispatch notification with direct link to /diet-plans
+            const promoNotif = {
+                id: `diet_notif_${Date.now()}`,
+                title: `Platform Active Protocol Promoted`,
+                message: `Nutritional Protocol "${plan.title || plan.planTitle}" has been promoted to the Active Platform Protocol!`,
+                time: 'Just now',
+                icon: 'restaurant_menu',
+                type: 'DIET_PLAN',
+                path: '/diet-plans',
+                read: false
+            };
+            const existingNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
+            localStorage.setItem('nutrimunch_user_notifications', JSON.stringify([promoNotif, ...existingNotifs]));
+            window.dispatchEvent(new Event('nutrimunch_notification_added'));
+            try {
+                const cbc = new BroadcastChannel('nutrimunch_clinical_channel');
+                cbc.postMessage({ payload: promoNotif });
+                setTimeout(() => { try { cbc.close(); } catch (e) {} }, 500);
+            } catch (e) {}
+            api.post('/notifications/send', {
+                title: promoNotif.title,
+                message: promoNotif.message,
+                type: 'DIET_PLAN',
+                icon: 'restaurant_menu',
+                path: '/diet-plans'
+            }).catch(() => {});
+
             showToast(`"${plan.title || plan.planTitle}" promoted to Platform Active Protocol!`);
             loadAllPlans();
         } catch (e) {

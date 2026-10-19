@@ -5,6 +5,7 @@ import { Droplet, Plus, RotateCcw, CheckCircle2, Sparkles, TrendingUp, Activity,
 import api, { API_BASE_URL } from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
+import ManualFoodTracker from '../../../components/ManualFoodTracker';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -509,7 +510,10 @@ const ProgressTracking = () => {
                 </div>
             </div>
 
-            {/* 2. Daily Requirements Section */}
+            {/* 2. Manual Food-Logging & Auto Daily Nutrition Count */}
+            <ManualFoodTracker customTargets={customTargets} />
+
+            {/* 3. Daily Requirements Section */}
             <div className="bg-gradient-to-r from-emerald-950/40 via-white/5 to-[#a5d391]/10 backdrop-blur-xl border border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                     <div className="flex items-center gap-3">

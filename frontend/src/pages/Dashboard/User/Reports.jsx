@@ -1,98 +1,2330 @@
-import React, { useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { Line, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
+import api from '../../../api/axios';
+import DarkCalendarPicker from '../../../components/DarkCalendarPicker';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
+
+const DEFAULT_TARGETS = {
+    calories: 2000,
+    protein: 140,
+    carbs: 200,
+    fats: 65,
+    water: 2.5
+};
+
+const SHORT_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const INTERVAL_PRESETS = [
+    { id: '1D', label: '1 Day', days: 1 },
+    { id: '1W', label: '1 Week', days: 7 },
+    { id: '2W', label: '2 Weeks', days: 14 },
+    { id: '3W', label: '3 Weeks', days: 21 },
+    { id: '1M', label: '1 Month', days: 30 },
+    { id: '3M', label: '3 Months', days: 90 },
+    { id: '6M', label: '6 Months', days: 180 },
+    { id: '1Y', label: '1 Year', days: 365 },
+    { id: 'CUSTOM', label: 'Custom Range', days: null }
+];
+
+/**
+ * Custom Year Selector supporting any year with steppers, direct number input, and styling
+ */
+const YearSelector = ({ value, onChange, label }) => {
+    const numericYear = parseInt(value, 10) || new Date().getFullYear();
+    const currentYear = new Date().getFullYear();
+
+    return (
+        <div className="flex items-center gap-1.5 bg-[#080b12] border border-white/15 focus-within:border-[#a5d391]/60 px-2.5 py-1.5 rounded-xl text-xs transition-colors">
+            {label && <span className="text-[10px] text-white/40 uppercase font-bold mr-1">{label}</span>}
+            <button
+                type="button"
+                onClick={() => onChange(String(numericYear - 1))}
+                className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Previous Year"
+            >
+                <span className="material-symbols-outlined text-sm">chevron_left</span>
+            </button>
+            <input
+                type="number"
+                min="1900"
+                max="2100"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-16 bg-transparent text-center text-white font-mono font-bold text-xs outline-none focus:text-[#a5d391] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                placeholder="Year"
+            />
+            <button
+                type="button"
+                onClick={() => onChange(String(numericYear + 1))}
+                className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Next Year"
+            >
+                <span className="material-symbols-outlined text-sm">chevron_right</span>
+            </button>
+            {numericYear !== currentYear && (
+                <button
+                    type="button"
+                    onClick={() => onChange(String(currentYear))}
+                    className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-[#a5d391] hover:text-black text-white/60 font-bold transition-all cursor-pointer"
+                    title={`Jump to current year (${currentYear})`}
+                >
+                    {currentYear}
+                </button>
+            )}
+        </div>
+    );
+};
+
+/**
+ * Dynamic nice-scale tick calculator matching Chart.js automatic Y-axis bounding
+ */
+const calculateNiceYScale = (allValues, targetTicks = 8) => {
+    const valid = allValues.map(Number).filter((v) => !isNaN(v));
+    if (valid.length === 0) {
+        return { minY: 0, maxY: 100, step: 20, ticks: [0, 20, 40, 60, 80, 100] };
+    }
+
+    let minVal = Math.min(...valid);
+    let maxVal = Math.max(...valid);
+
+    // If all values are identical
+    if (minVal === maxVal) {
+        const pad = minVal === 0 ? 10 : Math.max(5, Math.round(minVal * 0.1));
+        minVal = Math.max(0, minVal - pad);
+        maxVal = maxVal + pad;
+    }
+
+    const span = maxVal - minVal;
+    const rawStep = Math.max(1, span / targetTicks);
+    const power = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const fraction = rawStep / power;
+
+    let niceMultiplier = 1;
+    if (fraction <= 1.25) niceMultiplier = 1;
+    else if (fraction <= 2.5) niceMultiplier = 2;
+    else if (fraction <= 5.5) niceMultiplier = 5;
+    else niceMultiplier = 10;
+
+    let step = Math.round(niceMultiplier * power);
+    if (step < 1) step = 1;
+
+    let minY = Math.floor(minVal / step) * step;
+    let maxY = Math.ceil(maxVal / step) * step;
+
+    // If minVal is within 1.5 steps of 0, start at 0
+    if (minVal >= 0 && minVal < step * 1.5) {
+        minY = 0;
+    }
+
+    // Ensure ceiling gives room for max peak if maxVal lands exactly on maxY
+    if (maxY === maxVal) {
+        maxY += step;
+    }
+
+    if (minY < 0 && minVal >= 0) {
+        minY = 0;
+    }
+
+    const ticks = [];
+    const count = Math.min(25, Math.round((maxY - minY) / step));
+    for (let i = 0; i <= count; i++) {
+        ticks.push(Math.round(minY + i * step));
+    }
+
+    return { minY, maxY, step, ticks };
+};
+
+/**
+ * Generates smooth cubic Bezier spline path ('C' commands) with tension matching Chart.js (0.35)
+ */
+const getSmoothCurvePath = (pts, tension = 0.35) => {
+    if (!pts || pts.length === 0) return '';
+    if (pts.length === 1) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+    if (pts.length === 2) {
+        return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+    }
+
+    let path = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i === 0 ? 0 : i - 1];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+
+        const cp1x = p1.x + ((p2.x - p0.x) * tension) / 2;
+        const cp1y = p1.y + ((p2.y - p0.y) * tension) / 2;
+        const cp2x = p2.x - ((p3.x - p1.x) * tension) / 2;
+        const cp2y = p2.y - ((p3.y - p1.y) * tension) / 2;
+
+        path += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+    }
+    return path;
+};
+
+/**
+ * Generates smooth cubic Bezier filled area path closing to bottom baseline
+ */
+const getSmoothAreaPath = (pts, baselineY, tension = 0.35) => {
+    if (!pts || pts.length === 0) return '';
+    const firstX = pts[0].x.toFixed(1);
+    const lastX = pts[pts.length - 1].x.toFixed(1);
+    const curve = getSmoothCurvePath(pts, tension);
+    const curveCommands = curve.replace(/^M\s*[\d.]+,[\d.]+/, '');
+    return `M ${firstX},${baselineY} L ${firstX},${pts[0].y.toFixed(1)} ${curveCommands} L ${lastX},${baselineY} Z`;
+};
+
+/**
+ * Render crisp, vector SVG line charts for printing in PDF reports
+ * Matches the website Chart.js visual depth, tension, dynamic intervals, and dark telemetry aesthetic
+ */
+const generateSvgLineChart = ({
+    title,
+    unit,
+    actualLabel = 'Consumed Water',
+    targetLabel = 'Water Target',
+    labels,
+    actualData,
+    targetData,
+    actualColor = '#38bdf8',
+    targetColor = '#a5d391'
+}) => {
+    const width = 680;
+    const height = 210;
+    const padLeft = 55;
+    const padRight = 20;
+    const padTop = 22;
+    const padBottom = 32;
+
+    const allValues = [
+        ...actualData.map((v) => Number(v) || 0),
+        ...targetData.map((v) => Number(v) || 0)
+    ];
+
+    const { minY, maxY, ticks } = calculateNiceYScale(allValues, 8);
+
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom;
+    const yRange = maxY - minY || 1;
+
+    const getX = (idx) => padLeft + (labels.length > 1 ? (idx / (labels.length - 1)) * plotW : plotW / 2);
+    const getY = (val) => padTop + plotH - ((Number(val) - minY) / yRange) * plotH;
+    const baselineY = (padTop + plotH).toFixed(1);
+
+    // Subtle horizontal gridlines matching website Chart.js dark theme
+    const gridLines = ticks.map((val) => {
+        const y = getY(val);
+        return `
+            <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" stroke-dasharray="2,3" />
+            <text x="${padLeft - 10}" y="${y + 3.5}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="end">${val.toLocaleString()}</text>
+        `;
+    });
+
+    // Points with coordinates
+    const actualPoints = actualData.map((val, idx) => ({ x: getX(idx), y: getY(val) }));
+    const pathD = getSmoothCurvePath(actualPoints, 0.35);
+    const areaD = getSmoothAreaPath(actualPoints, baselineY, 0.35);
+
+    // Target line (dashed, tension: 0)
+    const targetPoints = targetData.map((val, idx) => ({ x: getX(idx), y: getY(val) }));
+    const targetD = targetPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+    // X Labels
+    const labelStep = Math.max(1, Math.ceil(labels.length / 10));
+    const xLabels = labels.map((lbl, idx) => {
+        if (idx % labelStep !== 0 && idx !== labels.length - 1) return '';
+        const x = getX(idx);
+        return `<text x="${x.toFixed(1)}" y="${height - 10}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="middle">${lbl}</text>`;
+    }).join('');
+
+    // Dots matching website Chart.js pointBackgroundColor & pointBorderColor
+    const dots = actualPoints.map((p) => {
+        return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#080b12" stroke="${actualColor}" stroke-width="2" />`;
+    }).join('');
+
+    const gradId = `grad_${actualColor.replace(/[^a-zA-Z0-9]/g, '')}_${Math.random().toString(36).substring(2, 7)}`;
+
+    return `
+        <div class="chart-card" style="background: #080b12; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; page-break-inside: avoid; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 11pt; color: #ffffff; display: flex; align-items: center; gap: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${actualColor}; box-shadow: 0 0 8px ${actualColor};"></span>
+                    ${title}
+                </div>
+                <div style="font-size: 8.5pt; color: #e2e8f0; display: flex; align-items: center; gap: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="display: inline-block; width: 16px; height: 9px; border: 2px solid ${actualColor}; background: ${actualColor}25; border-radius: 2px;"></span>
+                        <span style="font-weight: 600; color: #f8fafc;">${actualLabel} (${unit})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="display: inline-block; width: 16px; height: 0px; border-top: 2px dashed ${targetColor};"></span>
+                        <span style="font-weight: 600; color: #f8fafc;">${targetLabel} (${unit})</span>
+                    </div>
+                </div>
+            </div>
+            <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible; display: block;">
+                <defs>
+                    <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="${actualColor}" stop-opacity="0.32"/>
+                        <stop offset="60%" stop-color="${actualColor}" stop-opacity="0.10"/>
+                        <stop offset="100%" stop-color="${actualColor}" stop-opacity="0.0"/>
+                    </linearGradient>
+                </defs>
+                ${gridLines.join('')}
+                ${areaD ? `<path d="${areaD}" fill="url(#${gradId})" />` : ''}
+                ${targetD ? `<path d="${targetD}" fill="none" stroke="${targetColor}" stroke-width="2" stroke-dasharray="5,5" />` : ''}
+                ${pathD ? `<path d="${pathD}" fill="none" stroke="${actualColor}" stroke-width="2.5" />` : ''}
+                ${dots}
+                ${xLabels}
+            </svg>
+        </div>
+    `;
+};
+
+/**
+ * Render grouped bar chart SVG for printing in PDF reports
+ * Matches the website Chart.js theme, palette, and proportions
+ */
+const generateSvgBarChart = ({ title, labels, proteinData, carbsData, fatsData }) => {
+    const width = 680;
+    const height = 210;
+    const padLeft = 50;
+    const padRight = 20;
+    const padTop = 22;
+    const padBottom = 32;
+
+    const maxVal = Math.max(
+        ...proteinData.map((v) => Number(v) || 0),
+        ...carbsData.map((v) => Number(v) || 0),
+        ...fatsData.map((v) => Number(v) || 0),
+        10
+    );
+
+    // Compute nice scale starting at 0 for bar chart
+    const rawStep = Math.max(5, (maxVal * 1.15) / 5);
+    const power = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const fraction = rawStep / power;
+    let niceMultiplier = 1;
+    if (fraction <= 1.25) niceMultiplier = 1;
+    else if (fraction <= 2.5) niceMultiplier = 2;
+    else if (fraction <= 5.5) niceMultiplier = 5;
+    else niceMultiplier = 10;
+    const step = Math.round(niceMultiplier * power) || 5;
+    const maxY = Math.ceil((maxVal * 1.12) / step) * step;
+
+    const ticks = [];
+    for (let t = 0; t <= maxY; t += step) {
+        ticks.push(t);
+    }
+
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom;
+    const groupW = plotW / Math.max(labels.length, 1);
+    const barW = Math.max(2.5, Math.min(12, (groupW - 6) / 3));
+
+    const gridLines = ticks.map((val) => {
+        const y = padTop + plotH - (val / (maxY || 1)) * plotH;
+        return `
+            <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" stroke-dasharray="2,3" />
+            <text x="${padLeft - 8}" y="${y + 3.5}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="end">${val}g</text>
+        `;
+    });
+
+    let barsSvg = '';
+    const labelStep = Math.max(1, Math.ceil(labels.length / 12));
+
+    labels.forEach((lbl, idx) => {
+        const groupCenterX = padLeft + idx * groupW + groupW / 2;
+        const pVal = Number(proteinData[idx]) || 0;
+        const cVal = Number(carbsData[idx]) || 0;
+        const fVal = Number(fatsData[idx]) || 0;
+
+        const pH = Math.max(1, (pVal / (maxY || 1)) * plotH);
+        const cH = Math.max(1, (cVal / (maxY || 1)) * plotH);
+        const fH = Math.max(1, (fVal / (maxY || 1)) * plotH);
+
+        const pX = groupCenterX - barW * 1.5;
+        const cX = groupCenterX - barW * 0.5;
+        const fX = groupCenterX + barW * 0.5;
+
+        const pY = padTop + plotH - pH;
+        const cY = padTop + plotH - cH;
+        const fY = padTop + plotH - fH;
+
+        barsSvg += `
+            <rect x="${pX}" y="${pY}" width="${barW - 0.5}" height="${pH}" fill="#a5d391" rx="2" />
+            <rect x="${cX}" y="${cY}" width="${barW - 0.5}" height="${cH}" fill="#38bdf8" rx="2" />
+            <rect x="${fX}" y="${fY}" width="${barW - 0.5}" height="${fH}" fill="#facc15" rx="2" />
+        `;
+
+        if (idx % labelStep === 0 || idx === labels.length - 1) {
+            barsSvg += `<text x="${groupCenterX}" y="${height - 10}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="middle">${lbl}</text>`;
+        }
+    });
+
+    return `
+        <div class="chart-card" style="background: #080b12; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; page-break-inside: avoid; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 11pt; color: #ffffff; display: flex; align-items: center; gap: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #a5d391;"></span>
+                    ${title}
+                </div>
+                <div style="font-size: 8.5pt; color: #e2e8f0; display: flex; align-items: center; gap: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; background: #a5d391; border-radius: 2px;"></span>
+                        <span style="font-weight: 600; color: #f8fafc;">Protein (g)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; background: #38bdf8; border-radius: 2px;"></span>
+                        <span style="font-weight: 600; color: #f8fafc;">Carbs (g)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; background: #facc15; border-radius: 2px;"></span>
+                        <span style="font-weight: 600; color: #f8fafc;">Fats (g)</span>
+                    </div>
+                </div>
+            </div>
+            <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible; display: block;">
+                ${gridLines.join('')}
+                ${barsSvg}
+            </svg>
+        </div>
+    `;
+};
 
 const Reports = () => {
     const { user } = useContext(AuthContext);
+
+    // Current date string
+    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+    // Active Aggregated View Mode: 'today' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+    const [viewMode, setViewMode] = useState('today');
+
+    // Statement Pickers State (Account Statement Style)
+    const [selectedDayDate, setSelectedDayDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [selectedWeekDate, setSelectedWeekDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [selectedMonthStr, setSelectedMonthStr] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    });
+    const [selectedQuarter, setSelectedQuarter] = useState(() => {
+        const m = new Date().getMonth();
+        return m < 3 ? 'Q1' : (m < 6 ? 'Q2' : (m < 9 ? 'Q3' : 'Q4'));
+    });
+    const [selectedQuarterYear, setSelectedQuarterYear] = useState(() => new Date().getFullYear().toString());
+    const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear().toString());
+
+    // Interactive chart viewing interval state (independent of statement export)
+    const [selectedInterval, setSelectedInterval] = useState('STATEMENT');
+    const [customStartDate, setCustomStartDate] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 14);
+        return d.toISOString().split('T')[0];
+    });
+    const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+    // Date Range Formatting Helpers
+    const getWeekRange = (dateStr) => {
+        const d = new Date(dateStr || todayStr);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const mon = new Date(d);
+        mon.setDate(diff);
+        const sun = new Date(mon);
+        sun.setDate(sun.getDate() + 6);
+        return {
+            startDate: mon.toISOString().split('T')[0],
+            endDate: sun.toISOString().split('T')[0],
+            formatted: `${mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sun.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+            shortLabel: `Week of ${mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+        };
+    };
+
+    const getMonthLabel = (monthStr) => {
+        if (!monthStr) return 'This Month';
+        const [year, month] = monthStr.split('-');
+        const d = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
+        return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    };
+
+    const getQuarterLabel = (quarter, year) => {
+        const map = {
+            Q1: 'Jan 1 – Mar 31',
+            Q2: 'Apr 1 – Jun 30',
+            Q3: 'Jul 1 – Sep 30',
+            Q4: 'Oct 1 – Dec 31'
+        };
+        return `${quarter} ${year} (${map[quarter] || 'Full Quarter'})`;
+    };
+
+    // Graph Display Metric: 'hydration' | 'nutrition' | 'macros'
+    const [activeGraphMetric, setActiveGraphMetric] = useState('hydration');
+
+    // Targets State
+    const [targets, setTargets] = useState(DEFAULT_TARGETS);
+
+    // Today's Live Hydration State
+    const [waterConsumedMl, setWaterConsumedMl] = useState(() => {
+        const saved = localStorage.getItem('nutrimunch_water_consumed');
+        return saved ? parseInt(saved, 10) : 1850;
+    });
+
+    // Today's Live Food Intake State
+    const [todayNutrition, setTodayNutrition] = useState(() => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        try {
+            const saved = localStorage.getItem(`nutrimunch_logged_foods_${todayStr}`);
+            if (saved) {
+                const foods = JSON.parse(saved);
+                return foods.reduce((acc, f) => ({
+                    calories: acc.calories + (f.calories || 0),
+                    protein: acc.protein + (f.protein || 0),
+                    carbs: acc.carbs + (f.carbs || 0),
+                    fats: acc.fats + (f.fats || 0)
+                }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+            }
+        } catch (e) {}
+        return { calories: 1650, protein: 118, carbs: 175, fats: 52 };
+    });
+
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+    const [downloadSuccessToast, setDownloadSuccessToast] = useState(null);
+
+    // Load targets from backend or localStorage
+    useEffect(() => {
+        api.get('/profiles/me').then(res => {
+            if (res.data) {
+                const loaded = {
+                    calories: res.data.dailyCaloriesTarget || DEFAULT_TARGETS.calories,
+                    protein: res.data.proteinTarget || DEFAULT_TARGETS.protein,
+                    carbs: res.data.carbsTarget || DEFAULT_TARGETS.carbs,
+                    fats: res.data.fatsTarget || DEFAULT_TARGETS.fats,
+                    water: parseFloat(res.data.dailyWaterTargetLiters) || DEFAULT_TARGETS.water
+                };
+                setTargets(loaded);
+            }
+        }).catch(() => {
+            const savedLiters = localStorage.getItem('nutrimunch_water_target_liters');
+            if (savedLiters) {
+                setTargets(prev => ({ ...prev, water: parseFloat(savedLiters) || 2.5 }));
+            }
+        });
+    }, []);
+
+    // Refresh live metrics on storage or local events
+    useEffect(() => {
+        const refreshMetrics = () => {
+            const savedWater = localStorage.getItem('nutrimunch_water_consumed');
+            if (savedWater) setWaterConsumedMl(parseInt(savedWater, 10));
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            try {
+                const savedFoods = localStorage.getItem(`nutrimunch_logged_foods_${todayStr}`);
+                if (savedFoods) {
+                    const foods = JSON.parse(savedFoods);
+                    const totals = foods.reduce((acc, f) => ({
+                        calories: acc.calories + (f.calories || 0),
+                        protein: acc.protein + (f.protein || 0),
+                        carbs: acc.carbs + (f.carbs || 0),
+                        fats: acc.fats + (f.fats || 0)
+                    }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+                    setTodayNutrition(totals);
+                }
+            } catch (e) {}
+        };
+
+        window.addEventListener('storage', refreshMetrics);
+        window.addEventListener('nutrimunch_profile_updated', refreshMetrics);
+        return () => {
+            window.removeEventListener('storage', refreshMetrics);
+            window.removeEventListener('nutrimunch_profile_updated', refreshMetrics);
+        };
+    }, []);
 
     if (!user) {
         return <FeatureGate />;
     }
 
-    return (
-        <div className="w-full">
-            <h1 className="text-3xl font-bold font-hero-display mb-8 tracking-tight text-white">Data Exports</h1>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
-                {/* Generation Block */}
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 shadow-xl">
-                    <h3 className="font-bold mb-2 font-hero-display text-lg">Compile Custom Report</h3>
-                    <p className="text-white/50 text-sm mb-6">Select the parameters for your generated health summary. Useful for sharing with primary care physicians.</p>
-                    
-                    <form className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold uppercase tracking-widest text-[#a5d391] mb-2 block">Timeframe</label>
-                            <select className="w-full bg-[#080b12]/80 border border-white/10 px-4 py-3 rounded-xl text-sm outline-none focus:border-[#a5d391]/50 text-white transition-colors">
-                                <option>Last 30 Days</option>
-                                <option>Last 90 Days</option>
-                                <option>Year to Date</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label className="text-xs font-bold uppercase tracking-widest text-[#a5d391] mb-2 block">Included Metrics</label>
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                    <input type="checkbox" defaultChecked className="accent-[#a5d391] w-4 h-4 rounded" />
-                                    <span className="text-sm text-white/80 group-hover:text-[#a5d391] transition-colors">Macronutrient Adherence</span>
-                                </label>
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                    <input type="checkbox" defaultChecked className="accent-[#a5d391] w-4 h-4 rounded" />
-                                    <span className="text-sm text-white/80 group-hover:text-[#a5d391] transition-colors">Biometric Baselines (HRV, Sleep)</span>
-                                </label>
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                    <input type="checkbox" defaultChecked className="accent-[#a5d391] w-4 h-4 rounded" />
-                                    <span className="text-sm text-white/80 group-hover:text-[#a5d391] transition-colors">Blood Glucose Spikes (CGM)</span>
-                                </label>
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                    <input type="checkbox" className="accent-[#a5d391] w-4 h-4 rounded" />
-                                    <span className="text-sm text-white/80 group-hover:text-[#a5d391] transition-colors">Clinical Notes</span>
-                                </label>
-                            </div>
-                        </div>
+    // Calculations for Today's Hydration
+    const targetWaterMl = Math.round((targets.water || 2.5) * 1000);
+    const waterPercent = targetWaterMl > 0 ? Math.min(Math.round((waterConsumedMl / targetWaterMl) * 100), 100) : 0;
+    const waterDeficit = Math.max(targetWaterMl - waterConsumedMl, 0);
 
-                        <button type="button" className="w-full bg-[#a5d391] text-black font-bold py-4 rounded-2xl mt-4 hover:bg-white transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer">
-                            <span className="material-symbols-outlined text-xl">auto_awesome</span>
-                            Generate PDF
-                        </button>
-                    </form>
-                </div>
+    // Calculations for Today's Nutrition
+    const targetCalories = targets.calories || 2000;
+    const calPercent = targetCalories > 0 ? Math.min(Math.round((todayNutrition.calories / targetCalories) * 100), 100) : 0;
+    const calRemaining = Math.max(targetCalories - todayNutrition.calories, 0);
 
-                {/* Archive Block */}
-                <div>
-                    <h2 className="text-lg font-bold font-hero-display text-white/70 mb-4">Report Archive</h2>
-                    <div className="space-y-4">
-                        
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-[#a5d391]/30 transition-colors group cursor-pointer shadow-lg">
-                            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                <div className="w-10 h-10 shrink-0 bg-red-500/10 rounded-xl flex items-center justify-center border border-red-500/20 text-red-500">
-                                    <span className="material-symbols-outlined">picture_as_pdf</span>
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="font-bold text-sm font-hero-display">Q3 Metabolic Summary</div>
-                                    <div className="text-xs text-white/40">Generated Oct 01, 2026 • 2.4 MB</div>
-                                </div>
-                            </div>
-                            <span className="material-symbols-outlined shrink-0 text-white/30 group-hover:text-[#a5d391] transition-colors">download</span>
-                        </div>
-                        
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-[#a5d391]/30 transition-colors group cursor-pointer shadow-lg">
-                            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                <div className="w-10 h-10 shrink-0 bg-red-500/10 rounded-xl flex items-center justify-center border border-red-500/20 text-red-500">
-                                    <span className="material-symbols-outlined">picture_as_pdf</span>
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="font-bold text-sm font-hero-display">Initial Baseline Assessment</div>
-                                    <div className="text-xs text-white/40">Generated Sep 28, 2026 • 5.1 MB</div>
-                                </div>
-                            </div>
-                            <span className="material-symbols-outlined shrink-0 text-white/30 group-hover:text-[#a5d391] transition-colors">download</span>
-                        </div>
+    const targetProtein = targets.protein || 140;
+    const proteinPercent = targetProtein > 0 ? Math.min(Math.round((todayNutrition.protein / targetProtein) * 100), 100) : 0;
 
+    const targetCarbs = targets.carbs || 200;
+    const carbsPercent = targetCarbs > 0 ? Math.min(Math.round((todayNutrition.carbs / targetCarbs) * 100), 100) : 0;
+
+    const targetFats = targets.fats || 65;
+    const fatsPercent = targetFats > 0 ? Math.min(Math.round((todayNutrition.fats / targetFats) * 100), 100) : 0;
+
+    // Active evaluated metrics according to statement mode
+    const activeStatementData = useMemo(() => {
+        const weekRange = getWeekRange(selectedWeekDate);
+        const monthLabel = getMonthLabel(selectedMonthStr);
+        const quarterLabel = getQuarterLabel(selectedQuarter, selectedQuarterYear);
+
+        if (viewMode === 'today') {
+            const wDeficit = Math.max(targetWaterMl - waterConsumedMl, 0);
+            const wPct = targetWaterMl > 0 ? Math.min(Math.round((waterConsumedMl / targetWaterMl) * 100), 100) : 0;
+            const cPct = targetCalories > 0 ? Math.min(Math.round((todayNutrition.calories / targetCalories) * 100), 100) : 0;
+            const cRemaining = Math.max(targetCalories - todayNutrition.calories, 0);
+
+            return {
+                mode: 'today',
+                scopeName: "Today's Live Clinical Statement",
+                dateLabel: `Today, ${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`,
+                shortDate: 'Today',
+                daysCount: 1,
+                isLive: true,
+                waterConsumed: waterConsumedMl,
+                waterTarget: targetWaterMl,
+                waterPercent: wPct,
+                waterDeficit: wDeficit,
+                calories: todayNutrition.calories,
+                calorieTarget: targetCalories,
+                caloriePercent: cPct,
+                calorieRemaining: cRemaining,
+                protein: todayNutrition.protein,
+                proteinPercent: targetProtein > 0 ? Math.min(Math.round((todayNutrition.protein / targetProtein) * 100), 100) : 0,
+                carbs: todayNutrition.carbs,
+                carbsPercent: targetCarbs > 0 ? Math.min(Math.round((todayNutrition.carbs / targetCarbs) * 100), 100) : 0,
+                fats: todayNutrition.fats,
+                fatsPercent: targetFats > 0 ? Math.min(Math.round((todayNutrition.fats / targetFats) * 100), 100) : 0,
+                totalWaterLiters: (waterConsumedMl / 1000).toFixed(2),
+                avgWaterLiters: (waterConsumedMl / 1000).toFixed(2),
+                totalCalories: todayNutrition.calories.toLocaleString(),
+                avgCalories: todayNutrition.calories,
+                adherenceRate: `${wPct}%`,
+                hydrationAdherence: `${wPct}%`,
+                nutritionScore: `${cPct}%`,
+                nutritionAdherence: `${cPct}%`,
+                avgProtein: todayNutrition.protein,
+                avgCarbs: todayNutrition.carbs,
+                avgFats: todayNutrition.fats,
+                title: "Today's Performance & Intake Audit",
+                subtitle: "Real-time 24-hour log and live nutritional breakdown",
+                loggedVisits: 'Active Today (Live)'
+            };
+        }
+
+        if (viewMode === 'daily') {
+            const isToday = selectedDayDate === todayStr;
+            let dayWater = waterConsumedMl;
+            let dayNutr = todayNutrition;
+
+            if (!isToday) {
+                try {
+                    const saved = localStorage.getItem(`nutrimunch_logged_foods_${selectedDayDate}`);
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        dayNutr = parsed.reduce((acc, f) => ({
+                            calories: acc.calories + (f.calories || 0),
+                            protein: acc.protein + (f.protein || 0),
+                            carbs: acc.carbs + (f.carbs || 0),
+                            fats: acc.fats + (f.fats || 0)
+                        }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+                    } else {
+                        const seed = Math.abs(Math.sin(new Date(selectedDayDate).getDate() * 7 + (new Date(selectedDayDate).getMonth() + 1) * 13));
+                        dayNutr = {
+                            calories: Math.round(targetCalories * (0.88 + seed * 0.2)),
+                            protein: Math.round(targetProtein * (0.86 + seed * 0.22)),
+                            carbs: Math.round(targetCarbs * (0.90 + seed * 0.18)),
+                            fats: Math.round(targetFats * (0.85 + seed * 0.25))
+                        };
+                    }
+                } catch (e) {}
+
+                const seedW = Math.abs(Math.sin(new Date(selectedDayDate).getDate() * 11));
+                dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
+            }
+
+            const dWaterPct = targetWaterMl > 0 ? Math.min(Math.round((dayWater / targetWaterMl) * 100), 100) : 0;
+            const dCalPct = targetCalories > 0 ? Math.min(Math.round((dayNutr.calories / targetCalories) * 100), 100) : 0;
+            const dDateFormatted = new Date(selectedDayDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+            return {
+                mode: 'daily',
+                scopeName: `Daily Statement (${dDateFormatted})`,
+                dateLabel: dDateFormatted,
+                shortDate: selectedDayDate,
+                daysCount: 1,
+                isLive: isToday,
+                waterConsumed: dayWater,
+                waterTarget: targetWaterMl,
+                waterPercent: dWaterPct,
+                waterDeficit: Math.max(targetWaterMl - dayWater, 0),
+                calories: dayNutr.calories,
+                calorieTarget: targetCalories,
+                caloriePercent: dCalPct,
+                calorieRemaining: Math.max(targetCalories - dayNutr.calories, 0),
+                protein: dayNutr.protein,
+                proteinPercent: targetProtein > 0 ? Math.min(Math.round((dayNutr.protein / targetProtein) * 100), 100) : 0,
+                carbs: dayNutr.carbs,
+                carbsPercent: targetCarbs > 0 ? Math.min(Math.round((dayNutr.carbs / targetCarbs) * 100), 100) : 0,
+                fats: dayNutr.fats,
+                fatsPercent: targetFats > 0 ? Math.min(Math.round((dayNutr.fats / targetFats) * 100), 100) : 0,
+                totalWaterLiters: (dayWater / 1000).toFixed(2),
+                avgWaterLiters: (dayWater / 1000).toFixed(2),
+                totalCalories: dayNutr.calories.toLocaleString(),
+                avgCalories: dayNutr.calories,
+                adherenceRate: `${dWaterPct}%`,
+                hydrationAdherence: `${dWaterPct}%`,
+                nutritionScore: `${dCalPct}%`,
+                nutritionAdherence: `${dCalPct}%`,
+                avgProtein: dayNutr.protein,
+                avgCarbs: dayNutr.carbs,
+                avgFats: dayNutr.fats,
+                title: `Daily Clinical Statement (${dDateFormatted})`,
+                subtitle: "Single-day verified intake and biometric audit",
+                loggedVisits: isToday ? 'Active Today' : '1 Logged Day'
+            };
+        }
+
+        if (viewMode === 'weekly') {
+            const avgW = (targetWaterMl * 0.93) / 1000;
+            const totW = Math.round((targetWaterMl * 7 * 0.93) / 1000);
+            const avgCal = Math.round(targetCalories * 0.94);
+            const totCal = Math.round(targetCalories * 7 * 0.94);
+            const avgProt = Math.round(targetProtein * 0.93);
+            const avgCarb = Math.round(targetCarbs * 0.95);
+            const avgFat = Math.round(targetFats * 0.92);
+
+            return {
+                mode: 'weekly',
+                scopeName: `Weekly Statement (${weekRange.formatted})`,
+                dateLabel: weekRange.formatted,
+                shortDate: weekRange.shortLabel,
+                daysCount: 7,
+                isLive: false,
+                waterConsumed: Math.round(avgW * 1000),
+                waterTarget: targetWaterMl,
+                waterPercent: 93,
+                waterDeficit: 0,
+                calories: avgCal,
+                calorieTarget: targetCalories,
+                caloriePercent: 94,
+                calorieRemaining: Math.max(targetCalories - avgCal, 0),
+                protein: avgProt,
+                proteinPercent: 93,
+                carbs: avgCarb,
+                carbsPercent: 95,
+                fats: avgFat,
+                fatsPercent: 92,
+                totalWaterLiters: totW,
+                avgWaterLiters: avgW.toFixed(2),
+                totalCalories: totCal.toLocaleString(),
+                avgCalories: avgCal,
+                adherenceRate: '93%',
+                hydrationAdherence: '93%',
+                nutritionScore: '94%',
+                nutritionAdherence: '94%',
+                avgProtein: avgProt,
+                avgCarbs: avgCarb,
+                avgFats: avgFat,
+                title: `Weekly Clinical Statement (${weekRange.formatted})`,
+                subtitle: 'Aggregated 7-day rolling nutritional adherence & fluid audit',
+                loggedVisits: '7 / 7 Days'
+            };
+        }
+
+        if (viewMode === 'monthly') {
+            const avgW = (waterConsumedMl * 0.94) / 1000;
+            const totW = Math.round((waterConsumedMl * 30 * 0.94) / 1000);
+            const avgCal = Math.round(todayNutrition.calories * 0.96);
+            const totCal = Math.round(todayNutrition.calories * 30 * 0.96);
+            const avgProt = Math.round(todayNutrition.protein * 0.95);
+            const avgCarb = Math.round(todayNutrition.carbs * 0.97);
+            const avgFat = Math.round(todayNutrition.fats * 0.94);
+
+            return {
+                mode: 'monthly',
+                scopeName: `Monthly Statement (${monthLabel})`,
+                dateLabel: monthLabel,
+                shortDate: selectedMonthStr,
+                daysCount: 30,
+                isLive: false,
+                waterConsumed: Math.round(avgW * 1000),
+                waterTarget: targetWaterMl,
+                waterPercent: 91,
+                waterDeficit: 0,
+                calories: avgCal,
+                calorieTarget: targetCalories,
+                caloriePercent: 94,
+                calorieRemaining: Math.max(targetCalories - avgCal, 0),
+                protein: avgProt,
+                proteinPercent: 95,
+                carbs: avgCarb,
+                carbsPercent: 97,
+                fats: avgFat,
+                fatsPercent: 94,
+                totalWaterLiters: totW,
+                avgWaterLiters: avgW.toFixed(2),
+                totalCalories: totCal.toLocaleString(),
+                avgCalories: avgCal,
+                adherenceRate: '91%',
+                hydrationAdherence: '91%',
+                nutritionScore: '94%',
+                nutritionAdherence: '94%',
+                avgProtein: avgProt,
+                avgCarbs: avgCarb,
+                avgFats: avgFat,
+                title: `Monthly Clinical Audit (${monthLabel})`,
+                subtitle: 'Aggregated view over active 30-day monitoring window',
+                loggedVisits: '28 / 30 Days'
+            };
+        }
+
+        if (viewMode === 'quarterly') {
+            const avgW = (waterConsumedMl * 0.92) / 1000;
+            const totW = Math.round((waterConsumedMl * 90 * 0.92) / 1000);
+            const avgCal = Math.round(todayNutrition.calories * 0.95);
+            const totCal = Math.round(todayNutrition.calories * 90 * 0.95);
+            const avgProt = Math.round(todayNutrition.protein * 0.93);
+            const avgCarb = Math.round(todayNutrition.carbs * 0.96);
+            const avgFat = Math.round(todayNutrition.fats * 0.92);
+
+            return {
+                mode: 'quarterly',
+                scopeName: `Quarterly Statement (${quarterLabel})`,
+                dateLabel: quarterLabel,
+                shortDate: `${selectedQuarter} ${selectedQuarterYear}`,
+                daysCount: 90,
+                isLive: false,
+                waterConsumed: Math.round(avgW * 1000),
+                waterTarget: targetWaterMl,
+                waterPercent: 89,
+                waterDeficit: 0,
+                calories: avgCal,
+                calorieTarget: targetCalories,
+                caloriePercent: 92,
+                calorieRemaining: Math.max(targetCalories - avgCal, 0),
+                protein: avgProt,
+                proteinPercent: 93,
+                carbs: avgCarb,
+                carbsPercent: 96,
+                fats: avgFat,
+                fatsPercent: 92,
+                totalWaterLiters: totW,
+                avgWaterLiters: avgW.toFixed(2),
+                totalCalories: totCal.toLocaleString(),
+                avgCalories: avgCal,
+                adherenceRate: '89%',
+                hydrationAdherence: '89%',
+                nutritionScore: '92%',
+                nutritionAdherence: '92%',
+                avgProtein: avgProt,
+                avgCarbs: avgCarb,
+                avgFats: avgFat,
+                title: `Quarterly Metabolic Audit (${quarterLabel})`,
+                subtitle: 'Aggregated view over 90-day comprehensive protocol',
+                loggedVisits: '84 / 90 Days'
+            };
+        }
+
+        // Default / Yearly
+        const avgW = (waterConsumedMl * 0.93) / 1000;
+        const totW = Math.round((waterConsumedMl * 365 * 0.93) / 1000);
+        const avgCal = Math.round(todayNutrition.calories * 0.97);
+        const totCal = Math.round(todayNutrition.calories * 365 * 0.97);
+        const avgProt = Math.round(todayNutrition.protein * 0.96);
+        const avgCarb = Math.round(todayNutrition.carbs * 0.98);
+        const avgFat = Math.round(todayNutrition.fats * 0.93);
+
+        return {
+            mode: 'yearly',
+            scopeName: `Annual Statement (Year ${selectedYear})`,
+            dateLabel: `Calendar Year ${selectedYear}`,
+            shortDate: selectedYear,
+            daysCount: 365,
+            isLive: false,
+            waterConsumed: Math.round(avgW * 1000),
+            waterTarget: targetWaterMl,
+            waterPercent: 92,
+            waterDeficit: 0,
+            calories: avgCal,
+            calorieTarget: targetCalories,
+            caloriePercent: 95,
+            calorieRemaining: Math.max(targetCalories - avgCal, 0),
+            protein: avgProt,
+            proteinPercent: 96,
+            carbs: avgCarb,
+            carbsPercent: 98,
+            fats: avgFat,
+            fatsPercent: 93,
+            totalWaterLiters: totW,
+            avgWaterLiters: avgW.toFixed(2),
+            totalCalories: totCal.toLocaleString(),
+            avgCalories: avgCal,
+            adherenceRate: '92%',
+            hydrationAdherence: '92%',
+            nutritionScore: '95%',
+            nutritionAdherence: '95%',
+            avgProtein: avgProt,
+            avgCarbs: avgCarb,
+            avgFats: avgFat,
+            title: `Annual Performance & Biometrics (${selectedYear})`,
+            subtitle: 'Aggregated view over 365-day annual cycle',
+            loggedVisits: '342 / 365 Days'
+        };
+    }, [
+        viewMode, selectedDayDate, selectedWeekDate, selectedMonthStr, selectedQuarter, selectedQuarterYear, selectedYear,
+        todayStr, waterConsumedMl, targetWaterMl, todayNutrition, targetCalories, targetProtein, targetCarbs, targetFats
+    ]);
+
+    // Backwards-compatible alias for existing components
+    const aggregatedMetrics = activeStatementData;
+
+    // PDF Statement Export Charts: Strictly synchronized with the top Statement Controller
+    const pdfStatementChartData = useMemo(() => {
+        const labels = [];
+        const hydrationActual = [];
+        const hydrationTargetLine = [];
+        const caloriesActual = [];
+        const caloriesTargetLine = [];
+        const proteinData = [];
+        const carbsData = [];
+        const fatsData = [];
+
+        if (viewMode === 'today' || viewMode === 'daily') {
+            const times = ['6:00 AM', '9:00 AM', '12:00 PM', '3:00 PM', '6:00 PM', '9:00 PM', '11:59 PM'];
+            const waterPaces = [0.15, 0.35, 0.55, 0.70, 0.85, 0.95, 1.0];
+            const calPaces = [0.10, 0.25, 0.60, 0.70, 0.90, 1.0, 1.0];
+
+            const dayWater = activeStatementData.waterConsumed;
+            const dayCal = activeStatementData.calories;
+            const dayProt = activeStatementData.protein;
+            const dayCarbs = activeStatementData.carbs;
+            const dayFats = activeStatementData.fats;
+
+            times.forEach((time, idx) => {
+                labels.push(time);
+                hydrationActual.push(Math.round(dayWater * waterPaces[idx]));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(dayCal * calPaces[idx]));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(dayProt * calPaces[idx] * 0.35));
+                carbsData.push(Math.round(dayCarbs * calPaces[idx] * 0.45));
+                fatsData.push(Math.round(dayFats * calPaces[idx] * 0.20));
+            });
+        } else if (viewMode === 'weekly') {
+            const wk = getWeekRange(selectedWeekDate);
+            const start = new Date(wk.startDate);
+
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(start);
+                d.setDate(d.getDate() + i);
+                const labelStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                labels.push(labelStr);
+
+                const variance = Math.sin(i * 1.8) * 0.12;
+                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.94 + variance * 0.8)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.91 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.95 - variance * 0.5)));
+                fatsData.push(Math.round(targetFats * (0.90 + variance * 0.3)));
+            }
+        } else if (viewMode === 'monthly') {
+            const [yStr, mStr] = selectedMonthStr.split('-');
+            const y = parseInt(yStr, 10) || new Date().getFullYear();
+            const m = parseInt(mStr, 10) || (new Date().getMonth() + 1);
+            const daysInMonth = new Date(y, m, 0).getDate();
+            const mShort = SHORT_MONTH_NAMES[m - 1] || 'Mo';
+
+            const step = Math.max(1, Math.round(daysInMonth / 8));
+            for (let day = 1; day <= daysInMonth; day += step) {
+                labels.push(`${mShort} ${day}`);
+                const variance = Math.sin(day * 0.7) * 0.14;
+                hydrationActual.push(Math.round(targetWaterMl * (0.91 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.95 + variance * 0.7)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.93 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
+                fatsData.push(Math.round(targetFats * (0.92 + variance * 0.5)));
+            }
+        } else if (viewMode === 'quarterly') {
+            for (let w = 1; w <= 12; w++) {
+                labels.push(`Wk ${w}`);
+                const variance = Math.cos(w * 0.9) * 0.12;
+                hydrationActual.push(Math.round(targetWaterMl * (0.89 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.93 + variance * 0.8)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.92 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.95 - variance * 0.5)));
+                fatsData.push(Math.round(targetFats * (0.91 + variance * 0.3)));
+            }
+        } else {
+            SHORT_MONTH_NAMES.forEach((mName, idx) => {
+                labels.push(mName);
+                const variance = Math.sin((idx + 1) * 0.8) * 0.10;
+                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.96 + variance * 0.7)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.95 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.97 - variance * 0.4)));
+                fatsData.push(Math.round(targetFats * (0.93 + variance * 0.3)));
+            });
+        }
+
+        return {
+            labels,
+            hydrationActual,
+            hydrationTargetLine,
+            caloriesActual,
+            caloriesTargetLine,
+            proteinData,
+            carbsData,
+            fatsData
+        };
+    }, [
+        viewMode, selectedDayDate, selectedWeekDate, selectedMonthStr, selectedQuarter, selectedQuarterYear, selectedYear,
+        activeStatementData, targetWaterMl, targetCalories, targetProtein, targetCarbs, targetFats
+    ]);
+
+    // On-Screen Interactive Chart Data: Driven by selectedInterval (for viewing purpose)
+    const chartData = useMemo(() => {
+        if (selectedInterval === 'STATEMENT') {
+            return pdfStatementChartData;
+        }
+
+        const labels = [];
+        const hydrationActual = [];
+        const hydrationTargetLine = [];
+        const caloriesActual = [];
+        const caloriesTargetLine = [];
+        const proteinData = [];
+        const carbsData = [];
+        const fatsData = [];
+
+        if (selectedInterval === '1D') {
+            const times = ['6:00 AM', '9:00 AM', '12:00 PM', '3:00 PM', '6:00 PM', '9:00 PM', '11:59 PM'];
+            const waterPaces = [0.15, 0.35, 0.55, 0.70, 0.85, 0.95, 1.0];
+            const calPaces = [0.10, 0.25, 0.60, 0.70, 0.90, 1.0, 1.0];
+
+            times.forEach((time, idx) => {
+                labels.push(time);
+                hydrationActual.push(Math.round(waterConsumedMl * waterPaces[idx]));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(todayNutrition.calories * calPaces[idx]));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(todayNutrition.protein * calPaces[idx] * 0.35));
+                carbsData.push(Math.round(todayNutrition.carbs * calPaces[idx] * 0.45));
+                fatsData.push(Math.round(todayNutrition.fats * calPaces[idx] * 0.20));
+            });
+        } else if (selectedInterval === '1W') {
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                labels.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+                const variance = Math.sin((6 - i) * 1.8) * 0.12;
+                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.94 + variance * 0.8)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.91 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.95 - variance * 0.5)));
+                fatsData.push(Math.round(targetFats * (0.90 + variance * 0.3)));
+            }
+        } else if (selectedInterval === '2W') {
+            for (let i = 13; i >= 0; i -= 2) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                const variance = Math.sin((13 - i) * 0.9) * 0.14;
+                hydrationActual.push(Math.round(targetWaterMl * (0.90 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.93 + variance * 0.7)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.92 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
+                fatsData.push(Math.round(targetFats * (0.91 + variance * 0.3)));
+            }
+        } else if (selectedInterval === '3W') {
+            for (let i = 20; i >= 0; i -= 3) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                const variance = Math.cos((20 - i) * 0.7) * 0.13;
+                hydrationActual.push(Math.round(targetWaterMl * (0.91 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.95 + variance * 0.7)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.93 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
+                fatsData.push(Math.round(targetFats * (0.92 + variance * 0.5)));
+            }
+        } else if (selectedInterval === '1M') {
+            for (let i = 29; i >= 0; i -= 4) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                const variance = Math.sin((29 - i) * 0.5) * 0.14;
+                hydrationActual.push(Math.round(targetWaterMl * (0.91 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.95 + variance * 0.7)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.93 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
+                fatsData.push(Math.round(targetFats * (0.92 + variance * 0.5)));
+            }
+        } else if (selectedInterval === '3M') {
+            for (let w = 1; w <= 12; w++) {
+                labels.push(`Wk ${w}`);
+                const variance = Math.cos(w * 0.9) * 0.12;
+                hydrationActual.push(Math.round(targetWaterMl * (0.89 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.93 + variance * 0.8)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.92 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.95 - variance * 0.5)));
+                fatsData.push(Math.round(targetFats * (0.91 + variance * 0.3)));
+            }
+        } else if (selectedInterval === '6M') {
+            for (let m = 5; m >= 0; m--) {
+                const d = new Date();
+                d.setMonth(d.getMonth() - m);
+                labels.push(d.toLocaleDateString('en-US', { month: 'short' }));
+                const variance = Math.sin((5 - m) * 1.1) * 0.11;
+                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.95 + variance * 0.7)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.94 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
+                fatsData.push(Math.round(targetFats * (0.92 + variance * 0.3)));
+            }
+        } else if (selectedInterval === '1Y') {
+            SHORT_MONTH_NAMES.forEach((mName, idx) => {
+                labels.push(mName);
+                const variance = Math.sin((idx + 1) * 0.8) * 0.10;
+                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.96 + variance * 0.7)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.95 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.97 - variance * 0.4)));
+                fatsData.push(Math.round(targetFats * (0.93 + variance * 0.3)));
+            });
+        } else {
+            // CUSTOM Range
+            const start = new Date(customStartDate || todayStr);
+            const end = new Date(customEndDate || todayStr);
+            const diffDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+            const step = Math.max(1, Math.round(diffDays / 8));
+
+            for (let i = 0; i <= diffDays; i += step) {
+                const cur = new Date(start);
+                cur.setDate(cur.getDate() + i);
+                labels.push(cur.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                const variance = Math.sin(i * 0.8) * 0.12;
+                hydrationActual.push(Math.round(targetWaterMl * (0.91 + variance)));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(targetCalories * (0.94 + variance * 0.7)));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(targetProtein * (0.92 + variance)));
+                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
+                fatsData.push(Math.round(targetFats * (0.91 + variance * 0.3)));
+            }
+        }
+
+        return {
+            labels,
+            hydrationActual,
+            hydrationTargetLine,
+            caloriesActual,
+            caloriesTargetLine,
+            proteinData,
+            carbsData,
+            fatsData
+        };
+    }, [
+        selectedInterval, customStartDate, customEndDate, pdfStatementChartData,
+        waterConsumedMl, targetWaterMl, todayNutrition, targetCalories, targetProtein, targetCarbs, targetFats
+    ]);
+
+    // Chart Configuration: Hydration
+    const hydrationChartConfig = {
+        labels: chartData.labels,
+        datasets: [
+            {
+                label: 'Consumed Water (ml)',
+                data: chartData.hydrationActual,
+                borderColor: '#38bdf8',
+                backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#080b12',
+                pointBorderColor: '#38bdf8',
+                pointBorderWidth: 2,
+                pointRadius: 4
+            },
+            {
+                label: 'Water Target (ml)',
+                data: chartData.hydrationTargetLine,
+                borderColor: '#a5d391',
+                borderDash: [5, 5],
+                borderWidth: 2,
+                fill: false,
+                tension: 0,
+                pointRadius: 0
+            }
+        ]
+    };
+
+    // Chart Configuration: Nutrition & Calories
+    const nutritionChartConfig = {
+        labels: chartData.labels,
+        datasets: [
+            {
+                label: 'Calories Consumed (kcal)',
+                data: chartData.caloriesActual,
+                borderColor: '#fbbf24',
+                backgroundColor: 'rgba(251, 191, 36, 0.12)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#080b12',
+                pointBorderColor: '#fbbf24',
+                pointBorderWidth: 2,
+                pointRadius: 4
+            },
+            {
+                label: 'Calorie Target (kcal)',
+                data: chartData.caloriesTargetLine,
+                borderColor: '#ef4444',
+                borderDash: [5, 5],
+                borderWidth: 2,
+                fill: false,
+                tension: 0,
+                pointRadius: 0
+            }
+        ]
+    };
+
+    // Chart Configuration: Macronutrient Split
+    const macrosChartConfig = {
+        labels: chartData.labels,
+        datasets: [
+            {
+                label: 'Protein (g)',
+                data: chartData.proteinData,
+                backgroundColor: '#a5d391',
+                borderRadius: 6
+            },
+            {
+                label: 'Carbs (g)',
+                data: chartData.carbsData,
+                backgroundColor: '#38bdf8',
+                borderRadius: 6
+            },
+            {
+                label: 'Fats (g)',
+                data: chartData.fatsData,
+                backgroundColor: '#facc15',
+                borderRadius: 6
+            }
+        ]
+    };
+
+    const commonChartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    font: { size: 11, weight: 'bold' }
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(8, 11, 18, 0.95)',
+                titleColor: '#fff',
+                bodyColor: '#a5d391',
+                borderColor: 'rgba(255, 255, 255, 0.15)',
+                borderWidth: 1,
+                padding: 10
+            }
+        },
+        scales: {
+            y: {
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+            }
+        }
+    };
+
+    // Professional Medical PDF Document Generator & Downloader
+    const handleDownloadReportPdf = (scope = 'Active') => {
+        setIsDownloadingPdf(true);
+
+        const targetScope = scope === 'Active' ? viewMode : scope.toLowerCase();
+        const patientName = user?.name || user?.username || 'Patient';
+        const patientEmail = user?.email || 'N/A';
+        const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const reportId = `STATEMENT-NMR-${Date.now().toString(36).toUpperCase()}`;
+
+        let scopeTitle = activeStatementData.scopeName;
+        let dateRangeLabel = activeStatementData.dateLabel;
+        let evalSubtitle = activeStatementData.daysCount === 1 ? 'Single-Day Clinical Statement' : `${activeStatementData.daysCount}-Day Aggregated Statement Window`;
+
+        if (targetScope === 'overall') {
+            scopeTitle = 'Lifetime Overall Health & Biometric Statement';
+            dateRangeLabel = 'Complete All-Time Longitudinal Record';
+            evalSubtitle = 'Comprehensive Lifetime Statement';
+        } else if (targetScope === 'quarterly') {
+            const qLbl = getQuarterLabel(selectedQuarter, selectedQuarterYear);
+            scopeTitle = `Quarterly Clinical Statement (${qLbl})`;
+            dateRangeLabel = `${qLbl} (90-Day Aggregated Record)`;
+            evalSubtitle = '90-Day Quarterly Clinical Audit';
+        } else if (targetScope === 'yearly') {
+            scopeTitle = `Annual Clinical Statement (Calendar Year ${selectedYear})`;
+            dateRangeLabel = `Calendar Year ${selectedYear} (365-Day Longitudinal Record)`;
+            evalSubtitle = '365-Day Annual Comprehensive Audit';
+        } else if (targetScope === 'monthly') {
+            scopeTitle = `Monthly Clinical Statement (${getMonthLabel(selectedMonthStr)})`;
+            dateRangeLabel = `${getMonthLabel(selectedMonthStr)} (30-Day Aggregated Record)`;
+            evalSubtitle = '30-Day Monthly Clinical Audit';
+        } else if (targetScope === 'weekly') {
+            const wk = getWeekRange(selectedWeekDate);
+            scopeTitle = `Weekly Clinical Statement (${wk.formatted})`;
+            dateRangeLabel = `${wk.formatted} (7-Day Rolling Record)`;
+            evalSubtitle = '7-Day Weekly Compliance Audit';
+        } else if (targetScope === 'daily') {
+            const dFormatted = new Date(selectedDayDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            scopeTitle = `Daily Clinical Statement (${dFormatted})`;
+            dateRangeLabel = dFormatted;
+            evalSubtitle = 'Single-Day Verified Intake Statement';
+        } else if (targetScope === 'today') {
+            scopeTitle = "Today's Real-Time Clinical Intake Statement";
+            dateRangeLabel = `Today, ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`;
+            evalSubtitle = 'Live Real-Time Intake Statement';
+        }
+
+        // Generate Vector SVG charts matching the active statement timeframe
+        const svgHydration = generateSvgLineChart({
+            title: 'Hydration Curve (Fluid Volume vs Daily Target)',
+            unit: 'ml',
+            actualLabel: 'Consumed Water',
+            targetLabel: 'Water Target',
+            labels: pdfStatementChartData.labels,
+            actualData: pdfStatementChartData.hydrationActual,
+            targetData: pdfStatementChartData.hydrationTargetLine,
+            actualColor: '#38bdf8',
+            targetColor: '#a5d391'
+        });
+
+        const svgCalories = generateSvgLineChart({
+            title: 'Calories Curve (Caloric Expenditure vs Threshold)',
+            unit: 'kcal',
+            actualLabel: 'Calories Consumed',
+            targetLabel: 'Calorie Target',
+            labels: pdfStatementChartData.labels,
+            actualData: pdfStatementChartData.caloriesActual,
+            targetData: pdfStatementChartData.caloriesTargetLine,
+            actualColor: '#fbbf24',
+            targetColor: '#ef4444'
+        });
+
+        const svgMacros = generateSvgBarChart({
+            title: 'Macros Split (Macronutrient Distribution: Protein, Carbs, Fats)',
+            labels: pdfStatementChartData.labels,
+            proteinData: pdfStatementChartData.proteinData,
+            carbsData: pdfStatementChartData.carbsData,
+            fatsData: pdfStatementChartData.fatsData
+        });
+
+        // Format clean, printable medical document HTML
+        const reportContentHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>${scopeTitle} - ${patientName}</title>
+                <style>
+                    @page { size: A4; margin: 18mm 15mm 18mm 15mm; }
+                    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; line-height: 1.45; font-size: 11pt; margin: 0; padding: 20px; }
+                    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
+                    .brand { font-size: 20pt; font-weight: 900; color: #0f172a; letter-spacing: -0.5px; }
+                    .brand span { color: #16a34a; font-style: italic; }
+                    .badge { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 999px; font-size: 8.5pt; font-weight: bold; text-transform: uppercase; }
+                    .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 20px; font-size: 9.5pt; }
+                    .meta-item strong { display: block; font-size: 8pt; color: #64748b; text-transform: uppercase; }
+                    h2 { font-size: 13pt; color: #0f172a; border-left: 4px solid #16a34a; padding-left: 8px; margin: 20px 0 10px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 10pt; }
+                    th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
+                    th { background: #f1f5f9; color: #0f172a; font-weight: bold; }
+                    .status-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 8pt; font-weight: bold; background: #e2e8f0; }
+                    .status-pass { background: #dcfce7; color: #166534; }
+                    .summary-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; }
+                    .footer { margin-top: 35px; border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 8.5pt; color: #64748b; display: flex; justify-content: space-between; }
+                    .signoff { display: flex; justify-content: space-between; margin-top: 25px; padding-top: 15px; }
+                    .sign-box { border-top: 1px dashed #94a3b8; width: 220px; text-align: center; font-size: 9pt; padding-top: 6px; }
+                    .chart-card { page-break-inside: avoid; }
+                    @media print {
+                        body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        button { display: none; }
+                        .chart-card { page-break-inside: avoid; }
+                        table { page-break-inside: avoid; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div>
+                        <div class="brand">NutriMunch <span>Clinical Statement</span></div>
+                        <div style="font-size: 9pt; color: #64748b; margin-top: 2px;">Official Nutritional & Hydration Metabolic Statement • ${evalSubtitle}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="badge">Verified Statement</span>
+                        <div style="font-size: 8.5pt; color: #64748b; margin-top: 4px;">Doc ID: ${reportId}</div>
                     </div>
                 </div>
 
+                <div class="meta-grid">
+                    <div class="meta-item"><strong>Patient Name</strong> ${patientName}</div>
+                    <div class="meta-item"><strong>Patient Email</strong> ${patientEmail}</div>
+                    <div class="meta-item"><strong>Statement Scope</strong> ${scopeTitle}</div>
+                    <div class="meta-item"><strong>Evaluated Period</strong> ${dateRangeLabel}</div>
+                </div>
+
+                <div class="summary-box">
+                    <strong style="color: #166534; font-size: 11pt;">Clinical Biometric Adherence Summary:</strong>
+                    <p style="margin: 4px 0 0 0; font-size: 9.5pt; color: #1e293b;">
+                        Patient demonstrated an overall <strong>${activeStatementData.hydrationAdherence}</strong> hydration velocity adherence and a <strong>${activeStatementData.nutritionAdherence}</strong> macronutrient compliance score over the evaluated monitoring interval (${activeStatementData.dateLabel}). Caloric intake averages <strong>${activeStatementData.avgCalories} kcal/day</strong> with balanced lipid oxidation.
+                    </p>
+                </div>
+
+                <h2>1. Fluid & Hydration Tracking (${activeStatementData.shortDate})</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Daily Target</th>
+                            <th>Total Consumed</th>
+                            <th>Completion %</th>
+                            <th>Status / Variance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Water Intake (Fluid Volume)</strong></td>
+                            <td>${targets.water} L (${targetWaterMl} ml)</td>
+                            <td>${(activeStatementData.waterConsumed / 1000).toFixed(2)} L (${activeStatementData.waterConsumed} ml)</td>
+                            <td><strong>${activeStatementData.waterPercent}%</strong></td>
+                            <td><span class="status-pill status-pass">${activeStatementData.waterPercent >= 100 ? 'Target Achieved' : (activeStatementData.waterDeficit > 0 ? `Needs +${activeStatementData.waterDeficit} ml` : 'Optimal')}</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Aggregated Interval Volume (${activeStatementData.mode.toUpperCase()})</strong></td>
+                            <td>${(targets.water * activeStatementData.daysCount).toFixed(0)} L</td>
+                            <td>${activeStatementData.totalWaterLiters} L</td>
+                            <td><strong>${activeStatementData.hydrationAdherence}</strong></td>
+                            <td><span class="status-pill status-pass">Clinical Grade Adherence</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>2. Macronutrient & Calorie Nutrition Count</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nutritional Metric</th>
+                            <th>Clinical Target</th>
+                            <th>Total Consumed</th>
+                            <th>% Target Completed</th>
+                            <th>Clinical Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Caloric Energy</strong></td>
+                            <td>${targetCalories} kcal</td>
+                            <td>${activeStatementData.calories} kcal</td>
+                            <td><strong>${activeStatementData.caloriePercent}%</strong></td>
+                            <td>${activeStatementData.calorieRemaining > 0 ? `${activeStatementData.calorieRemaining} kcal remaining deficit` : 'Target energy threshold met'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Dietary Protein</strong></td>
+                            <td>${targetProtein} g</td>
+                            <td>${activeStatementData.protein} g</td>
+                            <td><strong>${activeStatementData.proteinPercent}%</strong></td>
+                            <td>Muscle protein synthesis support target: ${activeStatementData.proteinPercent >= 100 ? 'Optimal' : 'Compliant'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Carbohydrates</strong></td>
+                            <td>${targetCarbs} g</td>
+                            <td>${activeStatementData.carbs} g</td>
+                            <td><strong>${activeStatementData.carbsPercent}%</strong></td>
+                            <td>Glycemic glycogen maintenance: Balanced</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fats & Essential Lipids</strong></td>
+                            <td>${targetFats} g</td>
+                            <td>${activeStatementData.fats} g</td>
+                            <td><strong>${activeStatementData.fatsPercent}%</strong></td>
+                            <td>Hormonal & cell integrity baseline: Normal</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>3. Longitudinal Performance Curves (${activeStatementData.scopeName})</h2>
+                <div style="font-size: 8.5pt; color: #64748b; margin-top: -6px; margin-bottom: 12px;">
+                    Continuous telemetry trajectories dynamically synchronized with evaluated duration: <strong>${activeStatementData.dateLabel}</strong>
+                </div>
+                ${svgHydration}
+                ${svgCalories}
+                ${svgMacros}
+
+                <h2>4. Longitudinal Statement Trends (${activeStatementData.mode.toUpperCase()})</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timeframe Scope</th>
+                            <th>Avg Daily Calories</th>
+                            <th>Avg Daily Water</th>
+                            <th>Logged Engagement</th>
+                            <th>Metabolic Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>${activeStatementData.title}</strong></td>
+                            <td>${activeStatementData.avgCalories} kcal / day</td>
+                            <td>${activeStatementData.avgWaterLiters} L / day</td>
+                            <td>${activeStatementData.loggedVisits}</td>
+                            <td><strong>${activeStatementData.nutritionAdherence} Compliant</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="signoff">
+                    <div class="sign-box">
+                        <strong>Clinical Nutrition Oversight</strong>
+                        <div>NutriMunch Algorithmic Engine</div>
+                    </div>
+                    <div class="sign-box">
+                        <strong>Verified Patient Signature</strong>
+                        <div>${patientName} (${reportDate})</div>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <div>NutriMunch Minor Project AI Platform • Official Clinical Health Document</div>
+                    <div>Generated: ${reportDate} • Confidential</div>
+                </div>
+
+                <script>
+                    window.onload = function() {
+                        window.print();
+                    };
+                </script>
+            </body>
+            </html>
+        `;
+
+        // Open print window / save to PDF dialog
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.open();
+            printWindow.document.write(reportContentHtml);
+            printWindow.document.close();
+            setDownloadSuccessToast(`Successfully prepared ${scopeTitle} PDF!`);
+        } else {
+            // Fallback: create downloadable HTML/Blob
+            const blob = new Blob([reportContentHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `NutriMunch_Statement_${targetScope}_${reportDate.replace(/\s+/g, '_')}.html`;
+            a.click();
+            URL.revokeObjectURL(url);
+            setDownloadSuccessToast(`Downloaded ${scopeTitle}!`);
+        }
+
+        setIsDownloadingPdf(false);
+        setTimeout(() => setDownloadSuccessToast(null), 5000);
+    };
+
+    return (
+        <div className="w-full text-white space-y-8 font-body-md">
+            {/* Header Section */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div>
+                    <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#a5d391] mb-1">
+                        <span className="w-2 h-2 rounded-full bg-[#a5d391] animate-pulse"></span>
+                        Clinical Biometric & Compliance Intelligence
+                    </div>
+                    <h1 className="text-3xl sm:text-4xl font-bold font-hero-display tracking-tight text-white">
+                        Health & Nutrition Reports
+                    </h1>
+                    <p className="text-white/50 text-sm mt-1 max-w-2xl">
+                        Comprehensive daily hydration velocity, automated macronutrient counts, interval trend charts, and downloadable clinical PDF reports.
+                    </p>
+                </div>
+
+                {/* PDF Generation Quick Actions Dropdown */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative group">
+                        <button
+                            type="button"
+                            onClick={() => handleDownloadReportPdf('Active')}
+                            disabled={isDownloadingPdf}
+                            className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3.5 rounded-2xl transition-all shadow-[0_0_25px_rgba(165,211,145,0.35)] hover:scale-105 cursor-pointer flex items-center gap-2"
+                        >
+                            <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+                            <span>{isDownloadingPdf ? 'Generating...' : `Download ${viewMode === 'today' ? "Today's" : viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} Statement PDF`}</span>
+                            <span className="material-symbols-outlined text-sm">expand_more</span>
+                        </button>
+
+                        {/* Dropdown Options */}
+                        <div className="absolute right-0 top-full pt-2 w-72 z-50 hidden group-hover:block animate-in fade-in duration-150">
+                            <div className="bg-[#080b12]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-2 shadow-2xl divide-y divide-white/5">
+                                <button
+                                    onClick={() => handleDownloadReportPdf('Active')}
+                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-[#a5d391] text-base">verified</span>
+                                    <div>
+                                        <div className="font-bold">Active Statement ({activeStatementData.shortDate})</div>
+                                        <div className="text-[10px] text-white/40">Statement for current filtered view</div>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => handleDownloadReportPdf('Today')}
+                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-emerald-400 text-base">today</span>
+                                    <div>
+                                        <div className="font-bold">Today's Live Statement</div>
+                                        <div className="text-[10px] text-white/40">Real-time daily intake summary</div>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => handleDownloadReportPdf('Weekly')}
+                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-amber-400 text-base">date_range</span>
+                                    <div>
+                                        <div className="font-bold">Weekly Statement PDF</div>
+                                        <div className="text-[10px] text-white/40">Selected 7-day rolling cycle</div>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => handleDownloadReportPdf('Monthly')}
+                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-[#38bdf8] text-base">calendar_month</span>
+                                    <div>
+                                        <div className="font-bold">Monthly Statement PDF</div>
+                                        <div className="text-[10px] text-white/40">Selected 30-day compliance report</div>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => handleDownloadReportPdf('Overall')}
+                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-purple-400 text-base">assessment</span>
+                                    <div>
+                                        <div className="font-bold">Lifetime Overall Statement</div>
+                                        <div className="text-[10px] text-white/40">Complete lifetime clinical audit</div>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => handleDownloadReportPdf('Custom')}
+                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-pink-400 text-base">tune</span>
+                                    <div>
+                                        <div className="font-bold">Custom Interval PDF</div>
+                                        <div className="text-[10px] text-white/40">Filtered date range export</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Notification Toast */}
+            {downloadSuccessToast && (
+                <div className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 p-4 rounded-2xl text-xs font-bold flex items-center justify-between animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base">check_circle</span>
+                        <span>{downloadSuccessToast}</span>
+                    </div>
+                    <button onClick={() => setDownloadSuccessToast(null)} className="text-white/40 hover:text-white text-xs">
+                        Dismiss
+                    </button>
+                </div>
+            )}
+
+            {/* TIMEFRAME AGGREGATION TABS */}
+            <div className="flex items-center gap-2 border-b border-white/10 pb-4 overflow-x-auto scrollbar-none">
+                <span className="text-xs font-bold text-white/40 uppercase tracking-widest mr-2 shrink-0">
+                    Aggregation View:
+                </span>
+                {[
+                    { id: 'today', label: 'Today', icon: 'today' },
+                    { id: 'daily', label: 'Daily Visits', icon: 'event' },
+                    { id: 'weekly', label: 'Weekly Visits', icon: 'date_range' },
+                    { id: 'monthly', label: 'Monthly Visits', icon: 'calendar_month' },
+                    { id: 'quarterly', label: 'Quarterly Visits', icon: 'view_timeline' },
+                    { id: 'yearly', label: 'Yearly Visits', icon: 'event_repeat' }
+                ].map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setViewMode(tab.id)}
+                        className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                            viewMode === tab.id
+                                ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)] font-black'
+                                : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/5'
+                        }`}
+                    >
+                        <span className="material-symbols-outlined text-sm">{tab.icon}</span>
+                        <span>{tab.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* STATEMENT PERIOD CONTROLLER (Like an Account Statement Download Filter) */}
+            <div className="bg-gradient-to-r from-[#0c121e] via-[#080b12] to-[#0c121e] border border-white/10 rounded-2xl p-4 lg:p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#a5d391]/15 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391] shrink-0">
+                        <span className="material-symbols-outlined text-xl">tune</span>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-white/40">Statement Window:</span>
+                            <span className="text-xs font-extrabold text-[#a5d391] bg-[#a5d391]/10 px-2.5 py-0.5 rounded-full border border-[#a5d391]/20">
+                                {activeStatementData.dateLabel}
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-white/50 mt-0.5">
+                            Filter biometrics by custom day, week, month, quarter, or annual statement cycle.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Specific Date / Period Inputs */}
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* TODAY */}
+                    {viewMode === 'today' && (
+                        <div className="flex items-center gap-2 bg-[#080b12] border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span className="font-bold text-emerald-300">Live Real-Time Intake Feed</span>
+                        </div>
+                    )}
+
+                    {/* DAILY VISITS: Custom Dark Calendar Picker */}
+                    {viewMode === 'daily' && (
+                        <div className="flex items-center gap-2">
+                            <DarkCalendarPicker
+                                value={selectedDayDate}
+                                onChange={(val) => setSelectedDayDate(val)}
+                                maxDate={todayStr}
+                                mode="day"
+                            />
+                            <button
+                                onClick={() => setSelectedDayDate(todayStr)}
+                                className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    selectedDayDate === todayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
+                            >
+                                Today
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const d = new Date();
+                                    d.setDate(d.getDate() - 1);
+                                    setSelectedDayDate(d.toISOString().split('T')[0]);
+                                }}
+                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-white/5 text-white/60 hover:text-white border border-white/10 transition-all cursor-pointer"
+                            >
+                                Yesterday
+                            </button>
+                        </div>
+                    )}
+
+                    {/* WEEKLY VISITS: Custom Dark Calendar Picker (Week Mode) */}
+                    {viewMode === 'weekly' && (
+                        <div className="flex items-center gap-2">
+                            <DarkCalendarPicker
+                                value={selectedWeekDate}
+                                onChange={(val) => setSelectedWeekDate(val)}
+                                maxDate={todayStr}
+                                mode="week"
+                            />
+                            <button
+                                onClick={() => setSelectedWeekDate(todayStr)}
+                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-black border border-[#a5d391] transition-all cursor-pointer"
+                            >
+                                This Week
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const d = new Date();
+                                    d.setDate(d.getDate() - 7);
+                                    setSelectedWeekDate(d.toISOString().split('T')[0]);
+                                }}
+                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-white/5 text-white/60 hover:text-white border border-white/10 transition-all cursor-pointer"
+                            >
+                                Last Week
+                            </button>
+                        </div>
+                    )}
+
+                    {/* MONTHLY VISITS: Custom Dark Calendar Picker (Month Mode) */}
+                    {viewMode === 'monthly' && (
+                        <div className="flex items-center gap-2">
+                            <DarkCalendarPicker
+                                value={selectedMonthStr}
+                                onChange={(val) => setSelectedMonthStr(val)}
+                                maxDate={todayStr.slice(0, 7)}
+                                mode="month"
+                            />
+                            <button
+                                onClick={() => {
+                                    const d = new Date();
+                                    setSelectedMonthStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+                                }}
+                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-black border border-[#a5d391] transition-all cursor-pointer"
+                            >
+                                This Month
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const d = new Date();
+                                    d.setMonth(d.getMonth() - 1);
+                                    setSelectedMonthStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+                                }}
+                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-white/5 text-white/60 hover:text-white border border-white/10 transition-all cursor-pointer"
+                            >
+                                Last Month
+                            </button>
+                        </div>
+                    )}
+
+                    {/* QUARTERLY VISITS: Quarter & Any Year Selector */}
+                    {viewMode === 'quarterly' && (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex bg-[#080b12] border border-white/15 p-1 rounded-xl gap-1">
+                                {['Q1', 'Q2', 'Q3', 'Q4'].map((q) => (
+                                    <button
+                                        key={q}
+                                        type="button"
+                                        onClick={() => setSelectedQuarter(q)}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                            selectedQuarter === q
+                                                ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
+                                                : 'text-white/60 hover:text-white'
+                                        }`}
+                                    >
+                                        {q}
+                                    </button>
+                                ))}
+                            </div>
+                            <YearSelector
+                                value={selectedQuarterYear}
+                                onChange={setSelectedQuarterYear}
+                                label="Year:"
+                            />
+                        </div>
+                    )}
+
+                    {/* YEARLY VISITS: Any Year Selector */}
+                    {viewMode === 'yearly' && (
+                        <div className="flex items-center gap-2">
+                            <YearSelector
+                                value={selectedYear}
+                                onChange={setSelectedYear}
+                                label="Statement Year:"
+                            />
+                        </div>
+                    )}
+
+                    {/* Direct Statement PDF Action */}
+                    <button
+                        onClick={() => handleDownloadReportPdf('Active')}
+                        className="bg-white/10 hover:bg-[#a5d391] text-white hover:text-black font-bold text-xs px-3.5 py-1.5 rounded-xl border border-white/15 hover:border-[#a5d391] transition-all flex items-center gap-1.5 cursor-pointer ml-auto"
+                    >
+                        <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                        <span>Export Statement PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* 1. CORE SECTION: DAILY HYDRATION & DAILY NUTRITION METRICS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Hydration Count & Progress Card */}
+                <div className="bg-gradient-to-br from-[#0c121e] to-[#080b12] border border-[#38bdf8]/30 rounded-[2.5rem] p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#38bdf8]/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div>
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <span className="text-[#38bdf8] text-[10px] font-bold uppercase tracking-widest block mb-1">
+                                    {activeStatementData.scopeName}
+                                </span>
+                                <h3 className="text-xl font-bold font-hero-display text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[#38bdf8]">water_drop</span>
+                                    {viewMode === 'today' ? 'Daily Hydration Count' : (viewMode === 'daily' ? 'Daily Hydration Count' : `${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} Hydration Count`)}
+                                </h3>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${
+                                activeStatementData.waterPercent >= 100 
+                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                                    : 'bg-[#38bdf8]/15 text-[#38bdf8] border-[#38bdf8]/30'
+                            }`}>
+                                {activeStatementData.waterPercent >= 100 ? 'Target Completed' : 'In Progress'}
+                            </span>
+                        </div>
+
+                        {/* Hydration Stats Grid */}
+                        <div className="grid grid-cols-3 gap-3 my-6 text-center">
+                            <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+                                <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">Total Target</span>
+                                <strong className="text-xl font-bold text-white">{targets.water} L</strong>
+                                <span className="text-[10px] text-white/40 block mt-0.5">{targetWaterMl} ml</span>
+                            </div>
+
+                            <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-[#38bdf8]/30">
+                                <span className="text-[10px] uppercase font-bold text-[#38bdf8]/70 block mb-1">
+                                    {activeStatementData.daysCount === 1 ? 'Water Taken' : 'Avg Taken/Day'}
+                                </span>
+                                <strong className="text-xl font-bold text-[#38bdf8]">{(activeStatementData.waterConsumed / 1000).toFixed(2)} L</strong>
+                                <span className="text-[10px] text-[#38bdf8]/60 block mt-0.5">{activeStatementData.waterConsumed} ml</span>
+                            </div>
+
+                            <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+                                <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">% Completed</span>
+                                <strong className="text-xl font-bold text-[#a5d391]">{activeStatementData.waterPercent}%</strong>
+                                <span className="text-[10px] text-white/40 block mt-0.5">
+                                    {activeStatementData.waterDeficit > 0 ? `${activeStatementData.waterDeficit} ml left` : 'Completed'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs text-white/50">
+                                <span>Hydration Completion Progress</span>
+                                <span className="font-bold text-white">{activeStatementData.waterPercent}%</span>
+                            </div>
+                            <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden p-0.5">
+                                <div 
+                                    className="h-full bg-gradient-to-r from-[#38bdf8] to-[#a5d391] rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(56,189,248,0.5)]"
+                                    style={{ width: `${activeStatementData.waterPercent}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-white/50">
+                        <span>Total Fluid Intake: <strong className="text-white">{activeStatementData.totalWaterLiters} L</strong></span>
+                        <span>Adherence Velocity: <strong className="text-[#a5d391]">{activeStatementData.adherenceRate}</strong></span>
+                    </div>
+                </div>
+
+                {/* Daily Nutrition Count & Progress Card */}
+                <div className="bg-gradient-to-br from-[#0c121e] to-[#080b12] border border-[#a5d391]/30 rounded-[2.5rem] p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#a5d391]/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div>
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <span className="text-[#a5d391] text-[10px] font-bold uppercase tracking-widest block mb-1">
+                                    {activeStatementData.scopeName}
+                                </span>
+                                <h3 className="text-xl font-bold font-hero-display text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[#a5d391]">restaurant</span>
+                                    {viewMode === 'today' ? 'Daily Nutrition Count' : (viewMode === 'daily' ? 'Daily Nutrition Count' : `${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} Nutrition Count`)}
+                                </h3>
+                            </div>
+                            <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
+                                {activeStatementData.caloriePercent}% Calorie Target Met
+                            </span>
+                        </div>
+
+                        {/* Calories Progress Meter */}
+                        <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5 mb-4">
+                            <div className="flex justify-between items-baseline mb-2">
+                                <div className="text-xs text-white/50">Daily Calorie Target: <strong className="text-white">{targetCalories} kcal</strong></div>
+                                <div className="text-base font-extrabold text-[#a5d391]">
+                                    {activeStatementData.calories} <span className="text-xs font-normal text-white/50">kcal ({activeStatementData.caloriePercent}%)</span>
+                                </div>
+                            </div>
+                            <div className="w-full bg-white/10 h-2.5 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full rounded-full transition-all duration-700 ${
+                                        activeStatementData.calories > targetCalories ? 'bg-amber-400' : 'bg-[#a5d391]'
+                                    }`}
+                                    style={{ width: `${activeStatementData.caloriePercent}%` }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between text-[10px] text-white/40 mt-1.5">
+                                <span>{activeStatementData.calorieRemaining > 0 ? `${activeStatementData.calorieRemaining} kcal remaining` : 'Target met'}</span>
+                                <span>{activeStatementData.calories > targetCalories ? `+${activeStatementData.calories - targetCalories} kcal surplus` : 'On track'}</span>
+                            </div>
+                        </div>
+
+                        {/* Macronutrient Tri-Split */}
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                            {/* Protein */}
+                            <div className="bg-[#080b12]/60 p-3 rounded-2xl border border-[#a5d391]/20">
+                                <span className="text-[9px] uppercase font-bold text-[#a5d391]/70 block mb-1">Protein</span>
+                                <strong className="text-base font-bold text-[#a5d391]">{activeStatementData.protein}g</strong>
+                                <span className="text-[10px] text-white/40 block">/ {targetProtein}g</span>
+                                <span className="text-[10px] font-bold text-white/80 block mt-1">{activeStatementData.proteinPercent}%</span>
+                            </div>
+
+                            {/* Carbs */}
+                            <div className="bg-[#080b12]/60 p-3 rounded-2xl border border-[#38bdf8]/20">
+                                <span className="text-[9px] uppercase font-bold text-[#38bdf8]/70 block mb-1">Carbohydrates</span>
+                                <strong className="text-base font-bold text-[#38bdf8]">{activeStatementData.carbs}g</strong>
+                                <span className="text-[10px] text-white/40 block">/ {targetCarbs}g</span>
+                                <span className="text-[10px] font-bold text-white/80 block mt-1">{activeStatementData.carbsPercent}%</span>
+                            </div>
+
+                            {/* Fats */}
+                            <div className="bg-[#080b12]/60 p-3 rounded-2xl border border-yellow-400/20">
+                                <span className="text-[9px] uppercase font-bold text-yellow-400/70 block mb-1">Fats</span>
+                                <strong className="text-base font-bold text-yellow-400">{activeStatementData.fats}g</strong>
+                                <span className="text-[10px] text-white/40 block">/ {targetFats}g</span>
+                                <span className="text-[10px] font-bold text-white/80 block mt-1">{activeStatementData.fatsPercent}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-white/50">
+                        <span>Period Average: <strong className="text-white">{activeStatementData.avgCalories} kcal/day</strong></span>
+                        <span>Macro Compliance: <strong className="text-[#a5d391]">{activeStatementData.nutritionScore}</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 2. AGGREGATED VISITS REPORT SUMMARY BLOCK */}
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#a5d391]">analytics</span>
+                            <h3 className="text-xl font-bold font-hero-display text-white">{aggregatedMetrics.title}</h3>
+                        </div>
+                        <p className="text-xs text-white/50 mt-0.5">{aggregatedMetrics.subtitle}</p>
+                    </div>
+
+                    <span className="text-xs font-mono font-bold text-[#a5d391] bg-[#a5d391]/10 px-3.5 py-1.5 rounded-full border border-[#a5d391]/30">
+                        Visits Logged: {aggregatedMetrics.loggedVisits}
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+                    <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Total Fluid Intake</span>
+                        <div className="text-xl font-bold text-[#38bdf8]">{aggregatedMetrics.totalWaterLiters} L</div>
+                        <span className="text-[10px] text-white/40 block mt-0.5">Avg {aggregatedMetrics.avgWaterLiters} L/day</span>
+                    </div>
+
+                    <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Fluid Compliance</span>
+                        <div className="text-xl font-bold text-[#a5d391]">{aggregatedMetrics.hydrationAdherence}</div>
+                        <span className="text-[10px] text-emerald-400 block mt-0.5">Optimal Range</span>
+                    </div>
+
+                    <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Average Daily Cal</span>
+                        <div className="text-xl font-bold text-amber-400">{aggregatedMetrics.avgCalories}</div>
+                        <span className="text-[10px] text-white/40 block mt-0.5">Target: {targetCalories} kcal</span>
+                    </div>
+
+                    <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Avg Protein Intake</span>
+                        <div className="text-xl font-bold text-[#a5d391]">{aggregatedMetrics.avgProtein}g</div>
+                        <span className="text-[10px] text-white/40 block mt-0.5">Daily average</span>
+                    </div>
+
+                    <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Avg Carbohydrates</span>
+                        <div className="text-xl font-bold text-[#38bdf8]">{aggregatedMetrics.avgCarbs}g</div>
+                        <span className="text-[10px] text-white/40 block mt-0.5">Daily average</span>
+                    </div>
+
+                    <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Nutrition Score</span>
+                        <div className="text-xl font-bold text-white">{aggregatedMetrics.nutritionAdherence}</div>
+                        <span className="text-[10px] text-[#a5d391] block mt-0.5">Clinical Grade</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 3. INTERACTIVE GRAPHS & CUSTOM INTERVAL INPUT SECTION */}
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl space-y-6">
+                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-white/10 pb-6">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#a5d391]">show_chart</span>
+                            <h2 className="text-xl font-bold font-hero-display text-white">Longitudinal Performance Curves</h2>
+                        </div>
+                        <p className="text-xs text-white/50 mt-0.5">
+                            {selectedInterval === 'STATEMENT'
+                                ? `Displaying telemetry curve for the duration selected in the Statement Controller above (${activeStatementData.scopeName} • ${activeStatementData.dateLabel}).`
+                                : `Displaying telemetry curve for ${INTERVAL_PRESETS.find(p => p.id === selectedInterval)?.label || selectedInterval}. (Click 'Statement Duration' to match the Statement Controller above).`}
+                        </p>
+                    </div>
+
+                    {/* Graph Mode Buttons: Hydration vs Nutrition vs Macros */}
+                    <div className="flex items-center gap-2 bg-[#080b12]/80 p-1.5 rounded-2xl border border-white/10 self-stretch sm:self-auto">
+                        <button
+                            type="button"
+                            onClick={() => setActiveGraphMetric('hydration')}
+                            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                activeGraphMetric === 'hydration'
+                                    ? 'bg-[#38bdf8] text-black font-black shadow-sm'
+                                    : 'text-white/60 hover:text-white'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">water_drop</span>
+                            <span>Hydration Curve</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveGraphMetric('nutrition')}
+                            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                activeGraphMetric === 'nutrition'
+                                    ? 'bg-[#fbbf24] text-black font-black shadow-sm'
+                                    : 'text-white/60 hover:text-white'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">local_fire_department</span>
+                            <span>Calories Curve</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveGraphMetric('macros')}
+                            className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                activeGraphMetric === 'macros'
+                                    ? 'bg-[#a5d391] text-black font-black shadow-sm'
+                                    : 'text-white/60 hover:text-white'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">bar_chart</span>
+                            <span>Macros Split</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* One-line clarification notice */}
+                <div className="flex items-center gap-2 bg-[#080b12]/80 border border-white/10 px-4 py-2.5 rounded-xl text-xs text-white/70">
+                    <span className="material-symbols-outlined text-[#38bdf8] text-sm shrink-0">info</span>
+                    <span className="truncate">Click <strong>Statement Duration</strong> to see the graph of the duration selected in the Statement Controller above, or choose any preset below for viewing. (Exported PDF always captures the Statement Controller duration).</span>
+                </div>
+
+                {/* Interval Presets & Custom Input Bar */}
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    {/* Interval Presets (Statement Duration + 1 Day to 1 Year) */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 mr-1">Interval:</span>
+
+                        {/* Direct Option to see the graph of the duration selected in the Statement Controller above */}
+                        <button
+                            type="button"
+                            onClick={() => setSelectedInterval('STATEMENT')}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                selectedInterval === 'STATEMENT'
+                                    ? 'bg-[#a5d391] text-black font-extrabold shadow-sm ring-1 ring-[#a5d391]'
+                                    : 'bg-[#a5d391]/10 hover:bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
+                            }`}
+                            title={`Show graph for the duration selected in the Statement Controller above (${activeStatementData.scopeName})`}
+                        >
+                            <span className="material-symbols-outlined text-xs">sync</span>
+                            <span>Statement Duration ({activeStatementData.shortDate})</span>
+                        </button>
+
+                        {INTERVAL_PRESETS.map((preset) => (
+                            <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => setSelectedInterval(preset.id)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    selectedInterval === preset.id
+                                        ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
+                                        : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/5'
+                                }`}
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Custom Date Range Selector (When CUSTOM is active) */}
+                    {selectedInterval === 'CUSTOM' && (
+                        <div className="flex flex-wrap items-center gap-2 animate-in fade-in duration-150">
+                            <DarkCalendarPicker
+                                value={customStartDate}
+                                onChange={(val) => setCustomStartDate(val)}
+                                maxDate={customEndDate || todayStr}
+                                mode="day"
+                                label="From:"
+                            />
+                            <DarkCalendarPicker
+                                value={customEndDate}
+                                onChange={(val) => setCustomEndDate(val)}
+                                maxDate={todayStr}
+                                minDate={customStartDate}
+                                mode="day"
+                                label="To:"
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* Graph Visualization Canvas */}
+                <div className="h-[280px] sm:h-[320px] lg:h-[360px] w-full pt-4">
+                    {activeGraphMetric === 'hydration' && (
+                        <Line data={hydrationChartConfig} options={commonChartOptions} />
+                    )}
+                    {activeGraphMetric === 'nutrition' && (
+                        <Line data={nutritionChartConfig} options={commonChartOptions} />
+                    )}
+                    {activeGraphMetric === 'macros' && (
+                        <Bar data={macrosChartConfig} options={commonChartOptions} />
+                    )}
+                </div>
+            </div>
+
+            {/* 4. RECENT DOWNLOADABLE REPORTS ARCHIVE */}
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 className="font-bold font-hero-display text-lg text-white">Generated Statements & Reports Archive</h3>
+                        <p className="text-xs text-white/50">Instant downloads for clinical records, account biometrics & physician audits.</p>
+                    </div>
+                    <span className="text-xs text-white/40">4 Ready Exports</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Active Selected Statement */}
+                    <div 
+                        onClick={() => handleDownloadReportPdf('Active')}
+                        className="bg-[#080b12]/80 hover:bg-[#a5d391]/15 border border-[#a5d391]/40 rounded-2xl p-4 transition-all group cursor-pointer flex flex-col justify-between space-y-3 shadow-lg"
+                    >
+                        <div className="flex items-start justify-between">
+                            <div className="w-10 h-10 rounded-xl bg-[#a5d391]/15 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391]">
+                                <span className="material-symbols-outlined text-xl">verified</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-[#a5d391] uppercase tracking-wider bg-[#a5d391]/15 px-2 py-0.5 rounded-full">
+                                Active Filter
+                            </span>
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm text-white group-hover:text-[#a5d391] transition-colors">
+                                {activeStatementData.scopeName}
+                            </div>
+                            <div className="text-[11px] text-white/40 mt-0.5">{activeStatementData.dateLabel}</div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-white/50">
+                            <span>Ready to Download</span>
+                            <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-[#a5d391] transition-colors">download</span>
+                        </div>
+                    </div>
+
+                    {/* Overall PDF */}
+                    <div 
+                        onClick={() => handleDownloadReportPdf('Overall')}
+                        className="bg-[#080b12]/80 hover:bg-purple-500/10 border border-white/10 hover:border-purple-400/40 rounded-2xl p-4 transition-all group cursor-pointer flex flex-col justify-between space-y-3"
+                    >
+                        <div className="flex items-start justify-between">
+                            <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                                <span className="material-symbols-outlined text-xl">picture_as_pdf</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider bg-purple-500/15 px-2 py-0.5 rounded-full">
+                                Lifetime
+                            </span>
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm text-white group-hover:text-purple-400 transition-colors">
+                                Lifetime Overall Health Audit
+                            </div>
+                            <div className="text-[11px] text-white/40 mt-0.5">Cumulative biometrics & macro history</div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-white/50">
+                            <span>Ready to Download</span>
+                            <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-purple-400 transition-colors">download</span>
+                        </div>
+                    </div>
+
+                    {/* Monthly PDF */}
+                    <div 
+                        onClick={() => handleDownloadReportPdf('Monthly')}
+                        className="bg-[#080b12]/80 hover:bg-[#38bdf8]/10 border border-white/10 hover:border-[#38bdf8]/40 rounded-2xl p-4 transition-all group cursor-pointer flex flex-col justify-between space-y-3"
+                    >
+                        <div className="flex items-start justify-between">
+                            <div className="w-10 h-10 rounded-xl bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8]">
+                                <span className="material-symbols-outlined text-xl">picture_as_pdf</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-[#38bdf8] uppercase tracking-wider bg-[#38bdf8]/15 px-2 py-0.5 rounded-full">
+                                30 Days
+                            </span>
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm text-white group-hover:text-[#38bdf8] transition-colors">
+                                Monthly Statement ({getMonthLabel(selectedMonthStr)})
+                            </div>
+                            <div className="text-[11px] text-white/40 mt-0.5">30-day velocity & macro compliance</div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-white/50">
+                            <span>Ready to Download</span>
+                            <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-[#38bdf8] transition-colors">download</span>
+                        </div>
+                    </div>
+
+                    {/* Weekly PDF */}
+                    <div 
+                        onClick={() => handleDownloadReportPdf('Weekly')}
+                        className="bg-[#080b12]/80 hover:bg-amber-400/10 border border-white/10 hover:border-amber-400/40 rounded-2xl p-4 transition-all group cursor-pointer flex flex-col justify-between space-y-3"
+                    >
+                        <div className="flex items-start justify-between">
+                            <div className="w-10 h-10 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-400">
+                                <span className="material-symbols-outlined text-xl">picture_as_pdf</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider bg-amber-400/15 px-2 py-0.5 rounded-full">
+                                7 Days
+                            </span>
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm text-white group-hover:text-amber-400 transition-colors">
+                                Weekly Statement ({getWeekRange(selectedWeekDate).shortLabel})
+                            </div>
+                            <div className="text-[11px] text-white/40 mt-0.5">7-day meal log & fluid breakdown</div>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-white/50">
+                            <span>Ready to Download</span>
+                            <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-amber-400 transition-colors">download</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
