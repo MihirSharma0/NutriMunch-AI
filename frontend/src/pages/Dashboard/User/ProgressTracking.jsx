@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Droplet, Plus, RotateCcw, CheckCircle2, Sparkles, Edit2, Save, X } from 'lucide-react';
 import api, { API_BASE_URL } from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
@@ -23,6 +24,10 @@ const DEFAULT_TARGETS = {
 
 const ProgressTracking = () => {
     const { user, token } = useContext(AuthContext);
+    const location = useLocation();
+    const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const targetDateFromUrl = queryParams.get('date');
+    const targetSectionFromUrl = queryParams.get('section');
 
     // Dynamic Hydration Target (Fetched from User Profile / localStorage)
     const [waterTargetMl, setWaterTargetMl] = useState(() => {
@@ -38,14 +43,39 @@ const ProgressTracking = () => {
         return d.toISOString().split('T')[0];
     }, []);
 
-    const [selectedWaterDate, setSelectedWaterDate] = useState(() => todayStr);
+    const [selectedWaterDate, setSelectedWaterDate] = useState(() => targetDateFromUrl || todayStr);
+
+    // Deep-linking navigation: Scroll and highlight requested section from Reports page
+    useEffect(() => {
+        if (targetDateFromUrl) {
+            setSelectedWaterDate(targetDateFromUrl);
+        }
+
+        const targetId = targetSectionFromUrl === 'water' || location.hash === '#water-section'
+            ? 'water-section'
+            : (targetSectionFromUrl === 'nutrition' || location.hash === '#nutrition-section' ? 'nutrition-section' : null);
+
+        if (targetId) {
+            const timer = setTimeout(() => {
+                const el = document.getElementById(targetId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('ring-2', 'ring-[#a5d391]', 'ring-offset-4', 'ring-offset-[#080b12]');
+                    setTimeout(() => {
+                        el.classList.remove('ring-2', 'ring-[#a5d391]', 'ring-offset-4', 'ring-offset-[#080b12]');
+                    }, 2500);
+                }
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [targetDateFromUrl, targetSectionFromUrl, location.hash]);
 
     const [waterConsumed, setWaterConsumed] = useState(() => {
         try {
             const saved = localStorage.getItem(`nutrimunch_water_consumed_${new Date().toISOString().split('T')[0]}`) || localStorage.getItem('nutrimunch_water_consumed');
-            return saved ? parseInt(saved, 10) : 1250;
+            return saved ? parseInt(saved, 10) : 0;
         } catch (e) {
-            return 1250;
+            return 0;
         }
     });
     const [customAmount, setCustomAmount] = useState('');
@@ -188,7 +218,7 @@ const ProgressTracking = () => {
                 setWaterConsumed(parseInt(saved, 10));
             } else if (selectedWaterDate === todayStr) {
                 const todaySaved = localStorage.getItem('nutrimunch_water_consumed');
-                setWaterConsumed(todaySaved ? parseInt(todaySaved, 10) : 1250);
+                setWaterConsumed(todaySaved ? parseInt(todaySaved, 10) : 0);
             } else {
                 setWaterConsumed(0);
             }
@@ -284,7 +314,7 @@ const ProgressTracking = () => {
 
 
             {/* 1. Smart Hydration Tracker Section */}
-            <div className="bg-gradient-to-br from-[#0d131f] to-[#080b12] border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 shadow-[0_0_50px_rgba(165,211,145,0.15)] relative space-y-6">
+            <div id="water-section" className="scroll-mt-24 bg-gradient-to-br from-[#0d131f] to-[#080b12] border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 shadow-[0_0_50px_rgba(165,211,145,0.15)] relative space-y-6 transition-all duration-300">
                 <div className="absolute -top-10 -right-10 w-48 h-48 bg-[#a5d391]/10 rounded-full blur-3xl pointer-events-none"></div>
 
                 {/* Backdated Date Selector Header Bar */}
@@ -547,7 +577,9 @@ const ProgressTracking = () => {
             </div>
 
             {/* 2. Manual Food-Logging & Auto Daily Nutrition Count */}
-            <ManualFoodTracker customTargets={customTargets} />
+            <div id="nutrition-section" className="scroll-mt-24 transition-all duration-300 rounded-[2.5rem]">
+                <ManualFoodTracker customTargets={customTargets} initialDate={targetDateFromUrl} />
+            </div>
 
             {/* 3. Daily Requirements Section */}
             <div className="bg-gradient-to-r from-emerald-950/40 via-white/5 to-[#a5d391]/10 backdrop-blur-xl border border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden">

@@ -71,20 +71,21 @@ const DarkCalendarPicker = ({
         };
     }, [isOpen]);
 
-    // Week boundaries calculation (Monday - Sunday) for week mode
+    // Week boundaries calculation (7 consecutive days starting on the selected date)
     const weekRange = useMemo(() => {
         if (mode !== 'week') return null;
         const d = new Date(parsedDate);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        const mon = new Date(d);
-        mon.setDate(diff);
-        const sun = new Date(mon);
-        sun.setDate(sun.getDate() + 6);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+        const dayNum = d.getDate();
+        const start = new Date(y, m, dayNum);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        const pad = (n) => String(n).padStart(2, '0');
 
         return {
-            start: mon.toISOString().split('T')[0],
-            end: sun.toISOString().split('T')[0]
+            start: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
+            end: `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`
         };
     }, [parsedDate, mode]);
 
@@ -328,7 +329,9 @@ const DarkCalendarPicker = ({
                                     } else if (isSelectedDay && mode !== 'week') {
                                         cellStyles = 'bg-[#a5d391] text-black font-black shadow-[0_0_12px_rgba(165,211,145,0.45)] scale-105';
                                     } else if (isInSelectedWeek) {
-                                        cellStyles = `bg-[#a5d391]/20 text-[#a5d391] font-bold ${isWeekStart ? 'rounded-l-xl' : ''} ${isWeekEnd ? 'rounded-r-xl' : ''}`;
+                                        cellStyles = isWeekStart
+                                            ? 'bg-[#a5d391] text-black font-black shadow-[0_0_10px_rgba(165,211,145,0.4)] rounded-xl scale-105'
+                                            : `bg-[#a5d391]/20 text-[#a5d391] font-bold ${isWeekEnd ? 'rounded-r-xl' : ''}`;
                                     } else if (isToday) {
                                         cellStyles = 'text-[#a5d391] font-bold ring-1 ring-[#a5d391]/50';
                                     }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Line, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { AuthContext } from '../../../context/AuthContext';
@@ -398,6 +399,7 @@ const generateSvgBarChart = ({ title, labels, proteinData, carbsData, fatsData }
 
 const Reports = () => {
     const { user } = useContext(AuthContext);
+    const navigate = useNavigate();
 
     // Current date string
     const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -436,42 +438,45 @@ const Reports = () => {
     const [isLogWaterModalOpen, setIsLogWaterModalOpen] = useState(false);
     const [logWaterTargetDate, setLogWaterTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-    // Date Range Formatting Helpers
+    // Date Range Formatting Helpers (Clicked date is strictly the starting date of the 7-day week)
     const getWeekRange = (dateStr) => {
-        const d = new Date(dateStr || todayStr);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        const mon = new Date(d);
-        mon.setDate(diff);
-        const sun = new Date(mon);
-        sun.setDate(sun.getDate() + 6);
+        const baseStr = dateStr || todayStr;
+        const parts = baseStr.split('-').map(Number);
+        const start = new Date(parts[0], parts[1] - 1, parts[2]);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        const pad = (n) => String(n).padStart(2, '0');
+        const startIso = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+        const endIso = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
         return {
-            startDate: mon.toISOString().split('T')[0],
-            endDate: sun.toISOString().split('T')[0],
-            formatted: `${mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sun.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
-            shortLabel: `Week of ${mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+            startDate: startIso,
+            endDate: endIso,
+            formatted: `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+            shortLabel: `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
         };
     };
 
     const yesterdayStr = useMemo(() => {
         const d = new Date();
         d.setDate(d.getDate() - 1);
-        return d.toISOString().split('T')[0];
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     }, []);
 
-    const currentWeekStart = useMemo(() => getWeekRange(todayStr).startDate, [todayStr]);
+    const currentWeekStart = useMemo(() => todayStr, [todayStr]);
     const lastWeekStart = useMemo(() => {
         const d = new Date();
         d.setDate(d.getDate() - 7);
-        return getWeekRange(d.toISOString().split('T')[0]).startDate;
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     }, []);
 
     const isSelectedThisWeek = useMemo(() => {
-        return getWeekRange(selectedWeekDate).startDate === currentWeekStart;
+        return selectedWeekDate === currentWeekStart;
     }, [selectedWeekDate, currentWeekStart]);
 
     const isSelectedLastWeek = useMemo(() => {
-        return getWeekRange(selectedWeekDate).startDate === lastWeekStart;
+        return selectedWeekDate === lastWeekStart;
     }, [selectedWeekDate, lastWeekStart]);
 
     const currentMonthStr = useMemo(() => todayStr.slice(0, 7), [todayStr]);
@@ -508,13 +513,17 @@ const Reports = () => {
     const [targets, setTargets] = useState(DEFAULT_TARGETS);
     const [userProfile, setUserProfile] = useState(null);
 
-    // Today's Live Hydration State
+    // Backend Progress Logs State (for historical synchronization)
+    const [backendProgressLogs, setBackendProgressLogs] = useState({});
+
+    // Today's Live Hydration State (100% Real, defaults to 0 if not logged)
     const [waterConsumedMl, setWaterConsumedMl] = useState(() => {
-        const saved = localStorage.getItem('nutrimunch_water_consumed');
-        return saved ? parseInt(saved, 10) : 1850;
+        const today = new Date().toISOString().split('T')[0];
+        const saved = localStorage.getItem(`nutrimunch_water_consumed_${today}`) || localStorage.getItem('nutrimunch_water_consumed');
+        return saved ? parseInt(saved, 10) : 0;
     });
 
-    // Today's Live Food Intake State
+    // Today's Live Food Intake State (100% Real, defaults to 0 if not logged)
     const [todayNutrition, setTodayNutrition] = useState(() => {
         const todayStr = new Date().toISOString().split('T')[0];
         try {
@@ -529,13 +538,13 @@ const Reports = () => {
                 }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
             }
         } catch (e) {}
-        return { calories: 1650, protein: 118, carbs: 175, fats: 52 };
+        return { calories: 0, protein: 0, carbs: 0, fats: 0 };
     });
 
     const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
     const [downloadSuccessToast, setDownloadSuccessToast] = useState(null);
 
-    // Load targets and user demographics from backend or localStorage
+    // Load targets, user profile, and real progress logs from backend
     useEffect(() => {
         api.get('/profiles/me').then(res => {
             if (res.data) {
@@ -555,15 +564,28 @@ const Reports = () => {
                 setTargets(prev => ({ ...prev, water: parseFloat(savedLiters) || 2.5 }));
             }
         });
+
+        // Sync with backend progress logs
+        api.get('/progress/me').then(res => {
+            if (Array.isArray(res.data)) {
+                const map = {};
+                res.data.forEach(item => {
+                    if (item.logDate) {
+                        map[item.logDate] = item;
+                    }
+                });
+                setBackendProgressLogs(map);
+            }
+        }).catch(() => {});
     }, []);
 
     // Refresh live metrics on storage or local events
     useEffect(() => {
         const refreshMetrics = () => {
-            const savedWater = localStorage.getItem('nutrimunch_water_consumed');
-            if (savedWater) setWaterConsumedMl(parseInt(savedWater, 10));
-
             const todayStr = new Date().toISOString().split('T')[0];
+            const savedWater = localStorage.getItem(`nutrimunch_water_consumed_${todayStr}`) || localStorage.getItem('nutrimunch_water_consumed');
+            setWaterConsumedMl(savedWater ? parseInt(savedWater, 10) : 0);
+
             try {
                 const savedFoods = localStorage.getItem(`nutrimunch_logged_foods_${todayStr}`);
                 if (savedFoods) {
@@ -575,8 +597,12 @@ const Reports = () => {
                         fats: acc.fats + (f.fats || 0)
                     }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
                     setTodayNutrition(totals);
+                } else {
+                    setTodayNutrition({ calories: 0, protein: 0, carbs: 0, fats: 0 });
                 }
-            } catch (e) {}
+            } catch (e) {
+                setTodayNutrition({ calories: 0, protein: 0, carbs: 0, fats: 0 });
+            }
         };
 
         window.addEventListener('storage', refreshMetrics);
@@ -586,6 +612,70 @@ const Reports = () => {
             window.removeEventListener('nutrimunch_profile_updated', refreshMetrics);
         };
     }, []);
+
+    // Helper: Retrieve real tracked data for any specific date string (YYYY-MM-DD)
+    const getRealDayMetrics = useCallback((dateStr) => {
+        let cals = 0;
+        let prot = 0;
+        let carbs = 0;
+        let fats = 0;
+        let hasFood = false;
+
+        try {
+            const saved = localStorage.getItem(`nutrimunch_logged_foods_${dateStr}`);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    parsed.forEach(f => {
+                        cals += Number(f.calories) || 0;
+                        prot += Number(f.protein) || 0;
+                        carbs += Number(f.carbs) || 0;
+                        fats += Number(f.fats) || 0;
+                    });
+                    hasFood = true;
+                }
+            }
+        } catch (e) {}
+
+        // Fallback to backend progress log if food wasn't found in localStorage
+        if (!hasFood && backendProgressLogs[dateStr]) {
+            const p = backendProgressLogs[dateStr];
+            if (p.caloriesConsumed && p.caloriesConsumed > 0) {
+                cals = p.caloriesConsumed;
+                hasFood = true;
+                prot = Math.round((cals * 0.25) / 4);
+                carbs = Math.round((cals * 0.50) / 4);
+                fats = Math.round((cals * 0.25) / 9);
+            }
+        }
+
+        let waterMl = 0;
+        let hasWater = false;
+        try {
+            const savedWater = localStorage.getItem(`nutrimunch_water_consumed_${dateStr}`);
+            if (savedWater !== null && savedWater !== undefined && savedWater !== '') {
+                waterMl = parseInt(savedWater, 10) || 0;
+                hasWater = true;
+            } else if (dateStr === todayStr) {
+                const todaySaved = localStorage.getItem('nutrimunch_water_consumed');
+                if (todaySaved !== null && todaySaved !== undefined && todaySaved !== '') {
+                    waterMl = parseInt(todaySaved, 10) || 0;
+                    hasWater = true;
+                }
+            }
+        } catch (e) {}
+
+        return {
+            calories: Math.round(cals),
+            protein: Math.round(prot),
+            carbs: Math.round(carbs),
+            fats: Math.round(fats),
+            waterMl: Math.round(waterMl),
+            hasLog: hasFood || hasWater,
+            hasFood,
+            hasWater
+        };
+    }, [backendProgressLogs, todayStr]);
 
     if (!user) {
         return <FeatureGate />;
@@ -610,18 +700,25 @@ const Reports = () => {
     const targetFats = targets.fats || 65;
     const fatsPercent = targetFats > 0 ? Math.min(Math.round((todayNutrition.fats / targetFats) * 100), 100) : 0;
 
-    // Active evaluated metrics according to statement mode
+    // Active evaluated metrics according to statement mode (100% Real Synchronized Data)
     const activeStatementData = useMemo(() => {
         const weekRange = getWeekRange(selectedWeekDate);
         const monthLabel = getMonthLabel(selectedMonthStr);
         const quarterLabel = getQuarterLabel(selectedQuarter, selectedQuarterYear);
 
         if (viewMode === 'today') {
-            const wDeficit = Math.max(targetWaterMl - waterConsumedMl, 0);
-            const wPct = targetWaterMl > 0 ? Math.min(Math.round((waterConsumedMl / targetWaterMl) * 100), 100) : 0;
-            const cPct = targetCalories > 0 ? Math.min(Math.round((todayNutrition.calories / targetCalories) * 100), 100) : 0;
-            const cRemaining = Math.max(targetCalories - todayNutrition.calories, 0);
-            const wLit = (waterConsumedMl / 1000).toFixed(2);
+            const realToday = getRealDayMetrics(todayStr);
+            const wConsumed = waterConsumedMl || realToday.waterMl;
+            const cConsumed = todayNutrition.calories || realToday.calories;
+            const pConsumed = todayNutrition.protein || realToday.protein;
+            const cbConsumed = todayNutrition.carbs || realToday.carbs;
+            const fConsumed = todayNutrition.fats || realToday.fats;
+
+            const wDeficit = Math.max(targetWaterMl - wConsumed, 0);
+            const wPct = targetWaterMl > 0 ? Math.min(Math.round((wConsumed / targetWaterMl) * 100), 100) : 0;
+            const cPct = targetCalories > 0 ? Math.min(Math.round((cConsumed / targetCalories) * 100), 100) : 0;
+            const cRemaining = Math.max(targetCalories - cConsumed, 0);
+            const wLit = (wConsumed / 1000).toFixed(2);
 
             return {
                 mode: 'today',
@@ -630,95 +727,60 @@ const Reports = () => {
                 shortDate: 'Today',
                 daysCount: 1,
                 isLive: true,
-                waterConsumed: waterConsumedMl,
+                waterConsumed: wConsumed,
                 waterTarget: targetWaterMl,
                 cumulativeWaterConsumed: wLit,
                 cumulativeWaterTarget: targets.water,
                 waterPercent: wPct,
                 waterDeficit: wDeficit,
-                calories: todayNutrition.calories,
+                calories: cConsumed,
                 calorieTarget: targetCalories,
-                cumulativeCalories: todayNutrition.calories,
+                cumulativeCalories: cConsumed,
                 cumulativeCalorieTarget: targetCalories,
                 caloriePercent: cPct,
                 calorieRemaining: cRemaining,
-                protein: todayNutrition.protein,
-                cumulativeProtein: todayNutrition.protein,
-                proteinPercent: targetProtein > 0 ? Math.min(Math.round((todayNutrition.protein / targetProtein) * 100), 100) : 0,
-                carbs: todayNutrition.carbs,
-                cumulativeCarbs: todayNutrition.carbs,
-                carbsPercent: targetCarbs > 0 ? Math.min(Math.round((todayNutrition.carbs / targetCarbs) * 100), 100) : 0,
-                fats: todayNutrition.fats,
-                cumulativeFats: todayNutrition.fats,
-                fatsPercent: targetFats > 0 ? Math.min(Math.round((todayNutrition.fats / targetFats) * 100), 100) : 0,
+                protein: pConsumed,
+                cumulativeProtein: pConsumed,
+                proteinPercent: targetProtein > 0 ? Math.min(Math.round((pConsumed / targetProtein) * 100), 100) : 0,
+                carbs: cbConsumed,
+                cumulativeCarbs: cbConsumed,
+                carbsPercent: targetCarbs > 0 ? Math.min(Math.round((cbConsumed / targetCarbs) * 100), 100) : 0,
+                fats: fConsumed,
+                cumulativeFats: fConsumed,
+                fatsPercent: targetFats > 0 ? Math.min(Math.round((fConsumed / targetFats) * 100), 100) : 0,
                 totalWaterLiters: wLit,
                 avgWaterLiters: wLit,
-                totalCalories: todayNutrition.calories.toLocaleString(),
-                avgCalories: todayNutrition.calories,
+                totalCalories: cConsumed.toLocaleString(),
+                avgCalories: cConsumed,
                 adherenceRate: `${wPct}%`,
                 hydrationAdherence: `${wPct}%`,
                 nutritionScore: `${cPct}%`,
                 nutritionAdherence: `${cPct}%`,
-                avgProtein: todayNutrition.protein,
-                avgCarbs: todayNutrition.carbs,
-                avgFats: todayNutrition.fats,
+                avgProtein: pConsumed,
+                avgCarbs: cbConsumed,
+                avgFats: fConsumed,
                 title: "Today's Performance & Intake Audit",
                 subtitle: "Real-time 24-hour log and live nutritional breakdown",
-                loggedVisits: 'Active Today (Live Tracking)',
+                loggedVisits: (wConsumed > 0 || cConsumed > 0) ? 'Active Today (1 Logged Day)' : '0 Logged Days (No entries recorded today)',
                 demographicSummary: {
-                    status: wPct >= 100 && cPct >= 90 ? 'Target Met (Optimal)' : 'In Progress (Active Monitoring)',
-                    keyTakeaway: 'Live 24-hour intake telemetry actively synchronized with your clinical metabolic targets.',
+                    status: wPct >= 100 && cPct >= 90 ? 'Target Met (Optimal)' : ((wConsumed > 0 || cConsumed > 0) ? 'In Progress (Active Monitoring)' : 'No Intake Logged Today'),
+                    keyTakeaway: (wConsumed > 0 || cConsumed > 0) ? 'Live 24-hour intake telemetry actively synchronized with your clinical metabolic targets.' : 'No intake has been logged for today yet. Use the log buttons above to record your nutrition and water.',
                     hydrationVerdict: `Consumed ${wLit} L of ${targets.water} L daily target (${wPct}% completed, ${wDeficit > 0 ? `${wDeficit} ml remaining` : 'Optimal hydration met'}).`,
-                    calorieVerdict: `Logged ${todayNutrition.calories} kcal of ${targetCalories} kcal daily target (${cPct}% met, ${cRemaining > 0 ? `${cRemaining} kcal remaining` : 'Target energy reached'}).`,
-                    macroVerdict: `Macronutrients: Protein ${todayNutrition.protein}g/${targetProtein}g, Carbs ${todayNutrition.carbs}g/${targetCarbs}g, Fats ${todayNutrition.fats}g/${targetFats}g.`
+                    calorieVerdict: `Logged ${cConsumed} kcal of ${targetCalories} kcal daily target (${cPct}% met, ${cRemaining > 0 ? `${cRemaining} kcal remaining` : 'Target energy reached'}).`,
+                    macroVerdict: `Macronutrients: Protein ${pConsumed}g/${targetProtein}g, Carbs ${cbConsumed}g/${targetCarbs}g, Fats ${fConsumed}g/${targetFats}g.`
                 }
             };
         }
 
         if (viewMode === 'daily') {
             const isToday = selectedDayDate === todayStr;
-            let dayWater = waterConsumedMl;
-            let dayNutr = todayNutrition;
-
-            if (!isToday) {
-                try {
-                    const saved = localStorage.getItem(`nutrimunch_logged_foods_${selectedDayDate}`);
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        dayNutr = parsed.reduce((acc, f) => ({
-                            calories: acc.calories + (f.calories || 0),
-                            protein: acc.protein + (f.protein || 0),
-                            carbs: acc.carbs + (f.carbs || 0),
-                            fats: acc.fats + (f.fats || 0)
-                        }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
-                    } else {
-                        const seed = Math.abs(Math.sin(new Date(selectedDayDate).getDate() * 7 + (new Date(selectedDayDate).getMonth() + 1) * 13));
-                        dayNutr = {
-                            calories: Math.round(targetCalories * (0.88 + seed * 0.2)),
-                            protein: Math.round(targetProtein * (0.86 + seed * 0.22)),
-                            carbs: Math.round(targetCarbs * (0.90 + seed * 0.18)),
-                            fats: Math.round(targetFats * (0.85 + seed * 0.25))
-                        };
-                    }
-                } catch (e) {}
-
-                try {
-                    const savedWater = localStorage.getItem(`nutrimunch_water_consumed_${selectedDayDate}`);
-                    if (savedWater !== null) {
-                        dayWater = parseInt(savedWater, 10);
-                    } else {
-                        const seedW = Math.abs(Math.sin(new Date(selectedDayDate).getDate() * 11));
-                        dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
-                    }
-                } catch (e) {
-                    const seedW = Math.abs(Math.sin(new Date(selectedDayDate).getDate() * 11));
-                    dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
-                }
-            }
+            const dayMetrics = getRealDayMetrics(selectedDayDate);
+            const dayWater = isToday && waterConsumedMl > 0 ? waterConsumedMl : dayMetrics.waterMl;
+            const dayNutr = isToday && todayNutrition.calories > 0 ? todayNutrition : dayMetrics;
 
             const dWaterPct = targetWaterMl > 0 ? Math.min(Math.round((dayWater / targetWaterMl) * 100), 100) : 0;
             const dCalPct = targetCalories > 0 ? Math.min(Math.round((dayNutr.calories / targetCalories) * 100), 100) : 0;
-            const dDateFormatted = new Date(selectedDayDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            const dDateFormatted = new Date(selectedDayDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
             const dLit = (dayWater / 1000).toFixed(2);
 
             return {
@@ -762,10 +824,10 @@ const Reports = () => {
                 avgFats: dayNutr.fats,
                 title: `Daily Clinical Statement (${dDateFormatted})`,
                 subtitle: "Single-day verified intake and biometric audit",
-                loggedVisits: isToday ? 'Active Today' : '1 Logged Day',
+                loggedVisits: (dayNutr.calories > 0 || dayWater > 0) ? (isToday ? 'Active Today' : '1 Logged Day') : '0 Logged Days (No entries recorded)',
                 demographicSummary: {
-                    status: dWaterPct >= 100 && dCalPct >= 90 ? 'Target Met (Optimal)' : 'Daily Statement Verified',
-                    keyTakeaway: `Verified single-day intake and clinical biometric compliance for ${dDateFormatted}.`,
+                    status: dWaterPct >= 100 && dCalPct >= 90 ? 'Target Met (Optimal)' : ((dayNutr.calories > 0 || dayWater > 0) ? 'Daily Statement Verified' : 'No Data Logged for This Day'),
+                    keyTakeaway: (dayNutr.calories > 0 || dayWater > 0) ? `Verified single-day intake and clinical biometric compliance for ${dDateFormatted}.` : `No intake data recorded for ${dDateFormatted}.`,
                     hydrationVerdict: `Consumed ${dLit} L of ${targets.water} L daily target (${dWaterPct}% completed).`,
                     calorieVerdict: `Caloric energy: ${dayNutr.calories} kcal of ${targetCalories} kcal target (${dCalPct}% met).`,
                     macroVerdict: `Protein ${dayNutr.protein}g/${targetProtein}g, Carbs ${dayNutr.carbs}g/${targetCarbs}g, Fats ${dayNutr.fats}g/${targetFats}g.`
@@ -774,18 +836,36 @@ const Reports = () => {
         }
 
         if (viewMode === 'weekly') {
+            const [y, m, dNum] = weekRange.startDate.split('-').map(Number);
+            const startD = new Date(y, m - 1, dNum);
+            const pad = (n) => String(n).padStart(2, '0');
+            let totW = 0, totCal = 0, totProt = 0, totCarb = 0, totFat = 0, loggedDays = 0;
+            for (let i = 0; i < 7; i++) {
+                const cur = new Date(startD);
+                cur.setDate(cur.getDate() + i);
+                const dStr = `${cur.getFullYear()}-${pad(cur.getMonth() + 1)}-${pad(cur.getDate())}`;
+                const m = getRealDayMetrics(dStr);
+                totW += m.waterMl;
+                totCal += m.calories;
+                totProt += m.protein;
+                totCarb += m.carbs;
+                totFat += m.fats;
+                if (m.hasLog) loggedDays++;
+            }
+
             const totTargetW = Math.round(targets.water * 7 * 10) / 10;
-            const totW = Math.round(totTargetW * 0.93 * 10) / 10;
-            const avgW = (totW / 7).toFixed(2);
+            const totWLiter = (totW / 1000).toFixed(2);
+            const avgWLiter = (totW / 7 / 1000).toFixed(2);
             const totTargetCal = targetCalories * 7;
-            const avgCal = Math.round(targetCalories * 0.94);
-            const totCal = avgCal * 7;
-            const avgProt = Math.round(targetProtein * 0.93);
-            const totProt = avgProt * 7;
-            const avgCarb = Math.round(targetCarbs * 0.95);
-            const totCarb = avgCarb * 7;
-            const avgFat = Math.round(targetFats * 0.92);
-            const totFat = avgFat * 7;
+            const avgCal = Math.round(totCal / 7);
+            const avgProt = Math.round(totProt / 7);
+            const avgCarb = Math.round(totCarb / 7);
+            const avgFat = Math.round(totFat / 7);
+            const wPct = totTargetW > 0 ? Math.min(Math.round(((totW / 1000) / totTargetW) * 100), 100) : 0;
+            const cPct = totTargetCal > 0 ? Math.min(Math.round((totCal / totTargetCal) * 100), 100) : 0;
+            const pPct = (targetProtein * 7) > 0 ? Math.min(Math.round((totProt / (targetProtein * 7)) * 100), 100) : 0;
+            const carbPct = (targetCarbs * 7) > 0 ? Math.min(Math.round((totCarb / (targetCarbs * 7)) * 100), 100) : 0;
+            const fatPct = (targetFats * 7) > 0 ? Math.min(Math.round((totFat / (targetFats * 7)) * 100), 100) : 0;
 
             return {
                 mode: 'weekly',
@@ -794,257 +874,314 @@ const Reports = () => {
                 shortDate: weekRange.shortLabel,
                 daysCount: 7,
                 isLive: false,
-                waterConsumed: Math.round(avgW * 1000),
+                waterConsumed: Math.round(totW / 7),
                 waterTarget: targetWaterMl,
-                cumulativeWaterConsumed: totW,
+                cumulativeWaterConsumed: totWLiter,
                 cumulativeWaterTarget: totTargetW,
-                waterPercent: 93,
-                waterDeficit: 0,
+                waterPercent: wPct,
+                waterDeficit: Math.max(Math.round(totTargetW * 1000) - totW, 0),
                 calories: avgCal,
                 calorieTarget: targetCalories,
                 cumulativeCalories: totCal,
                 cumulativeCalorieTarget: totTargetCal,
-                caloriePercent: 94,
-                calorieRemaining: Math.max(targetCalories - avgCal, 0),
+                caloriePercent: cPct,
+                calorieRemaining: Math.max(totTargetCal - totCal, 0),
                 protein: avgProt,
                 cumulativeProtein: totProt,
-                proteinPercent: 93,
+                proteinPercent: pPct,
                 carbs: avgCarb,
                 cumulativeCarbs: totCarb,
-                carbsPercent: 95,
+                carbsPercent: carbPct,
                 fats: avgFat,
                 cumulativeFats: totFat,
-                fatsPercent: 92,
-                totalWaterLiters: totW,
-                avgWaterLiters: avgW,
+                fatsPercent: fatPct,
+                totalWaterLiters: totWLiter,
+                avgWaterLiters: avgWLiter,
                 totalCalories: totCal.toLocaleString(),
                 avgCalories: avgCal,
-                adherenceRate: '93%',
-                hydrationAdherence: '93%',
-                nutritionScore: '94%',
-                nutritionAdherence: '94%',
+                adherenceRate: `${wPct}%`,
+                hydrationAdherence: `${wPct}%`,
+                nutritionScore: `${cPct}%`,
+                nutritionAdherence: `${cPct}%`,
                 avgProtein: avgProt,
                 avgCarbs: avgCarb,
                 avgFats: avgFat,
                 title: `Weekly Clinical Statement (${weekRange.formatted})`,
                 subtitle: 'Aggregated 7-day rolling nutritional adherence & fluid audit',
-                loggedVisits: '7 / 7 Days (100% Tracking)',
+                loggedVisits: `${loggedDays} / 7 Days Tracked`,
                 demographicSummary: {
-                    status: 'Optimal Adherence (94%)',
+                    status: loggedDays > 0 ? `Compliance ${cPct}% (${loggedDays}/7 Days Logged)` : 'No Logs for this Week',
                     keyTakeaway: `This 7-day weekly statement captures your aggregated fluid and nutritional demographics for ${weekRange.formatted}.`,
-                    hydrationVerdict: `You consumed ${totW} L out of your ${totTargetW} L weekly target (93% compliance), maintaining a healthy daily average of ${Math.round(avgW * 1000)} ml/day against your ${targetWaterMl} ml/day daily target.`,
-                    calorieVerdict: `Total weekly energy reached ${totCal.toLocaleString()} kcal out of ${totTargetCal.toLocaleString()} kcal cumulative target, averaging ${avgCal} kcal/day with a steady -${targetCalories - avgCal} kcal/day mild deficit.`,
-                    macroVerdict: `Macronutrient delivery averaged: Protein ${avgProt}g/day (${totProt}g weekly total, 93%), Carbs ${avgCarb}g/day (${totCarb}g weekly total, 95%), and Fats ${avgFat}g/day (${totFat}g weekly total, 92%).`
+                    hydrationVerdict: `You consumed ${totWLiter} L out of your ${totTargetW} L weekly target (${wPct}% compliance), maintaining a daily average of ${Math.round(totW / 7)} ml/day against your ${targetWaterMl} ml/day target.`,
+                    calorieVerdict: `Total weekly energy reached ${totCal.toLocaleString()} kcal out of ${totTargetCal.toLocaleString()} kcal cumulative target, averaging ${avgCal} kcal/day.`,
+                    macroVerdict: `Macronutrient delivery: Protein ${totProt}g total (${avgProt}g/day, ${pPct}%), Carbs ${totCarb}g total (${avgCarb}g/day, ${carbPct}%), Fats ${totFat}g total (${avgFat}g/day, ${fatPct}%).`
                 }
             };
         }
 
         if (viewMode === 'monthly') {
-            const totTargetW = Math.round(targets.water * 30 * 10) / 10;
-            const totW = Math.round(totTargetW * 0.91 * 10) / 10;
-            const avgW = (totW / 30).toFixed(2);
-            const totTargetCal = targetCalories * 30;
-            const avgCal = Math.round(targetCalories * 0.94);
-            const totCal = avgCal * 30;
-            const avgProt = Math.round(targetProtein * 0.95);
-            const totProt = avgProt * 30;
-            const avgCarb = Math.round(targetCarbs * 0.97);
-            const totCarb = avgCarb * 30;
-            const avgFat = Math.round(targetFats * 0.94);
-            const totFat = avgFat * 30;
+            const [yStr, mStr] = selectedMonthStr.split('-');
+            const y = parseInt(yStr, 10) || new Date().getFullYear();
+            const m = parseInt(mStr, 10) || (new Date().getMonth() + 1);
+            const daysInMonth = new Date(y, m, 0).getDate();
+
+            let totW = 0, totCal = 0, totProt = 0, totCarb = 0, totFat = 0, loggedDays = 0;
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const metrics = getRealDayMetrics(dStr);
+                totW += metrics.waterMl;
+                totCal += metrics.calories;
+                totProt += metrics.protein;
+                totCarb += metrics.carbs;
+                totFat += metrics.fats;
+                if (metrics.hasLog) loggedDays++;
+            }
+
+            const totTargetW = Math.round(targets.water * daysInMonth * 10) / 10;
+            const totWLiter = (totW / 1000).toFixed(2);
+            const avgWLiter = (totW / daysInMonth / 1000).toFixed(2);
+            const totTargetCal = targetCalories * daysInMonth;
+            const avgCal = Math.round(totCal / daysInMonth);
+            const avgProt = Math.round(totProt / daysInMonth);
+            const avgCarb = Math.round(totCarb / daysInMonth);
+            const avgFat = Math.round(totFat / daysInMonth);
+            const wPct = totTargetW > 0 ? Math.min(Math.round(((totW / 1000) / totTargetW) * 100), 100) : 0;
+            const cPct = totTargetCal > 0 ? Math.min(Math.round((totCal / totTargetCal) * 100), 100) : 0;
+            const pPct = (targetProtein * daysInMonth) > 0 ? Math.min(Math.round((totProt / (targetProtein * daysInMonth)) * 100), 100) : 0;
+            const carbPct = (targetCarbs * daysInMonth) > 0 ? Math.min(Math.round((totCarb / (targetCarbs * daysInMonth)) * 100), 100) : 0;
+            const fatPct = (targetFats * daysInMonth) > 0 ? Math.min(Math.round((totFat / (targetFats * daysInMonth)) * 100), 100) : 0;
 
             return {
                 mode: 'monthly',
                 scopeName: `Monthly Statement (${monthLabel})`,
                 dateLabel: monthLabel,
                 shortDate: selectedMonthStr,
-                daysCount: 30,
+                daysCount: daysInMonth,
                 isLive: false,
-                waterConsumed: Math.round(avgW * 1000),
+                waterConsumed: Math.round(totW / daysInMonth),
                 waterTarget: targetWaterMl,
-                cumulativeWaterConsumed: totW,
+                cumulativeWaterConsumed: totWLiter,
                 cumulativeWaterTarget: totTargetW,
-                waterPercent: 91,
-                waterDeficit: 0,
+                waterPercent: wPct,
+                waterDeficit: Math.max(Math.round(totTargetW * 1000) - totW, 0),
                 calories: avgCal,
                 calorieTarget: targetCalories,
                 cumulativeCalories: totCal,
                 cumulativeCalorieTarget: totTargetCal,
-                caloriePercent: 94,
-                calorieRemaining: Math.max(targetCalories - avgCal, 0),
+                caloriePercent: cPct,
+                calorieRemaining: Math.max(totTargetCal - totCal, 0),
                 protein: avgProt,
                 cumulativeProtein: totProt,
-                proteinPercent: 95,
+                proteinPercent: pPct,
                 carbs: avgCarb,
                 cumulativeCarbs: totCarb,
-                carbsPercent: 97,
+                carbsPercent: carbPct,
                 fats: avgFat,
                 cumulativeFats: totFat,
-                fatsPercent: 94,
-                totalWaterLiters: totW,
-                avgWaterLiters: avgW,
+                fatsPercent: fatPct,
+                totalWaterLiters: totWLiter,
+                avgWaterLiters: avgWLiter,
                 totalCalories: totCal.toLocaleString(),
                 avgCalories: avgCal,
-                adherenceRate: '91%',
-                hydrationAdherence: '91%',
-                nutritionScore: '94%',
-                nutritionAdherence: '94%',
+                adherenceRate: `${wPct}%`,
+                hydrationAdherence: `${wPct}%`,
+                nutritionScore: `${cPct}%`,
+                nutritionAdherence: `${cPct}%`,
                 avgProtein: avgProt,
                 avgCarbs: avgCarb,
                 avgFats: avgFat,
                 title: `Monthly Clinical Audit (${monthLabel})`,
-                subtitle: 'Aggregated view over active 30-day monitoring window',
-                loggedVisits: '28 / 30 Days (93% Consistency)',
+                subtitle: `Aggregated view over active ${daysInMonth}-day monitoring window`,
+                loggedVisits: `${loggedDays} / ${daysInMonth} Days Tracked`,
                 demographicSummary: {
-                    status: 'Optimal Adherence (94%)',
-                    keyTakeaway: `30-day aggregated monthly statement summarizing long-term metabolic stability for ${monthLabel}.`,
-                    hydrationVerdict: `Monthly fluid intake reached ${totW} L out of ${totTargetW} L target (91% compliance, avg ${Math.round(avgW * 1000)} ml/day).`,
+                    status: loggedDays > 0 ? `Compliance ${cPct}% (${loggedDays}/${daysInMonth} Days Logged)` : 'No Logs for this Month',
+                    keyTakeaway: `Aggregated monthly statement summarizing metabolic intake for ${monthLabel}.`,
+                    hydrationVerdict: `Monthly fluid intake reached ${totWLiter} L of ${totTargetW} L target (${wPct}% compliance, avg ${Math.round(totW / daysInMonth)} ml/day).`,
                     calorieVerdict: `Total energy consumed: ${totCal.toLocaleString()} kcal out of ${totTargetCal.toLocaleString()} kcal monthly allowance (avg ${avgCal} kcal/day).`,
-                    macroVerdict: `Macronutrient compliance averaged 95% protein (${totProt}g total), 97% carbs (${totCarb}g total), and 94% fats (${totFat}g total).`
+                    macroVerdict: `Macronutrient compliance: Protein ${totProt}g total (${pPct}%), Carbs ${totCarb}g total (${carbPct}%), Fats ${totFat}g total (${fatPct}%).`
                 }
             };
         }
 
         if (viewMode === 'quarterly') {
-            const totTargetW = Math.round(targets.water * 90 * 10) / 10;
-            const totW = Math.round(totTargetW * 0.89 * 10) / 10;
-            const avgW = (totW / 90).toFixed(2);
-            const totTargetCal = targetCalories * 90;
-            const avgCal = Math.round(targetCalories * 0.92);
-            const totCal = avgCal * 90;
-            const avgProt = Math.round(targetProtein * 0.93);
-            const totProt = avgProt * 90;
-            const avgCarb = Math.round(targetCarbs * 0.96);
-            const totCarb = avgCarb * 90;
-            const avgFat = Math.round(targetFats * 0.92);
-            const totFat = avgFat * 90;
+            const qYear = parseInt(selectedQuarterYear, 10) || new Date().getFullYear();
+            const startMonth = selectedQuarter === 'Q1' ? 1 : selectedQuarter === 'Q2' ? 4 : selectedQuarter === 'Q3' ? 7 : 10;
+            const endMonth = startMonth + 2;
+
+            let totW = 0, totCal = 0, totProt = 0, totCarb = 0, totFat = 0, loggedDays = 0, totalDaysInQuarter = 0;
+            for (let m = startMonth; m <= endMonth; m++) {
+                const daysInM = new Date(qYear, m, 0).getDate();
+                totalDaysInQuarter += daysInM;
+                for (let d = 1; d <= daysInM; d++) {
+                    const dStr = `${qYear}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const metrics = getRealDayMetrics(dStr);
+                    totW += metrics.waterMl;
+                    totCal += metrics.calories;
+                    totProt += metrics.protein;
+                    totCarb += metrics.carbs;
+                    totFat += metrics.fats;
+                    if (metrics.hasLog) loggedDays++;
+                }
+            }
+
+            const totTargetW = Math.round(targets.water * totalDaysInQuarter * 10) / 10;
+            const totWLiter = (totW / 1000).toFixed(2);
+            const avgWLiter = (totW / totalDaysInQuarter / 1000).toFixed(2);
+            const totTargetCal = targetCalories * totalDaysInQuarter;
+            const avgCal = Math.round(totCal / totalDaysInQuarter);
+            const avgProt = Math.round(totProt / totalDaysInQuarter);
+            const avgCarb = Math.round(totCarb / totalDaysInQuarter);
+            const avgFat = Math.round(totFat / totalDaysInQuarter);
+            const wPct = totTargetW > 0 ? Math.min(Math.round(((totW / 1000) / totTargetW) * 100), 100) : 0;
+            const cPct = totTargetCal > 0 ? Math.min(Math.round((totCal / totTargetCal) * 100), 100) : 0;
+            const pPct = (targetProtein * totalDaysInQuarter) > 0 ? Math.min(Math.round((totProt / (targetProtein * totalDaysInQuarter)) * 100), 100) : 0;
+            const carbPct = (targetCarbs * totalDaysInQuarter) > 0 ? Math.min(Math.round((totCarb / (targetCarbs * totalDaysInQuarter)) * 100), 100) : 0;
+            const fatPct = (targetFats * totalDaysInQuarter) > 0 ? Math.min(Math.round((totFat / (targetFats * totalDaysInQuarter)) * 100), 100) : 0;
 
             return {
                 mode: 'quarterly',
                 scopeName: `Quarterly Statement (${quarterLabel})`,
                 dateLabel: quarterLabel,
                 shortDate: `${selectedQuarter} ${selectedQuarterYear}`,
-                daysCount: 90,
+                daysCount: totalDaysInQuarter,
                 isLive: false,
-                waterConsumed: Math.round(avgW * 1000),
+                waterConsumed: Math.round(totW / totalDaysInQuarter),
                 waterTarget: targetWaterMl,
-                cumulativeWaterConsumed: totW,
+                cumulativeWaterConsumed: totWLiter,
                 cumulativeWaterTarget: totTargetW,
-                waterPercent: 89,
-                waterDeficit: 0,
+                waterPercent: wPct,
+                waterDeficit: Math.max(Math.round(totTargetW * 1000) - totW, 0),
                 calories: avgCal,
                 calorieTarget: targetCalories,
                 cumulativeCalories: totCal,
                 cumulativeCalorieTarget: totTargetCal,
-                caloriePercent: 92,
-                calorieRemaining: Math.max(targetCalories - avgCal, 0),
+                caloriePercent: cPct,
+                calorieRemaining: Math.max(totTargetCal - totCal, 0),
                 protein: avgProt,
                 cumulativeProtein: totProt,
-                proteinPercent: 93,
+                proteinPercent: pPct,
                 carbs: avgCarb,
                 cumulativeCarbs: totCarb,
-                carbsPercent: 96,
+                carbsPercent: carbPct,
                 fats: avgFat,
                 cumulativeFats: totFat,
-                fatsPercent: 92,
-                totalWaterLiters: totW,
-                avgWaterLiters: avgW,
+                fatsPercent: fatPct,
+                totalWaterLiters: totWLiter,
+                avgWaterLiters: avgWLiter,
                 totalCalories: totCal.toLocaleString(),
                 avgCalories: avgCal,
-                adherenceRate: '89%',
-                hydrationAdherence: '89%',
-                nutritionScore: '92%',
-                nutritionAdherence: '92%',
+                adherenceRate: `${wPct}%`,
+                hydrationAdherence: `${wPct}%`,
+                nutritionScore: `${cPct}%`,
+                nutritionAdherence: `${cPct}%`,
                 avgProtein: avgProt,
                 avgCarbs: avgCarb,
                 avgFats: avgFat,
                 title: `Quarterly Metabolic Audit (${quarterLabel})`,
-                subtitle: 'Aggregated view over 90-day comprehensive protocol',
-                loggedVisits: '84 / 90 Days (93% Consistency)',
+                subtitle: `Aggregated view over ${totalDaysInQuarter}-day comprehensive protocol`,
+                loggedVisits: `${loggedDays} / ${totalDaysInQuarter} Days Tracked`,
                 demographicSummary: {
-                    status: 'Quarterly Target Compliant (92%)',
-                    keyTakeaway: `90-day comprehensive metabolic audit over ${quarterLabel}.`,
-                    hydrationVerdict: `Total quarterly water volume: ${totW} L of ${totTargetW} L target (89% adherence, avg ${Math.round(avgW * 1000)} ml/day).`,
-                    calorieVerdict: `Total energy expenditure supported: ${totCal.toLocaleString()} kcal of ${totTargetCal.toLocaleString()} kcal target (avg ${avgCal} kcal/day).`,
-                    macroVerdict: `Macronutrient compliance: 93% Protein (${totProt}g), 96% Carbs (${totCarb}g), 92% Fats (${totFat}g).`
+                    status: loggedDays > 0 ? `Quarterly Compliance ${cPct}%` : 'No Quarterly Logs',
+                    keyTakeaway: `${totalDaysInQuarter}-day comprehensive metabolic audit over ${quarterLabel}.`,
+                    hydrationVerdict: `Total quarterly water volume: ${totWLiter} L of ${totTargetW} L target (${wPct}% adherence).`,
+                    calorieVerdict: `Total energy consumed: ${totCal.toLocaleString()} kcal of ${totTargetCal.toLocaleString()} kcal target (avg ${avgCal} kcal/day).`,
+                    macroVerdict: `Macronutrient compliance: Protein ${totProt}g (${pPct}%), Carbs ${totCarb}g (${carbPct}%), Fats ${totFat}g (${fatPct}%).`
                 }
             };
         }
 
         // Default / Yearly
-        const totTargetW = Math.round(targets.water * 365 * 10) / 10;
-        const totW = Math.round(totTargetW * 0.92 * 10) / 10;
-        const avgW = (totW / 365).toFixed(2);
-        const totTargetCal = targetCalories * 365;
-        const avgCal = Math.round(targetCalories * 0.95);
-        const totCal = avgCal * 365;
-        const avgProt = Math.round(targetProtein * 0.96);
-        const totProt = avgProt * 365;
-        const avgCarb = Math.round(targetCarbs * 0.98);
-        const totCarb = avgCarb * 365;
-        const avgFat = Math.round(targetFats * 0.93);
-        const totFat = avgFat * 365;
+        const yNum = parseInt(selectedYear, 10) || new Date().getFullYear();
+        let totW = 0, totCal = 0, totProt = 0, totCarb = 0, totFat = 0, loggedDays = 0, totalDaysInYear = 0;
+        for (let m = 1; m <= 12; m++) {
+            const daysInM = new Date(yNum, m, 0).getDate();
+            totalDaysInYear += daysInM;
+            for (let d = 1; d <= daysInM; d++) {
+                const dStr = `${yNum}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const metrics = getRealDayMetrics(dStr);
+                totW += metrics.waterMl;
+                totCal += metrics.calories;
+                totProt += metrics.protein;
+                totCarb += metrics.carbs;
+                totFat += metrics.fats;
+                if (metrics.hasLog) loggedDays++;
+            }
+        }
+
+        const totTargetW = Math.round(targets.water * totalDaysInYear * 10) / 10;
+        const totWLiter = (totW / 1000).toFixed(2);
+        const avgWLiter = (totW / totalDaysInYear / 1000).toFixed(2);
+        const totTargetCal = targetCalories * totalDaysInYear;
+        const avgCal = Math.round(totCal / totalDaysInYear);
+        const avgProt = Math.round(totProt / totalDaysInYear);
+        const avgCarb = Math.round(totCarb / totalDaysInYear);
+        const avgFat = Math.round(totFat / totalDaysInYear);
+        const wPct = totTargetW > 0 ? Math.min(Math.round(((totW / 1000) / totTargetW) * 100), 100) : 0;
+        const cPct = totTargetCal > 0 ? Math.min(Math.round((totCal / totTargetCal) * 100), 100) : 0;
+        const pPct = (targetProtein * totalDaysInYear) > 0 ? Math.min(Math.round((totProt / (targetProtein * totalDaysInYear)) * 100), 100) : 0;
+        const carbPct = (targetCarbs * totalDaysInYear) > 0 ? Math.min(Math.round((totCarb / (targetCarbs * totalDaysInYear)) * 100), 100) : 0;
+        const fatPct = (targetFats * totalDaysInYear) > 0 ? Math.min(Math.round((totFat / (targetFats * totalDaysInYear)) * 100), 100) : 0;
 
         return {
             mode: 'yearly',
             scopeName: `Annual Statement (Year ${selectedYear})`,
             dateLabel: `Calendar Year ${selectedYear}`,
             shortDate: selectedYear,
-            daysCount: 365,
+            daysCount: totalDaysInYear,
             isLive: false,
-            waterConsumed: Math.round(avgW * 1000),
+            waterConsumed: Math.round(totW / totalDaysInYear),
             waterTarget: targetWaterMl,
-            cumulativeWaterConsumed: totW,
+            cumulativeWaterConsumed: totWLiter,
             cumulativeWaterTarget: totTargetW,
-            waterPercent: 92,
-            waterDeficit: 0,
+            waterPercent: wPct,
+            waterDeficit: Math.max(Math.round(totTargetW * 1000) - totW, 0),
             calories: avgCal,
             calorieTarget: targetCalories,
             cumulativeCalories: totCal,
             cumulativeCalorieTarget: totTargetCal,
-            caloriePercent: 95,
-            calorieRemaining: Math.max(targetCalories - avgCal, 0),
+            caloriePercent: cPct,
+            calorieRemaining: Math.max(totTargetCal - totCal, 0),
             protein: avgProt,
             cumulativeProtein: totProt,
-            proteinPercent: 96,
+            proteinPercent: pPct,
             carbs: avgCarb,
             cumulativeCarbs: totCarb,
-            carbsPercent: 98,
+            carbsPercent: carbPct,
             fats: avgFat,
             cumulativeFats: totFat,
-            fatsPercent: 93,
-            totalWaterLiters: totW,
-            avgWaterLiters: avgW,
+            fatsPercent: fatPct,
+            totalWaterLiters: totWLiter,
+            avgWaterLiters: avgWLiter,
             totalCalories: totCal.toLocaleString(),
             avgCalories: avgCal,
-            adherenceRate: '92%',
-            hydrationAdherence: '92%',
-            nutritionScore: '95%',
-            nutritionAdherence: '95%',
+            adherenceRate: `${wPct}%`,
+            hydrationAdherence: `${wPct}%`,
+            nutritionScore: `${cPct}%`,
+            nutritionAdherence: `${cPct}%`,
             avgProtein: avgProt,
             avgCarbs: avgCarb,
             avgFats: avgFat,
             title: `Annual Statement (Year ${selectedYear})`,
-            subtitle: `365-day longitudinal record for calendar year ${selectedYear}`,
-            loggedVisits: '342 / 365 Days (94% Consistency)',
+            subtitle: `${totalDaysInYear}-day longitudinal record for calendar year ${selectedYear}`,
+            loggedVisits: `${loggedDays} / ${totalDaysInYear} Days Tracked`,
             demographicSummary: {
-                status: 'Annual Target Compliant (95%)',
-                keyTakeaway: `365-day comprehensive annual clinical record for calendar year ${selectedYear}.`,
-                hydrationVerdict: `Annual water intake totaled ${totW} L of ${totTargetW} L target (92% compliance, avg ${Math.round(avgW * 1000)} ml/day).`,
+                status: loggedDays > 0 ? `Annual Compliance ${cPct}%` : 'No Annual Logs',
+                keyTakeaway: `${totalDaysInYear}-day comprehensive annual clinical record for calendar year ${selectedYear}.`,
+                hydrationVerdict: `Annual water intake totaled ${totWLiter} L of ${totTargetW} L target (${wPct}% compliance).`,
                 calorieVerdict: `Total annual calories consumed: ${totCal.toLocaleString()} kcal of ${totTargetCal.toLocaleString()} kcal target (avg ${avgCal} kcal/day).`,
-                macroVerdict: `Macronutrient compliance: 96% Protein (${totProt}g), 98% Carbs (${totCarb}g), 93% Fats (${totFat}g).`
+                macroVerdict: `Macronutrient compliance: Protein ${totProt}g (${pPct}%), Carbs ${totCarb}g (${carbPct}%), Fats ${totFat}g (${fatPct}%).`
             }
         };
     }, [
         viewMode, selectedDayDate, selectedWeekDate, selectedMonthStr, selectedQuarter, selectedQuarterYear, selectedYear,
         todayStr, waterConsumedMl, targetWaterMl, todayNutrition, targetCalories, targetProtein, targetCarbs, targetFats,
-        nutritionLogVersion
+        nutritionLogVersion, getRealDayMetrics, targets.water
     ]);
 
     // Backwards-compatible alias for existing components
     const aggregatedMetrics = activeStatementData;
 
-    // PDF Statement Export Charts: Strictly synchronized with the top Statement Controller
+    // PDF Statement Export Charts: Strictly synchronized with Real Tracked Data
     const pdfStatementChartData = useMemo(() => {
         const labels = [];
         const hydrationActual = [];
@@ -1056,87 +1193,126 @@ const Reports = () => {
         const fatsData = [];
 
         if (viewMode === 'today' || viewMode === 'daily') {
-            const times = ['6:00 AM', '9:00 AM', '12:00 PM', '3:00 PM', '6:00 PM', '9:00 PM', '11:59 PM'];
-            const waterPaces = [0.15, 0.35, 0.55, 0.70, 0.85, 0.95, 1.0];
-            const calPaces = [0.10, 0.25, 0.60, 0.70, 0.90, 1.0, 1.0];
+            const targetDate = viewMode === 'today' ? todayStr : selectedDayDate;
+            const times = ['Morning (8 AM)', 'Midday (12 PM)', 'Afternoon (4 PM)', 'Night (8 PM)'];
+            const dayMetrics = getRealDayMetrics(targetDate);
+            const totalCals = dayMetrics.calories;
+            const totalWater = dayMetrics.waterMl;
+            const totalProt = dayMetrics.protein;
+            const totalCarb = dayMetrics.carbs;
+            const totalFat = dayMetrics.fats;
 
-            const dayWater = activeStatementData.waterConsumed;
-            const dayCal = activeStatementData.calories;
-            const dayProt = activeStatementData.protein;
-            const dayCarbs = activeStatementData.carbs;
-            const dayFats = activeStatementData.fats;
-
-            times.forEach((time, idx) => {
-                labels.push(time);
-                hydrationActual.push(Math.round(dayWater * waterPaces[idx]));
+            times.forEach((t, idx) => {
+                labels.push(t);
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(dayCal * calPaces[idx]));
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(dayProt * calPaces[idx] * 0.35));
-                carbsData.push(Math.round(dayCarbs * calPaces[idx] * 0.45));
-                fatsData.push(Math.round(dayFats * calPaces[idx] * 0.20));
+
+                if (totalCals === 0 && totalWater === 0) {
+                    hydrationActual.push(0);
+                    caloriesActual.push(0);
+                    proteinData.push(0);
+                    carbsData.push(0);
+                    fatsData.push(0);
+                } else {
+                    const factor = (idx + 1) / times.length;
+                    hydrationActual.push(Math.round(totalWater * factor));
+                    caloriesActual.push(Math.round(totalCals * factor));
+                    proteinData.push(Math.round(totalProt * factor));
+                    carbsData.push(Math.round(totalCarb * factor));
+                    fatsData.push(Math.round(totalFat * factor));
+                }
             });
         } else if (viewMode === 'weekly') {
             const wk = getWeekRange(selectedWeekDate);
-            const start = new Date(wk.startDate);
+            const [y, m, dNum] = wk.startDate.split('-').map(Number);
+            const start = new Date(y, m - 1, dNum);
+            const pad = (n) => String(n).padStart(2, '0');
 
             for (let i = 0; i < 7; i++) {
-                const d = new Date(start);
-                d.setDate(d.getDate() + i);
-                const labelStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const cur = new Date(start);
+                cur.setDate(cur.getDate() + i);
+                const dStr = `${cur.getFullYear()}-${pad(cur.getMonth() + 1)}-${pad(cur.getDate())}`;
+                const labelStr = cur.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 labels.push(labelStr);
 
-                const variance = Math.sin(i * 1.8) * 0.12;
-                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+                const m = getRealDayMetrics(dStr);
+                hydrationActual.push(m.waterMl);
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.94 + variance * 0.8)));
+                caloriesActual.push(m.calories);
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.91 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.95 - variance * 0.5)));
-                fatsData.push(Math.round(targetFats * (0.90 + variance * 0.3)));
+                proteinData.push(m.protein);
+                carbsData.push(m.carbs);
+                fatsData.push(m.fats);
             }
         } else if (viewMode === 'monthly') {
             const [yStr, mStr] = selectedMonthStr.split('-');
             const y = parseInt(yStr, 10) || new Date().getFullYear();
             const m = parseInt(mStr, 10) || (new Date().getMonth() + 1);
             const daysInMonth = new Date(y, m, 0).getDate();
-            const mShort = SHORT_MONTH_NAMES[m - 1] || 'Mo';
 
-            const step = Math.max(1, Math.round(daysInMonth / 8));
-            for (let day = 1; day <= daysInMonth; day += step) {
-                labels.push(`${mShort} ${day}`);
-                const variance = Math.sin(day * 0.7) * 0.14;
-                hydrationActual.push(Math.round(targetWaterMl * (0.91 + variance)));
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const metrics = getRealDayMetrics(dStr);
+                labels.push(`${SHORT_MONTH_NAMES[m - 1]} ${day}`);
+                hydrationActual.push(metrics.waterMl);
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.95 + variance * 0.7)));
+                caloriesActual.push(metrics.calories);
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.93 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
-                fatsData.push(Math.round(targetFats * (0.92 + variance * 0.5)));
+                proteinData.push(metrics.protein);
+                carbsData.push(metrics.carbs);
+                fatsData.push(metrics.fats);
             }
         } else if (viewMode === 'quarterly') {
-            for (let w = 1; w <= 12; w++) {
+            const qYear = parseInt(selectedQuarterYear, 10) || new Date().getFullYear();
+            const startMonth = selectedQuarter === 'Q1' ? 1 : selectedQuarter === 'Q2' ? 4 : selectedQuarter === 'Q3' ? 7 : 10;
+            const startQuarterDate = new Date(qYear, startMonth - 1, 1);
+
+            for (let w = 1; w <= 13; w++) {
                 labels.push(`Wk ${w}`);
-                const variance = Math.cos(w * 0.9) * 0.12;
-                hydrationActual.push(Math.round(targetWaterMl * (0.89 + variance)));
+                let wWater = 0, wCal = 0, wProt = 0, wCarbs = 0, wFats = 0;
+                for (let day = 0; day < 7; day++) {
+                    const d = new Date(startQuarterDate);
+                    d.setDate(d.getDate() + (w - 1) * 7 + day);
+                    const dStr = d.toISOString().split('T')[0];
+                    const metrics = getRealDayMetrics(dStr);
+                    wWater += metrics.waterMl;
+                    wCal += metrics.calories;
+                    wProt += metrics.protein;
+                    wCarbs += metrics.carbs;
+                    wFats += metrics.fats;
+                }
+                hydrationActual.push(Math.round(wWater / 7));
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.93 + variance * 0.8)));
+                caloriesActual.push(Math.round(wCal / 7));
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.92 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.95 - variance * 0.5)));
-                fatsData.push(Math.round(targetFats * (0.91 + variance * 0.3)));
+                proteinData.push(Math.round(wProt / 7));
+                carbsData.push(Math.round(wCarbs / 7));
+                fatsData.push(Math.round(wFats / 7));
             }
         } else {
+            // Yearly
+            const yNum = parseInt(selectedYear, 10) || new Date().getFullYear();
             SHORT_MONTH_NAMES.forEach((mName, idx) => {
                 labels.push(mName);
-                const variance = Math.sin((idx + 1) * 0.8) * 0.10;
-                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+                const m = idx + 1;
+                const daysInM = new Date(yNum, m, 0).getDate();
+                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0;
+                for (let d = 1; d <= daysInM; d++) {
+                    const dStr = `${yNum}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const metrics = getRealDayMetrics(dStr);
+                    mWater += metrics.waterMl;
+                    mCal += metrics.calories;
+                    mProt += metrics.protein;
+                    mCarbs += metrics.carbs;
+                    mFats += metrics.fats;
+                }
+                hydrationActual.push(Math.round(mWater / daysInM));
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.96 + variance * 0.7)));
+                caloriesActual.push(Math.round(mCal / daysInM));
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.95 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.97 - variance * 0.4)));
-                fatsData.push(Math.round(targetFats * (0.93 + variance * 0.3)));
+                proteinData.push(Math.round(mProt / daysInM));
+                carbsData.push(Math.round(mCarbs / daysInM));
+                fatsData.push(Math.round(mFats / daysInM));
             });
         }
 
@@ -1151,12 +1327,11 @@ const Reports = () => {
             fatsData
         };
     }, [
-        viewMode, selectedDayDate, selectedWeekDate, selectedMonthStr, selectedQuarter, selectedQuarterYear, selectedYear,
-        activeStatementData, targetWaterMl, targetCalories, targetProtein, targetCarbs, targetFats,
-        nutritionLogVersion
+        viewMode, selectedWeekDate, selectedMonthStr, selectedQuarter, selectedQuarterYear, selectedYear,
+        selectedDayDate, todayStr, targetWaterMl, targetCalories, getRealDayMetrics
     ]);
 
-    // On-Screen Interactive Chart Data: Driven by selectedInterval (for viewing purpose)
+    // On-Screen Interactive Chart Data: Synchronized with Real Tracked Data
     const chartData = useMemo(() => {
         if (selectedInterval === 'STATEMENT') {
             return pdfStatementChartData;
@@ -1172,175 +1347,191 @@ const Reports = () => {
         const fatsData = [];
 
         if (selectedInterval === '1D') {
-            const times = ['6:00 AM', '9:00 AM', '12:00 PM', '3:00 PM', '6:00 PM', '9:00 PM', '11:59 PM'];
-            const waterPaces = [0.15, 0.35, 0.55, 0.70, 0.85, 0.95, 1.0];
-            const calPaces = [0.10, 0.25, 0.60, 0.70, 0.90, 1.0, 1.0];
-
-            times.forEach((time, idx) => {
-                labels.push(time);
-                hydrationActual.push(Math.round(waterConsumedMl * waterPaces[idx]));
+            const times = ['Morning (8 AM)', 'Midday (12 PM)', 'Afternoon (4 PM)', 'Night (8 PM)'];
+            const dayMetrics = getRealDayMetrics(todayStr);
+            times.forEach((t, idx) => {
+                labels.push(t);
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(todayNutrition.calories * calPaces[idx]));
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(todayNutrition.protein * calPaces[idx] * 0.35));
-                carbsData.push(Math.round(todayNutrition.carbs * calPaces[idx] * 0.45));
-                fatsData.push(Math.round(todayNutrition.fats * calPaces[idx] * 0.20));
+                if (dayMetrics.calories === 0 && dayMetrics.waterMl === 0) {
+                    hydrationActual.push(0);
+                    caloriesActual.push(0);
+                    proteinData.push(0);
+                    carbsData.push(0);
+                    fatsData.push(0);
+                } else {
+                    const factor = (idx + 1) / times.length;
+                    hydrationActual.push(Math.round(dayMetrics.waterMl * factor));
+                    caloriesActual.push(Math.round(dayMetrics.calories * factor));
+                    proteinData.push(Math.round(dayMetrics.protein * factor));
+                    carbsData.push(Math.round(dayMetrics.carbs * factor));
+                    fatsData.push(Math.round(dayMetrics.fats * factor));
+                }
             });
         } else if (selectedInterval === '1W') {
             for (let i = 6; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
                 labels.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
-                const variance = Math.sin((6 - i) * 1.8) * 0.12;
-                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+
+                const m = getRealDayMetrics(dStr);
+                hydrationActual.push(m.waterMl);
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.94 + variance * 0.8)));
+                caloriesActual.push(m.calories);
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.91 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.95 - variance * 0.5)));
-                fatsData.push(Math.round(targetFats * (0.90 + variance * 0.3)));
+                proteinData.push(m.protein);
+                carbsData.push(m.carbs);
+                fatsData.push(m.fats);
             }
         } else if (selectedInterval === '2W') {
-            for (let i = 13; i >= 0; i -= 2) {
+            for (let i = 13; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
                 labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                const variance = Math.sin((13 - i) * 0.9) * 0.14;
-                hydrationActual.push(Math.round(targetWaterMl * (0.90 + variance)));
+
+                const m = getRealDayMetrics(dStr);
+                hydrationActual.push(m.waterMl);
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.93 + variance * 0.7)));
+                caloriesActual.push(m.calories);
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.92 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
-                fatsData.push(Math.round(targetFats * (0.91 + variance * 0.3)));
+                proteinData.push(m.protein);
+                carbsData.push(m.carbs);
+                fatsData.push(m.fats);
             }
         } else if (selectedInterval === '3W') {
-            for (let i = 20; i >= 0; i -= 3) {
+            for (let i = 20; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
                 labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                const variance = Math.cos((20 - i) * 0.7) * 0.13;
-                hydrationActual.push(Math.round(targetWaterMl * (0.91 + variance)));
+
+                const m = getRealDayMetrics(dStr);
+                hydrationActual.push(m.waterMl);
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.95 + variance * 0.7)));
+                caloriesActual.push(m.calories);
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.93 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
-                fatsData.push(Math.round(targetFats * (0.92 + variance * 0.5)));
+                proteinData.push(m.protein);
+                carbsData.push(m.carbs);
+                fatsData.push(m.fats);
             }
         } else if (selectedInterval === '1M') {
-            for (let i = 29; i >= 0; i -= 4) {
+            for (let i = 29; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
                 labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                const variance = Math.sin((29 - i) * 0.5) * 0.14;
-                hydrationActual.push(Math.round(targetWaterMl * (0.91 + variance)));
+
+                const m = getRealDayMetrics(dStr);
+                hydrationActual.push(m.waterMl);
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.95 + variance * 0.7)));
+                caloriesActual.push(m.calories);
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.93 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
-                fatsData.push(Math.round(targetFats * (0.92 + variance * 0.5)));
+                proteinData.push(m.protein);
+                carbsData.push(m.carbs);
+                fatsData.push(m.fats);
             }
         } else if (selectedInterval === '3M') {
-            for (let w = 1; w <= 12; w++) {
-                labels.push(`Wk ${w}`);
-                const variance = Math.cos(w * 0.9) * 0.12;
-                hydrationActual.push(Math.round(targetWaterMl * (0.89 + variance)));
+            for (let w = 11; w >= 0; w--) {
+                labels.push(`Wk -${w}`);
+                let wWater = 0, wCal = 0, wProt = 0, wCarbs = 0, wFats = 0;
+                for (let day = 0; day < 7; day++) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - (w * 7 + day));
+                    const dStr = d.toISOString().split('T')[0];
+                    const m = getRealDayMetrics(dStr);
+                    wWater += m.waterMl;
+                    wCal += m.calories;
+                    wProt += m.protein;
+                    wCarbs += m.carbs;
+                    wFats += m.fats;
+                }
+                hydrationActual.push(Math.round(wWater / 7));
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.93 + variance * 0.8)));
+                caloriesActual.push(Math.round(wCal / 7));
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.92 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.95 - variance * 0.5)));
-                fatsData.push(Math.round(targetFats * (0.91 + variance * 0.3)));
+                proteinData.push(Math.round(wProt / 7));
+                carbsData.push(Math.round(wCarbs / 7));
+                fatsData.push(Math.round(wFats / 7));
             }
         } else if (selectedInterval === '6M') {
             for (let m = 5; m >= 0; m--) {
                 const d = new Date();
                 d.setMonth(d.getMonth() - m);
                 labels.push(d.toLocaleDateString('en-US', { month: 'short' }));
-                const variance = Math.sin((5 - m) * 1.1) * 0.11;
-                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
+                const y = d.getFullYear();
+                const month = d.getMonth() + 1;
+                const daysInM = new Date(y, month, 0).getDate();
+
+                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0;
+                for (let day = 1; day <= daysInM; day++) {
+                    const dStr = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const metrics = getRealDayMetrics(dStr);
+                    mWater += metrics.waterMl;
+                    mCal += metrics.calories;
+                    mProt += metrics.protein;
+                    mCarbs += metrics.carbs;
+                    mFats += metrics.fats;
+                }
+                hydrationActual.push(Math.round(mWater / daysInM));
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.95 + variance * 0.7)));
+                caloriesActual.push(Math.round(mCal / daysInM));
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.94 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
-                fatsData.push(Math.round(targetFats * (0.92 + variance * 0.3)));
+                proteinData.push(Math.round(mProt / daysInM));
+                carbsData.push(Math.round(mCarbs / daysInM));
+                fatsData.push(Math.round(mFats / daysInM));
             }
         } else if (selectedInterval === '1Y') {
-            SHORT_MONTH_NAMES.forEach((mName, idx) => {
-                labels.push(mName);
-                const variance = Math.sin((idx + 1) * 0.8) * 0.10;
-                hydrationActual.push(Math.round(targetWaterMl * (0.92 + variance)));
-                hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.96 + variance * 0.7)));
-                caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.95 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.97 - variance * 0.4)));
-                fatsData.push(Math.round(targetFats * (0.93 + variance * 0.3)));
-            });
-        } else {
-            // CUSTOM: Single Selected Date (24-hour Telemetry Progression Curve)
-            const targetDate = customSingleDate || todayStr;
-            const isToday = targetDate === todayStr;
-            let dayWater = waterConsumedMl;
-            let dayCal = todayNutrition.calories;
-            let dayProt = todayNutrition.protein;
-            let dayCarbs = todayNutrition.carbs;
-            let dayFats = todayNutrition.fats;
+            for (let m = 11; m >= 0; m--) {
+                const d = new Date();
+                d.setMonth(d.getMonth() - m);
+                labels.push(d.toLocaleDateString('en-US', { month: 'short' }));
+                const y = d.getFullYear();
+                const month = d.getMonth() + 1;
+                const daysInM = new Date(y, month, 0).getDate();
 
-            if (!isToday) {
-                try {
-                    const saved = localStorage.getItem(`nutrimunch_logged_foods_${targetDate}`);
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        const totals = parsed.reduce((acc, f) => ({
-                            calories: acc.calories + (f.calories || 0),
-                            protein: acc.protein + (f.protein || 0),
-                            carbs: acc.carbs + (f.carbs || 0),
-                            fats: acc.fats + (f.fats || 0)
-                        }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
-                        dayCal = totals.calories;
-                        dayProt = totals.protein;
-                        dayCarbs = totals.carbs;
-                        dayFats = totals.fats;
-                    } else {
-                        const seed = Math.abs(Math.sin(new Date(targetDate).getDate() * 7 + (new Date(targetDate).getMonth() + 1) * 13));
-                        dayCal = Math.round(targetCalories * (0.88 + seed * 0.2));
-                        dayProt = Math.round(targetProtein * (0.86 + seed * 0.22));
-                        dayCarbs = Math.round(targetCarbs * (0.90 + seed * 0.18));
-                        dayFats = Math.round(targetFats * (0.85 + seed * 0.25));
-                    }
-                } catch (e) {}
-
-                try {
-                    const savedWater = localStorage.getItem(`nutrimunch_water_consumed_${targetDate}`);
-                    if (savedWater !== null) {
-                        dayWater = parseInt(savedWater, 10);
-                    } else {
-                        const seedW = Math.abs(Math.sin(new Date(targetDate).getDate() * 11));
-                        dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
-                    }
-                } catch (e) {
-                    const seedW = Math.abs(Math.sin(new Date(targetDate).getDate() * 11));
-                    dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
+                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0;
+                for (let day = 1; day <= daysInM; day++) {
+                    const dStr = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const metrics = getRealDayMetrics(dStr);
+                    mWater += metrics.waterMl;
+                    mCal += metrics.calories;
+                    mProt += metrics.protein;
+                    mCarbs += metrics.carbs;
+                    mFats += metrics.fats;
                 }
-            }
-
-            const times = ['6:00 AM', '9:00 AM', '12:00 PM', '3:00 PM', '6:00 PM', '9:00 PM', '11:59 PM'];
-            const waterPaces = [0.15, 0.35, 0.55, 0.70, 0.85, 0.95, 1.0];
-            const calPaces = [0.10, 0.25, 0.60, 0.70, 0.90, 1.0, 1.0];
-
-            times.forEach((time, idx) => {
-                labels.push(time);
-                hydrationActual.push(Math.round(dayWater * waterPaces[idx]));
+                hydrationActual.push(Math.round(mWater / daysInM));
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(dayCal * calPaces[idx]));
+                caloriesActual.push(Math.round(mCal / daysInM));
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(dayProt * calPaces[idx] * 0.35));
-                carbsData.push(Math.round(dayCarbs * calPaces[idx] * 0.45));
-                fatsData.push(Math.round(dayFats * calPaces[idx] * 0.20));
+                proteinData.push(Math.round(mProt / daysInM));
+                carbsData.push(Math.round(mCarbs / daysInM));
+                fatsData.push(Math.round(mFats / daysInM));
+            }
+        } else {
+            // CUSTOM: Single Selected Date Progression
+            const targetDate = customSingleDate || todayStr;
+            const times = ['Morning (8 AM)', 'Midday (12 PM)', 'Afternoon (4 PM)', 'Night (8 PM)'];
+            const dayMetrics = getRealDayMetrics(targetDate);
+            times.forEach((t, idx) => {
+                labels.push(t);
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesTargetLine.push(targetCalories);
+                if (dayMetrics.calories === 0 && dayMetrics.waterMl === 0) {
+                    hydrationActual.push(0);
+                    caloriesActual.push(0);
+                    proteinData.push(0);
+                    carbsData.push(0);
+                    fatsData.push(0);
+                } else {
+                    const factor = (idx + 1) / times.length;
+                    hydrationActual.push(Math.round(dayMetrics.waterMl * factor));
+                    caloriesActual.push(Math.round(dayMetrics.calories * factor));
+                    proteinData.push(Math.round(dayMetrics.protein * factor));
+                    carbsData.push(Math.round(dayMetrics.carbs * factor));
+                    fatsData.push(Math.round(dayMetrics.fats * factor));
+                }
             });
         }
 
@@ -1356,8 +1547,7 @@ const Reports = () => {
         };
     }, [
         selectedInterval, customSingleDate, pdfStatementChartData,
-        waterConsumedMl, targetWaterMl, todayNutrition, targetCalories, targetProtein, targetCarbs, targetFats,
-        nutritionLogVersion
+        targetWaterMl, targetCalories, getRealDayMetrics, todayStr
     ]);
 
     // Chart Configuration: Hydration
@@ -1525,6 +1715,40 @@ const Reports = () => {
             evalSubtitle = 'Live Real-Time Intake Statement';
         }
 
+        // Determine precise date / duration mentioned for document naming
+        let durationMentioned = '';
+        if (targetScope === 'today') {
+            const parts = todayStr.split('-').map(Number);
+            const d = new Date(parts[0], parts[1] - 1, parts[2]);
+            durationMentioned = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } else if (targetScope === 'daily') {
+            const parts = selectedDayDate.split('-').map(Number);
+            const d = new Date(parts[0], parts[1] - 1, parts[2]);
+            durationMentioned = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } else if (targetScope === 'weekly') {
+            const wk = getWeekRange(selectedWeekDate);
+            const sParts = wk.startDate.split('-').map(Number);
+            const eParts = wk.endDate.split('-').map(Number);
+            const sDate = new Date(sParts[0], sParts[1] - 1, sParts[2]);
+            const eDate = new Date(eParts[0], eParts[1] - 1, eParts[2]);
+            const sStr = sDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const eStr = eDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            durationMentioned = `${sStr} to ${eStr}`;
+        } else if (targetScope === 'monthly') {
+            const [y, m] = selectedMonthStr.split('-').map(Number);
+            const mDate = new Date(y, m - 1, 1);
+            durationMentioned = mDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        } else if (targetScope === 'quarterly') {
+            durationMentioned = `${selectedQuarter} ${selectedQuarterYear}`;
+        } else if (targetScope === 'yearly') {
+            durationMentioned = `Year ${selectedYear}`;
+        } else {
+            durationMentioned = 'Lifetime';
+        }
+
+        const reportDocumentTitle = `Health Report ${durationMentioned}`;
+        const safeFileName = reportDocumentTitle.replace(/[\/\\:*?"<>|]/g, '-');
+
         // Generate Vector SVG charts matching the active statement timeframe
         const svgHydration = generateSvgLineChart({
             title: 'Hydration Curve (Fluid Volume vs Daily Target)',
@@ -1563,7 +1787,7 @@ const Reports = () => {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>${scopeTitle} - ${patientName}</title>
+                <title>${reportDocumentTitle}</title>
                 <style>
                     @page { size: A4; margin: 18mm 15mm 18mm 15mm; }
                     body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; line-height: 1.45; font-size: 11pt; margin: 0; padding: 20px; }
@@ -1763,17 +1987,17 @@ const Reports = () => {
             printWindow.document.open();
             printWindow.document.write(reportContentHtml);
             printWindow.document.close();
-            setDownloadSuccessToast(`Successfully prepared ${scopeTitle} PDF!`);
+            setDownloadSuccessToast(`Successfully prepared ${reportDocumentTitle} PDF!`);
         } else {
             // Fallback: create downloadable HTML/Blob
             const blob = new Blob([reportContentHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `NutriMunch_Statement_${targetScope}_${reportDate.replace(/\s+/g, '_')}.html`;
+            a.download = `${safeFileName}.html`;
             a.click();
             URL.revokeObjectURL(url);
-            setDownloadSuccessToast(`Downloaded ${scopeTitle}!`);
+            setDownloadSuccessToast(`Downloaded ${reportDocumentTitle}!`);
         }
 
         setIsDownloadingPdf(false);
@@ -1797,86 +2021,18 @@ const Reports = () => {
                     </p>
                 </div>
 
-                {/* PDF Generation Quick Actions Dropdown */}
+                {/* PDF Generation Direct Action: Downloads selected period */}
                 <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative group">
-                        <button
-                            type="button"
-                            onClick={() => handleDownloadReportPdf('Active')}
-                            disabled={isDownloadingPdf}
-                            className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3.5 rounded-2xl transition-all shadow-[0_0_25px_rgba(165,211,145,0.35)] hover:scale-105 cursor-pointer flex items-center gap-2"
-                        >
-                            <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
-                            <span>{isDownloadingPdf ? 'Generating...' : `Download ${viewMode === 'today' ? "Today's" : viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} Statement PDF`}</span>
-                            <span className="material-symbols-outlined text-sm">expand_more</span>
-                        </button>
-
-                        {/* Dropdown Options */}
-                        <div className="absolute right-0 top-full pt-2 w-72 z-50 hidden group-hover:block animate-in fade-in duration-150">
-                            <div className="bg-[#080b12]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-2 shadow-2xl divide-y divide-white/5">
-                                <button
-                                    onClick={() => handleDownloadReportPdf('Active')}
-                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
-                                >
-                                    <span className="material-symbols-outlined text-[#a5d391] text-base">verified</span>
-                                    <div>
-                                        <div className="font-bold">Active Statement ({activeStatementData.shortDate})</div>
-                                        <div className="text-[10px] text-white/40">Statement for current filtered view</div>
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => handleDownloadReportPdf('Today')}
-                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
-                                >
-                                    <span className="material-symbols-outlined text-emerald-400 text-base">today</span>
-                                    <div>
-                                        <div className="font-bold">Today's Live Statement</div>
-                                        <div className="text-[10px] text-white/40">Real-time daily intake summary</div>
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => handleDownloadReportPdf('Weekly')}
-                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
-                                >
-                                    <span className="material-symbols-outlined text-amber-400 text-base">date_range</span>
-                                    <div>
-                                        <div className="font-bold">Weekly Statement PDF</div>
-                                        <div className="text-[10px] text-white/40">Selected 7-day rolling cycle</div>
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => handleDownloadReportPdf('Monthly')}
-                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
-                                >
-                                    <span className="material-symbols-outlined text-[#38bdf8] text-base">calendar_month</span>
-                                    <div>
-                                        <div className="font-bold">Monthly Statement PDF</div>
-                                        <div className="text-[10px] text-white/40">Selected 30-day compliance report</div>
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => handleDownloadReportPdf('Overall')}
-                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
-                                >
-                                    <span className="material-symbols-outlined text-purple-400 text-base">assessment</span>
-                                    <div>
-                                        <div className="font-bold">Lifetime Overall Statement</div>
-                                        <div className="text-[10px] text-white/40">Complete lifetime clinical audit</div>
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => handleDownloadReportPdf('Custom')}
-                                    className="w-full p-2.5 hover:bg-[#a5d391]/15 text-left rounded-xl transition-all flex items-center gap-2.5 text-xs text-white/90 hover:text-white cursor-pointer"
-                                >
-                                    <span className="material-symbols-outlined text-pink-400 text-base">tune</span>
-                                    <div>
-                                        <div className="font-bold">Custom Interval PDF</div>
-                                        <div className="text-[10px] text-white/40">Filtered date range export</div>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => handleDownloadReportPdf('Active')}
+                        disabled={isDownloadingPdf}
+                        className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3.5 rounded-2xl transition-all shadow-[0_0_25px_rgba(165,211,145,0.35)] hover:scale-105 cursor-pointer flex items-center gap-2"
+                        title="Download Health Report for current selected period"
+                    >
+                        <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+                        <span>{isDownloadingPdf ? 'Generating...' : 'Download Health Report'}</span>
+                    </button>
                 </div>
             </div>
 
@@ -1952,11 +2108,10 @@ const Reports = () => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setLogNutritionTargetDate(todayStr);
-                                    setIsLogNutritionModalOpen(true);
+                                    navigate(`/dashboard/user/progress?section=nutrition&date=${todayStr}#nutrition-section`);
                                 }}
                                 className="px-3 py-2 rounded-xl text-xs font-bold bg-[#a5d391]/15 hover:bg-[#a5d391]/25 text-[#a5d391] border border-[#a5d391]/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                                title="Log today's daily nutrition count"
+                                title="Log today's daily nutrition count on Progress page"
                             >
                                 <span className="material-symbols-outlined text-xs">edit_calendar</span>
                                 <span>Log Today</span>
@@ -1996,11 +2151,10 @@ const Reports = () => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setLogNutritionTargetDate(selectedDayDate);
-                                    setIsLogNutritionModalOpen(true);
+                                    navigate(`/dashboard/user/progress?section=nutrition&date=${selectedDayDate}#nutrition-section`);
                                 }}
                                 className="px-3 py-2 rounded-xl text-xs font-bold bg-[#a5d391]/15 hover:bg-[#a5d391]/25 text-[#a5d391] border border-[#a5d391]/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                                title="Log or adjust nutrition count for selected day"
+                                title="Log or adjust nutrition count for selected day on Progress page"
                             >
                                 <span className="material-symbols-outlined text-xs">edit_calendar</span>
                                 <span>Log Day</span>
@@ -2026,11 +2180,7 @@ const Reports = () => {
                                 This Week
                             </button>
                             <button
-                                onClick={() => {
-                                    const d = new Date();
-                                    d.setDate(d.getDate() - 7);
-                                    setSelectedWeekDate(d.toISOString().split('T')[0]);
-                                }}
+                                onClick={() => setSelectedWeekDate(lastWeekStart)}
                                 className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                                     isSelectedLastWeek ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
                                 }`}
@@ -2116,126 +2266,13 @@ const Reports = () => {
                     {/* Direct Statement PDF Action */}
                     <button
                         onClick={() => handleDownloadReportPdf('Active')}
+                        disabled={isDownloadingPdf}
                         className="bg-white/10 hover:bg-[#a5d391] text-white hover:text-black font-bold text-xs px-3.5 py-1.5 rounded-xl border border-white/15 hover:border-[#a5d391] transition-all flex items-center gap-1.5 cursor-pointer ml-auto"
+                        title="Download Health Report for current selected period"
                     >
                         <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
-                        <span>Export Statement PDF</span>
+                        <span>{isDownloadingPdf ? 'Generating...' : 'Download Health Report'}</span>
                     </button>
-                </div>
-            </div>
-
-            {/* PATIENT DEMOGRAPHICS & CLINICAL STATEMENT EVALUATION */}
-            <div className="bg-gradient-to-br from-[#0c121e]/90 via-[#080b12]/95 to-[#050810] border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-[#a5d391]/5 rounded-full blur-3xl pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#38bdf8]/5 rounded-full blur-3xl pointer-events-none"></div>
-
-                <div className="relative z-10 flex flex-col xl:flex-row gap-6 justify-between items-stretch">
-                    {/* LEFT: Patient Clinical Demographics Profile */}
-                    <div className="flex-1 border-b xl:border-b-0 xl:border-r border-white/10 pb-6 xl:pb-0 xl:pr-8 flex flex-col justify-between">
-                        <div>
-                            <div className="flex items-center gap-3.5 mb-4">
-                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#a5d391]/20 to-[#38bdf8]/20 border border-[#a5d391]/40 flex items-center justify-center text-[#a5d391] shadow-lg shrink-0">
-                                    <span className="material-symbols-outlined text-2xl">badge</span>
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <h4 className="text-lg font-bold text-white tracking-tight">
-                                            {userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim() : (user?.name || user?.username || 'Verified Member')}
-                                        </h4>
-                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
-                                            {userProfile?.goal || 'Optimal Health'}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-white/50">{userProfile?.email || user?.email || 'patient-id@nutrimunch.ai'}</p>
-                                </div>
-                            </div>
-
-                            {/* Demographics Badges Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3">
-                                <div className="bg-[#080b12]/90 border border-white/5 rounded-2xl p-3">
-                                    <span className="text-[10px] uppercase font-bold text-white/40 block">Age & Gender</span>
-                                    <span className="text-xs font-bold text-white mt-1 block">
-                                        {userProfile?.age ? `${userProfile.age} Yrs` : '26 Yrs'} • {userProfile?.gender || 'Male'}
-                                    </span>
-                                </div>
-                                <div className="bg-[#080b12]/90 border border-white/5 rounded-2xl p-3">
-                                    <span className="text-[10px] uppercase font-bold text-white/40 block">Height & Weight</span>
-                                    <span className="text-xs font-bold text-white mt-1 block">
-                                        {userProfile?.heightCm ? `${userProfile.heightCm} cm` : '176 cm'} • {userProfile?.weightKg ? `${userProfile.weightKg} kg` : '72 kg'}
-                                    </span>
-                                </div>
-                                <div className="bg-[#080b12]/90 border border-white/5 rounded-2xl p-3">
-                                    <span className="text-[10px] uppercase font-bold text-white/40 block">Body Mass Index</span>
-                                    <span className="text-xs font-bold text-[#a5d391] mt-1 block">
-                                        {userProfile?.heightCm && userProfile?.weightKg 
-                                            ? `${(userProfile.weightKg / Math.pow(userProfile.heightCm / 100, 2)).toFixed(1)} BMI` 
-                                            : '23.2 BMI'} (Normal)
-                                    </span>
-                                </div>
-                                <div className="bg-[#080b12]/90 border border-white/5 rounded-2xl p-3">
-                                    <span className="text-[10px] uppercase font-bold text-white/40 block">Daily Targets</span>
-                                    <span className="text-xs font-bold text-[#38bdf8] mt-1 block">
-                                        {targetCalories} kcal • {targets.water} L
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-white/40">
-                            <span>Activity Profile: <strong className="text-white/70">{userProfile?.activityLevel || 'Moderately Active'}</strong></span>
-                            <span>Diet Type: <strong className="text-white/70">{userProfile?.dietType || 'Balanced Macro Split'}</strong></span>
-                        </div>
-                    </div>
-
-                    {/* RIGHT: What This Statement Is Trying To Tell You */}
-                    <div className="flex-1 flex flex-col justify-between">
-                        <div>
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-amber-400 text-lg">insights</span>
-                                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                                        Clinical Interpretation — What This Statement Tells You
-                                    </h4>
-                                </div>
-                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                    {activeStatementData.demographicSummary?.status || 'Active Compliance'}
-                                </span>
-                            </div>
-
-                            <p className="text-xs text-white/80 leading-relaxed bg-[#050810]/70 p-3.5 rounded-2xl border border-white/5">
-                                {activeStatementData.demographicSummary?.keyTakeaway}
-                            </p>
-
-                            <div className="mt-3.5 space-y-2">
-                                <div className="flex items-start gap-2 text-xs">
-                                    <span className="material-symbols-outlined text-[#38bdf8] text-sm mt-0.5 shrink-0">water_drop</span>
-                                    <span className="text-white/70">
-                                        <strong className="text-white font-medium">Hydration Velocity: </strong>
-                                        {activeStatementData.demographicSummary?.hydrationVerdict}
-                                    </span>
-                                </div>
-                                <div className="flex items-start gap-2 text-xs">
-                                    <span className="material-symbols-outlined text-amber-400 text-sm mt-0.5 shrink-0">local_fire_department</span>
-                                    <span className="text-white/70">
-                                        <strong className="text-white font-medium">Caloric Energy: </strong>
-                                        {activeStatementData.demographicSummary?.calorieVerdict}
-                                    </span>
-                                </div>
-                                <div className="flex items-start gap-2 text-xs">
-                                    <span className="material-symbols-outlined text-[#a5d391] text-sm mt-0.5 shrink-0">bar_chart</span>
-                                    <span className="text-white/70">
-                                        <strong className="text-white font-medium">Macro Allocation: </strong>
-                                        {activeStatementData.demographicSummary?.macroVerdict}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-white/40">
-                            <span>Statement Cycle: <strong className="text-white/70">{activeStatementData.dateLabel}</strong></span>
-                            <span>Evaluation Window: <strong className="text-[#a5d391]">{activeStatementData.daysCount === 1 ? '1 Day (Daily)' : `${activeStatementData.daysCount} Days Aggregate`}</strong></span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -2268,11 +2305,11 @@ const Reports = () => {
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setLogWaterTargetDate(viewMode === 'today' ? todayStr : selectedDayDate);
-                                            setIsLogWaterModalOpen(true);
+                                            const targetD = viewMode === 'today' ? todayStr : selectedDayDate;
+                                            navigate(`/dashboard/user/progress?section=water&date=${targetD}#water-section`);
                                         }}
                                         className="px-3 py-1 rounded-full bg-gradient-to-r from-[#38bdf8]/20 to-cyan-500/20 hover:from-[#38bdf8]/30 hover:to-cyan-500/30 text-[#38bdf8] hover:text-white border border-[#38bdf8]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
-                                        title="Log or adjust fluid intake for this date"
+                                        title="Navigate to Smart Hydration Tracker on Progress Page"
                                     >
                                         <span className="material-symbols-outlined text-sm">water_drop</span>
                                         <span>+ Log Water Count</span>
@@ -2370,11 +2407,11 @@ const Reports = () => {
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setLogNutritionTargetDate(viewMode === 'today' ? todayStr : selectedDayDate);
-                                            setIsLogNutritionModalOpen(true);
+                                            const targetD = viewMode === 'today' ? todayStr : selectedDayDate;
+                                            navigate(`/dashboard/user/progress?section=nutrition&date=${targetD}#nutrition-section`);
                                         }}
                                         className="px-3 py-1 rounded-full bg-gradient-to-r from-[#a5d391]/20 to-emerald-500/20 hover:from-[#a5d391]/30 hover:to-emerald-500/30 text-[#a5d391] hover:text-white border border-[#a5d391]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
-                                        title="Log or adjust daily food intake & macro count for this date"
+                                        title="Navigate to Daily Nutrition Count on Progress Page"
                                     >
                                         <span className="material-symbols-outlined text-sm">edit_calendar</span>
                                         <span>+ Log Daily Count</span>
@@ -2671,118 +2708,7 @@ const Reports = () => {
                 </div>
             </div>
 
-            {/* 4. RECENT DOWNLOADABLE REPORTS ARCHIVE */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl">
-                <div className="flex justify-between items-center mb-6">
-                    <div>
-                        <h3 className="font-bold font-hero-display text-lg text-white">Generated Statements & Reports Archive</h3>
-                        <p className="text-xs text-white/50">Instant downloads for clinical records, account biometrics & physician audits.</p>
-                    </div>
-                    <span className="text-xs text-white/40">4 Ready Exports</span>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Active Selected Statement */}
-                    <div 
-                        onClick={() => handleDownloadReportPdf('Active')}
-                        className="bg-[#080b12]/80 hover:bg-[#a5d391]/15 border border-[#a5d391]/40 rounded-2xl p-4 transition-all group cursor-pointer flex flex-col justify-between space-y-3 shadow-lg"
-                    >
-                        <div className="flex items-start justify-between">
-                            <div className="w-10 h-10 rounded-xl bg-[#a5d391]/15 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391]">
-                                <span className="material-symbols-outlined text-xl">verified</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-[#a5d391] uppercase tracking-wider bg-[#a5d391]/15 px-2 py-0.5 rounded-full">
-                                Active Filter
-                            </span>
-                        </div>
-                        <div>
-                            <div className="font-bold text-sm text-white group-hover:text-[#a5d391] transition-colors">
-                                {activeStatementData.scopeName}
-                            </div>
-                            <div className="text-[11px] text-white/40 mt-0.5">{activeStatementData.dateLabel}</div>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-white/50">
-                            <span>Ready to Download</span>
-                            <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-[#a5d391] transition-colors">download</span>
-                        </div>
-                    </div>
-
-                    {/* Overall PDF */}
-                    <div 
-                        onClick={() => handleDownloadReportPdf('Overall')}
-                        className="bg-[#080b12]/80 hover:bg-purple-500/10 border border-white/10 hover:border-purple-400/40 rounded-2xl p-4 transition-all group cursor-pointer flex flex-col justify-between space-y-3"
-                    >
-                        <div className="flex items-start justify-between">
-                            <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                                <span className="material-symbols-outlined text-xl">picture_as_pdf</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider bg-purple-500/15 px-2 py-0.5 rounded-full">
-                                Lifetime
-                            </span>
-                        </div>
-                        <div>
-                            <div className="font-bold text-sm text-white group-hover:text-purple-400 transition-colors">
-                                Lifetime Overall Health Audit
-                            </div>
-                            <div className="text-[11px] text-white/40 mt-0.5">Cumulative biometrics & macro history</div>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-white/50">
-                            <span>Ready to Download</span>
-                            <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-purple-400 transition-colors">download</span>
-                        </div>
-                    </div>
-
-                    {/* Monthly PDF */}
-                    <div 
-                        onClick={() => handleDownloadReportPdf('Monthly')}
-                        className="bg-[#080b12]/80 hover:bg-[#38bdf8]/10 border border-white/10 hover:border-[#38bdf8]/40 rounded-2xl p-4 transition-all group cursor-pointer flex flex-col justify-between space-y-3"
-                    >
-                        <div className="flex items-start justify-between">
-                            <div className="w-10 h-10 rounded-xl bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8]">
-                                <span className="material-symbols-outlined text-xl">picture_as_pdf</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-[#38bdf8] uppercase tracking-wider bg-[#38bdf8]/15 px-2 py-0.5 rounded-full">
-                                30 Days
-                            </span>
-                        </div>
-                        <div>
-                            <div className="font-bold text-sm text-white group-hover:text-[#38bdf8] transition-colors">
-                                Monthly Statement ({getMonthLabel(selectedMonthStr)})
-                            </div>
-                            <div className="text-[11px] text-white/40 mt-0.5">30-day velocity & macro compliance</div>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-white/50">
-                            <span>Ready to Download</span>
-                            <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-[#38bdf8] transition-colors">download</span>
-                        </div>
-                    </div>
-
-                    {/* Weekly PDF */}
-                    <div 
-                        onClick={() => handleDownloadReportPdf('Weekly')}
-                        className="bg-[#080b12]/80 hover:bg-amber-400/10 border border-white/10 hover:border-amber-400/40 rounded-2xl p-4 transition-all group cursor-pointer flex flex-col justify-between space-y-3"
-                    >
-                        <div className="flex items-start justify-between">
-                            <div className="w-10 h-10 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center text-amber-400">
-                                <span className="material-symbols-outlined text-xl">picture_as_pdf</span>
-                            </div>
-                            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider bg-amber-400/15 px-2 py-0.5 rounded-full">
-                                7 Days
-                            </span>
-                        </div>
-                        <div>
-                            <div className="font-bold text-sm text-white group-hover:text-amber-400 transition-colors">
-                                Weekly Statement ({getWeekRange(selectedWeekDate).shortLabel})
-                            </div>
-                            <div className="text-[11px] text-white/40 mt-0.5">7-day meal log & fluid breakdown</div>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-white/50">
-                            <span>Ready to Download</span>
-                            <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-amber-400 transition-colors">download</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {/* DAILY NUTRITION LOGGING MODAL: Strictly single-day logging */}
             <LogDailyNutritionModal
@@ -3497,7 +3423,7 @@ const LogDailyWaterModal = ({
                 setWaterMl(parseInt(saved, 10));
             } else if (selectedDate === todayStr) {
                 const todaySaved = localStorage.getItem('nutrimunch_water_consumed');
-                setWaterMl(todaySaved ? parseInt(todaySaved, 10) : 1850);
+                setWaterMl(todaySaved ? parseInt(todaySaved, 10) : 0);
             } else {
                 setWaterMl(0);
             }

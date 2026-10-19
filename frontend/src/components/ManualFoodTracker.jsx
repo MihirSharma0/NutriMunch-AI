@@ -10,7 +10,7 @@ const MEAL_TYPES = [
     { id: 'Snack', label: 'Snack', icon: 'cookie' }
 ];
 
-const ManualFoodTracker = ({ customTargets = {} }) => {
+const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
     // Current date & backdated daily logging state
     const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
     const yesterdayStr = useMemo(() => {
@@ -19,7 +19,14 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
         return d.toISOString().split('T')[0];
     }, []);
 
-    const [selectedLogDate, setSelectedLogDate] = useState(() => todayStr);
+    const [selectedLogDate, setSelectedLogDate] = useState(() => initialDate || todayStr);
+
+    useEffect(() => {
+        if (initialDate) {
+            setSelectedLogDate(initialDate);
+        }
+    }, [initialDate]);
+
     const storageKey = `nutrimunch_logged_foods_${selectedLogDate}`;
 
     // Entry Mode: 'search' (Food Database item) or 'direct' (Quick Daily Macro Count)
