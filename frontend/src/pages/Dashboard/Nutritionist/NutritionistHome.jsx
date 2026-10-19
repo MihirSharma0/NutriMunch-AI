@@ -189,45 +189,48 @@ const NutritionistHome = () => {
             .map((appointment) => appointment.userId || appointment.userEmail || appointment.userName)
             .filter(Boolean)
     ).size;
-    const nextConsultation = upcomingConsultations[0];
-    const nextConsultationLabel = nextConsultation
-        ? new Date(nextConsultation.appointmentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : 'No upcoming';
-
+    const pendingRequests = consultationRecords.filter(
+        (appointment) => String(appointment.status || '').toUpperCase() === 'PENDING'
+    ).length;
+    const todayConsultations = upcomingConsultations.filter((appointment) => {
+        const appointmentDate = new Date(appointment.appointmentTime);
+        const today = new Date();
+        return appointmentDate.toDateString() === today.toDateString();
+    }).length;
     return (
         <div className="w-full">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white">Clinical Command Center</h1>
-                    <p className="text-sm text-white/50 mt-1">Real-time patient monitoring and algorithmic nutrition oversight.</p>
+                    <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white">Nutritionist Workspace</h1>
+                    <p className="text-sm text-white/50 mt-1">Manage consultations, clients, and personalized nutrition plans from one place.</p>
                 </div>
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#a5d391]/10 border border-[#a5d391]/20 text-[#a5d391] text-xs font-bold uppercase tracking-widest backdrop-blur-md">
                     <span className="w-2 h-2 rounded-full bg-[#a5d391] animate-pulse"></span>
-                    Clinical AI Agent Operational
+                    Workspace ready
                 </div>
             </div>
             
             {/* Top Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Active Roster</div>
-                        <span className="material-symbols-outlined text-[#a5d391] text-[20px]">groups</span>
+                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Pending Requests</div>
+                        <span className="material-symbols-outlined text-amber-300 text-[20px]">pending_actions</span>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display">{activeRoster}</div>
-                        <div className="text-xs text-white/50 mt-1">Patients with scheduled consultations</div>
+                        <div className="text-3xl font-bold font-hero-display">{pendingRequests}</div>
+                        <div className="text-xs text-white/50 mt-1">{pendingRequests ? 'Requests waiting for your review' : 'No requests waiting for review'}</div>
                     </div>
                 </div>
                 
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Avg Adherence</div>
-                        <span className="material-symbols-outlined text-[#a5d391] text-[20px]">analytics</span>
+                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Today's Schedule</div>
+                        <span className="material-symbols-outlined text-[#a5d391] text-[20px]">today</span>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display">N/A</div>
-                        <div className="text-xs text-white/50 mt-1">No adherence records available</div>
+                        <div className="text-3xl font-bold font-hero-display">{todayConsultations}</div>
+                        <div className="text-xs text-white/50 mt-1">{todayConsultations ? 'Consultations scheduled today' : 'No consultations scheduled today'}</div>
                     </div>
                 </div>
 
@@ -258,27 +261,34 @@ const NutritionistHome = () => {
                     </div>
                 </Link>
 
-                <div className="bg-red-500/10 backdrop-blur-xl border border-red-500/30 rounded-[2.5rem] p-5 flex flex-col justify-between shadow-[0_0_25px_rgba(239,68,68,0.15)]">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="text-red-400 text-[10px] font-bold uppercase tracking-widest">AI Anomalies</div>
-                        <span className="material-symbols-outlined text-red-400 text-[20px] animate-pulse">warning</span>
-                    </div>
-                    <div>
-                        <div className="text-3xl font-bold font-hero-display text-red-400">0</div>
-                        <div className="text-xs text-red-400/70 mt-1">No recorded anomalies</div>
-                    </div>
-                </div>
-
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Total Consults</div>
-                        <span className="material-symbols-outlined text-[#a5d391] text-[20px]">event_available</span>
+                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Active Clients</div>
+                        <span className="material-symbols-outlined text-[#a5d391] text-[20px]">groups</span>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display">{consultationRecords.length}</div>
-                        <div className="text-xs text-white/50 mt-1">Next at {nextConsultationLabel}</div>
+                        <div className="text-3xl font-bold font-hero-display">{activeRoster}</div>
+                        <div className="text-xs text-white/50 mt-1">Clients with active consultations</div>
                     </div>
                 </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <Link to="/dashboard/nutritionist/schedule" className="bg-[#a5d391]/10 border border-[#a5d391]/25 rounded-2xl p-5 hover:bg-[#a5d391]/20 transition-colors">
+                    <span className="material-symbols-outlined text-[#a5d391]">calendar_month</span>
+                    <h2 className="font-bold mt-3">Review schedule</h2>
+                    <p className="text-xs text-white/50 mt-1">Approve requests and manage consultation times.</p>
+                </Link>
+                <Link to="/dashboard/nutritionist/builder" className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-[#a5d391]/40 transition-colors">
+                    <span className="material-symbols-outlined text-[#a5d391]">edit_note</span>
+                    <h2 className="font-bold mt-3">Create diet plan</h2>
+                    <p className="text-xs text-white/50 mt-1">Build and save a personalized nutrition protocol.</p>
+                </Link>
+                <Link to="/dashboard/nutritionist/clients" className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-[#a5d391]/40 transition-colors">
+                    <span className="material-symbols-outlined text-[#a5d391]">person_search</span>
+                    <h2 className="font-bold mt-3">Manage clients</h2>
+                    <p className="text-xs text-white/50 mt-1">Review client profiles and clinical requirements.</p>
+                </Link>
             </div>
 
             <div className="grid grid-cols-1 gap-8">
@@ -287,7 +297,7 @@ const NutritionistHome = () => {
                     <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
                         <h2 className="text-lg font-bold font-hero-display flex items-center gap-2">
                             <span className="material-symbols-outlined text-[#a5d391]">videocam</span>
-                            Upcoming Consultations
+                            Next Consultations
                         </h2>
                         <span className="text-xs text-[#a5d391] uppercase tracking-widest font-black bg-[#a5d391]/10 px-3 py-1 rounded-full border border-[#a5d391]/20">
                             {upcomingConsultations.length} Scheduled
@@ -300,7 +310,14 @@ const NutritionistHome = () => {
                         ) : upcomingConsultations.length === 0 ? (
                             <div className="py-8 text-center">
                                 <span className="material-symbols-outlined text-3xl text-white/25">event_available</span>
-                                <p className="text-xs text-white/50 mt-2">No upcoming consultations scheduled.</p>
+                                <p className="text-xs text-white/50 mt-2">Your schedule is clear. New consultation requests will appear here.</p>
+                                <Link
+                                    to="/dashboard/nutritionist/schedule"
+                                    className="inline-flex items-center gap-1 mt-4 text-xs font-bold uppercase tracking-wider text-[#a5d391] hover:text-white"
+                                >
+                                    Open schedule
+                                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                </Link>
                             </div>
                         ) : upcomingConsultations.map((consult, idx) => {
                             const appointmentDate = new Date(consult.appointmentTime);
