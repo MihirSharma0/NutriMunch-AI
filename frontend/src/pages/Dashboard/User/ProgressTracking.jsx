@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Droplet, Plus, RotateCcw, CheckCircle2, Sparkles, TrendingUp, Activity, Edit2, Save, X } from 'lucide-react';
@@ -6,6 +6,7 @@ import api, { API_BASE_URL } from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import ManualFoodTracker from '../../../components/ManualFoodTracker';
+import DarkCalendarPicker from '../../../components/DarkCalendarPicker';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -33,9 +34,23 @@ const ProgressTracking = () => {
         return saved ? Math.round(parseFloat(saved) * 1000) : 3000;
     });
 
+    // Today and backdated hydration date state
+    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+    const yesterdayStr = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().split('T')[0];
+    }, []);
+
+    const [selectedWaterDate, setSelectedWaterDate] = useState(() => todayStr);
+
     const [waterConsumed, setWaterConsumed] = useState(() => {
-        const saved = localStorage.getItem('nutrimunch_water_consumed');
-        return saved ? parseInt(saved, 10) : 1250;
+        try {
+            const saved = localStorage.getItem(`nutrimunch_water_consumed_${new Date().toISOString().split('T')[0]}`) || localStorage.getItem('nutrimunch_water_consumed');
+            return saved ? parseInt(saved, 10) : 1250;
+        } catch (e) {
+            return 1250;
+        }
     });
     const [customAmount, setCustomAmount] = useState('');
     const [logSuccessMessage, setLogSuccessMessage] = useState('');
@@ -169,9 +184,31 @@ const ProgressTracking = () => {
         };
     }, []);
 
+    // Reload water consumption whenever selectedWaterDate changes
     useEffect(() => {
-        localStorage.setItem('nutrimunch_water_consumed', waterConsumed.toString());
-    }, [waterConsumed]);
+        try {
+            const saved = localStorage.getItem(`nutrimunch_water_consumed_${selectedWaterDate}`);
+            if (saved !== null) {
+                setWaterConsumed(parseInt(saved, 10));
+            } else if (selectedWaterDate === todayStr) {
+                const todaySaved = localStorage.getItem('nutrimunch_water_consumed');
+                setWaterConsumed(todaySaved ? parseInt(todaySaved, 10) : 1250);
+            } else {
+                setWaterConsumed(0);
+            }
+        } catch (e) {
+            setWaterConsumed(0);
+        }
+    }, [selectedWaterDate, todayStr]);
+
+    // Save water consumed to partitioned localStorage and sync global event
+    useEffect(() => {
+        localStorage.setItem(`nutrimunch_water_consumed_${selectedWaterDate}`, waterConsumed.toString());
+        if (selectedWaterDate === todayStr) {
+            localStorage.setItem('nutrimunch_water_consumed', waterConsumed.toString());
+        }
+        window.dispatchEvent(new Event('storage'));
+    }, [waterConsumed, selectedWaterDate, todayStr]);
 
     if (!user) {
         return <FeatureGate />;
@@ -207,12 +244,12 @@ const ProgressTracking = () => {
     const handleAddWater = (amount) => {
         const newTotal = waterConsumed + amount;
         setWaterConsumed(newTotal);
-        setLogSuccessMessage(`Added +${amount} ml water! Logged successfully.`);
+        setLogSuccessMessage(`Added +${amount} ml fluid for ${selectedWaterDate === todayStr ? 'today' : selectedWaterDate}!`);
         setTimeout(() => setLogSuccessMessage(''), 3000);
 
         // API call to sync with backend progress log endpoint
         api.post('/progress/me', {
-            logDate: new Date().toISOString().split('T')[0],
+            logDate: selectedWaterDate,
             notes: `Water intake logged: +${amount} ml (Total: ${newTotal} ml)`
         }).catch(() => {
             // Silently handle offline mode
@@ -221,8 +258,12 @@ const ProgressTracking = () => {
 
     const handleResetWater = () => {
         setWaterConsumed(0);
-        setLogSuccessMessage('Hydration tracker reset for today.');
+        setLogSuccessMessage(`Hydration tracker reset for ${selectedWaterDate === todayStr ? 'today' : selectedWaterDate}.`);
         setTimeout(() => setLogSuccessMessage(''), 3000);
+        api.post('/progress/me', {
+            logDate: selectedWaterDate,
+            notes: `Water intake reset for ${selectedWaterDate}.`
+        }).catch(() => {});
     };
 
     const handleCustomSubmit = (e) => {
@@ -290,10 +331,52 @@ const ProgressTracking = () => {
 
 
             {/* 1. Smart Hydration Tracker Section */}
-            <div className="bg-gradient-to-br from-[#0d131f] to-[#080b12] border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 shadow-[0_0_50px_rgba(165,211,145,0.15)] relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#0d131f] to-[#080b12] border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 shadow-[0_0_50px_rgba(165,211,145,0.15)] relative space-y-6">
                 <div className="absolute -top-10 -right-10 w-48 h-48 bg-[#a5d391]/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+                {/* Backdated Date Selector Header Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 relative z-30">
+                    <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[#38bdf8] text-xl">water_drop</span>
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">Hydration Target Date:</span>
+                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                            selectedWaterDate === todayStr 
+                                ? 'bg-[#38bdf8]/15 text-[#38bdf8] border-[#38bdf8]/30' 
+                                : 'bg-amber-400/15 text-amber-300 border-amber-400/30'
+                        }`}>
+                            {selectedWaterDate === todayStr ? 'Today (Live)' : `Backdated (${selectedWaterDate})`}
+                        </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <DarkCalendarPicker
+                            value={selectedWaterDate}
+                            onChange={(val) => setSelectedWaterDate(val)}
+                            maxDate={todayStr}
+                            mode="day"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setSelectedWaterDate(todayStr)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                selectedWaterDate === todayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                            }`}
+                        >
+                            Today
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedWaterDate(yesterdayStr)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                selectedWaterDate === yesterdayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                            }`}
+                        >
+                            Yesterday
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
                     {/* Left: Interactive Circular Progress Ring */}
                     <div className="flex items-center gap-6">
                         <div className="relative w-36 h-36 flex items-center justify-center shrink-0">

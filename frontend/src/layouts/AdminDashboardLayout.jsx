@@ -16,17 +16,27 @@ const AdminDashboardLayout = () => {
     const accentBorder = "border-[#a5d391]/20";
     const accentShadow = "shadow-[0_0_20px_rgba(165,211,145,0.25)]";
 
+    const [openSubMenus, setOpenSubMenus] = useState(() => ({
+        "System Core": true
+    }));
+
     const navItems = [
-        { name: "System Core", path: "/dashboard/admin", icon: "dashboard" },
-        { name: "Diet Protocols Vault", path: "/dashboard/admin/diet-plans", icon: "menu_book" },
+        { 
+            name: "System Core", 
+            icon: "dashboard",
+            subItems: [
+                { name: "System Core", path: "/dashboard/admin", icon: "dashboard" },
+                { name: "Diet Plans Management", path: "/dashboard/admin/diet-plans", icon: "menu_book" },
+                { name: "Analytics", path: "/dashboard/admin/analytics", icon: "analytics" },
+                { name: "SQL Console", path: "/dashboard/admin/sql", icon: "terminal" }
+            ]
+        },
         { name: "User Management", path: "/dashboard/admin/users", icon: "manage_accounts" },
-        { name: "SQL Console", path: "/dashboard/admin/sql", icon: "terminal" },
         { name: "Nutritionist Nodes", path: "/dashboard/admin/dietitians", icon: "badge" },
         { name: "Testimonials", path: "/dashboard/admin/testimonials", icon: "rate_review" },
         { name: "Blog CMS", path: "/dashboard/admin/blogs", icon: "article" },
         { name: "Global Recipes", path: "/dashboard/admin/recipes", icon: "restaurant_menu" },
-        { name: "Transactions", path: "/dashboard/admin/payments", icon: "payments" },
-        { name: "Analytics", path: "/dashboard/admin/analytics", icon: "analytics" }
+        { name: "Transactions", path: "/dashboard/admin/payments", icon: "payments" }
     ];
 
     const handleLogout = () => {
@@ -58,7 +68,56 @@ const AdminDashboardLayout = () => {
 
                 <nav className="flex-grow p-4 space-y-2 overflow-y-auto">
                     {navItems.map((item, idx) => {
-                        const isActive = location.pathname === item.path || (location.pathname === '/dashboard/admin' && item.path === '/dashboard/admin');
+                        if (item.subItems) {
+                            const isAnySubActive = item.subItems.some(sub => location.pathname === sub.path);
+                            const isOpen = !!openSubMenus[item.name];
+
+                            return (
+                                <div key={idx} className="space-y-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setOpenSubMenus(prev => ({ ...prev, [item.name]: !prev[item.name] }))}
+                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl font-bold transition-all duration-300 cursor-pointer ${
+                                            isAnySubActive 
+                                                ? `${accentBgLight} ${accentColor} border ${accentBorder} ${accentShadow} backdrop-blur-md` 
+                                                : 'text-white/50 hover:bg-white/5 hover:text-white border border-transparent'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                                            <span>{item.name}</span>
+                                        </div>
+                                        <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                                            expand_more
+                                        </span>
+                                    </button>
+
+                                    {isOpen && (
+                                        <div className="pl-6 pr-2 py-1 space-y-1 border-l-2 border-white/10 ml-6">
+                                            {item.subItems.map((sub, sIdx) => {
+                                                const isSubActive = location.pathname === sub.path;
+                                                return (
+                                                    <Link
+                                                        key={sIdx}
+                                                        to={sub.path}
+                                                        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                                                            isSubActive
+                                                                ? `${accentBgLight} ${accentColor} border ${accentBorder}`
+                                                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                                                        }`}
+                                                    >
+                                                        <span className="material-symbols-outlined text-base">{sub.icon}</span>
+                                                        <span>{sub.name}</span>
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }
+
+                        const isActive = location.pathname === item.path;
                         return (
                             <Link
                                 key={idx}
@@ -68,7 +127,7 @@ const AdminDashboardLayout = () => {
                                 <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                                 {item.name}
                             </Link>
-                        )
+                        );
                     })}
                 </nav>
 
@@ -139,7 +198,53 @@ const AdminDashboardLayout = () => {
                         </div>
                         <nav className="flex-grow p-4 space-y-2 overflow-y-auto">
                             {navItems.map((item, idx) => {
-                                const isActive = location.pathname === item.path || (location.pathname === '/dashboard/admin' && item.path === '/dashboard/admin');
+                                if (item.subItems) {
+                                    const isAnySubActive = item.subItems.some(sub => location.pathname === sub.path);
+                                    const isOpen = !!openSubMenus[item.name];
+
+                                    return (
+                                        <div key={idx} className="space-y-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setOpenSubMenus(prev => ({ ...prev, [item.name]: !prev[item.name] }))}
+                                                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl font-bold transition-all ${
+                                                    isAnySubActive ? `${accentBgLight} ${accentColor}` : 'text-white/50 hover:bg-white/5 hover:text-white'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                                                    <span>{item.name}</span>
+                                                </div>
+                                                <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                                                    expand_more
+                                                </span>
+                                            </button>
+
+                                            {isOpen && (
+                                                <div className="pl-6 pr-2 py-1 space-y-1 border-l-2 border-white/10 ml-6">
+                                                    {item.subItems.map((sub, sIdx) => {
+                                                        const isSubActive = location.pathname === sub.path;
+                                                        return (
+                                                            <Link
+                                                                key={sIdx}
+                                                                to={sub.path}
+                                                                onClick={() => setIsSidebarOpen(false)}
+                                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                                                                    isSubActive ? `${accentBgLight} ${accentColor}` : 'text-white/60 hover:text-white hover:bg-white/5'
+                                                                }`}
+                                                            >
+                                                                <span className="material-symbols-outlined text-base">{sub.icon}</span>
+                                                                <span>{sub.name}</span>
+                                                            </Link>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                }
+
+                                const isActive = location.pathname === item.path;
                                 return (
                                     <Link
                                         key={idx}
@@ -150,7 +255,7 @@ const AdminDashboardLayout = () => {
                                         <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                                         {item.name}
                                     </Link>
-                                )
+                                );
                             })}
                         </nav>
                         <div className="p-4 border-t border-white/10">

@@ -32,6 +32,13 @@ export const getNavItemsForRole = (user) => {
         { label: 'Dietitian Verification', path: '/dashboard/admin/dietitians', icon: 'badge', desc: 'Approve or suspend nutritionist applications' }
     ];
 
+    const systemCoreSubMenu = [
+        { label: 'System Core', path: '/dashboard/admin', icon: 'dashboard', desc: 'Master system controls, credentials & live telemetry' },
+        { label: 'Diet Plans Management', path: '/dashboard/admin/diet-plans', icon: 'menu_book', desc: 'Audit, inspect, promote, and purge diet plans registry' },
+        { label: 'Analytics', path: '/dashboard/admin/analytics', icon: 'analytics', desc: 'Platform health metrics, user growth & revenue KPIs' },
+        { label: 'SQL Console', path: '/dashboard/admin/sql', icon: 'terminal', desc: 'Raw database query console & table inspection' }
+    ];
+
     const clientManagementSubMenu = [
         { label: 'Client Roster', path: '/dashboard/nutritionist/clients', icon: 'group', desc: 'Manage patient roster, health logs & biometrics' },
         { label: 'Schedule', path: '/dashboard/nutritionist/schedule', icon: 'calendar_month', desc: 'Manage consultation calendar & slots' }
@@ -66,12 +73,10 @@ export const getNavItemsForRole = (user) => {
     if (rawRole === 'ADMIN') {
         return [
             { label: 'Home', path: '/' },
-            { label: 'System Core', path: '/dashboard/admin' },
+            { label: 'System Core', subMenu: systemCoreSubMenu, headerTitle: 'System & Analytics Core' },
             { label: 'Platform Features', subMenu: userAiSubMenu, headerTitle: 'AI Platform Suite' },
             { label: 'User Management', subMenu: userManagementSubMenu, headerTitle: 'User Administration' },
             { label: 'Testimonials', path: '/dashboard/admin/testimonials' },
-            { label: 'Analytics', path: '/dashboard/admin/analytics' },
-            { label: 'SQL Console', path: '/dashboard/admin/sql' },
             { label: 'Contact', path: '/contact' }
         ];
     }

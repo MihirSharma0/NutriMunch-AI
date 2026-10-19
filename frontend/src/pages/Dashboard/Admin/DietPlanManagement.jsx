@@ -211,11 +211,11 @@ const DietPlanManagement = () => {
                 <div>
                     <div className="text-[#a5d391] text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mb-2">
                         <span className="w-1.5 h-1.5 bg-[#a5d391] rounded-full animate-pulse"></span>
-                        Admin Control Suite • Protocol Vault
+                        Admin Control Suite • Diet Plans Vault
                     </div>
                     <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white flex items-center gap-3">
                         <span className="material-symbols-outlined text-[#a5d391] text-3xl">menu_book</span>
-                        Diet Protocols Management
+                        Diet Plans Management
                     </h1>
                     <p className="text-white/60 text-xs sm:text-sm mt-1">
                         Audit, inspect, promote, and permanently purge diet regimens across all platform users, nutritionists, and database records.

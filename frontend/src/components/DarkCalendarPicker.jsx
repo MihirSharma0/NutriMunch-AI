@@ -199,7 +199,7 @@ const DarkCalendarPicker = ({
     };
 
     return (
-        <div className={`relative inline-block ${className}`} ref={containerRef}>
+        <div className={`relative inline-block ${isOpen ? 'z-[9999]' : 'z-auto'} ${className}`} ref={containerRef}>
             {/* Trigger Button */}
             <button
                 type="button"
@@ -223,7 +223,7 @@ const DarkCalendarPicker = ({
             {/* Custom Dark Theme Calendar Popup Card */}
             {isOpen && (
                 <div 
-                    className="absolute z-50 mt-2 left-0 sm:right-auto bg-[#0a0e17] border border-white/15 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl w-[300px] animate-in fade-in zoom-in-95 duration-150 select-none"
+                    className="absolute z-[9999] mt-2 left-0 sm:right-auto bg-[#0a0e17] border border-white/15 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl w-[300px] animate-in fade-in zoom-in-95 duration-150 select-none"
                     style={{ minWidth: '300px' }}
                 >
                     {/* Calendar Header */}

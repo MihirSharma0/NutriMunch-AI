@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { Line, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api from '../../../api/axios';
 import DarkCalendarPicker from '../../../components/DarkCalendarPicker';
+import { searchFoodDatabase, FOOD_DATABASE } from '../../../data/foodDatabase';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
@@ -27,7 +28,7 @@ const INTERVAL_PRESETS = [
     { id: '3M', label: '3 Months', days: 90 },
     { id: '6M', label: '6 Months', days: 180 },
     { id: '1Y', label: '1 Year', days: 365 },
-    { id: 'CUSTOM', label: 'Custom Range', days: null }
+    { id: 'CUSTOM', label: 'Custom Date', days: 1 }
 ];
 
 /**
@@ -420,12 +421,20 @@ const Reports = () => {
 
     // Interactive chart viewing interval state (independent of statement export)
     const [selectedInterval, setSelectedInterval] = useState('STATEMENT');
-    const [customStartDate, setCustomStartDate] = useState(() => {
+    const [customSingleDate, setCustomSingleDate] = useState(() => {
         const d = new Date();
-        d.setDate(d.getDate() - 14);
+        d.setDate(d.getDate() - 1);
         return d.toISOString().split('T')[0];
     });
-    const [customEndDate, setCustomEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+    // Daily Nutrition Logging Modal State (Strictly single-day resolution)
+    const [isLogNutritionModalOpen, setIsLogNutritionModalOpen] = useState(false);
+    const [logNutritionTargetDate, setLogNutritionTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [nutritionLogVersion, setNutritionLogVersion] = useState(0);
+
+    // Daily Water Logging Modal State (Strictly single-day resolution)
+    const [isLogWaterModalOpen, setIsLogWaterModalOpen] = useState(false);
+    const [logWaterTargetDate, setLogWaterTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
 
     // Date Range Formatting Helpers
     const getWeekRange = (dateStr) => {
@@ -443,6 +452,37 @@ const Reports = () => {
             shortLabel: `Week of ${mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
         };
     };
+
+    const yesterdayStr = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().split('T')[0];
+    }, []);
+
+    const currentWeekStart = useMemo(() => getWeekRange(todayStr).startDate, [todayStr]);
+    const lastWeekStart = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        return getWeekRange(d.toISOString().split('T')[0]).startDate;
+    }, []);
+
+    const isSelectedThisWeek = useMemo(() => {
+        return getWeekRange(selectedWeekDate).startDate === currentWeekStart;
+    }, [selectedWeekDate, currentWeekStart]);
+
+    const isSelectedLastWeek = useMemo(() => {
+        return getWeekRange(selectedWeekDate).startDate === lastWeekStart;
+    }, [selectedWeekDate, lastWeekStart]);
+
+    const currentMonthStr = useMemo(() => todayStr.slice(0, 7), [todayStr]);
+    const lastMonthStr = useMemo(() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }, []);
+
+    const isSelectedThisMonth = selectedMonthStr === currentMonthStr;
+    const isSelectedLastMonth = selectedMonthStr === lastMonthStr;
 
     const getMonthLabel = (monthStr) => {
         if (!monthStr) return 'This Month';
@@ -466,6 +506,7 @@ const Reports = () => {
 
     // Targets State
     const [targets, setTargets] = useState(DEFAULT_TARGETS);
+    const [userProfile, setUserProfile] = useState(null);
 
     // Today's Live Hydration State
     const [waterConsumedMl, setWaterConsumedMl] = useState(() => {
@@ -494,10 +535,11 @@ const Reports = () => {
     const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
     const [downloadSuccessToast, setDownloadSuccessToast] = useState(null);
 
-    // Load targets from backend or localStorage
+    // Load targets and user demographics from backend or localStorage
     useEffect(() => {
         api.get('/profiles/me').then(res => {
             if (res.data) {
+                setUserProfile(res.data);
                 const loaded = {
                     calories: res.data.dailyCaloriesTarget || DEFAULT_TARGETS.calories,
                     protein: res.data.proteinTarget || DEFAULT_TARGETS.protein,
@@ -579,6 +621,7 @@ const Reports = () => {
             const wPct = targetWaterMl > 0 ? Math.min(Math.round((waterConsumedMl / targetWaterMl) * 100), 100) : 0;
             const cPct = targetCalories > 0 ? Math.min(Math.round((todayNutrition.calories / targetCalories) * 100), 100) : 0;
             const cRemaining = Math.max(targetCalories - todayNutrition.calories, 0);
+            const wLit = (waterConsumedMl / 1000).toFixed(2);
 
             return {
                 mode: 'today',
@@ -589,20 +632,27 @@ const Reports = () => {
                 isLive: true,
                 waterConsumed: waterConsumedMl,
                 waterTarget: targetWaterMl,
+                cumulativeWaterConsumed: wLit,
+                cumulativeWaterTarget: targets.water,
                 waterPercent: wPct,
                 waterDeficit: wDeficit,
                 calories: todayNutrition.calories,
                 calorieTarget: targetCalories,
+                cumulativeCalories: todayNutrition.calories,
+                cumulativeCalorieTarget: targetCalories,
                 caloriePercent: cPct,
                 calorieRemaining: cRemaining,
                 protein: todayNutrition.protein,
+                cumulativeProtein: todayNutrition.protein,
                 proteinPercent: targetProtein > 0 ? Math.min(Math.round((todayNutrition.protein / targetProtein) * 100), 100) : 0,
                 carbs: todayNutrition.carbs,
+                cumulativeCarbs: todayNutrition.carbs,
                 carbsPercent: targetCarbs > 0 ? Math.min(Math.round((todayNutrition.carbs / targetCarbs) * 100), 100) : 0,
                 fats: todayNutrition.fats,
+                cumulativeFats: todayNutrition.fats,
                 fatsPercent: targetFats > 0 ? Math.min(Math.round((todayNutrition.fats / targetFats) * 100), 100) : 0,
-                totalWaterLiters: (waterConsumedMl / 1000).toFixed(2),
-                avgWaterLiters: (waterConsumedMl / 1000).toFixed(2),
+                totalWaterLiters: wLit,
+                avgWaterLiters: wLit,
                 totalCalories: todayNutrition.calories.toLocaleString(),
                 avgCalories: todayNutrition.calories,
                 adherenceRate: `${wPct}%`,
@@ -614,7 +664,14 @@ const Reports = () => {
                 avgFats: todayNutrition.fats,
                 title: "Today's Performance & Intake Audit",
                 subtitle: "Real-time 24-hour log and live nutritional breakdown",
-                loggedVisits: 'Active Today (Live)'
+                loggedVisits: 'Active Today (Live Tracking)',
+                demographicSummary: {
+                    status: wPct >= 100 && cPct >= 90 ? 'Target Met (Optimal)' : 'In Progress (Active Monitoring)',
+                    keyTakeaway: 'Live 24-hour intake telemetry actively synchronized with your clinical metabolic targets.',
+                    hydrationVerdict: `Consumed ${wLit} L of ${targets.water} L daily target (${wPct}% completed, ${wDeficit > 0 ? `${wDeficit} ml remaining` : 'Optimal hydration met'}).`,
+                    calorieVerdict: `Logged ${todayNutrition.calories} kcal of ${targetCalories} kcal daily target (${cPct}% met, ${cRemaining > 0 ? `${cRemaining} kcal remaining` : 'Target energy reached'}).`,
+                    macroVerdict: `Macronutrients: Protein ${todayNutrition.protein}g/${targetProtein}g, Carbs ${todayNutrition.carbs}g/${targetCarbs}g, Fats ${todayNutrition.fats}g/${targetFats}g.`
+                }
             };
         }
 
@@ -645,13 +702,24 @@ const Reports = () => {
                     }
                 } catch (e) {}
 
-                const seedW = Math.abs(Math.sin(new Date(selectedDayDate).getDate() * 11));
-                dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
+                try {
+                    const savedWater = localStorage.getItem(`nutrimunch_water_consumed_${selectedDayDate}`);
+                    if (savedWater !== null) {
+                        dayWater = parseInt(savedWater, 10);
+                    } else {
+                        const seedW = Math.abs(Math.sin(new Date(selectedDayDate).getDate() * 11));
+                        dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
+                    }
+                } catch (e) {
+                    const seedW = Math.abs(Math.sin(new Date(selectedDayDate).getDate() * 11));
+                    dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
+                }
             }
 
             const dWaterPct = targetWaterMl > 0 ? Math.min(Math.round((dayWater / targetWaterMl) * 100), 100) : 0;
             const dCalPct = targetCalories > 0 ? Math.min(Math.round((dayNutr.calories / targetCalories) * 100), 100) : 0;
             const dDateFormatted = new Date(selectedDayDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            const dLit = (dayWater / 1000).toFixed(2);
 
             return {
                 mode: 'daily',
@@ -662,20 +730,27 @@ const Reports = () => {
                 isLive: isToday,
                 waterConsumed: dayWater,
                 waterTarget: targetWaterMl,
+                cumulativeWaterConsumed: dLit,
+                cumulativeWaterTarget: targets.water,
                 waterPercent: dWaterPct,
                 waterDeficit: Math.max(targetWaterMl - dayWater, 0),
                 calories: dayNutr.calories,
                 calorieTarget: targetCalories,
+                cumulativeCalories: dayNutr.calories,
+                cumulativeCalorieTarget: targetCalories,
                 caloriePercent: dCalPct,
                 calorieRemaining: Math.max(targetCalories - dayNutr.calories, 0),
                 protein: dayNutr.protein,
+                cumulativeProtein: dayNutr.protein,
                 proteinPercent: targetProtein > 0 ? Math.min(Math.round((dayNutr.protein / targetProtein) * 100), 100) : 0,
                 carbs: dayNutr.carbs,
+                cumulativeCarbs: dayNutr.carbs,
                 carbsPercent: targetCarbs > 0 ? Math.min(Math.round((dayNutr.carbs / targetCarbs) * 100), 100) : 0,
                 fats: dayNutr.fats,
+                cumulativeFats: dayNutr.fats,
                 fatsPercent: targetFats > 0 ? Math.min(Math.round((dayNutr.fats / targetFats) * 100), 100) : 0,
-                totalWaterLiters: (dayWater / 1000).toFixed(2),
-                avgWaterLiters: (dayWater / 1000).toFixed(2),
+                totalWaterLiters: dLit,
+                avgWaterLiters: dLit,
                 totalCalories: dayNutr.calories.toLocaleString(),
                 avgCalories: dayNutr.calories,
                 adherenceRate: `${dWaterPct}%`,
@@ -687,18 +762,30 @@ const Reports = () => {
                 avgFats: dayNutr.fats,
                 title: `Daily Clinical Statement (${dDateFormatted})`,
                 subtitle: "Single-day verified intake and biometric audit",
-                loggedVisits: isToday ? 'Active Today' : '1 Logged Day'
+                loggedVisits: isToday ? 'Active Today' : '1 Logged Day',
+                demographicSummary: {
+                    status: dWaterPct >= 100 && dCalPct >= 90 ? 'Target Met (Optimal)' : 'Daily Statement Verified',
+                    keyTakeaway: `Verified single-day intake and clinical biometric compliance for ${dDateFormatted}.`,
+                    hydrationVerdict: `Consumed ${dLit} L of ${targets.water} L daily target (${dWaterPct}% completed).`,
+                    calorieVerdict: `Caloric energy: ${dayNutr.calories} kcal of ${targetCalories} kcal target (${dCalPct}% met).`,
+                    macroVerdict: `Protein ${dayNutr.protein}g/${targetProtein}g, Carbs ${dayNutr.carbs}g/${targetCarbs}g, Fats ${dayNutr.fats}g/${targetFats}g.`
+                }
             };
         }
 
         if (viewMode === 'weekly') {
-            const avgW = (targetWaterMl * 0.93) / 1000;
-            const totW = Math.round((targetWaterMl * 7 * 0.93) / 1000);
+            const totTargetW = Math.round(targets.water * 7 * 10) / 10;
+            const totW = Math.round(totTargetW * 0.93 * 10) / 10;
+            const avgW = (totW / 7).toFixed(2);
+            const totTargetCal = targetCalories * 7;
             const avgCal = Math.round(targetCalories * 0.94);
-            const totCal = Math.round(targetCalories * 7 * 0.94);
+            const totCal = avgCal * 7;
             const avgProt = Math.round(targetProtein * 0.93);
+            const totProt = avgProt * 7;
             const avgCarb = Math.round(targetCarbs * 0.95);
+            const totCarb = avgCarb * 7;
             const avgFat = Math.round(targetFats * 0.92);
+            const totFat = avgFat * 7;
 
             return {
                 mode: 'weekly',
@@ -709,20 +796,27 @@ const Reports = () => {
                 isLive: false,
                 waterConsumed: Math.round(avgW * 1000),
                 waterTarget: targetWaterMl,
+                cumulativeWaterConsumed: totW,
+                cumulativeWaterTarget: totTargetW,
                 waterPercent: 93,
                 waterDeficit: 0,
                 calories: avgCal,
                 calorieTarget: targetCalories,
+                cumulativeCalories: totCal,
+                cumulativeCalorieTarget: totTargetCal,
                 caloriePercent: 94,
                 calorieRemaining: Math.max(targetCalories - avgCal, 0),
                 protein: avgProt,
+                cumulativeProtein: totProt,
                 proteinPercent: 93,
                 carbs: avgCarb,
+                cumulativeCarbs: totCarb,
                 carbsPercent: 95,
                 fats: avgFat,
+                cumulativeFats: totFat,
                 fatsPercent: 92,
                 totalWaterLiters: totW,
-                avgWaterLiters: avgW.toFixed(2),
+                avgWaterLiters: avgW,
                 totalCalories: totCal.toLocaleString(),
                 avgCalories: avgCal,
                 adherenceRate: '93%',
@@ -734,18 +828,30 @@ const Reports = () => {
                 avgFats: avgFat,
                 title: `Weekly Clinical Statement (${weekRange.formatted})`,
                 subtitle: 'Aggregated 7-day rolling nutritional adherence & fluid audit',
-                loggedVisits: '7 / 7 Days'
+                loggedVisits: '7 / 7 Days (100% Tracking)',
+                demographicSummary: {
+                    status: 'Optimal Adherence (94%)',
+                    keyTakeaway: `This 7-day weekly statement captures your aggregated fluid and nutritional demographics for ${weekRange.formatted}.`,
+                    hydrationVerdict: `You consumed ${totW} L out of your ${totTargetW} L weekly target (93% compliance), maintaining a healthy daily average of ${Math.round(avgW * 1000)} ml/day against your ${targetWaterMl} ml/day daily target.`,
+                    calorieVerdict: `Total weekly energy reached ${totCal.toLocaleString()} kcal out of ${totTargetCal.toLocaleString()} kcal cumulative target, averaging ${avgCal} kcal/day with a steady -${targetCalories - avgCal} kcal/day mild deficit.`,
+                    macroVerdict: `Macronutrient delivery averaged: Protein ${avgProt}g/day (${totProt}g weekly total, 93%), Carbs ${avgCarb}g/day (${totCarb}g weekly total, 95%), and Fats ${avgFat}g/day (${totFat}g weekly total, 92%).`
+                }
             };
         }
 
         if (viewMode === 'monthly') {
-            const avgW = (waterConsumedMl * 0.94) / 1000;
-            const totW = Math.round((waterConsumedMl * 30 * 0.94) / 1000);
-            const avgCal = Math.round(todayNutrition.calories * 0.96);
-            const totCal = Math.round(todayNutrition.calories * 30 * 0.96);
-            const avgProt = Math.round(todayNutrition.protein * 0.95);
-            const avgCarb = Math.round(todayNutrition.carbs * 0.97);
-            const avgFat = Math.round(todayNutrition.fats * 0.94);
+            const totTargetW = Math.round(targets.water * 30 * 10) / 10;
+            const totW = Math.round(totTargetW * 0.91 * 10) / 10;
+            const avgW = (totW / 30).toFixed(2);
+            const totTargetCal = targetCalories * 30;
+            const avgCal = Math.round(targetCalories * 0.94);
+            const totCal = avgCal * 30;
+            const avgProt = Math.round(targetProtein * 0.95);
+            const totProt = avgProt * 30;
+            const avgCarb = Math.round(targetCarbs * 0.97);
+            const totCarb = avgCarb * 30;
+            const avgFat = Math.round(targetFats * 0.94);
+            const totFat = avgFat * 30;
 
             return {
                 mode: 'monthly',
@@ -756,20 +862,27 @@ const Reports = () => {
                 isLive: false,
                 waterConsumed: Math.round(avgW * 1000),
                 waterTarget: targetWaterMl,
+                cumulativeWaterConsumed: totW,
+                cumulativeWaterTarget: totTargetW,
                 waterPercent: 91,
                 waterDeficit: 0,
                 calories: avgCal,
                 calorieTarget: targetCalories,
+                cumulativeCalories: totCal,
+                cumulativeCalorieTarget: totTargetCal,
                 caloriePercent: 94,
                 calorieRemaining: Math.max(targetCalories - avgCal, 0),
                 protein: avgProt,
+                cumulativeProtein: totProt,
                 proteinPercent: 95,
                 carbs: avgCarb,
+                cumulativeCarbs: totCarb,
                 carbsPercent: 97,
                 fats: avgFat,
+                cumulativeFats: totFat,
                 fatsPercent: 94,
                 totalWaterLiters: totW,
-                avgWaterLiters: avgW.toFixed(2),
+                avgWaterLiters: avgW,
                 totalCalories: totCal.toLocaleString(),
                 avgCalories: avgCal,
                 adherenceRate: '91%',
@@ -781,18 +894,30 @@ const Reports = () => {
                 avgFats: avgFat,
                 title: `Monthly Clinical Audit (${monthLabel})`,
                 subtitle: 'Aggregated view over active 30-day monitoring window',
-                loggedVisits: '28 / 30 Days'
+                loggedVisits: '28 / 30 Days (93% Consistency)',
+                demographicSummary: {
+                    status: 'Optimal Adherence (94%)',
+                    keyTakeaway: `30-day aggregated monthly statement summarizing long-term metabolic stability for ${monthLabel}.`,
+                    hydrationVerdict: `Monthly fluid intake reached ${totW} L out of ${totTargetW} L target (91% compliance, avg ${Math.round(avgW * 1000)} ml/day).`,
+                    calorieVerdict: `Total energy consumed: ${totCal.toLocaleString()} kcal out of ${totTargetCal.toLocaleString()} kcal monthly allowance (avg ${avgCal} kcal/day).`,
+                    macroVerdict: `Macronutrient compliance averaged 95% protein (${totProt}g total), 97% carbs (${totCarb}g total), and 94% fats (${totFat}g total).`
+                }
             };
         }
 
         if (viewMode === 'quarterly') {
-            const avgW = (waterConsumedMl * 0.92) / 1000;
-            const totW = Math.round((waterConsumedMl * 90 * 0.92) / 1000);
-            const avgCal = Math.round(todayNutrition.calories * 0.95);
-            const totCal = Math.round(todayNutrition.calories * 90 * 0.95);
-            const avgProt = Math.round(todayNutrition.protein * 0.93);
-            const avgCarb = Math.round(todayNutrition.carbs * 0.96);
-            const avgFat = Math.round(todayNutrition.fats * 0.92);
+            const totTargetW = Math.round(targets.water * 90 * 10) / 10;
+            const totW = Math.round(totTargetW * 0.89 * 10) / 10;
+            const avgW = (totW / 90).toFixed(2);
+            const totTargetCal = targetCalories * 90;
+            const avgCal = Math.round(targetCalories * 0.92);
+            const totCal = avgCal * 90;
+            const avgProt = Math.round(targetProtein * 0.93);
+            const totProt = avgProt * 90;
+            const avgCarb = Math.round(targetCarbs * 0.96);
+            const totCarb = avgCarb * 90;
+            const avgFat = Math.round(targetFats * 0.92);
+            const totFat = avgFat * 90;
 
             return {
                 mode: 'quarterly',
@@ -803,20 +928,27 @@ const Reports = () => {
                 isLive: false,
                 waterConsumed: Math.round(avgW * 1000),
                 waterTarget: targetWaterMl,
+                cumulativeWaterConsumed: totW,
+                cumulativeWaterTarget: totTargetW,
                 waterPercent: 89,
                 waterDeficit: 0,
                 calories: avgCal,
                 calorieTarget: targetCalories,
+                cumulativeCalories: totCal,
+                cumulativeCalorieTarget: totTargetCal,
                 caloriePercent: 92,
                 calorieRemaining: Math.max(targetCalories - avgCal, 0),
                 protein: avgProt,
+                cumulativeProtein: totProt,
                 proteinPercent: 93,
                 carbs: avgCarb,
+                cumulativeCarbs: totCarb,
                 carbsPercent: 96,
                 fats: avgFat,
+                cumulativeFats: totFat,
                 fatsPercent: 92,
                 totalWaterLiters: totW,
-                avgWaterLiters: avgW.toFixed(2),
+                avgWaterLiters: avgW,
                 totalCalories: totCal.toLocaleString(),
                 avgCalories: avgCal,
                 adherenceRate: '89%',
@@ -828,18 +960,30 @@ const Reports = () => {
                 avgFats: avgFat,
                 title: `Quarterly Metabolic Audit (${quarterLabel})`,
                 subtitle: 'Aggregated view over 90-day comprehensive protocol',
-                loggedVisits: '84 / 90 Days'
+                loggedVisits: '84 / 90 Days (93% Consistency)',
+                demographicSummary: {
+                    status: 'Quarterly Target Compliant (92%)',
+                    keyTakeaway: `90-day comprehensive metabolic audit over ${quarterLabel}.`,
+                    hydrationVerdict: `Total quarterly water volume: ${totW} L of ${totTargetW} L target (89% adherence, avg ${Math.round(avgW * 1000)} ml/day).`,
+                    calorieVerdict: `Total energy expenditure supported: ${totCal.toLocaleString()} kcal of ${totTargetCal.toLocaleString()} kcal target (avg ${avgCal} kcal/day).`,
+                    macroVerdict: `Macronutrient compliance: 93% Protein (${totProt}g), 96% Carbs (${totCarb}g), 92% Fats (${totFat}g).`
+                }
             };
         }
 
         // Default / Yearly
-        const avgW = (waterConsumedMl * 0.93) / 1000;
-        const totW = Math.round((waterConsumedMl * 365 * 0.93) / 1000);
-        const avgCal = Math.round(todayNutrition.calories * 0.97);
-        const totCal = Math.round(todayNutrition.calories * 365 * 0.97);
-        const avgProt = Math.round(todayNutrition.protein * 0.96);
-        const avgCarb = Math.round(todayNutrition.carbs * 0.98);
-        const avgFat = Math.round(todayNutrition.fats * 0.93);
+        const totTargetW = Math.round(targets.water * 365 * 10) / 10;
+        const totW = Math.round(totTargetW * 0.92 * 10) / 10;
+        const avgW = (totW / 365).toFixed(2);
+        const totTargetCal = targetCalories * 365;
+        const avgCal = Math.round(targetCalories * 0.95);
+        const totCal = avgCal * 365;
+        const avgProt = Math.round(targetProtein * 0.96);
+        const totProt = avgProt * 365;
+        const avgCarb = Math.round(targetCarbs * 0.98);
+        const totCarb = avgCarb * 365;
+        const avgFat = Math.round(targetFats * 0.93);
+        const totFat = avgFat * 365;
 
         return {
             mode: 'yearly',
@@ -850,20 +994,27 @@ const Reports = () => {
             isLive: false,
             waterConsumed: Math.round(avgW * 1000),
             waterTarget: targetWaterMl,
+            cumulativeWaterConsumed: totW,
+            cumulativeWaterTarget: totTargetW,
             waterPercent: 92,
             waterDeficit: 0,
             calories: avgCal,
             calorieTarget: targetCalories,
+            cumulativeCalories: totCal,
+            cumulativeCalorieTarget: totTargetCal,
             caloriePercent: 95,
             calorieRemaining: Math.max(targetCalories - avgCal, 0),
             protein: avgProt,
+            cumulativeProtein: totProt,
             proteinPercent: 96,
             carbs: avgCarb,
+            cumulativeCarbs: totCarb,
             carbsPercent: 98,
             fats: avgFat,
+            cumulativeFats: totFat,
             fatsPercent: 93,
             totalWaterLiters: totW,
-            avgWaterLiters: avgW.toFixed(2),
+            avgWaterLiters: avgW,
             totalCalories: totCal.toLocaleString(),
             avgCalories: avgCal,
             adherenceRate: '92%',
@@ -873,13 +1024,21 @@ const Reports = () => {
             avgProtein: avgProt,
             avgCarbs: avgCarb,
             avgFats: avgFat,
-            title: `Annual Performance & Biometrics (${selectedYear})`,
-            subtitle: 'Aggregated view over 365-day annual cycle',
-            loggedVisits: '342 / 365 Days'
+            title: `Annual Statement (Year ${selectedYear})`,
+            subtitle: `365-day longitudinal record for calendar year ${selectedYear}`,
+            loggedVisits: '342 / 365 Days (94% Consistency)',
+            demographicSummary: {
+                status: 'Annual Target Compliant (95%)',
+                keyTakeaway: `365-day comprehensive annual clinical record for calendar year ${selectedYear}.`,
+                hydrationVerdict: `Annual water intake totaled ${totW} L of ${totTargetW} L target (92% compliance, avg ${Math.round(avgW * 1000)} ml/day).`,
+                calorieVerdict: `Total annual calories consumed: ${totCal.toLocaleString()} kcal of ${totTargetCal.toLocaleString()} kcal target (avg ${avgCal} kcal/day).`,
+                macroVerdict: `Macronutrient compliance: 96% Protein (${totProt}g), 98% Carbs (${totCarb}g), 93% Fats (${totFat}g).`
+            }
         };
     }, [
         viewMode, selectedDayDate, selectedWeekDate, selectedMonthStr, selectedQuarter, selectedQuarterYear, selectedYear,
-        todayStr, waterConsumedMl, targetWaterMl, todayNutrition, targetCalories, targetProtein, targetCarbs, targetFats
+        todayStr, waterConsumedMl, targetWaterMl, todayNutrition, targetCalories, targetProtein, targetCarbs, targetFats,
+        nutritionLogVersion
     ]);
 
     // Backwards-compatible alias for existing components
@@ -993,7 +1152,8 @@ const Reports = () => {
         };
     }, [
         viewMode, selectedDayDate, selectedWeekDate, selectedMonthStr, selectedQuarter, selectedQuarterYear, selectedYear,
-        activeStatementData, targetWaterMl, targetCalories, targetProtein, targetCarbs, targetFats
+        activeStatementData, targetWaterMl, targetCalories, targetProtein, targetCarbs, targetFats,
+        nutritionLogVersion
     ]);
 
     // On-Screen Interactive Chart Data: Driven by selectedInterval (for viewing purpose)
@@ -1121,25 +1281,67 @@ const Reports = () => {
                 fatsData.push(Math.round(targetFats * (0.93 + variance * 0.3)));
             });
         } else {
-            // CUSTOM Range
-            const start = new Date(customStartDate || todayStr);
-            const end = new Date(customEndDate || todayStr);
-            const diffDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
-            const step = Math.max(1, Math.round(diffDays / 8));
+            // CUSTOM: Single Selected Date (24-hour Telemetry Progression Curve)
+            const targetDate = customSingleDate || todayStr;
+            const isToday = targetDate === todayStr;
+            let dayWater = waterConsumedMl;
+            let dayCal = todayNutrition.calories;
+            let dayProt = todayNutrition.protein;
+            let dayCarbs = todayNutrition.carbs;
+            let dayFats = todayNutrition.fats;
 
-            for (let i = 0; i <= diffDays; i += step) {
-                const cur = new Date(start);
-                cur.setDate(cur.getDate() + i);
-                labels.push(cur.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                const variance = Math.sin(i * 0.8) * 0.12;
-                hydrationActual.push(Math.round(targetWaterMl * (0.91 + variance)));
-                hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(targetCalories * (0.94 + variance * 0.7)));
-                caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(targetProtein * (0.92 + variance)));
-                carbsData.push(Math.round(targetCarbs * (0.96 - variance * 0.4)));
-                fatsData.push(Math.round(targetFats * (0.91 + variance * 0.3)));
+            if (!isToday) {
+                try {
+                    const saved = localStorage.getItem(`nutrimunch_logged_foods_${targetDate}`);
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        const totals = parsed.reduce((acc, f) => ({
+                            calories: acc.calories + (f.calories || 0),
+                            protein: acc.protein + (f.protein || 0),
+                            carbs: acc.carbs + (f.carbs || 0),
+                            fats: acc.fats + (f.fats || 0)
+                        }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+                        dayCal = totals.calories;
+                        dayProt = totals.protein;
+                        dayCarbs = totals.carbs;
+                        dayFats = totals.fats;
+                    } else {
+                        const seed = Math.abs(Math.sin(new Date(targetDate).getDate() * 7 + (new Date(targetDate).getMonth() + 1) * 13));
+                        dayCal = Math.round(targetCalories * (0.88 + seed * 0.2));
+                        dayProt = Math.round(targetProtein * (0.86 + seed * 0.22));
+                        dayCarbs = Math.round(targetCarbs * (0.90 + seed * 0.18));
+                        dayFats = Math.round(targetFats * (0.85 + seed * 0.25));
+                    }
+                } catch (e) {}
+
+                try {
+                    const savedWater = localStorage.getItem(`nutrimunch_water_consumed_${targetDate}`);
+                    if (savedWater !== null) {
+                        dayWater = parseInt(savedWater, 10);
+                    } else {
+                        const seedW = Math.abs(Math.sin(new Date(targetDate).getDate() * 11));
+                        dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
+                    }
+                } catch (e) {
+                    const seedW = Math.abs(Math.sin(new Date(targetDate).getDate() * 11));
+                    dayWater = Math.round(targetWaterMl * (0.85 + seedW * 0.25));
+                }
             }
+
+            const times = ['6:00 AM', '9:00 AM', '12:00 PM', '3:00 PM', '6:00 PM', '9:00 PM', '11:59 PM'];
+            const waterPaces = [0.15, 0.35, 0.55, 0.70, 0.85, 0.95, 1.0];
+            const calPaces = [0.10, 0.25, 0.60, 0.70, 0.90, 1.0, 1.0];
+
+            times.forEach((time, idx) => {
+                labels.push(time);
+                hydrationActual.push(Math.round(dayWater * waterPaces[idx]));
+                hydrationTargetLine.push(targetWaterMl);
+                caloriesActual.push(Math.round(dayCal * calPaces[idx]));
+                caloriesTargetLine.push(targetCalories);
+                proteinData.push(Math.round(dayProt * calPaces[idx] * 0.35));
+                carbsData.push(Math.round(dayCarbs * calPaces[idx] * 0.45));
+                fatsData.push(Math.round(dayFats * calPaces[idx] * 0.20));
+            });
         }
 
         return {
@@ -1153,8 +1355,9 @@ const Reports = () => {
             fatsData
         };
     }, [
-        selectedInterval, customStartDate, customEndDate, pdfStatementChartData,
-        waterConsumedMl, targetWaterMl, todayNutrition, targetCalories, targetProtein, targetCarbs, targetFats
+        selectedInterval, customSingleDate, pdfStatementChartData,
+        waterConsumedMl, targetWaterMl, todayNutrition, targetCalories, targetProtein, targetCarbs, targetFats,
+        nutritionLogVersion
     ]);
 
     // Chart Configuration: Hydration
@@ -1404,15 +1607,27 @@ const Reports = () => {
                 <div class="meta-grid">
                     <div class="meta-item"><strong>Patient Name</strong> ${patientName}</div>
                     <div class="meta-item"><strong>Patient Email</strong> ${patientEmail}</div>
+                    <div class="meta-item"><strong>Demographics</strong> ${userProfile?.age ? `${userProfile.age} Yrs` : '26 Yrs'} • ${userProfile?.gender || 'Male'}</div>
+                    <div class="meta-item"><strong>Biometrics</strong> ${userProfile?.heightCm ? `${userProfile.heightCm} cm` : '176 cm'} • ${userProfile?.weightKg ? `${userProfile.weightKg} kg` : '72 kg'} (${userProfile?.heightCm && userProfile?.weightKg ? (userProfile.weightKg / Math.pow(userProfile.heightCm / 100, 2)).toFixed(1) : '23.2'} BMI)</div>
+                    <div class="meta-item"><strong>Primary Goal</strong> ${userProfile?.goal || 'Optimal Health'}</div>
+                    <div class="meta-item"><strong>Daily Targets</strong> ${targetCalories} kcal • ${targets.water} L</div>
                     <div class="meta-item"><strong>Statement Scope</strong> ${scopeTitle}</div>
                     <div class="meta-item"><strong>Evaluated Period</strong> ${dateRangeLabel}</div>
                 </div>
 
                 <div class="summary-box">
-                    <strong style="color: #166534; font-size: 11pt;">Clinical Biometric Adherence Summary:</strong>
-                    <p style="margin: 4px 0 0 0; font-size: 9.5pt; color: #1e293b;">
-                        Patient demonstrated an overall <strong>${activeStatementData.hydrationAdherence}</strong> hydration velocity adherence and a <strong>${activeStatementData.nutritionAdherence}</strong> macronutrient compliance score over the evaluated monitoring interval (${activeStatementData.dateLabel}). Caloric intake averages <strong>${activeStatementData.avgCalories} kcal/day</strong> with balanced lipid oxidation.
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="color: #166534; font-size: 11pt;">Clinical Biometric Adherence Summary & What This Statement Tells You:</strong>
+                        <span class="badge" style="background: #166534; color: #fff;">${activeStatementData.demographicSummary?.status || 'Verified'}</span>
+                    </div>
+                    <p style="margin: 0 0 8px 0; font-size: 9.5pt; color: #1e293b; line-height: 1.45;">
+                        ${activeStatementData.demographicSummary?.keyTakeaway || `Patient demonstrated an overall ${activeStatementData.hydrationAdherence} hydration velocity adherence and a ${activeStatementData.nutritionAdherence} macronutrient compliance score over the evaluated monitoring interval (${activeStatementData.dateLabel}).`}
                     </p>
+                    <div style="font-size: 9pt; color: #334155; border-top: 1px dashed #bbf7d0; padding-top: 6px; display: grid; grid-template-columns: 1fr; gap: 4px;">
+                        <div>• <strong>Hydration:</strong> ${activeStatementData.demographicSummary?.hydrationVerdict}</div>
+                        <div>• <strong>Calories & Energy:</strong> ${activeStatementData.demographicSummary?.calorieVerdict}</div>
+                        <div>• <strong>Macronutrients:</strong> ${activeStatementData.demographicSummary?.macroVerdict}</div>
+                    </div>
                 </div>
 
                 <h2>1. Fluid & Hydration Tracking (${activeStatementData.shortDate})</h2>
@@ -1707,7 +1922,7 @@ const Reports = () => {
             </div>
 
             {/* STATEMENT PERIOD CONTROLLER (Like an Account Statement Download Filter) */}
-            <div className="bg-gradient-to-r from-[#0c121e] via-[#080b12] to-[#0c121e] border border-white/10 rounded-2xl p-4 lg:p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="bg-gradient-to-r from-[#0c121e] via-[#080b12] to-[#0c121e] border border-white/10 rounded-2xl p-4 lg:p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-30">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#a5d391]/15 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391] shrink-0">
                         <span className="material-symbols-outlined text-xl">tune</span>
@@ -1729,9 +1944,23 @@ const Reports = () => {
                 <div className="flex flex-wrap items-center gap-3">
                     {/* TODAY */}
                     {viewMode === 'today' && (
-                        <div className="flex items-center gap-2 bg-[#080b12] border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                            <span className="font-bold text-emerald-300">Live Real-Time Intake Feed</span>
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 bg-[#080b12] border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                                <span className="font-bold text-emerald-300">Live Real-Time Intake Feed</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLogNutritionTargetDate(todayStr);
+                                    setIsLogNutritionModalOpen(true);
+                                }}
+                                className="px-3 py-2 rounded-xl text-xs font-bold bg-[#a5d391]/15 hover:bg-[#a5d391]/25 text-[#a5d391] border border-[#a5d391]/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                                title="Log today's daily nutrition count"
+                            >
+                                <span className="material-symbols-outlined text-xs">edit_calendar</span>
+                                <span>Log Today</span>
+                            </button>
                         </div>
                     )}
 
@@ -1758,9 +1987,23 @@ const Reports = () => {
                                     d.setDate(d.getDate() - 1);
                                     setSelectedDayDate(d.toISOString().split('T')[0]);
                                 }}
-                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-white/5 text-white/60 hover:text-white border border-white/10 transition-all cursor-pointer"
+                                className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    selectedDayDate === yesterdayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
                             >
                                 Yesterday
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLogNutritionTargetDate(selectedDayDate);
+                                    setIsLogNutritionModalOpen(true);
+                                }}
+                                className="px-3 py-2 rounded-xl text-xs font-bold bg-[#a5d391]/15 hover:bg-[#a5d391]/25 text-[#a5d391] border border-[#a5d391]/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                                title="Log or adjust nutrition count for selected day"
+                            >
+                                <span className="material-symbols-outlined text-xs">edit_calendar</span>
+                                <span>Log Day</span>
                             </button>
                         </div>
                     )}
@@ -1776,7 +2019,9 @@ const Reports = () => {
                             />
                             <button
                                 onClick={() => setSelectedWeekDate(todayStr)}
-                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-black border border-[#a5d391] transition-all cursor-pointer"
+                                className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    isSelectedThisWeek ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
                             >
                                 This Week
                             </button>
@@ -1786,7 +2031,9 @@ const Reports = () => {
                                     d.setDate(d.getDate() - 7);
                                     setSelectedWeekDate(d.toISOString().split('T')[0]);
                                 }}
-                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-white/5 text-white/60 hover:text-white border border-white/10 transition-all cursor-pointer"
+                                className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    isSelectedLastWeek ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
                             >
                                 Last Week
                             </button>
@@ -1807,7 +2054,9 @@ const Reports = () => {
                                     const d = new Date();
                                     setSelectedMonthStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
                                 }}
-                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-black border border-[#a5d391] transition-all cursor-pointer"
+                                className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    isSelectedThisMonth ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
                             >
                                 This Month
                             </button>
@@ -1817,7 +2066,9 @@ const Reports = () => {
                                     d.setMonth(d.getMonth() - 1);
                                     setSelectedMonthStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
                                 }}
-                                className="px-2.5 py-2 rounded-xl text-xs font-bold bg-white/5 text-white/60 hover:text-white border border-white/10 transition-all cursor-pointer"
+                                className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    isSelectedLastMonth ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
                             >
                                 Last Month
                             </button>
@@ -1873,6 +2124,121 @@ const Reports = () => {
                 </div>
             </div>
 
+            {/* PATIENT DEMOGRAPHICS & CLINICAL STATEMENT EVALUATION */}
+            <div className="bg-gradient-to-br from-[#0c121e]/90 via-[#080b12]/95 to-[#050810] border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[#a5d391]/5 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#38bdf8]/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div className="relative z-10 flex flex-col xl:flex-row gap-6 justify-between items-stretch">
+                    {/* LEFT: Patient Clinical Demographics Profile */}
+                    <div className="flex-1 border-b xl:border-b-0 xl:border-r border-white/10 pb-6 xl:pb-0 xl:pr-8 flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-3.5 mb-4">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#a5d391]/20 to-[#38bdf8]/20 border border-[#a5d391]/40 flex items-center justify-center text-[#a5d391] shadow-lg shrink-0">
+                                    <span className="material-symbols-outlined text-2xl">badge</span>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h4 className="text-lg font-bold text-white tracking-tight">
+                                            {userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim() : (user?.name || user?.username || 'Verified Member')}
+                                        </h4>
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
+                                            {userProfile?.goal || 'Optimal Health'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-white/50">{userProfile?.email || user?.email || 'patient-id@nutrimunch.ai'}</p>
+                                </div>
+                            </div>
+
+                            {/* Demographics Badges Grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3">
+                                <div className="bg-[#080b12]/90 border border-white/5 rounded-2xl p-3">
+                                    <span className="text-[10px] uppercase font-bold text-white/40 block">Age & Gender</span>
+                                    <span className="text-xs font-bold text-white mt-1 block">
+                                        {userProfile?.age ? `${userProfile.age} Yrs` : '26 Yrs'} • {userProfile?.gender || 'Male'}
+                                    </span>
+                                </div>
+                                <div className="bg-[#080b12]/90 border border-white/5 rounded-2xl p-3">
+                                    <span className="text-[10px] uppercase font-bold text-white/40 block">Height & Weight</span>
+                                    <span className="text-xs font-bold text-white mt-1 block">
+                                        {userProfile?.heightCm ? `${userProfile.heightCm} cm` : '176 cm'} • {userProfile?.weightKg ? `${userProfile.weightKg} kg` : '72 kg'}
+                                    </span>
+                                </div>
+                                <div className="bg-[#080b12]/90 border border-white/5 rounded-2xl p-3">
+                                    <span className="text-[10px] uppercase font-bold text-white/40 block">Body Mass Index</span>
+                                    <span className="text-xs font-bold text-[#a5d391] mt-1 block">
+                                        {userProfile?.heightCm && userProfile?.weightKg 
+                                            ? `${(userProfile.weightKg / Math.pow(userProfile.heightCm / 100, 2)).toFixed(1)} BMI` 
+                                            : '23.2 BMI'} (Normal)
+                                    </span>
+                                </div>
+                                <div className="bg-[#080b12]/90 border border-white/5 rounded-2xl p-3">
+                                    <span className="text-[10px] uppercase font-bold text-white/40 block">Daily Targets</span>
+                                    <span className="text-xs font-bold text-[#38bdf8] mt-1 block">
+                                        {targetCalories} kcal • {targets.water} L
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-white/40">
+                            <span>Activity Profile: <strong className="text-white/70">{userProfile?.activityLevel || 'Moderately Active'}</strong></span>
+                            <span>Diet Type: <strong className="text-white/70">{userProfile?.dietType || 'Balanced Macro Split'}</strong></span>
+                        </div>
+                    </div>
+
+                    {/* RIGHT: What This Statement Is Trying To Tell You */}
+                    <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-amber-400 text-lg">insights</span>
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                                        Clinical Interpretation — What This Statement Tells You
+                                    </h4>
+                                </div>
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                    {activeStatementData.demographicSummary?.status || 'Active Compliance'}
+                                </span>
+                            </div>
+
+                            <p className="text-xs text-white/80 leading-relaxed bg-[#050810]/70 p-3.5 rounded-2xl border border-white/5">
+                                {activeStatementData.demographicSummary?.keyTakeaway}
+                            </p>
+
+                            <div className="mt-3.5 space-y-2">
+                                <div className="flex items-start gap-2 text-xs">
+                                    <span className="material-symbols-outlined text-[#38bdf8] text-sm mt-0.5 shrink-0">water_drop</span>
+                                    <span className="text-white/70">
+                                        <strong className="text-white font-medium">Hydration Velocity: </strong>
+                                        {activeStatementData.demographicSummary?.hydrationVerdict}
+                                    </span>
+                                </div>
+                                <div className="flex items-start gap-2 text-xs">
+                                    <span className="material-symbols-outlined text-amber-400 text-sm mt-0.5 shrink-0">local_fire_department</span>
+                                    <span className="text-white/70">
+                                        <strong className="text-white font-medium">Caloric Energy: </strong>
+                                        {activeStatementData.demographicSummary?.calorieVerdict}
+                                    </span>
+                                </div>
+                                <div className="flex items-start gap-2 text-xs">
+                                    <span className="material-symbols-outlined text-[#a5d391] text-sm mt-0.5 shrink-0">bar_chart</span>
+                                    <span className="text-white/70">
+                                        <strong className="text-white font-medium">Macro Allocation: </strong>
+                                        {activeStatementData.demographicSummary?.macroVerdict}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-white/40">
+                            <span>Statement Cycle: <strong className="text-white/70">{activeStatementData.dateLabel}</strong></span>
+                            <span>Evaluation Window: <strong className="text-[#a5d391]">{activeStatementData.daysCount === 1 ? '1 Day (Daily)' : `${activeStatementData.daysCount} Days Aggregate`}</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* 1. CORE SECTION: DAILY HYDRATION & DAILY NUTRITION METRICS */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Hydration Count & Progress Card */}
@@ -1880,7 +2246,7 @@ const Reports = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-[#38bdf8]/5 rounded-full blur-3xl pointer-events-none"></div>
 
                     <div>
-                        <div className="flex justify-between items-start mb-4">
+                        <div className="flex flex-wrap justify-between items-start gap-2 mb-4">
                             <div>
                                 <span className="text-[#38bdf8] text-[10px] font-bold uppercase tracking-widest block mb-1">
                                     {activeStatementData.scopeName}
@@ -1890,36 +2256,72 @@ const Reports = () => {
                                     {viewMode === 'today' ? 'Daily Hydration Count' : (viewMode === 'daily' ? 'Daily Hydration Count' : `${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} Hydration Count`)}
                                 </h3>
                             </div>
-                            <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${
-                                activeStatementData.waterPercent >= 100 
-                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
-                                    : 'bg-[#38bdf8]/15 text-[#38bdf8] border-[#38bdf8]/30'
-                            }`}>
-                                {activeStatementData.waterPercent >= 100 ? 'Target Completed' : 'In Progress'}
-                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${
+                                    activeStatementData.waterPercent >= 100 
+                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                                        : 'bg-[#38bdf8]/15 text-[#38bdf8] border-[#38bdf8]/30'
+                                }`}>
+                                    {activeStatementData.waterPercent >= 100 ? 'Target Completed' : 'In Progress'}
+                                </span>
+                                {(viewMode === 'today' || viewMode === 'daily') ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setLogWaterTargetDate(viewMode === 'today' ? todayStr : selectedDayDate);
+                                            setIsLogWaterModalOpen(true);
+                                        }}
+                                        className="px-3 py-1 rounded-full bg-gradient-to-r from-[#38bdf8]/20 to-cyan-500/20 hover:from-[#38bdf8]/30 hover:to-cyan-500/30 text-[#38bdf8] hover:text-white border border-[#38bdf8]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                                        title="Log or adjust fluid intake for this date"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">water_drop</span>
+                                        <span>+ Log Water Count</span>
+                                    </button>
+                                ) : (
+                                    <span 
+                                        className="text-[10px] font-semibold text-white/40 bg-white/5 px-2.5 py-1 rounded-full border border-white/5 flex items-center gap-1"
+                                        title="Hydration logging is restricted to single-day entry only. Switch to Daily or Today view to log water."
+                                    >
+                                        <span className="material-symbols-outlined text-xs text-amber-400/80">lock</span>
+                                        <span>Daily Log Only</span>
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Hydration Stats Grid */}
                         <div className="grid grid-cols-3 gap-3 my-6 text-center">
                             <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
-                                <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">Total Target</span>
-                                <strong className="text-xl font-bold text-white">{targets.water} L</strong>
-                                <span className="text-[10px] text-white/40 block mt-0.5">{targetWaterMl} ml</span>
+                                <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">
+                                    {activeStatementData.daysCount > 1 ? `${activeStatementData.daysCount}-Day Target` : 'Total Target'}
+                                </span>
+                                <strong className="text-xl font-bold text-white">
+                                    {activeStatementData.daysCount > 1 ? `${activeStatementData.cumulativeWaterTarget} L` : `${targets.water} L`}
+                                </strong>
+                                <span className="text-[10px] text-white/40 block mt-0.5">
+                                    {activeStatementData.daysCount > 1 ? `(${targets.water} L/day baseline)` : `${targetWaterMl} ml`}
+                                </span>
                             </div>
 
                             <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-[#38bdf8]/30">
                                 <span className="text-[10px] uppercase font-bold text-[#38bdf8]/70 block mb-1">
-                                    {activeStatementData.daysCount === 1 ? 'Water Taken' : 'Avg Taken/Day'}
+                                    {activeStatementData.daysCount === 1 ? 'Water Taken' : 'Avg Taken / Day'}
                                 </span>
-                                <strong className="text-xl font-bold text-[#38bdf8]">{(activeStatementData.waterConsumed / 1000).toFixed(2)} L</strong>
-                                <span className="text-[10px] text-[#38bdf8]/60 block mt-0.5">{activeStatementData.waterConsumed} ml</span>
+                                <strong className="text-xl font-bold text-[#38bdf8]">
+                                    {(activeStatementData.waterConsumed / 1000).toFixed(2)} L
+                                </strong>
+                                <span className="text-[10px] text-[#38bdf8]/60 block mt-0.5">
+                                    {activeStatementData.waterConsumed} ml/day
+                                </span>
                             </div>
 
                             <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
                                 <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">% Completed</span>
                                 <strong className="text-xl font-bold text-[#a5d391]">{activeStatementData.waterPercent}%</strong>
                                 <span className="text-[10px] text-white/40 block mt-0.5">
-                                    {activeStatementData.waterDeficit > 0 ? `${activeStatementData.waterDeficit} ml left` : 'Completed'}
+                                    {activeStatementData.daysCount > 1 
+                                        ? `${activeStatementData.cumulativeWaterConsumed} L of ${activeStatementData.cumulativeWaterTarget} L` 
+                                        : (activeStatementData.waterDeficit > 0 ? `${activeStatementData.waterDeficit} ml left` : 'Completed')}
                                 </span>
                             </div>
                         </div>
@@ -1933,14 +2335,14 @@ const Reports = () => {
                             <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden p-0.5">
                                 <div 
                                     className="h-full bg-gradient-to-r from-[#38bdf8] to-[#a5d391] rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(56,189,248,0.5)]"
-                                    style={{ width: `${activeStatementData.waterPercent}%` }}
+                                    style={{ width: `${Math.min(activeStatementData.waterPercent, 100)}%` }}
                                 ></div>
                             </div>
                         </div>
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-white/50">
-                        <span>Total Fluid Intake: <strong className="text-white">{activeStatementData.totalWaterLiters} L</strong></span>
+                        <span>Total Fluid Intake: <strong className="text-white">{activeStatementData.daysCount > 1 ? `${activeStatementData.cumulativeWaterConsumed} L` : `${activeStatementData.totalWaterLiters} L`}</strong></span>
                         <span>Adherence Velocity: <strong className="text-[#a5d391]">{activeStatementData.adherenceRate}</strong></span>
                     </div>
                 </div>
@@ -1950,7 +2352,7 @@ const Reports = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-[#a5d391]/5 rounded-full blur-3xl pointer-events-none"></div>
 
                     <div>
-                        <div className="flex justify-between items-start mb-4">
+                        <div className="flex flex-wrap justify-between items-start gap-2 mb-4">
                             <div>
                                 <span className="text-[#a5d391] text-[10px] font-bold uppercase tracking-widest block mb-1">
                                     {activeStatementData.scopeName}
@@ -1960,17 +2362,48 @@ const Reports = () => {
                                     {viewMode === 'today' ? 'Daily Nutrition Count' : (viewMode === 'daily' ? 'Daily Nutrition Count' : `${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} Nutrition Count`)}
                                 </h3>
                             </div>
-                            <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
-                                {activeStatementData.caloriePercent}% Calorie Target Met
-                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
+                                    {activeStatementData.caloriePercent}% Calorie Target Met
+                                </span>
+                                {(viewMode === 'today' || viewMode === 'daily') ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setLogNutritionTargetDate(viewMode === 'today' ? todayStr : selectedDayDate);
+                                            setIsLogNutritionModalOpen(true);
+                                        }}
+                                        className="px-3 py-1 rounded-full bg-gradient-to-r from-[#a5d391]/20 to-emerald-500/20 hover:from-[#a5d391]/30 hover:to-emerald-500/30 text-[#a5d391] hover:text-white border border-[#a5d391]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                                        title="Log or adjust daily food intake & macro count for this date"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">edit_calendar</span>
+                                        <span>+ Log Daily Count</span>
+                                    </button>
+                                ) : (
+                                    <span 
+                                        className="text-[10px] font-semibold text-white/40 bg-white/5 px-2.5 py-1 rounded-full border border-white/5 flex items-center gap-1"
+                                        title="Nutrition logging is restricted to single-day entry only. Switch to Daily or Today view to log nutrition."
+                                    >
+                                        <span className="material-symbols-outlined text-xs text-amber-400/80">lock</span>
+                                        <span>Daily Log Only</span>
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Calories Progress Meter */}
                         <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5 mb-4">
                             <div className="flex justify-between items-baseline mb-2">
-                                <div className="text-xs text-white/50">Daily Calorie Target: <strong className="text-white">{targetCalories} kcal</strong></div>
+                                <div className="text-xs text-white/50">
+                                    {activeStatementData.daysCount > 1 
+                                        ? `Cumulative Target: ${activeStatementData.cumulativeCalorieTarget.toLocaleString()} kcal (${activeStatementData.daysCount} Days)`
+                                        : `Daily Calorie Target: ${targetCalories} kcal`}
+                                </div>
                                 <div className="text-base font-extrabold text-[#a5d391]">
-                                    {activeStatementData.calories} <span className="text-xs font-normal text-white/50">kcal ({activeStatementData.caloriePercent}%)</span>
+                                    {activeStatementData.daysCount > 1 
+                                        ? `${activeStatementData.cumulativeCalories.toLocaleString()} kcal` 
+                                        : `${activeStatementData.calories} kcal`} 
+                                    <span className="text-xs font-normal text-white/50"> ({activeStatementData.caloriePercent}%)</span>
                                 </div>
                             </div>
                             <div className="w-full bg-white/10 h-2.5 rounded-full overflow-hidden">
@@ -1978,12 +2411,20 @@ const Reports = () => {
                                     className={`h-full rounded-full transition-all duration-700 ${
                                         activeStatementData.calories > targetCalories ? 'bg-amber-400' : 'bg-[#a5d391]'
                                     }`}
-                                    style={{ width: `${activeStatementData.caloriePercent}%` }}
+                                    style={{ width: `${Math.min(activeStatementData.caloriePercent, 100)}%` }}
                                 ></div>
                             </div>
                             <div className="flex justify-between text-[10px] text-white/40 mt-1.5">
-                                <span>{activeStatementData.calorieRemaining > 0 ? `${activeStatementData.calorieRemaining} kcal remaining` : 'Target met'}</span>
-                                <span>{activeStatementData.calories > targetCalories ? `+${activeStatementData.calories - targetCalories} kcal surplus` : 'On track'}</span>
+                                <span>
+                                    {activeStatementData.daysCount > 1 
+                                        ? `Daily Average: ${activeStatementData.avgCalories} kcal/day (Baseline: ${targetCalories} kcal)`
+                                        : (activeStatementData.calorieRemaining > 0 ? `${activeStatementData.calorieRemaining} kcal remaining` : 'Target met')}
+                                </span>
+                                <span>
+                                    {activeStatementData.avgCalories > targetCalories 
+                                        ? `+${activeStatementData.avgCalories - targetCalories} kcal surplus` 
+                                        : `${targetCalories - activeStatementData.avgCalories} kcal deficit (On track)`}
+                                </span>
                             </div>
                         </div>
 
@@ -1993,24 +2434,30 @@ const Reports = () => {
                             <div className="bg-[#080b12]/60 p-3 rounded-2xl border border-[#a5d391]/20">
                                 <span className="text-[9px] uppercase font-bold text-[#a5d391]/70 block mb-1">Protein</span>
                                 <strong className="text-base font-bold text-[#a5d391]">{activeStatementData.protein}g</strong>
-                                <span className="text-[10px] text-white/40 block">/ {targetProtein}g</span>
-                                <span className="text-[10px] font-bold text-white/80 block mt-1">{activeStatementData.proteinPercent}%</span>
+                                <span className="text-[10px] text-white/40 block">/ {targetProtein}g/day</span>
+                                <span className="text-[10px] font-bold text-white/80 block mt-1">
+                                    {activeStatementData.daysCount > 1 ? `${activeStatementData.cumulativeProtein}g total (${activeStatementData.proteinPercent}%)` : `${activeStatementData.proteinPercent}%`}
+                                </span>
                             </div>
 
                             {/* Carbs */}
                             <div className="bg-[#080b12]/60 p-3 rounded-2xl border border-[#38bdf8]/20">
                                 <span className="text-[9px] uppercase font-bold text-[#38bdf8]/70 block mb-1">Carbohydrates</span>
                                 <strong className="text-base font-bold text-[#38bdf8]">{activeStatementData.carbs}g</strong>
-                                <span className="text-[10px] text-white/40 block">/ {targetCarbs}g</span>
-                                <span className="text-[10px] font-bold text-white/80 block mt-1">{activeStatementData.carbsPercent}%</span>
+                                <span className="text-[10px] text-white/40 block">/ {targetCarbs}g/day</span>
+                                <span className="text-[10px] font-bold text-white/80 block mt-1">
+                                    {activeStatementData.daysCount > 1 ? `${activeStatementData.cumulativeCarbs}g total (${activeStatementData.carbsPercent}%)` : `${activeStatementData.carbsPercent}%`}
+                                </span>
                             </div>
 
                             {/* Fats */}
                             <div className="bg-[#080b12]/60 p-3 rounded-2xl border border-yellow-400/20">
                                 <span className="text-[9px] uppercase font-bold text-yellow-400/70 block mb-1">Fats</span>
                                 <strong className="text-base font-bold text-yellow-400">{activeStatementData.fats}g</strong>
-                                <span className="text-[10px] text-white/40 block">/ {targetFats}g</span>
-                                <span className="text-[10px] font-bold text-white/80 block mt-1">{activeStatementData.fatsPercent}%</span>
+                                <span className="text-[10px] text-white/40 block">/ {targetFats}g/day</span>
+                                <span className="text-[10px] font-bold text-white/80 block mt-1">
+                                    {activeStatementData.daysCount > 1 ? `${activeStatementData.cumulativeFats}g total (${activeStatementData.fatsPercent}%)` : `${activeStatementData.fatsPercent}%`}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -2178,24 +2625,34 @@ const Reports = () => {
                         ))}
                     </div>
 
-                    {/* Custom Date Range Selector (When CUSTOM is active) */}
+                    {/* Custom Date Selector (When CUSTOM is active - Restricted strictly to ONE date) */}
                     {selectedInterval === 'CUSTOM' && (
                         <div className="flex flex-wrap items-center gap-2 animate-in fade-in duration-150">
+                            <span className="text-xs font-bold text-white/50 uppercase tracking-wide">Select Date:</span>
                             <DarkCalendarPicker
-                                value={customStartDate}
-                                onChange={(val) => setCustomStartDate(val)}
-                                maxDate={customEndDate || todayStr}
-                                mode="day"
-                                label="From:"
-                            />
-                            <DarkCalendarPicker
-                                value={customEndDate}
-                                onChange={(val) => setCustomEndDate(val)}
+                                value={customSingleDate}
+                                onChange={(val) => setCustomSingleDate(val)}
                                 maxDate={todayStr}
-                                minDate={customStartDate}
                                 mode="day"
-                                label="To:"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setCustomSingleDate(todayStr)}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    customSingleDate === todayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
+                            >
+                                Today
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCustomSingleDate(yesterdayStr)}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    customSingleDate === yesterdayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
+                            >
+                                Yesterday
+                            </button>
                         </div>
                     )}
                 </div>
@@ -2324,6 +2781,935 @@ const Reports = () => {
                             <span className="material-symbols-outlined text-sm text-white/40 group-hover:text-amber-400 transition-colors">download</span>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* DAILY NUTRITION LOGGING MODAL: Strictly single-day logging */}
+            <LogDailyNutritionModal
+                isOpen={isLogNutritionModalOpen}
+                onClose={() => setIsLogNutritionModalOpen(false)}
+                initialDate={logNutritionTargetDate}
+                todayStr={todayStr}
+                yesterdayStr={yesterdayStr}
+                targets={targets}
+                onLogUpdated={(dateLogged, foods, msg) => {
+                    setNutritionLogVersion(v => v + 1);
+                    if (dateLogged === todayStr) {
+                        const totals = foods.reduce((acc, f) => ({
+                            calories: acc.calories + (f.calories || 0),
+                            protein: acc.protein + (f.protein || 0),
+                            carbs: acc.carbs + (f.carbs || 0),
+                            fats: acc.fats + (f.fats || 0)
+                        }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+                        setTodayNutrition(totals);
+                    }
+                    setDownloadSuccessToast(msg || `Daily nutrition count for ${dateLogged} saved successfully.`);
+                    setTimeout(() => setDownloadSuccessToast(null), 4000);
+                }}
+            />
+
+            {/* DAILY WATER LOGGING MODAL: Strictly single-day logging */}
+            <LogDailyWaterModal
+                isOpen={isLogWaterModalOpen}
+                onClose={() => setIsLogWaterModalOpen(false)}
+                initialDate={logWaterTargetDate}
+                todayStr={todayStr}
+                yesterdayStr={yesterdayStr}
+                targetWaterMl={targetWaterMl}
+                targets={targets}
+                onWaterUpdated={(dateLogged, totalMl, msg) => {
+                    setNutritionLogVersion(v => v + 1);
+                    if (dateLogged === todayStr) {
+                        setWaterConsumedMl(totalMl);
+                    }
+                    setDownloadSuccessToast(msg || `Fluid intake for ${dateLogged} saved successfully.`);
+                    setTimeout(() => setDownloadSuccessToast(null), 4000);
+                }}
+            />
+        </div>
+    );
+};
+
+/**
+ * LogDailyNutritionModal Component
+ * Allows users to log or adjust previous days' daily nutrition count (or today).
+ * Strictly enforced to single-day resolution (no weekly/multi-day batch entry).
+ */
+const LogDailyNutritionModal = ({
+    isOpen,
+    onClose,
+    initialDate,
+    todayStr,
+    yesterdayStr,
+    targets,
+    onLogUpdated
+}) => {
+    const [selectedDate, setSelectedDate] = useState(initialDate || todayStr);
+    const [activeTab, setActiveTab] = useState('direct'); // 'direct' | 'database'
+
+    // Direct Nutrition Totals State
+    const [directCalories, setDirectCalories] = useState('');
+    const [directProtein, setDirectProtein] = useState('');
+    const [directCarbs, setDirectCarbs] = useState('');
+    const [directFats, setDirectFats] = useState('');
+    const [directLabel, setDirectLabel] = useState('Daily Nutrition Count');
+
+    // Food Database Search State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [selectedFood, setSelectedFood] = useState(null);
+    const [servingMultiplier, setServingMultiplier] = useState(1);
+    const [selectedMeal, setSelectedMeal] = useState('Breakfast');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    // Current Logged Foods State for the active date
+    const [dayLoggedFoods, setDayLoggedFoods] = useState([]);
+    const [feedbackMsg, setFeedbackMsg] = useState(null);
+
+    const searchRef = useRef(null);
+
+    // Sync selectedDate with initialDate prop when modal opens
+    useEffect(() => {
+        if (initialDate) setSelectedDate(initialDate);
+    }, [initialDate, isOpen]);
+
+    // Load logged foods whenever selectedDate or isOpen changes
+    useEffect(() => {
+        if (!isOpen) return;
+        try {
+            const saved = localStorage.getItem(`nutrimunch_logged_foods_${selectedDate}`);
+            if (saved) {
+                setDayLoggedFoods(JSON.parse(saved));
+            } else {
+                setDayLoggedFoods([]);
+            }
+        } catch (e) {
+            setDayLoggedFoods([]);
+        }
+        setFeedbackMsg(null);
+    }, [selectedDate, isOpen]);
+
+    // Handle outside clicks to close autocomplete dropdown
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (searchRef.current && !searchRef.current.contains(e.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Current day calculated totals
+    const dayTotals = useMemo(() => {
+        return dayLoggedFoods.reduce((acc, f) => ({
+            calories: acc.calories + (f.calories || 0),
+            protein: acc.protein + (f.protein || 0),
+            carbs: acc.carbs + (f.carbs || 0),
+            fats: acc.fats + (f.fats || 0)
+        }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+    }, [dayLoggedFoods]);
+
+    if (!isOpen) return null;
+
+    // Helper: Persist updated array to localStorage and notify parent
+    const persistLoggedFoods = (updatedFoods, successMessage) => {
+        try {
+            localStorage.setItem(`nutrimunch_logged_foods_${selectedDate}`, JSON.stringify(updatedFoods));
+            setDayLoggedFoods(updatedFoods);
+            window.dispatchEvent(new Event('storage'));
+            if (onLogUpdated) {
+                onLogUpdated(selectedDate, updatedFoods, successMessage);
+            }
+            setFeedbackMsg(successMessage || 'Updated successfully');
+            setTimeout(() => setFeedbackMsg(null), 3500);
+        } catch (e) {
+            console.error('Failed to save nutrition log:', e);
+        }
+    };
+
+    // Handler: Search Food Database
+    const handleSearchChange = (e) => {
+        const query = e.target.value;
+        setSearchQuery(query);
+        if (query.trim().length > 0) {
+            const results = searchFoodDatabase(query, 10);
+            setSearchResults(results);
+            setIsDropdownOpen(true);
+        } else {
+            setSearchResults([]);
+            setIsDropdownOpen(false);
+        }
+    };
+
+    // Handler: Select item from autocomplete
+    const handleSelectFood = (food) => {
+        setSelectedFood(food);
+        setServingMultiplier(1);
+        setIsDropdownOpen(false);
+        setSearchQuery(food.name);
+    };
+
+    // Handler: Save Direct Daily Count
+    const handleSaveDirect = (e) => {
+        e.preventDefault();
+        const cal = parseInt(directCalories, 10);
+        if (isNaN(cal) || cal <= 0) {
+            setFeedbackMsg('Please enter a valid calorie count (e.g. 1850).');
+            return;
+        }
+
+        const newEntry = {
+            id: `log_direct_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            name: directLabel.trim() || 'Daily Nutrition Total',
+            category: 'Daily Direct Log',
+            mealType: 'Daily Total',
+            servingSize: '1 Day',
+            multiplier: 1,
+            calories: cal,
+            protein: parseFloat(directProtein) || 0,
+            carbs: parseFloat(directCarbs) || 0,
+            fats: parseFloat(directFats) || 0,
+            loggedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: Date.now()
+        };
+
+        const updated = [...dayLoggedFoods, newEntry];
+        persistLoggedFoods(updated, `Logged ${cal} kcal for ${selectedDate}`);
+        setDirectCalories('');
+        setDirectProtein('');
+        setDirectCarbs('');
+        setDirectFats('');
+    };
+
+    // Handler: Add from Database
+    const handleAddFromDatabase = (e) => {
+        e.preventDefault();
+        if (!selectedFood) {
+            setFeedbackMsg('Please select a food item from the search results.');
+            return;
+        }
+
+        const mult = Math.max(0.1, parseFloat(servingMultiplier) || 1);
+        const newEntry = {
+            id: `log_db_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            foodId: selectedFood.id,
+            name: selectedFood.name,
+            category: selectedFood.category,
+            mealType: selectedMeal,
+            servingSize: selectedFood.servingSize,
+            multiplier: mult,
+            calories: Math.round(selectedFood.calories * mult),
+            protein: parseFloat((selectedFood.protein * mult).toFixed(1)),
+            carbs: parseFloat((selectedFood.carbs * mult).toFixed(1)),
+            fats: parseFloat((selectedFood.fats * mult).toFixed(1)),
+            loggedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: Date.now()
+        };
+
+        const updated = [...dayLoggedFoods, newEntry];
+        persistLoggedFoods(updated, `Added ${selectedFood.name} (${newEntry.calories} kcal)`);
+        setSelectedFood(null);
+        setSearchQuery('');
+        setServingMultiplier(1);
+    };
+
+    // Handler: Delete single item
+    const handleDeleteItem = (id) => {
+        const updated = dayLoggedFoods.filter(f => f.id !== id);
+        persistLoggedFoods(updated, 'Entry removed');
+    };
+
+    // Handler: Clear all for this date
+    const handleClearDay = () => {
+        if (window.confirm(`Clear all ${dayLoggedFoods.length} logged entries for ${selectedDate}?`)) {
+            persistLoggedFoods([], `Cleared all entries for ${selectedDate}`);
+        }
+    };
+
+    const formattedSelectedDate = new Date(selectedDate).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-[#0c121e] border border-white/15 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative">
+                
+                {/* Modal Header */}
+                <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#0c121e] via-[#080b12] to-[#0c121e]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-[#a5d391]/15 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391] shrink-0">
+                            <span className="material-symbols-outlined text-xl">edit_calendar</span>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <span>Log Daily Nutrition Count</span>
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30">
+                                    Daily Only
+                                </span>
+                            </h3>
+                            <p className="text-xs text-white/50">
+                                Log verified nutrition metrics for previous calendar days or today.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 scrollbar-thin scrollbar-thumb-white/10">
+                    
+                    {/* Clinical Single-Day Constraint Alert */}
+                    <div className="p-3.5 rounded-2xl bg-amber-400/10 border border-amber-400/25 flex items-start gap-2.5 text-xs text-amber-300">
+                        <span className="material-symbols-outlined text-amber-400 text-base shrink-0 mt-0.5">verified_user</span>
+                        <div>
+                            <strong className="font-bold">Daily-Wise Logging Policy: </strong>
+                            Nutrition count can only be added for a specific single day. Multi-day or weekly bulk batch logging is disabled to maintain clinical telemetry integrity.
+                        </div>
+                    </div>
+
+                    {/* Single Date Selector Bar */}
+                    <div className="bg-[#080b12] p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase text-white/50 tracking-wider">Date to Log:</span>
+                            <DarkCalendarPicker
+                                value={selectedDate}
+                                onChange={(val) => setSelectedDate(val)}
+                                maxDate={todayStr}
+                                mode="day"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedDate(todayStr)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    selectedDate === todayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
+                            >
+                                Today
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedDate(yesterdayStr)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    selectedDate === yesterdayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
+                            >
+                                Yesterday
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Day Calculated Totals Banner */}
+                    <div className="bg-gradient-to-br from-[#0c121e] to-[#080b12] border border-white/10 rounded-2xl p-4">
+                        <div className="flex items-center justify-between mb-3 text-xs">
+                            <span className="text-white/60 font-medium">
+                                Total Logged for <strong className="text-white font-bold">{formattedSelectedDate}</strong>:
+                            </span>
+                            <span className="text-[#a5d391] font-bold">
+                                {dayTotals.calories} / {targets.calories} kcal ({targets.calories > 0 ? Math.round((dayTotals.calories / targets.calories) * 100) : 0}%)
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                            <div className="bg-white/5 p-2 rounded-xl border border-white/5">
+                                <span className="text-[10px] uppercase text-white/40 block font-bold">Calories</span>
+                                <strong className="text-sm font-bold text-[#a5d391]">{dayTotals.calories}</strong>
+                                <span className="text-[10px] text-white/40 block">kcal</span>
+                            </div>
+                            <div className="bg-white/5 p-2 rounded-xl border border-white/5">
+                                <span className="text-[10px] uppercase text-white/40 block font-bold">Protein</span>
+                                <strong className="text-sm font-bold text-[#a5d391]">{dayTotals.protein}</strong>
+                                <span className="text-[10px] text-white/40 block">g / {targets.protein}g</span>
+                            </div>
+                            <div className="bg-white/5 p-2 rounded-xl border border-white/5">
+                                <span className="text-[10px] uppercase text-white/40 block font-bold">Carbs</span>
+                                <strong className="text-sm font-bold text-[#38bdf8]">{dayTotals.carbs}</strong>
+                                <span className="text-[10px] text-white/40 block">g / {targets.carbs}g</span>
+                            </div>
+                            <div className="bg-white/5 p-2 rounded-xl border border-white/5">
+                                <span className="text-[10px] uppercase text-white/40 block font-bold">Fats</span>
+                                <strong className="text-sm font-bold text-amber-400">{dayTotals.fats}</strong>
+                                <span className="text-[10px] text-white/40 block">g / {targets.fats}g</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Feedback Toast Banner */}
+                    {feedbackMsg && (
+                        <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center justify-between animate-in fade-in duration-150">
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">check_circle</span>
+                                <span>{feedbackMsg}</span>
+                            </div>
+                            <button type="button" onClick={() => setFeedbackMsg(null)} className="text-white/40 hover:text-white">✕</button>
+                        </div>
+                    )}
+
+                    {/* Input Mode Selector Tabs */}
+                    <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('direct')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                activeTab === 'direct'
+                                    ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
+                                    : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">speed</span>
+                            <span>Quick Daily Macro Count</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('database')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                activeTab === 'database'
+                                    ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
+                                    : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">search</span>
+                            <span>Food Database Item</span>
+                        </button>
+                    </div>
+
+                    {/* MODE 1: Direct Daily Totals Entry Form */}
+                    {activeTab === 'direct' && (
+                        <form onSubmit={handleSaveDirect} className="space-y-4 bg-[#080b12] p-4 rounded-2xl border border-white/10">
+                            <div className="text-xs text-white/60 mb-2">
+                                Enter the daily nutritional totals for <strong className="text-white">{formattedSelectedDate}</strong>:
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div>
+                                    <label className="text-[10px] font-bold text-white/50 uppercase block mb-1">
+                                        Calories (kcal) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="10000"
+                                        required
+                                        placeholder="e.g. 1850"
+                                        value={directCalories}
+                                        onChange={(e) => setDirectCalories(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-[#a5d391]/80 uppercase block mb-1">
+                                        Protein (g)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="500"
+                                        step="0.5"
+                                        placeholder="e.g. 120"
+                                        value={directProtein}
+                                        onChange={(e) => setDirectProtein(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-[#38bdf8]/80 uppercase block mb-1">
+                                        Carbs (g)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="1000"
+                                        step="0.5"
+                                        placeholder="e.g. 190"
+                                        value={directCarbs}
+                                        onChange={(e) => setDirectCarbs(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/15 focus:border-[#38bdf8] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-amber-400/80 uppercase block mb-1">
+                                        Fats (g)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="300"
+                                        step="0.5"
+                                        placeholder="e.g. 55"
+                                        value={directFats}
+                                        onChange={(e) => setDirectFats(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/15 focus:border-amber-400 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between pt-2">
+                                <input
+                                    type="text"
+                                    placeholder="Optional note / label (e.g. Whole Day Total, Home Cooked)"
+                                    value={directLabel}
+                                    onChange={(e) => setDirectLabel(e.target.value)}
+                                    className="w-full sm:w-2/3 bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                                />
+                                <button
+                                    type="submit"
+                                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#a5d391] hover:bg-[#b2e29e] text-black font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0"
+                                >
+                                    <span className="material-symbols-outlined text-sm font-bold">add_task</span>
+                                    <span>Save Daily Count</span>
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {/* MODE 2: Food Database Item Logger */}
+                    {activeTab === 'database' && (
+                        <form onSubmit={handleAddFromDatabase} className="space-y-4 bg-[#080b12] p-4 rounded-2xl border border-white/10">
+                            <div className="text-xs text-white/60 mb-2">
+                                Search and add food items to <strong className="text-white">{formattedSelectedDate}</strong>:
+                            </div>
+
+                            {/* Search Autocomplete */}
+                            <div ref={searchRef} className="relative">
+                                <div className="flex items-center gap-2 bg-white/5 border border-white/15 focus-within:border-[#a5d391] rounded-xl px-3 py-2">
+                                    <span className="material-symbols-outlined text-white/40 text-sm">search</span>
+                                    <input
+                                        type="text"
+                                        placeholder="Search food database (e.g. Oatmeal, Chicken, Salmon, Roti)..."
+                                        value={searchQuery}
+                                        onChange={handleSearchChange}
+                                        onFocus={() => searchQuery.trim() && setIsDropdownOpen(true)}
+                                        className="w-full bg-transparent text-xs text-white outline-none"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setSearchQuery(''); setSelectedFood(null); }}
+                                            className="text-white/40 hover:text-white text-xs"
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Autocomplete Dropdown */}
+                                {isDropdownOpen && searchResults.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-[#0c121e] border border-white/20 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-20 scrollbar-thin">
+                                        {searchResults.map((food) => (
+                                            <div
+                                                key={food.id}
+                                                onClick={() => handleSelectFood(food)}
+                                                className="p-2.5 hover:bg-white/10 transition-colors cursor-pointer border-b border-white/5 last:border-0 flex items-center justify-between text-xs"
+                                            >
+                                                <div>
+                                                    <span className="font-bold text-white block">{food.name}</span>
+                                                    <span className="text-[10px] text-white/40">{food.category} • {food.servingSize}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="font-mono font-bold text-[#a5d391] block">{food.calories} kcal</span>
+                                                    <span className="text-[10px] text-white/40">P: {food.protein}g • C: {food.carbs}g • F: {food.fats}g</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Selected Food Modifier Form */}
+                            {selectedFood && (
+                                <div className="p-3 rounded-xl bg-white/5 border border-[#a5d391]/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase text-[#a5d391] block">Selected Item:</span>
+                                        <strong className="text-sm text-white font-bold">{selectedFood.name}</strong>
+                                        <span className="text-white/40 block text-[11px]">
+                                            Base: {selectedFood.calories} kcal • P: {selectedFood.protein}g • C: {selectedFood.carbs}g • F: {selectedFood.fats}g ({selectedFood.servingSize})
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-white/50 uppercase block mb-1">Meal</label>
+                                            <select
+                                                value={selectedMeal}
+                                                onChange={(e) => setSelectedMeal(e.target.value)}
+                                                className="bg-[#080b12] border border-white/15 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none cursor-pointer"
+                                            >
+                                                <option value="Breakfast">Breakfast</option>
+                                                <option value="Lunch">Lunch</option>
+                                                <option value="Dinner">Dinner</option>
+                                                <option value="Snack">Snack</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] font-bold text-white/50 uppercase block mb-1">Servings</label>
+                                            <input
+                                                type="number"
+                                                min="0.1"
+                                                max="10"
+                                                step="0.25"
+                                                value={servingMultiplier}
+                                                onChange={(e) => setServingMultiplier(e.target.value)}
+                                                className="w-16 bg-[#080b12] border border-white/15 rounded-xl px-2 py-1.5 text-xs text-white font-mono font-bold text-center outline-none"
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            className="px-4 py-2 mt-4 rounded-xl bg-[#a5d391] hover:bg-[#b2e29e] text-black font-extrabold text-xs flex items-center gap-1 transition-all cursor-pointer shadow-md"
+                                        >
+                                            <span className="material-symbols-outlined text-sm font-bold">add</span>
+                                            <span>Add Item</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </form>
+                    )}
+
+                    {/* Logged Foods List for this day */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold uppercase text-white/50 tracking-wider">
+                                Logged Entries ({dayLoggedFoods.length})
+                            </span>
+                            {dayLoggedFoods.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleClearDay}
+                                    className="text-[11px] text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-xs">delete_sweep</span>
+                                    <span>Clear All for This Day</span>
+                                </button>
+                            )}
+                        </div>
+
+                        {dayLoggedFoods.length === 0 ? (
+                            <div className="p-6 rounded-2xl bg-white/5 border border-dashed border-white/10 text-center text-xs text-white/40">
+                                <span className="material-symbols-outlined text-2xl text-white/20 block mb-1">restaurant_menu</span>
+                                No nutrition entries logged yet for {formattedSelectedDate}.<br />
+                                Enter daily totals above or add items from the food database.
+                            </div>
+                        ) : (
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                                {dayLoggedFoods.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 flex items-center justify-between text-xs transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[#a5d391] shrink-0 font-bold text-xs">
+                                                {item.mealType ? item.mealType.charAt(0) : 'D'}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-white">{item.name}</span>
+                                                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-white/10 text-white/60">
+                                                        {item.mealType || 'Daily Total'}
+                                                    </span>
+                                                </div>
+                                                <span className="text-[10px] text-white/40 block">
+                                                    {item.servingSize} {item.multiplier && item.multiplier !== 1 ? `(${item.multiplier}x)` : ''} • P: {item.protein || 0}g • C: {item.carbs || 0}g • F: {item.fats || 0}g
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            <strong className="font-mono text-sm font-bold text-[#a5d391]">
+                                                {item.calories} kcal
+                                            </strong>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteItem(item.id)}
+                                                className="w-7 h-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center transition-colors cursor-pointer"
+                                                title="Delete entry"
+                                            >
+                                                <span className="material-symbols-outlined text-xs">delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 sm:p-5 border-t border-white/10 bg-[#080b12] flex items-center justify-between text-xs text-white/50">
+                    <span>
+                        Selected Day: <strong className="text-white font-bold">{selectedDate}</strong>
+                    </span>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors cursor-pointer"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/**
+ * LogDailyWaterModal Component
+ * Allows users to log or adjust fluid intake for any backdated calendar day (or today).
+ * Strictly single-day resolution.
+ */
+const LogDailyWaterModal = ({
+    isOpen,
+    onClose,
+    initialDate,
+    todayStr,
+    yesterdayStr,
+    targetWaterMl,
+    targets,
+    onWaterUpdated
+}) => {
+    const [selectedDate, setSelectedDate] = useState(initialDate || todayStr);
+    const [waterMl, setWaterMl] = useState(0);
+    const [customAddMl, setCustomAddMl] = useState('');
+    const [feedbackMsg, setFeedbackMsg] = useState(null);
+
+    // Sync selectedDate when initialDate changes
+    useEffect(() => {
+        if (initialDate) setSelectedDate(initialDate);
+    }, [initialDate, isOpen]);
+
+    // Load water consumption for selected date
+    useEffect(() => {
+        if (!isOpen) return;
+        try {
+            const saved = localStorage.getItem(`nutrimunch_water_consumed_${selectedDate}`);
+            if (saved !== null) {
+                setWaterMl(parseInt(saved, 10));
+            } else if (selectedDate === todayStr) {
+                const todaySaved = localStorage.getItem('nutrimunch_water_consumed');
+                setWaterMl(todaySaved ? parseInt(todaySaved, 10) : 1850);
+            } else {
+                setWaterMl(0);
+            }
+        } catch (e) {
+            setWaterMl(0);
+        }
+        setFeedbackMsg(null);
+    }, [selectedDate, isOpen, todayStr]);
+
+    if (!isOpen) return null;
+
+    const persistWater = (amount, msg) => {
+        try {
+            localStorage.setItem(`nutrimunch_water_consumed_${selectedDate}`, amount.toString());
+            if (selectedDate === todayStr) {
+                localStorage.setItem('nutrimunch_water_consumed', amount.toString());
+            }
+            setWaterMl(amount);
+            window.dispatchEvent(new Event('storage'));
+            if (onWaterUpdated) {
+                onWaterUpdated(selectedDate, amount, msg);
+            }
+            setFeedbackMsg(msg);
+            setTimeout(() => setFeedbackMsg(null), 3000);
+        } catch (e) {
+            console.error('Failed to save water log:', e);
+        }
+    };
+
+    const handleAdd = (delta) => {
+        const next = Math.max(0, waterMl + delta);
+        persistWater(next, `Added +${delta} ml for ${selectedDate} (Total: ${next} ml)`);
+    };
+
+    const handleSetTotal = (e) => {
+        e.preventDefault();
+        const val = parseInt(customAddMl, 10);
+        if (isNaN(val) || val < 0) {
+            setFeedbackMsg('Please enter a valid fluid amount in ml.');
+            return;
+        }
+        persistWater(val, `Set daily fluid total to ${val} ml for ${selectedDate}`);
+        setCustomAddMl('');
+    };
+
+    const handleReset = () => {
+        if (window.confirm(`Reset fluid intake for ${selectedDate}?`)) {
+            persistWater(0, `Reset fluid intake for ${selectedDate}`);
+        }
+    };
+
+    const percent = targetWaterMl > 0 ? Math.min(Math.round((waterMl / targetWaterMl) * 100), 100) : 0;
+    const remaining = Math.max(targetWaterMl - waterMl, 0);
+
+    const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-[#0c121e] border border-white/15 rounded-3xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl relative">
+                {/* Header */}
+                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#0c121e] via-[#080b12] to-[#0c121e]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8] shrink-0">
+                            <span className="material-symbols-outlined text-xl">water_drop</span>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <span>Log Daily Water Intake</span>
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#38bdf8]/15 text-[#38bdf8] border border-[#38bdf8]/30">
+                                    Daily Only
+                                </span>
+                            </h3>
+                            <p className="text-xs text-white/50">Record or backdate daily fluid consumption.</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-5 space-y-5">
+                    {/* Date Selector */}
+                    <div className="bg-[#080b12] p-3.5 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase text-white/50 tracking-wider">Date:</span>
+                            <DarkCalendarPicker
+                                value={selectedDate}
+                                onChange={(val) => setSelectedDate(val)}
+                                maxDate={todayStr}
+                                mode="day"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedDate(todayStr)}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    selectedDate === todayStr ? 'bg-[#38bdf8] text-black border-[#38bdf8]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
+                            >
+                                Today
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedDate(yesterdayStr)}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    selectedDate === yesterdayStr ? 'bg-[#38bdf8] text-black border-[#38bdf8]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                                }`}
+                            >
+                                Yesterday
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Feedback Toast */}
+                    {feedbackMsg && (
+                        <div className="p-3 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-bold flex items-center justify-between animate-in fade-in duration-150">
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">check_circle</span>
+                                <span>{feedbackMsg}</span>
+                            </div>
+                            <button type="button" onClick={() => setFeedbackMsg(null)} className="text-white/40 hover:text-white">✕</button>
+                        </div>
+                    )}
+
+                    {/* Fluid Progress Display */}
+                    <div className="bg-gradient-to-br from-[#0c121e] to-[#080b12] border border-[#38bdf8]/30 rounded-2xl p-4 space-y-3">
+                        <div className="flex justify-between items-baseline text-xs">
+                            <span className="text-white/60">
+                                Fluid for <strong className="text-white">{formattedDate}</strong>:
+                            </span>
+                            <span className="text-lg font-extrabold text-[#38bdf8]">
+                                {waterMl.toLocaleString()} <span className="text-xs text-white/50">/ {targetWaterMl.toLocaleString()} ml ({percent}%)</span>
+                            </span>
+                        </div>
+                        <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden p-0.5">
+                            <div
+                                className="h-full bg-gradient-to-r from-[#38bdf8] to-[#a5d391] rounded-full transition-all duration-500"
+                                style={{ width: `${percent}%` }}
+                            ></div>
+                        </div>
+                        <div className="text-[11px] text-white/50 flex justify-between">
+                            <span>{(waterMl / 1000).toFixed(2)} L of {targets.water} L daily target</span>
+                            <span>{remaining > 0 ? `${remaining.toLocaleString()} ml remaining` : '🎉 Goal achieved'}</span>
+                        </div>
+                    </div>
+
+                    {/* Quick Add Increment Buttons */}
+                    <div className="space-y-2">
+                        <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider block">Quick Add Fluid</span>
+                        <div className="grid grid-cols-4 gap-2">
+                            {[250, 500, 750, 1000].map((amt) => (
+                                <button
+                                    key={amt}
+                                    type="button"
+                                    onClick={() => handleAdd(amt)}
+                                    className="p-2.5 rounded-xl bg-white/5 hover:bg-[#38bdf8]/20 border border-white/10 hover:border-[#38bdf8]/40 text-white hover:text-[#38bdf8] text-xs font-bold transition-all cursor-pointer flex flex-col items-center gap-1 shadow-sm"
+                                >
+                                    <span className="material-symbols-outlined text-sm">water_drop</span>
+                                    <span>+{amt} ml</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Direct Set Custom Daily Total */}
+                    <form onSubmit={handleSetTotal} className="flex items-center gap-2 pt-1">
+                        <input
+                            type="number"
+                            min="0"
+                            max="20000"
+                            placeholder="Set exact daily total (e.g. 2400 ml)..."
+                            value={customAddMl}
+                            onChange={(e) => setCustomAddMl(e.target.value)}
+                            className="flex-1 bg-white/5 border border-white/15 focus:border-[#38bdf8] rounded-xl px-3 py-2 text-xs text-white outline-none font-mono"
+                        />
+                        <button
+                            type="submit"
+                            className="px-4 py-2 rounded-xl bg-[#38bdf8] hover:bg-[#60cdff] text-black font-extrabold text-xs transition-colors cursor-pointer shrink-0"
+                        >
+                            Set Total
+                        </button>
+                    </form>
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-white/10 bg-[#080b12] flex items-center justify-between text-xs">
+                    <button
+                        type="button"
+                        onClick={handleReset}
+                        className="text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-sm">restart_alt</span>
+                        <span>Reset Day's Fluid</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold transition-colors cursor-pointer"
+                    >
+                        Close
+                    </button>
                 </div>
             </div>
         </div>

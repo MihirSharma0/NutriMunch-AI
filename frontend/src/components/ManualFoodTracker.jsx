@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { searchFoodDatabase, FOOD_DATABASE } from '../data/foodDatabase';
 import api from '../api/axios';
+import DarkCalendarPicker from './DarkCalendarPicker';
 
 const MEAL_TYPES = [
     { id: 'Breakfast', label: 'Breakfast', icon: 'wb_twilight' },
@@ -10,9 +11,24 @@ const MEAL_TYPES = [
 ];
 
 const ManualFoodTracker = ({ customTargets = {} }) => {
-    // Current date for local log partitioning
-    const todayStr = new Date().toISOString().split('T')[0];
-    const storageKey = `nutrimunch_logged_foods_${todayStr}`;
+    // Current date & backdated daily logging state
+    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+    const yesterdayStr = useMemo(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().split('T')[0];
+    }, []);
+
+    const [selectedLogDate, setSelectedLogDate] = useState(() => todayStr);
+    const storageKey = `nutrimunch_logged_foods_${selectedLogDate}`;
+
+    // Entry Mode: 'search' (Food Database item) or 'direct' (Quick Daily Macro Count)
+    const [entryMode, setEntryMode] = useState('search');
+    const [directCalories, setDirectCalories] = useState('');
+    const [directProtein, setDirectProtein] = useState('');
+    const [directCarbs, setDirectCarbs] = useState('');
+    const [directFats, setDirectFats] = useState('');
+    const [directLabel, setDirectLabel] = useState('Daily Nutrition Count');
 
     // Search & Selection State
     const [searchQuery, setSearchQuery] = useState('');
@@ -23,10 +39,10 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
     const [selectedMeal, setSelectedMeal] = useState('Breakfast');
     const [feedbackMessage, setFeedbackMessage] = useState(null);
 
-    // Today's Logged Foods List
+    // Selected Date's Logged Foods List
     const [loggedFoods, setLoggedFoods] = useState(() => {
         try {
-            const saved = localStorage.getItem(storageKey);
+            const saved = localStorage.getItem(`nutrimunch_logged_foods_${todayStr}`);
             return saved ? JSON.parse(saved) : [];
         } catch (e) {
             return [];
@@ -35,10 +51,21 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
 
     const searchContainerRef = useRef(null);
 
-    // Save to localStorage whenever loggedFoods changes
+    // Reload foods when selectedLogDate changes
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(storageKey);
+            setLoggedFoods(saved ? JSON.parse(saved) : []);
+        } catch (e) {
+            setLoggedFoods([]);
+        }
+    }, [selectedLogDate, storageKey]);
+
+    // Save to localStorage whenever loggedFoods changes and broadcast to other components
     useEffect(() => {
         try {
             localStorage.setItem(storageKey, JSON.stringify(loggedFoods));
+            window.dispatchEvent(new Event('storage'));
         } catch (e) {
             console.error('Failed to save logged foods:', e);
         }
@@ -113,7 +140,7 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
         // Sync with backend progress logs if available
         const totalCals = updatedList.reduce((acc, curr) => acc + curr.calories, 0);
         api.post('/progress/me', {
-            logDate: todayStr,
+            logDate: selectedLogDate,
             caloriesConsumed: totalCals,
             notes: `Logged ${newEntry.name} (${newEntry.calories} kcal) for ${selectedMeal}. Total daily: ${totalCals} kcal`
         }).catch(() => {
@@ -124,6 +151,53 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
         setSelectedFood(null);
         setSearchQuery('');
         setServingMultiplier(1);
+    };
+
+    // Save direct macro count for selected date
+    const handleSaveDirectTotals = (e) => {
+        e.preventDefault();
+        const cal = parseInt(directCalories, 10);
+        if (isNaN(cal) || cal <= 0) {
+            setFeedbackMessage({ type: 'error', text: 'Please enter a valid calorie amount.' });
+            return;
+        }
+
+        const newEntry = {
+            id: `log_direct_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            name: directLabel.trim() || 'Daily Nutrition Total',
+            category: 'Daily Direct Log',
+            mealType: 'Daily Total',
+            servingSize: '1 Day Total',
+            multiplier: 1,
+            calories: cal,
+            protein: parseFloat(directProtein) || 0,
+            carbs: parseFloat(directCarbs) || 0,
+            fats: parseFloat(directFats) || 0,
+            fiber: 0,
+            loggedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: Date.now()
+        };
+
+        const updatedList = [newEntry, ...loggedFoods];
+        setLoggedFoods(updatedList);
+
+        setFeedbackMessage({
+            type: 'success',
+            text: `Logged ${cal} kcal for ${selectedLogDate}!`
+        });
+        setTimeout(() => setFeedbackMessage(null), 3500);
+
+        const totalCals = updatedList.reduce((acc, curr) => acc + curr.calories, 0);
+        api.post('/progress/me', {
+            logDate: selectedLogDate,
+            caloriesConsumed: totalCals,
+            notes: `Logged direct count (${cal} kcal) for ${selectedLogDate}.`
+        }).catch(() => {});
+
+        setDirectCalories('');
+        setDirectProtein('');
+        setDirectCarbs('');
+        setDirectFats('');
     };
 
     // Remove single logged item
@@ -141,22 +215,23 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
         // Recalculate and update backend
         const totalCals = updatedList.reduce((acc, curr) => acc + curr.calories, 0);
         api.post('/progress/me', {
-            logDate: todayStr,
+            logDate: selectedLogDate,
             caloriesConsumed: totalCals,
             notes: `Removed item. Total daily calories: ${totalCals} kcal`
         }).catch(() => {});
     };
 
-    // Clear all logged foods today
-    const handleClearToday = () => {
-        if (window.confirm("Are you sure you want to reset all logged meals for today?")) {
+    // Clear all logged foods for selected day
+    const handleClearDay = () => {
+        const isToday = selectedLogDate === todayStr;
+        if (window.confirm(`Are you sure you want to reset all logged meals for ${isToday ? 'today' : selectedLogDate}?`)) {
             setLoggedFoods([]);
-            setFeedbackMessage({ type: 'info', text: "Today's logged intake has been reset." });
+            setFeedbackMessage({ type: 'info', text: `${isToday ? "Today's" : selectedLogDate} logged intake has been reset.` });
             setTimeout(() => setFeedbackMessage(null), 3000);
             api.post('/progress/me', {
-                logDate: todayStr,
+                logDate: selectedLogDate,
                 caloriesConsumed: 0,
-                notes: `Daily food intake reset.`
+                notes: `Daily food intake reset for ${selectedLogDate}.`
             }).catch(() => {});
         }
     };
@@ -200,8 +275,8 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
             {/* Ambient Background Glow */}
             <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#a5d391]/5 rounded-full blur-3xl pointer-events-none"></div>
 
-            {/* Header Section */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6 relative z-10">
+            {/* Header Section with Backdated Day Controller */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6 relative z-30">
                 <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(165,211,145,0.25)]">
                         <span className="material-symbols-outlined text-2xl">restaurant_menu</span>
@@ -209,22 +284,52 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
                     <div>
                         <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#a5d391]">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-pulse"></span>
-                            Auto Daily Nutrition Count
+                            {selectedLogDate === todayStr ? "Today's Live Nutrition Log" : `Backdated Log: ${selectedLogDate}`}
                         </div>
-                        <h2 className="text-2xl font-bold font-hero-display text-white">Manual Food-Logging</h2>
-                        <p className="text-xs text-white/50">Search thousands of common foods, inspect exact macros, and log intake in real time.</p>
+                        <h2 className="text-2xl font-bold font-hero-display text-white">Daily Food & Macro Logging</h2>
+                        <p className="text-xs text-white/50">Log intake for today or select any backdated day to record previous nutritional metrics.</p>
                     </div>
                 </div>
 
-                {loggedFoods.length > 0 && (
+                {/* Backdated Date Selector Controls */}
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mr-1">Log Date:</span>
+                    <DarkCalendarPicker
+                        value={selectedLogDate}
+                        onChange={(val) => setSelectedLogDate(val)}
+                        maxDate={todayStr}
+                        mode="day"
+                    />
                     <button
-                        onClick={handleClearToday}
-                        className="self-start sm:self-auto text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                        type="button"
+                        onClick={() => setSelectedLogDate(todayStr)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            selectedLogDate === todayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                        }`}
                     >
-                        <span className="material-symbols-outlined text-sm">delete_sweep</span>
-                        <span>Reset Today's Log</span>
+                        Today
                     </button>
-                )}
+                    <button
+                        type="button"
+                        onClick={() => setSelectedLogDate(yesterdayStr)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            selectedLogDate === yesterdayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                        }`}
+                    >
+                        Yesterday
+                    </button>
+                    {loggedFoods.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={handleClearDay}
+                            className="text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0 ml-1"
+                            title={`Reset log for ${selectedLogDate}`}
+                        >
+                            <span className="material-symbols-outlined text-sm">delete_sweep</span>
+                            <span>Reset Day</span>
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Notification Banner */}
@@ -342,7 +447,118 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
                 </div>
             </div>
 
+            {/* LOGGING MODE TABS */}
+            <div className="flex items-center gap-2 border-b border-white/10 pb-3 relative z-20">
+                <button
+                    type="button"
+                    onClick={() => setEntryMode('search')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        entryMode === 'search'
+                            ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
+                            : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
+                    }`}
+                >
+                    <span className="material-symbols-outlined text-sm">search</span>
+                    <span>Search Food Database</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setEntryMode('direct')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        entryMode === 'direct'
+                            ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
+                            : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
+                    }`}
+                >
+                    <span className="material-symbols-outlined text-sm">speed</span>
+                    <span>Quick Direct Macro Entry</span>
+                </button>
+            </div>
+
+            {/* DIRECT MACRO ENTRY FORM (For quick backdated or daily whole-count entry) */}
+            {entryMode === 'direct' && (
+                <form onSubmit={handleSaveDirectTotals} className="bg-[#080b12]/90 border border-white/10 rounded-2xl p-5 space-y-4 relative z-20">
+                    <div className="flex items-center justify-between text-xs text-white/70">
+                        <span>Direct daily intake count for <strong className="text-white">{selectedLogDate}</strong>:</span>
+                        <span className="text-[10px] text-[#a5d391] font-bold uppercase tracking-wider">Single-day resolution</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                            <label className="text-[10px] font-bold text-white/50 uppercase block mb-1">Calories (kcal) *</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="10000"
+                                required
+                                placeholder="e.g. 1850"
+                                value={directCalories}
+                                onChange={(e) => setDirectCalories(e.target.value)}
+                                className="w-full bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-[#a5d391]/80 uppercase block mb-1">Protein (g)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="500"
+                                step="0.5"
+                                placeholder="e.g. 120"
+                                value={directProtein}
+                                onChange={(e) => setDirectProtein(e.target.value)}
+                                className="w-full bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-[#38bdf8]/80 uppercase block mb-1">Carbs (g)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="1000"
+                                step="0.5"
+                                placeholder="e.g. 190"
+                                value={directCarbs}
+                                onChange={(e) => setDirectCarbs(e.target.value)}
+                                className="w-full bg-white/5 border border-white/15 focus:border-[#38bdf8] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-amber-400/80 uppercase block mb-1">Fats (g)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="300"
+                                step="0.5"
+                                placeholder="e.g. 55"
+                                value={directFats}
+                                onChange={(e) => setDirectFats(e.target.value)}
+                                className="w-full bg-white/5 border border-white/15 focus:border-amber-400 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-between pt-1">
+                        <input
+                            type="text"
+                            placeholder="Optional note / label (e.g. Daily Nutritional Count, Home Meals)"
+                            value={directLabel}
+                            onChange={(e) => setDirectLabel(e.target.value)}
+                            className="w-full sm:w-2/3 bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                        />
+                        <button
+                            type="submit"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#a5d391] hover:bg-[#b2e29e] text-black font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0"
+                        >
+                            <span className="material-symbols-outlined text-sm font-bold">add_task</span>
+                            <span>Save Count for {selectedLogDate}</span>
+                        </button>
+                    </div>
+                </form>
+            )}
+
             {/* INTERACTIVE SEARCH & AUTOCOMPLETE LOGGING SECTION */}
+            {entryMode === 'search' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-20">
                 {/* Search & Food Picker Column */}
                 <div className="lg:col-span-7 space-y-4">
@@ -560,20 +776,23 @@ const ManualFoodTracker = ({ customTargets = {} }) => {
                     )}
                 </div>
             </div>
+            )}
 
-            {/* TODAY'S LOGGED FOODS INTAKE TIMELINE */}
+            {/* LOGGED FOODS INTAKE TIMELINE FOR SELECTED DATE */}
             <div className="pt-4 border-t border-white/10 relative z-10">
                 <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-[#a5d391] text-lg">history</span>
-                        <h3 className="font-bold text-base text-white">Today's Consumed Intake Log</h3>
+                        <h3 className="font-bold text-base text-white">
+                            {selectedLogDate === todayStr ? "Today's Consumed Intake Log" : `Consumed Intake Log (${selectedLogDate})`}
+                        </h3>
                         <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white/10 text-white/60">
                             {loggedFoods.length} items logged
                         </span>
                     </div>
 
                     <div className="text-xs text-white/50">
-                        Total Today: <strong className="text-[#a5d391]">{dailyTotals.calories} kcal</strong>
+                        Total {selectedLogDate === todayStr ? 'Today' : selectedLogDate}: <strong className="text-[#a5d391]">{dailyTotals.calories} kcal</strong>
                     </div>
                 </div>
 
