@@ -33,6 +33,7 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/diet-plans/all").hasRole("ADMIN")
                 .requestMatchers("/api/diet-plans/me/**").authenticated()
                 .requestMatchers("/api/auth/**", "/api/ai/**", "/api/v1/health", "/api/notifications/**", "/api/diet-plans/published", "/api/diet-plans/general", "/api/wallet/**", "/api/transactions/**", "/api/bookings/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()

@@ -559,6 +559,21 @@ const DietPlans = () => {
                                         <span className="material-symbols-outlined text-xs">sync_alt</span>
                                         <span>Import Requirements</span>
                                     </button>
+                                    {String(plan.id).startsWith('saved-ai-') && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                permanentlyDeleteDietPlan(plan, api);
+                                                setPlansList(previous => previous.filter(item => item.id !== plan.id));
+                                                if (selectedPlanId === plan.id) setSelectedPlanId(null);
+                                            }}
+                                            className="text-red-300/70 hover:text-red-300 text-[10px] font-bold px-2 py-1.5 rounded-xl transition-all cursor-pointer"
+                                            title="Delete this saved diet plan"
+                                        >
+                                            <span className="material-symbols-outlined text-xs align-middle">delete</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );

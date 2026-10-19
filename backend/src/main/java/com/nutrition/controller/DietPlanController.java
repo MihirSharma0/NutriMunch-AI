@@ -120,7 +120,7 @@ public class DietPlanController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<java.util.List<java.util.Map<String, Object>>> getAllDietPlansForAdmin() {
-        return ResponseEntity.ok(deployedPlansStore);
+    public ResponseEntity<List<DietPlanDto>> getAllDietPlansForAdmin() {
+        return ResponseEntity.ok(dietPlanService.getAllDietPlans());
     }
 }

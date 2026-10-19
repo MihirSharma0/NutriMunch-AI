@@ -16,19 +16,13 @@ const FinalCTA = () => {
                             Join thousands of others who have transformed their bodies and minds with our clinical, AI-driven nutritional protocols.
                         </p>
                         
-                        <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+                        <div className="flex justify-center items-center">
                             <Link 
                                 to="/appointments" 
                                 className="bg-[#080b12] text-white px-10 py-5 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl flex items-center gap-3 cursor-pointer"
                             >
                                 <span>Schedule Consultation</span>
                                 <span className="material-symbols-outlined text-primary text-xl">arrow_forward</span>
-                            </Link>
-                            <Link 
-                                to="/pricing" 
-                                className="bg-white/20 text-[#080b12] border border-[#080b12]/10 backdrop-blur-md px-10 py-5 rounded-full font-bold text-lg hover:bg-white/30 transition-colors flex items-center gap-3 cursor-pointer"
-                            >
-                                <span>View Pricing</span>
                             </Link>
                         </div>
                     </div>

@@ -7,6 +7,9 @@ import api from '../../../api/axios';
 const DietitianHome = () => {
     const { user } = useContext(AuthContext);
     const [walletBalance, setWalletBalance] = useState(null);
+    const [upcomingConsultations, setUpcomingConsultations] = useState([]);
+    const [consultationRecords, setConsultationRecords] = useState([]);
+    const [consultationsLoading, setConsultationsLoading] = useState(true);
 
     useEffect(() => {
         const userKeyId = user?.id || user?.userId;
@@ -133,9 +136,63 @@ const DietitianHome = () => {
         };
     }, [user]);
 
+    useEffect(() => {
+        let active = true;
+        const loadUpcomingConsultations = async () => {
+            if (!user) {
+                setConsultationsLoading(false);
+                return;
+            }
+            try {
+                const { data } = await api.get('/appointments/me');
+                const now = new Date();
+                const records = (Array.isArray(data) ? data : [])
+                    .filter(appointment => {
+                        const appointmentDate = new Date(appointment.appointmentTime);
+                        const status = String(appointment.status || '').toUpperCase();
+                        return !Number.isNaN(appointmentDate.getTime())
+                            && !['CANCELLED', 'COMPLETED', 'REJECTED'].includes(status);
+                    })
+                    .sort((a, b) => new Date(a.appointmentTime) - new Date(b.appointmentTime));
+                const upcoming = records
+                    .filter(appointment => new Date(appointment.appointmentTime) >= now)
+                    .slice(0, 4);
+                if (active) {
+                    setConsultationRecords(records);
+                    setUpcomingConsultations(upcoming);
+                }
+            } catch (error) {
+                console.error('Failed to load upcoming consultations:', error);
+                if (active) {
+                    setConsultationRecords([]);
+                    setUpcomingConsultations([]);
+                }
+            } finally {
+                if (active) setConsultationsLoading(false);
+            }
+        };
+
+        loadUpcomingConsultations();
+        const interval = setInterval(loadUpcomingConsultations, 30000);
+        return () => {
+            active = false;
+            clearInterval(interval);
+        };
+    }, [user]);
+
     if (!user) {
         return <FeatureGate />;
     }
+
+    const activeRoster = new Set(
+        consultationRecords
+            .map((appointment) => appointment.userId || appointment.userEmail || appointment.userName)
+            .filter(Boolean)
+    ).size;
+    const nextConsultation = upcomingConsultations[0];
+    const nextConsultationLabel = nextConsultation
+        ? new Date(nextConsultation.appointmentTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : 'No upcoming';
 
     return (
         <div className="w-full">
@@ -158,8 +215,8 @@ const DietitianHome = () => {
                         <span className="material-symbols-outlined text-[#a5d391] text-[20px]">groups</span>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display">42</div>
-                        <div className="text-xs text-[#a5d391] font-bold mt-1">+3 this week</div>
+                        <div className="text-3xl font-bold font-hero-display">{activeRoster}</div>
+                        <div className="text-xs text-white/50 mt-1">Patients with scheduled consultations</div>
                     </div>
                 </div>
                 
@@ -169,8 +226,8 @@ const DietitianHome = () => {
                         <span className="material-symbols-outlined text-[#a5d391] text-[20px]">analytics</span>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display">88%</div>
-                        <div className="text-xs text-white/50 mt-1">Across all active protocols</div>
+                        <div className="text-3xl font-bold font-hero-display">N/A</div>
+                        <div className="text-xs text-white/50 mt-1">No adherence records available</div>
                     </div>
                 </div>
 
@@ -207,97 +264,62 @@ const DietitianHome = () => {
                         <span className="material-symbols-outlined text-red-400 text-[20px] animate-pulse">warning</span>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display text-red-400">2</div>
-                        <div className="text-xs text-red-400/70 mt-1">Require manual override</div>
+                        <div className="text-3xl font-bold font-hero-display text-red-400">0</div>
+                        <div className="text-xs text-red-400/70 mt-1">No recorded anomalies</div>
                     </div>
                 </div>
 
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Today's Consults</div>
+                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Total Consults</div>
                         <span className="material-symbols-outlined text-[#a5d391] text-[20px]">event_available</span>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display">4</div>
-                        <div className="text-xs text-white/50 mt-1">Next at 14:00 EST</div>
+                        <div className="text-3xl font-bold font-hero-display">{consultationRecords.length}</div>
+                        <div className="text-xs text-white/50 mt-1">Next at {nextConsultationLabel}</div>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* AI Override Alerts */}
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl">
-                    <h2 className="text-lg font-bold font-hero-display mb-6 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-red-400">crisis_alert</span>
-                        Priority Interventions
-                    </h2>
-                    
-                    <div className="space-y-4">
-                        <div className="bg-[#080b12]/80 border border-red-500/30 rounded-2xl p-5 relative overflow-hidden">
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
-                            <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-                                <div>
-                                    <span className="text-xs font-bold bg-red-500/20 text-red-400 px-2.5 py-1 rounded-md uppercase tracking-widest">CGM Spike Detected</span>
-                                </div>
-                                <span className="text-xs text-white/40">10m ago</span>
-                            </div>
-                            <h3 className="font-bold text-white mb-1">Subject: David M. (ID: 442)</h3>
-                            <p className="text-white/60 text-sm mb-4">
-                                AI algorithm detected a sustained glucose spike &gt; 180 mg/dL after prescribed "Kinetic Bowl". Generative engine paused future carb loading. Human verification required to approve alternate formulation.
-                            </p>
-                            <button className="text-xs font-bold text-[#a5d391] hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1 cursor-pointer">
-                                Review Protocol <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                            </button>
-                        </div>
-
-                        <div className="bg-[#080b12]/80 border border-yellow-500/30 rounded-2xl p-5 relative overflow-hidden">
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500"></div>
-                            <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-                                <div>
-                                    <span className="text-xs font-bold bg-yellow-500/20 text-yellow-500 px-2.5 py-1 rounded-md uppercase tracking-widest">Adherence Drop</span>
-                                </div>
-                                <span className="text-xs text-white/40">2h ago</span>
-                            </div>
-                            <h3 className="font-bold text-white mb-1">Subject: Sarah J. (ID: 891)</h3>
-                            <p className="text-white/60 text-sm mb-4">
-                                Macro adherence dropped below 70% for 3 consecutive days. Generative engine suggests switching from "Hypertrophy" to "Maintenance" template to reduce fatigue.
-                            </p>
-                            <button className="text-xs font-bold text-[#a5d391] hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1 cursor-pointer">
-                                Review Protocol <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
+            <div className="grid grid-cols-1 gap-8">
                 {/* Upcoming Schedule */}
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl">
                     <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
                         <h2 className="text-lg font-bold font-hero-display flex items-center gap-2">
                             <span className="material-symbols-outlined text-[#a5d391]">videocam</span>
-                            Today's Consultations
+                            Upcoming Consultations
                         </h2>
-                        <span className="text-xs text-[#a5d391] uppercase tracking-widest font-black bg-[#a5d391]/10 px-3 py-1 rounded-full border border-[#a5d391]/20">OCT 12</span>
+                        <span className="text-xs text-[#a5d391] uppercase tracking-widest font-black bg-[#a5d391]/10 px-3 py-1 rounded-full border border-[#a5d391]/20">
+                            {upcomingConsultations.length} Scheduled
+                        </span>
                     </div>
 
                     <div className="space-y-4">
-                        {[
-                            { time: "10:00 AM", name: "Marcus Chen", type: "Baseline Review", status: "completed" },
-                            { time: "02:00 PM", name: "Sarah Jenkins", type: "Protocol Adjustment", status: "next" },
-                            { time: "04:30 PM", name: "David M.", type: "Emergency Override Consult", status: "pending" },
-                        ].map((consult, idx) => (
-                            <div key={idx} className={`flex items-center gap-3 sm:gap-4 p-4 rounded-2xl border ${consult.status === 'next' ? 'bg-[#a5d391]/10 border-[#a5d391]/30' : 'bg-[#080b12]/80 border-white/10'}`}>
+                        {consultationsLoading ? (
+                            <div className="py-8 text-center text-xs text-white/50">Loading upcoming consultations…</div>
+                        ) : upcomingConsultations.length === 0 ? (
+                            <div className="py-8 text-center">
+                                <span className="material-symbols-outlined text-3xl text-white/25">event_available</span>
+                                <p className="text-xs text-white/50 mt-2">No upcoming consultations scheduled.</p>
+                            </div>
+                        ) : upcomingConsultations.map((consult, idx) => {
+                            const appointmentDate = new Date(consult.appointmentTime);
+                            const isNext = idx === 0;
+                            const patientName = consult.userName || consult.userEmail || 'Patient';
+                            const sessionTitle = consult.title || consult.sessionType || 'Nutrition Consultation';
+                            return (
+                            <div key={consult.id || `${consult.appointmentTime}-${idx}`} className={`flex items-center gap-3 sm:gap-4 p-4 rounded-2xl border ${isNext ? 'bg-[#a5d391]/10 border-[#a5d391]/30' : 'bg-[#080b12]/80 border-white/10'}`}>
                                 <div className="text-center min-w-[56px] sm:min-w-[70px]">
-                                    <div className="font-bold text-sm">{consult.time.split(' ')[0]}</div>
-                                    <div className="text-[10px] text-white/40 uppercase tracking-widest">{consult.time.split(' ')[1]}</div>
+                                    <div className="font-bold text-sm">{appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                    <div className="text-[10px] text-white/40 uppercase tracking-widest">{appointmentDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
                                 </div>
                                 <div className="w-px h-8 bg-white/10"></div>
                                 <div className="flex-grow min-w-0">
-                                    <div className="font-bold text-sm truncate">{consult.name}</div>
-                                    <div className="text-xs text-white/50 truncate">{consult.type}</div>
+                                    <div className="font-bold text-sm truncate">{patientName}</div>
+                                    <div className="text-xs text-white/50 truncate">{sessionTitle}</div>
                                 </div>
                                 <div>
-                                    {consult.status === 'completed' && <span className="material-symbols-outlined text-[#a5d391] text-sm">check_circle</span>}
-                                    {consult.status === 'next' && (
+                                    {isNext && (
                                         <Link 
                                             to="/virtual-room" 
                                             className="bg-[#a5d391] text-black text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-white transition-colors cursor-pointer shadow-[0_0_15px_rgba(165,211,145,0.3)] inline-block"
@@ -305,10 +327,11 @@ const DietitianHome = () => {
                                             Join Room
                                         </Link>
                                     )}
-                                    {consult.status === 'pending' && <span className="material-symbols-outlined text-white/30 text-sm">schedule</span>}
+                                    {!isNext && <span className="material-symbols-outlined text-white/30 text-sm">schedule</span>}
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div className="mt-5 pt-4 border-t border-white/10 flex justify-end">
@@ -354,17 +377,15 @@ const DietitianHome = () => {
                         if (raw) history = JSON.parse(raw);
                     } catch (e) {}
 
-                    if (!history || history.length === 0) {
-                        history = [
-                            { id: "h1", title: "Clinical Metabolic Optimization Protocol", scope: "GENERAL", targetUserName: "All Users", calories: 2100, protein: 160, carbs: 150, fats: 70, waterLiters: 3.0, dietType: "High-Protein Metabolic" },
-                            { id: "h2", title: "Ketogenic Glycemic Reset Protocol", scope: "GENERAL", targetUserName: "All Users", calories: 2050, protein: 140, carbs: 35, fats: 150, waterLiters: 3.2, dietType: "Keto Glycemic Reset" },
-                            { id: "h3", title: "Exclusive Protocol for David Miller", scope: "EXCLUSIVE", targetUserName: "David Miller", calories: 2200, protein: 165, carbs: 160, fats: 68, waterLiters: 3.2, dietType: "High-Protein Metabolic" }
-                        ];
-                    }
+                    if (!Array.isArray(history)) history = [];
 
                     return (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {history.slice(0, 3).map((item) => (
+                            {history.length === 0 ? (
+                                <div className="md:col-span-3 py-8 text-center text-xs text-white/50">
+                                    No saved diet protocols available.
+                                </div>
+                            ) : history.slice(0, 3).map((item) => (
                                 <div
                                     key={item.id}
                                     className="p-5 rounded-2xl bg-[#080b12]/80 border border-white/10 hover:border-[#a5d391]/40 transition-all flex flex-col justify-between space-y-4 group"

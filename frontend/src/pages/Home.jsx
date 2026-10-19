@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useContext } from 'react';
 import Starfield from '../components/Starfield';
 import ServicesOverview from './HomeSections/ServicesOverview';
+import { AuthContext } from '../context/AuthContext';
 
 import AINutritionCoach from './HomeSections/AINutritionCoach';
 import HowItWorks from './HomeSections/HowItWorks';
@@ -83,6 +85,35 @@ const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, back
 
 const Home = () => {
     const navigate = useNavigate();
+    const { user } = useContext(AuthContext);
+    const role = String(user?.role || '').toUpperCase().replace('ROLE_', '');
+    const isStaffHome = role === 'ADMIN' || role === 'NUTRITIONIST' || role === 'DIETITIAN';
+    const roleContent = role === 'ADMIN'
+        ? {
+            eyebrow: 'Administration workspace',
+            title: 'Run the nutrition platform with clarity.',
+            description: 'Monitor users, diet plans, consultations, payments, and platform operations from one controlled workspace.',
+            action: 'Open Admin Dashboard',
+            path: '/dashboard/admin',
+            icon: 'admin_panel_settings'
+        }
+        : role === 'NUTRITIONIST' || role === 'DIETITIAN'
+            ? {
+                eyebrow: 'Clinical workspace',
+                title: 'Deliver better nutrition care.',
+                description: 'Review your patient roster, manage consultations, formulate diet protocols, and monitor clinical progress.',
+                action: 'Open Clinical Dashboard',
+                path: '/dashboard/nutritionist',
+                icon: 'clinical_notes'
+            }
+            : {
+                eyebrow: 'Personal nutrition workspace',
+                title: 'Make every meal move you forward.',
+                description: 'Generate personalized meal plans, track your targets, analyze food, and get guidance that adapts to your goals.',
+                action: 'Start Your Plan',
+                path: '/ai-diet',
+                icon: 'restaurant_menu'
+            };
     const blockShadow = Array.from({ length: 25 }).map((_, i) => {
         const x = i * 0.8;
         const y = i * 0.5;
@@ -136,23 +167,24 @@ const Home = () => {
                     {/* Center: Description */}
                     <div className="col-span-12 md:col-span-5 md:ml-8">
                         <p className="text-white/60 text-base md:text-lg leading-relaxed font-light text-center md:text-left">
-                            Our intelligent AI platform <strong className="text-white font-medium">analyzes your dietary habits and health metrics</strong> to build personalized meal plans, track macros, and accelerate your wellness goals.
+                            <span className="text-[#a5d391] text-xs font-bold uppercase tracking-widest block mb-3">{roleContent.eyebrow}</span>
+                            {roleContent.description}
                         </p>
                     </div>
 
                     {/* Right: UI Card & Text */}
                     <div 
-                        onClick={() => navigate('/ai-image')}
+                        onClick={() => navigate(roleContent.path)}
                         className="col-span-12 md:col-span-4 flex items-center gap-6 justify-start md:justify-end cursor-pointer group hover:opacity-90 transition-all"
                     >
                         <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-2xl overflow-hidden relative shadow-2xl shrink-0 backdrop-blur-xl group-hover:border-[#a5d391]/50 group-hover:shadow-[0_0_20px_rgba(165,211,145,0.2)] transition-all">
                             <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1AIb88EtGsaDT67Bs1oUgkS5rK8JusRcj0qe2qk4ydl65aRa-fgFIe3Og0O7KdSDssEDKTJoxmMm1tWF05oLw0d_Q044JejnNFQSuu6bI8mQme42twS2bMhcvoSzdUdIPPDne4DKXqUt--BL5RwjSbHfbWCr7xhlYzmWUf-19GgHO0ADNucL9oSeYguAwFlSRACjRCOHRG2q-2E_ojPRhNBa2VHN64pxEyvVjQZAmwG58EgpQLlKp" alt="UI" className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-700"/>
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-white text-2xl drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] group-hover:text-[#a5d391] group-hover:drop-shadow-[0_0_18px_rgba(165,211,145,1)] transition-all">insights</span>
+                                <span className="material-symbols-outlined text-white text-2xl drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] group-hover:text-[#a5d391] group-hover:drop-shadow-[0_0_18px_rgba(165,211,145,1)] transition-all">{roleContent.icon}</span>
                             </div>
                         </div>
                         <div className="text-white text-[15px] leading-snug group-hover:text-[#a5d391] transition-colors">
-                            Smart <span className="italic font-light text-white/70 group-hover:text-white/90">Calorie & Macro Logging</span> with <br/><strong className="font-semibold text-white group-hover:text-[#a5d391]">AI-Powered Precision ➔</strong>
+                            {roleContent.action} <strong className="font-semibold text-white group-hover:text-[#a5d391]">➔</strong>
                         </div>
                     </div>
 
@@ -163,6 +195,27 @@ const Home = () => {
 
             {/* Below sections restored like before */}
             <div className="relative bg-background w-full z-20">
+                {isStaffHome ? (
+                    <section className="max-w-7xl mx-auto px-4 sm:px-8 -mt-24 md:-mt-36 relative z-20">
+                        <div className="rounded-[2.5rem] border border-[#a5d391]/20 bg-[#0d121c] p-8 sm:p-12 shadow-2xl">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                                <div className="max-w-2xl">
+                                    <span className="text-[#a5d391] text-xs font-bold uppercase tracking-widest">{roleContent.eyebrow}</span>
+                                    <h2 className="font-hero-display text-3xl sm:text-5xl font-bold text-white mt-4 mb-4">{roleContent.title}</h2>
+                                    <p className="text-white/60 text-base leading-relaxed">{roleContent.description}</p>
+                                </div>
+                                <button
+                                    onClick={() => navigate(roleContent.path)}
+                                    className="shrink-0 bg-[#a5d391] text-black px-6 py-4 rounded-full font-bold flex items-center gap-2 hover:bg-white transition-colors"
+                                >
+                                    <span className="material-symbols-outlined">{roleContent.icon}</span>
+                                    {roleContent.action}
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                ) : (
+                <>
                 {/* Hero Image Pivot Section */}
                 <section className="max-w-7xl mx-auto px-4 sm:px-8 -mt-24 md:-mt-36 relative z-20">
                     <div className="relative rounded-xl overflow-hidden shadow-[0_80px_120px_-20px_rgba(15,23,42,0.3)] aspect-[21/9] border border-white/10">
@@ -296,18 +349,20 @@ const Home = () => {
                         </FlipFeatureCard>
                     </div>
                 </section>
+                </>
+                )}
 
                 {/* Appended New Sections */}
                 <div className="w-full bg-background text-on-background pt-0 pb-10">
                     <ServicesOverview />
                 </div>
-                <div className="w-full bg-[#080b12] text-white py-16 border-t border-white/10">
+                {!isStaffHome && <div className="w-full bg-[#080b12] text-white py-16 border-t border-white/10">
                     <HowItWorks />
-                </div>
+                </div>}
 
-                <div className="w-full bg-[#080b12] text-white py-12">
+                {!isStaffHome && <div className="w-full bg-[#080b12] text-white py-12">
                     <AINutritionCoach />
-                </div>
+                </div>}
 
                 <div className="w-full bg-background text-on-background pb-24">
                     <FinalCTA />
