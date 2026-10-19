@@ -35,7 +35,7 @@ export const getNavItemsForRole = (user) => {
     const systemCoreSubMenu = [
         { label: 'System Core', path: '/dashboard/admin', icon: 'dashboard', desc: 'Master system controls, credentials & live telemetry' },
         { label: 'Diet Plans Management', path: '/dashboard/admin/diet-plans', icon: 'menu_book', desc: 'Audit, inspect, promote, and purge diet plans registry' },
-        { label: 'Analytics', path: '/dashboard/admin/analytics', icon: 'analytics', desc: 'Platform health metrics, user growth & revenue KPIs' },
+        { label: 'Payments', path: '/dashboard/admin/payments', icon: 'payments', desc: 'Platform credit allocations, wallet transactions & audit ledger' },
         { label: 'SQL Console', path: '/dashboard/admin/sql', icon: 'terminal', desc: 'Raw database query console & table inspection' }
     ];
 
@@ -134,8 +134,42 @@ const Navbar = () => {
         return () => window.removeEventListener('nutrimunch_open_chat', handleOpenChat);
     }, []);
 
+    const [isForceCollapsed, setIsForceCollapsed] = useState(false);
+    const navContainerRef = useRef(null);
+    const desktopMenuRef = useRef(null);
+    const rightActionsRef = useRef(null);
     const dropdownRef = useRef(null);
     const notificationRef = useRef(null);
+    const menuWidthRef = useRef(640);
+
+    useEffect(() => {
+        const checkCollision = () => {
+            if (desktopMenuRef.current && desktopMenuRef.current.offsetWidth > 100) {
+                menuWidthRef.current = desktopMenuRef.current.offsetWidth;
+            }
+
+            if (!navContainerRef.current) return;
+            const containerWidth = navContainerRef.current.offsetWidth;
+            const rightWidth = rightActionsRef.current ? rightActionsRef.current.offsetWidth : 230;
+            // Point where consultation chat icon touches the Contact menu:
+            // Logo (~150px) + Menu (~640px) + Right controls (~230px) + Container padding (48px) + safety buffer (16px)
+            const minRequiredWidth = 150 + (menuWidthRef.current || 640) + rightWidth + 48 + 16;
+
+            if (containerWidth < minRequiredWidth || window.innerWidth < 1024) {
+                setIsForceCollapsed(true);
+            } else {
+                setIsForceCollapsed(false);
+            }
+        };
+
+        checkCollision();
+        const timer = setTimeout(checkCollision, 50);
+        window.addEventListener('resize', checkCollision);
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', checkCollision);
+        };
+    }, [user, location.pathname]);
 
     const navItems = getNavItemsForRole(user);
     const rawRole = user?.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'GUEST';
@@ -459,15 +493,21 @@ const Navbar = () => {
     return (
         <>
             <div className="fixed top-4 left-4 right-4 z-50 pointer-events-none">
-            <nav className="mx-auto max-w-7xl bg-[#080b12]/85 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-3xl overflow-visible shadow-2xl pointer-events-auto">
-                <div className="flex justify-between items-center px-3 sm:px-6 py-2.5 sm:py-3">
+            <nav ref={navContainerRef} className="mx-auto max-w-7xl bg-[#080b12]/85 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-3xl overflow-visible shadow-2xl pointer-events-auto">
+                <div className="flex justify-between items-center px-3 sm:px-6 py-2.5 sm:py-3 gap-2">
                     <Link to="/" className="font-headline-lg text-lg sm:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0">
                         <span className="w-2.5 h-2.5 bg-[#a5d391] rounded-full shadow-[0_0_10px_rgba(165,211,145,0.8)]"></span>
                         NutriMunch <span className="text-[#a5d391] italic font-semibold">AI</span>
                     </Link>
 
                     {/* Desktop Navigation Items Container */}
-                    <div ref={dropdownRef} className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-white/5 rounded-full px-2 py-1 border border-white/5 mx-1.5 xl:mx-4 shrink min-w-0">
+                    <div 
+                        ref={(el) => {
+                            dropdownRef.current = el;
+                            desktopMenuRef.current = el;
+                        }} 
+                        className={`${isForceCollapsed ? '!hidden' : 'hidden lg:flex'} items-center gap-0.5 xl:gap-1 bg-white/5 rounded-full px-3.5 py-1 border border-white/10 mx-1 xl:mx-2 shrink-0 shadow-inner`}
+                    >
                         {(() => {
                             const isStandaloneActive = navItems.some(nav => !nav.subMenu && checkIsActive(location.pathname, nav.path));
                             return navItems.map(item => {
@@ -485,7 +525,7 @@ const Navbar = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveDropdown(prev => prev === item.label ? null : item.label)}
-                                                className={`px-2.5 xl:px-3.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${isChildActive || isOpen ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center gap-1 leading-none cursor-pointer ${isChildActive || isOpen ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                                             >
                                                 <span>{item.label}</span>
                                                 <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
@@ -527,7 +567,7 @@ const Navbar = () => {
                                     <Link
                                         key={item.label}
                                         to={item.path}
-                                        className={`px-2.5 xl:px-3.5 py-1.5 rounded-full text-[11px] xl:text-xs font-semibold transition-all whitespace-nowrap ${isActive ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center leading-none ${isActive ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                                     >
                                         {item.label}
                                     </Link>
@@ -537,7 +577,7 @@ const Navbar = () => {
                     </div>
 
                     {/* Right User Actions & Controls (Notifications, Mobile Toggle, Login/Profile) */}
-                    <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                    <div ref={rightActionsRef} className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                         {/* Consultation Chat Button (when user is logged in) */}
                         {user && (
                             <button
@@ -667,10 +707,10 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* Mobile Menu Toggle Button (Hamburger / Close) - visible on < lg */}
+                        {/* Mobile & Dynamic Collision Menu Toggle Button (Hamburger / Close) */}
                         <button
                             type="button"
-                            className="lg:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm"
+                            className={`${isForceCollapsed ? '!flex' : 'lg:hidden flex'} w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm`}
                             onClick={() => setIsMenuOpen(prev => !prev)}
                             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
                             aria-expanded={isMenuOpen}
@@ -701,7 +741,7 @@ const Navbar = () => {
                                     </div>
 
                                     {/* Role Badge */}
-                                    <span className={`hidden sm:inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                    <span className={`hidden xl:inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST' || rawRole === 'DIETITIAN') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
                                         {roleLabel}
                                     </span>
 
@@ -735,8 +775,8 @@ const Navbar = () => {
                     </div>
                 </div>
 
-                {/* Mobile dropdown panel */}
-                <div className={`lg:hidden grid transition-all duration-300 ease-in-out ${isMenuOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                {/* Mobile & Collapsed dropdown panel */}
+                <div className={`${isForceCollapsed ? 'block' : 'lg:hidden block'} grid transition-all duration-300 ease-in-out ${isMenuOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                     <div className="overflow-hidden">
                         <div className="px-5 pb-6 pt-2 border-t border-white/10 flex flex-col gap-1">
                             {navItems.map(item => {

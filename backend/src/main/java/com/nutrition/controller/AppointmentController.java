@@ -29,10 +29,20 @@ public class AppointmentController {
     }
 
     @PostMapping("/book")
-    public ResponseEntity<AppointmentDto> bookAppointment(
+    public ResponseEntity<?> bookAppointment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody AppointmentDto dto) {
-        return ResponseEntity.ok(appointmentService.bookAppointment(userDetails.getId(), userDetails.getUser().getRole(), dto));
+        try {
+            return ResponseEntity.ok(appointmentService.bookAppointment(userDetails.getId(), userDetails.getUser().getRole(), dto));
+        } catch (com.nutrition.exception.LowBalanceException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST).body(Map.of(
+                    "status", "LOW_BALANCE",
+                    "message", e.getMessage(),
+                    "currentBalance", e.getCurrentBalance(),
+                    "requiredAmount", e.getRequiredAmount(),
+                    "deficit", e.getDeficit()
+            ));
+        }
     }
 
     @PutMapping("/{id}/status")

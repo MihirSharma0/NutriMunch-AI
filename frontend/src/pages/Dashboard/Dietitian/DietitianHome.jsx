@@ -1,10 +1,137 @@
-import React, { useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
+import api from '../../../api/axios';
 
 const DietitianHome = () => {
     const { user } = useContext(AuthContext);
+    const [walletBalance, setWalletBalance] = useState(null);
+
+    useEffect(() => {
+        const userKeyId = user?.id || user?.userId;
+        const userKeyEmail = user?.email?.toLowerCase();
+
+        const resolveCachedBalance = () => {
+            if (!userKeyId && !userKeyEmail) return 0;
+            const keys = [
+                userKeyId ? `nutrimunch_wallet_balance_id_${userKeyId}` : null,
+                userKeyId ? `nutrimunch_wallet_balance_${userKeyId}` : null,
+                userKeyEmail ? `nutrimunch_wallet_balance_email_${userKeyEmail}` : null,
+                userKeyEmail ? `nutrimunch_wallet_balance_${userKeyEmail}` : null
+            ].filter(Boolean);
+            let maxBal = 0;
+            for (const k of keys) {
+                const v = localStorage.getItem(k);
+                if (v !== null && !isNaN(Number(v))) {
+                    maxBal = Math.max(maxBal, Number(v));
+                }
+            }
+            return maxBal;
+        };
+
+        const fetchWallet = async () => {
+            if (!userKeyId && !userKeyEmail) {
+                setWalletBalance(0);
+                return;
+            }
+            try {
+                const res = await api.get('/wallet/me', {
+                    params: {
+                        userId: userKeyId || '',
+                        email: userKeyEmail || ''
+                    }
+                });
+                if (res.data && typeof res.data.balance !== 'undefined' && res.data.balance !== null) {
+                    const sBal = Number(res.data.balance);
+                    setWalletBalance(sBal);
+                    if (userKeyId) localStorage.setItem(`nutrimunch_wallet_balance_id_${userKeyId}`, String(sBal));
+                    if (userKeyEmail) localStorage.setItem(`nutrimunch_wallet_balance_email_${userKeyEmail}`, String(sBal));
+                    return;
+                }
+            } catch (err) {}
+            const cached = resolveCachedBalance();
+            setWalletBalance(cached);
+        };
+
+        fetchWallet();
+
+        const handleWalletUpdate = (e) => {
+            const myId = String(userKeyId || '');
+            const myEmail = (userKeyEmail || user?.username || '').toLowerCase();
+
+            if (e?.type === 'storage' && e?.key) {
+                const key = e.key;
+                if (!key.startsWith('nutrimunch_wallet_balance')) return;
+                const matchesMe = (myId && key.includes(myId)) || (myEmail && key.includes(myEmail));
+                if (!matchesMe) return;
+                const val = localStorage.getItem(key);
+                if (val !== null && !isNaN(Number(val))) {
+                    setWalletBalance(Number(val));
+                    return;
+                }
+            }
+
+            if (e?.detail) {
+                const targetId = String(e.detail.recipientId || '');
+                const targetEmail = (e.detail.recipientEmail || '').toLowerCase();
+                const isForMe = (targetId && myId && targetId === myId) || 
+                                (targetEmail && myEmail && targetEmail === myEmail) ||
+                                (!targetId && !targetEmail);
+                if (!isForMe) return;
+
+                const pushedVal = e.detail.newBalance !== undefined && e.detail.newBalance !== null
+                    ? e.detail.newBalance
+                    : e.detail.balance;
+
+                if (pushedVal !== undefined && pushedVal !== null) {
+                    const newBal = Number(pushedVal);
+                    setWalletBalance(newBal);
+                    if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
+                    if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+                    return;
+                }
+            }
+        };
+
+        window.addEventListener('wallet_updated', handleWalletUpdate);
+        window.addEventListener('storage', handleWalletUpdate);
+
+        let bc;
+        try {
+            bc = new BroadcastChannel('nutrimunch_clinical_channel');
+            bc.onmessage = (event) => {
+                if (event.data?.type === 'WALLET_CREDITED' || event.data?.type === 'WALLET_UPDATED') {
+                    const targetId = String(event.data.recipientId || '');
+                    const targetEmail = (event.data.recipientEmail || '').toLowerCase();
+                    const myId = String(userKeyId || '');
+                    const myEmail = (userKeyEmail || user?.username || '').toLowerCase();
+                    const isForMe = (targetId && myId && targetId === myId) || 
+                                    (targetEmail && myEmail && targetEmail === myEmail) ||
+                                    (!targetId && !targetEmail);
+                    if (!isForMe) return;
+
+                    // Direct Push: Apply pushed balance immediately with zero server load
+                    const pushedVal = event.data.newBalance !== undefined && event.data.newBalance !== null
+                        ? event.data.newBalance
+                        : event.data.balance;
+
+                    if (pushedVal !== undefined && pushedVal !== null) {
+                        const newBal = Number(pushedVal);
+                        setWalletBalance(newBal);
+                        if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
+                        if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+                    }
+                }
+            };
+        } catch (e) {}
+
+        return () => {
+            window.removeEventListener('wallet_updated', handleWalletUpdate);
+            window.removeEventListener('storage', handleWalletUpdate);
+            if (bc) bc.close();
+        };
+    }, [user]);
 
     if (!user) {
         return <FeatureGate />;
@@ -24,8 +151,8 @@ const DietitianHome = () => {
             </div>
             
             {/* Top Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12">
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div className="flex justify-between items-start mb-4">
                         <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Active Roster</div>
                         <span className="material-symbols-outlined text-[#a5d391] text-[20px]">groups</span>
@@ -36,7 +163,7 @@ const DietitianHome = () => {
                     </div>
                 </div>
                 
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div className="flex justify-between items-start mb-4">
                         <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Avg Adherence</div>
                         <span className="material-symbols-outlined text-[#a5d391] text-[20px]">analytics</span>
@@ -47,7 +174,24 @@ const DietitianHome = () => {
                     </div>
                 </div>
 
-                <div className="bg-red-500/10 backdrop-blur-xl border border-red-500/30 rounded-[2.5rem] p-6 flex flex-col justify-between shadow-[0_0_25px_rgba(239,68,68,0.15)]">
+                {/* Live App Wallet Earnings Card */}
+                <div className="bg-gradient-to-br from-[#a5d391]/15 via-white/5 to-transparent backdrop-blur-xl border border-[#a5d391]/30 rounded-[2.5rem] p-5 flex flex-col justify-between shadow-[0_0_20px_rgba(165,211,145,0.15)]">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="text-[#a5d391] text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-pulse"></span>
+                            Wallet Earnings
+                        </div>
+                        <span className="material-symbols-outlined text-[#a5d391] text-[20px]">account_balance_wallet</span>
+                    </div>
+                    <div>
+                        <div className="text-3xl font-bold font-hero-display text-[#a5d391] font-mono">
+                            {walletBalance !== null ? `₹${parseFloat(walletBalance).toFixed(2)}` : '₹0.00'}
+                        </div>
+                        <div className="text-xs text-white/60 mt-1">Direct session credits</div>
+                    </div>
+                </div>
+
+                <div className="bg-red-500/10 backdrop-blur-xl border border-red-500/30 rounded-[2.5rem] p-5 flex flex-col justify-between shadow-[0_0_25px_rgba(239,68,68,0.15)]">
                     <div className="flex justify-between items-start mb-4">
                         <div className="text-red-400 text-[10px] font-bold uppercase tracking-widest">AI Anomalies</div>
                         <span className="material-symbols-outlined text-red-400 text-[20px] animate-pulse">warning</span>
@@ -58,7 +202,7 @@ const DietitianHome = () => {
                     </div>
                 </div>
 
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
                     <div className="flex justify-between items-start mb-4">
                         <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Today's Consults</div>
                         <span className="material-symbols-outlined text-[#a5d391] text-[20px]">event_available</span>

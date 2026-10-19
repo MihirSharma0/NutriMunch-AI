@@ -95,6 +95,156 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const resolveWalletBalance = () => {
+        try {
+            const userKeyId = user?.id || user?.userId;
+            const userKeyEmail = user?.email?.toLowerCase();
+            if (!userKeyId && !userKeyEmail) return 0;
+
+            const keysToCheck = [
+                userKeyId ? `nutrimunch_wallet_balance_id_${userKeyId}` : null,
+                userKeyId ? `nutrimunch_wallet_balance_${userKeyId}` : null,
+                userKeyEmail ? `nutrimunch_wallet_balance_email_${userKeyEmail}` : null,
+                userKeyEmail ? `nutrimunch_wallet_balance_${userKeyEmail}` : null
+            ].filter(Boolean);
+
+            let maxBal = 0;
+            for (const k of keysToCheck) {
+                const val = localStorage.getItem(k);
+                if (val !== null && !isNaN(Number(val))) {
+                    maxBal = Math.max(maxBal, Number(val));
+                }
+            }
+            return maxBal;
+        } catch (e) {
+            return 0;
+        }
+    };
+
+    const [walletBalance, setWalletBalance] = useState(() => resolveWalletBalance());
+    const [walletLoading, setWalletLoading] = useState(false);
+
+    const loadWallet = async () => {
+        try {
+            setWalletLoading(true);
+            const userKeyId = user?.id || user?.userId;
+            const userKeyEmail = user?.email?.toLowerCase();
+
+            if (!userKeyId && !userKeyEmail) {
+                setWalletBalance(0);
+                return;
+            }
+
+            const res = await api.get('/wallet/me', {
+                params: {
+                    userId: userKeyId || '',
+                    email: userKeyEmail || ''
+                }
+            });
+
+            const cachedBal = resolveWalletBalance();
+
+            if (res.data && typeof res.data.balance !== 'undefined' && res.data.balance !== null) {
+                const sBal = Number(res.data.balance);
+                setWalletBalance(sBal);
+                if (userKeyId) {
+                    localStorage.setItem(`nutrimunch_wallet_balance_id_${userKeyId}`, String(sBal));
+                    localStorage.setItem(`nutrimunch_wallet_balance_${userKeyId}`, String(sBal));
+                }
+                if (userKeyEmail) {
+                    localStorage.setItem(`nutrimunch_wallet_balance_email_${userKeyEmail}`, String(sBal));
+                    localStorage.setItem(`nutrimunch_wallet_balance_${userKeyEmail}`, String(sBal));
+                }
+                return;
+            }
+        } catch (err) {
+            console.warn('Failed to load wallet on profile:', err);
+        } finally {
+            const fallbackBal = resolveWalletBalance();
+            setWalletBalance(prev => (prev !== undefined && prev !== null ? prev : fallbackBal));
+            setWalletLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadWallet();
+
+        const handleWalletUpdated = (e) => {
+            const myId = String(user?.id || user?.userId || '');
+            const myEmail = (user?.email || user?.username || '').toLowerCase();
+
+            if (e?.type === 'storage' && e?.key) {
+                const key = e.key;
+                if (!key.startsWith('nutrimunch_wallet_balance')) return;
+                const matchesMe = (myId && key.includes(myId)) || (myEmail && key.includes(myEmail));
+                if (!matchesMe) return;
+                const val = localStorage.getItem(key);
+                if (val !== null && !isNaN(Number(val))) {
+                    setWalletBalance(Number(val));
+                    return;
+                }
+            }
+
+            if (e?.detail) {
+                const targetId = String(e.detail.recipientId || '');
+                const targetEmail = (e.detail.recipientEmail || '').toLowerCase();
+                const isForMe = (targetId && myId && targetId === myId) || 
+                                (targetEmail && myEmail && targetEmail === myEmail) ||
+                                (!targetId && !targetEmail);
+                if (!isForMe) return;
+
+                const pushedVal = e.detail.newBalance !== undefined && e.detail.newBalance !== null
+                    ? e.detail.newBalance
+                    : e.detail.balance;
+
+                if (pushedVal !== undefined && pushedVal !== null) {
+                    const newBal = Number(pushedVal);
+                    setWalletBalance(newBal);
+                    if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
+                    if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+                    return;
+                }
+            }
+        };
+
+        window.addEventListener('wallet_updated', handleWalletUpdated);
+        window.addEventListener('storage', handleWalletUpdated);
+
+        let bc;
+        try {
+            bc = new BroadcastChannel('nutrimunch_clinical_channel');
+            bc.onmessage = (event) => {
+                if (event.data?.type === 'WALLET_CREDITED' || event.data?.type === 'WALLET_UPDATED') {
+                    const targetId = String(event.data.recipientId || '');
+                    const targetEmail = (event.data.recipientEmail || '').toLowerCase();
+                    const myId = String(user?.id || user?.userId || '');
+                    const myEmail = (user?.email || user?.username || '').toLowerCase();
+                    const isForMe = (targetId && myId && targetId === myId) || 
+                                    (targetEmail && myEmail && targetEmail === myEmail) ||
+                                    (!targetId && !targetEmail);
+                    if (!isForMe) return;
+
+                    // Direct Push: Apply pushed balance immediately with zero server load
+                    const pushedVal = event.data.newBalance !== undefined && event.data.newBalance !== null
+                        ? event.data.newBalance
+                        : event.data.balance;
+
+                    if (pushedVal !== undefined && pushedVal !== null) {
+                        const newBal = Number(pushedVal);
+                        setWalletBalance(newBal);
+                        if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
+                        if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+                    }
+                }
+            };
+        } catch (e) {}
+
+        return () => {
+            window.removeEventListener('wallet_updated', handleWalletUpdated);
+            window.removeEventListener('storage', handleWalletUpdated);
+            if (bc) bc.close();
+        };
+    }, [user]);
 
     // Helper to parse comma-separated string or array into array of clean strings
     const parseList = (val) => {
@@ -549,7 +699,22 @@ const Profile = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 justify-center md:justify-end">
+                <div className="flex flex-wrap gap-2 justify-center md:justify-end items-center">
+                    {/* Live App Wallet Balance Badge */}
+                    <Link
+                        to="/appointments"
+                        title="View App Wallet & Consultations"
+                        className="bg-[#080b12]/90 hover:bg-white/10 px-4 py-2.5 rounded-2xl border border-[#a5d391]/30 text-center shadow-[0_0_15px_rgba(165,211,145,0.15)] flex flex-col justify-center transition-all cursor-pointer group"
+                    >
+                        <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider flex items-center justify-center gap-1 group-hover:text-[#a5d391] transition-colors">
+                            <span className="material-symbols-outlined text-[13px] text-[#a5d391]">account_balance_wallet</span>
+                            App Wallet
+                        </div>
+                        <div className="text-sm font-bold font-mono text-[#a5d391]">
+                            {walletLoading ? '...' : `₹${Number(walletBalance || 0).toFixed(2)}`}
+                        </div>
+                    </Link>
+
                     <div className="bg-[#080b12]/80 px-4 py-2.5 rounded-2xl border border-white/10 text-center">
                         <div className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Goal</div>
                         <div className="text-sm font-bold text-[#a5d391]">{profile.goal}</div>

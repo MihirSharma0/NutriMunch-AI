@@ -32,6 +32,15 @@ public class Appointment {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "escrow_amount", precision = 12, scale = 2)
+    private java.math.BigDecimal escrowAmount = java.math.BigDecimal.ZERO;
+
+    @Column(name = "escrow_status", length = 30)
+    private String escrowStatus = "NONE"; // NONE | HELD | CAPTURED | REFUNDED
+
+    @Column(name = "escrow_transaction_ref", length = 64)
+    private String escrowTransactionRef;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

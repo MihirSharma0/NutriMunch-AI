@@ -1,8 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import api from '../api/axios';
 import Starfield from '../components/Starfield';
 import ConsultationChatModal from '../components/ConsultationChatModal';
+import { subscribeWalletSse } from '../utils/walletSse';
 
 const UserDashboardLayout = () => {
     const location = useLocation();
@@ -10,6 +12,159 @@ const UserDashboardLayout = () => {
     const { user, logout } = useContext(AuthContext);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isConsultationChatOpen, setIsConsultationChatOpen] = useState(false);
+    const resolveWalletBalance = () => {
+        try {
+            const userKeyId = user?.id || user?.userId;
+            const userKeyEmail = user?.email?.toLowerCase();
+            if (!userKeyId && !userKeyEmail) return 0;
+
+            const keysToCheck = [
+                userKeyId ? `nutrimunch_wallet_balance_id_${userKeyId}` : null,
+                userKeyId ? `nutrimunch_wallet_balance_${userKeyId}` : null,
+                userKeyEmail ? `nutrimunch_wallet_balance_email_${userKeyEmail}` : null,
+                userKeyEmail ? `nutrimunch_wallet_balance_${userKeyEmail}` : null
+            ].filter(Boolean);
+
+            let maxBal = 0;
+            for (const k of keysToCheck) {
+                const val = localStorage.getItem(k);
+                if (val !== null && !isNaN(Number(val))) {
+                    maxBal = Math.max(maxBal, Number(val));
+                }
+            }
+            return maxBal;
+        } catch (e) {
+            return 0;
+        }
+    };
+
+    const [walletBalance, setWalletBalance] = useState(() => resolveWalletBalance());
+
+    const loadWallet = async () => {
+        try {
+            const userKeyId = user?.id || user?.userId;
+            const userKeyEmail = user?.email?.toLowerCase();
+
+            if (!userKeyId && !userKeyEmail) {
+                setWalletBalance(0);
+                return;
+            }
+
+            const res = await api.get('/wallet/me', {
+                params: {
+                    userId: userKeyId || '',
+                    email: userKeyEmail || ''
+                }
+            });
+
+            const cachedBal = resolveWalletBalance();
+
+            if (res.data && typeof res.data.balance !== 'undefined' && res.data.balance !== null) {
+                const sBal = Number(res.data.balance);
+                setWalletBalance(sBal);
+                if (userKeyId) {
+                    localStorage.setItem(`nutrimunch_wallet_balance_id_${userKeyId}`, String(sBal));
+                    localStorage.setItem(`nutrimunch_wallet_balance_${userKeyId}`, String(sBal));
+                }
+                if (userKeyEmail) {
+                    localStorage.setItem(`nutrimunch_wallet_balance_email_${userKeyEmail}`, String(sBal));
+                    localStorage.setItem(`nutrimunch_wallet_balance_${userKeyEmail}`, String(sBal));
+                }
+                return;
+            }
+        } catch (err) {
+            // silent catch
+        }
+        const fallbackBal = resolveWalletBalance();
+        setWalletBalance(prev => (prev !== undefined && prev !== null ? prev : fallbackBal));
+    };
+
+    useEffect(() => {
+        try { localStorage.removeItem('nutrimunch_user_wallet_balance'); } catch (e) {}
+        loadWallet();
+
+        const handleWalletUpdate = (e) => {
+            const myId = String(user?.id || user?.userId || '');
+            const myEmail = (user?.email || user?.username || '').toLowerCase();
+
+            if (e?.type === 'storage' && e?.key) {
+                const key = e.key;
+                if (!key.startsWith('nutrimunch_wallet_balance')) return;
+                const matchesMe = (myId && key.includes(myId)) || (myEmail && key.includes(myEmail));
+                if (!matchesMe) return;
+                const val = localStorage.getItem(key);
+                if (val !== null && !isNaN(Number(val))) {
+                    setWalletBalance(Number(val));
+                    return;
+                }
+            }
+
+            if (e?.detail) {
+                const targetId = String(e.detail.recipientId || '');
+                const targetEmail = (e.detail.recipientEmail || '').toLowerCase();
+                const isForMe = (targetId && myId && targetId === myId) || 
+                                (targetEmail && myEmail && targetEmail === myEmail) ||
+                                (!targetId && !targetEmail);
+                if (!isForMe) return;
+
+                const pushedVal = e.detail.newBalance !== undefined && e.detail.newBalance !== null
+                    ? e.detail.newBalance
+                    : e.detail.balance;
+
+                if (pushedVal !== undefined && pushedVal !== null) {
+                    const newBal = Number(pushedVal);
+                    setWalletBalance(newBal);
+                    if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
+                    if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+                    return;
+                }
+            }
+        };
+
+        window.addEventListener('wallet_updated', handleWalletUpdate);
+        window.addEventListener('storage', handleWalletUpdate);
+
+        let bc;
+        try {
+            bc = new BroadcastChannel('nutrimunch_clinical_channel');
+            bc.onmessage = (event) => {
+                if (event.data?.type === 'WALLET_CREDITED' || event.data?.type === 'WALLET_UPDATED') {
+                    const targetId = String(event.data.recipientId || '');
+                    const targetEmail = (event.data.recipientEmail || '').toLowerCase();
+                    const myId = String(user?.id || user?.userId || '');
+                    const myEmail = (user?.email || user?.username || '').toLowerCase();
+                    const isForMe = (targetId && myId && targetId === myId) || 
+                                    (targetEmail && myEmail && targetEmail === myEmail) ||
+                                    (!targetId && !targetEmail);
+                    if (!isForMe) return;
+
+                    // Direct Push: Apply pushed balance immediately with zero server load
+                    const pushedVal = event.data.newBalance !== undefined && event.data.newBalance !== null
+                        ? event.data.newBalance
+                        : event.data.balance;
+
+                    if (pushedVal !== undefined && pushedVal !== null) {
+                        const newBal = Number(pushedVal);
+                        setWalletBalance(newBal);
+                        if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
+                        if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+                    }
+                }
+            };
+        } catch (e) {}
+
+        // Connect Server-Sent Events (SSE) stream for live push updates
+        const unsubscribeSse = subscribeWalletSse(user, (newBal) => {
+            setWalletBalance(newBal);
+        });
+
+        return () => {
+            window.removeEventListener('wallet_updated', handleWalletUpdate);
+            window.removeEventListener('storage', handleWalletUpdate);
+            if (bc) bc.close();
+            unsubscribeSse();
+        };
+    }, [user]);
 
     // Signature Theme (#a5d391 / Mint / #080b12)
     const accentColor = "text-[#a5d391]";
@@ -103,6 +258,19 @@ const UserDashboardLayout = () => {
                     </div>
 
                     <div className="flex items-center gap-3 sm:gap-4">
+                        {/* Live Wallet Balance Pill */}
+                        {walletBalance !== null && (
+                            <Link 
+                                to="/dashboard/user/appointments"
+                                title="App Wallet Balance — Click to view & book sessions"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#a5d391]/10 border border-[#a5d391]/30 hover:border-[#a5d391]/60 text-white text-xs font-bold transition-all shadow-sm group cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-[#a5d391] text-base group-hover:scale-110 transition-transform">account_balance_wallet</span>
+                                <span className="text-white/60 font-normal text-[11px] hidden sm:inline">Wallet:</span>
+                                <span className="text-[#a5d391] font-mono tracking-tight font-bold">₹{walletBalance.toFixed(2)}</span>
+                            </Link>
+                        )}
+
                         {/* Dietitian Consultation Chat Header Button */}
                         <button 
                             type="button"

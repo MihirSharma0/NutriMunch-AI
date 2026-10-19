@@ -47,7 +47,38 @@ const AppointmentManagement = () => {
             fetchAppointments();
             fetchClients();
         }
-    }, [token]);
+
+        const handleAppointmentUpdated = (e) => {
+            if (!e?.detail) return;
+            const eventData = e.detail;
+            if (eventData.action === 'DELETED') {
+                const delId = String(eventData.appointmentId);
+                setEventsList(prev => prev.filter(ev => String(ev.id) !== delId));
+                if (selectedEvent && String(selectedEvent.id) === delId) {
+                    setSelectedEvent(null);
+                }
+                return;
+            }
+            if (eventData.appointment) {
+                const updatedApt = eventData.appointment;
+                setEventsList(prev => {
+                    const exists = prev.some(ev => String(ev.id) === String(updatedApt.id));
+                    if (exists) {
+                        return prev.map(ev => String(ev.id) === String(updatedApt.id) ? { ...ev, ...updatedApt } : ev);
+                    }
+                    return [updatedApt, ...prev];
+                });
+                if (selectedEvent && String(selectedEvent.id) === String(updatedApt.id)) {
+                    setSelectedEvent(prev => ({ ...prev, ...updatedApt }));
+                }
+            }
+        };
+
+        window.addEventListener('appointment_updated', handleAppointmentUpdated);
+        return () => {
+            window.removeEventListener('appointment_updated', handleAppointmentUpdated);
+        };
+    }, [token, selectedEvent]);
 
     useEffect(() => {
         if (isAvailabilityModalOpen || selectedEvent) {

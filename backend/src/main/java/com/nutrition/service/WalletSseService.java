@@ -1,0 +1,163 @@
+package com.nutrition.service;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+@Service
+@Slf4j
+public class WalletSseService {
+
+    // 30 minutes timeout for SSE emitter
+    private static final Long SSE_TIMEOUT = 30 * 60 * 1000L;
+
+    // Subscriptions keyed by userId
+    private final Map<Long, List<SseEmitter>> userEmitters = new ConcurrentHashMap<>();
+
+    // Subscriptions keyed by lowercased email
+    private final Map<String, List<SseEmitter>> emailEmitters = new ConcurrentHashMap<>();
+
+    // Subscriptions for admins (to receive live ledger updates)
+    private final List<SseEmitter> adminEmitters = new CopyOnWriteArrayList<>();
+
+    public SseEmitter subscribe(Long userId, String email, boolean isAdmin) {
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
+
+        if (userId != null) {
+            userEmitters.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(emitter);
+        }
+        if (email != null && !email.isBlank()) {
+            emailEmitters.computeIfAbsent(email.trim().toLowerCase(), k -> new CopyOnWriteArrayList<>()).add(emitter);
+        }
+        if (isAdmin) {
+            adminEmitters.add(emitter);
+        }
+
+        Runnable cleanup = () -> removeEmitter(userId, email, isAdmin, emitter);
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(cleanup);
+        emitter.onError(e -> cleanup.run());
+
+        // Send initial connection handshake
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("CONNECTED")
+                    .data(Map.of(
+                            "status", "CONNECTED",
+                            "userId", userId != null ? userId : "",
+                            "email", email != null ? email : "",
+                            "timestamp", System.currentTimeMillis()
+                    )));
+        } catch (IOException e) {
+            log.warn("Failed to send initial SSE handshake: {}", e.getMessage());
+            cleanup.run();
+        }
+
+        log.info("SSE subscription established for userId={} email={} isAdmin={}", userId, email, isAdmin);
+        return emitter;
+    }
+
+    private void removeEmitter(Long userId, String email, boolean isAdmin, SseEmitter emitter) {
+        if (userId != null) {
+            List<SseEmitter> list = userEmitters.get(userId);
+            if (list != null) {
+                list.remove(emitter);
+                if (list.isEmpty()) userEmitters.remove(userId);
+            }
+        }
+        if (email != null && !email.isBlank()) {
+            String lower = email.trim().toLowerCase();
+            List<SseEmitter> list = emailEmitters.get(lower);
+            if (list != null) {
+                list.remove(emitter);
+                if (list.isEmpty()) emailEmitters.remove(lower);
+            }
+        }
+        if (isAdmin) {
+            adminEmitters.remove(emitter);
+        }
+    }
+
+    public void sendWalletUpdate(Long userId, String email, Map<String, Object> data) {
+        List<SseEmitter> targetEmitters = new CopyOnWriteArrayList<>();
+
+        if (userId != null && userEmitters.containsKey(userId)) {
+            targetEmitters.addAll(userEmitters.get(userId));
+        }
+        if (email != null && !email.isBlank()) {
+            String lower = email.trim().toLowerCase();
+            if (emailEmitters.containsKey(lower)) {
+                for (SseEmitter em : emailEmitters.get(lower)) {
+                    if (!targetEmitters.contains(em)) {
+                        targetEmitters.add(em);
+                    }
+                }
+            }
+        }
+
+        if (targetEmitters.isEmpty()) {
+            log.debug("No active SSE listeners for userId={} email={}", userId, email);
+            return;
+        }
+
+        log.info("Pushing SSE wallet update to {} listener(s) for userId={} email={}", targetEmitters.size(), userId, email);
+        for (SseEmitter emitter : targetEmitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("WALLET_UPDATED")
+                        .data(data));
+            } catch (Exception e) {
+                log.warn("Failed to send SSE wallet update, removing dead emitter: {}", e.getMessage());
+                removeEmitter(userId, email, false, emitter);
+            }
+        }
+    }
+
+    public void sendAppointmentUpdate(Long userId, String email, Map<String, Object> data) {
+        List<SseEmitter> targetEmitters = new CopyOnWriteArrayList<>();
+
+        if (userId != null && userEmitters.containsKey(userId)) {
+            targetEmitters.addAll(userEmitters.get(userId));
+        }
+        if (email != null && !email.isBlank()) {
+            String lower = email.trim().toLowerCase();
+            if (emailEmitters.containsKey(lower)) {
+                for (SseEmitter em : emailEmitters.get(lower)) {
+                    if (!targetEmitters.contains(em)) {
+                        targetEmitters.add(em);
+                    }
+                }
+            }
+        }
+
+        log.info("Pushing SSE appointment update to {} listener(s) for userId={} email={}", targetEmitters.size(), userId, email);
+        for (SseEmitter emitter : targetEmitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("APPOINTMENT_UPDATED")
+                        .data(data));
+            } catch (Exception e) {
+                removeEmitter(userId, email, false, emitter);
+            }
+        }
+    }
+
+    public void broadcastToAdmins(Map<String, Object> data) {
+        if (adminEmitters.isEmpty()) return;
+        for (SseEmitter emitter : adminEmitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("LEDGER_UPDATED")
+                        .data(data));
+            } catch (Exception e) {
+                adminEmitters.remove(emitter);
+            }
+        }
+    }
+}

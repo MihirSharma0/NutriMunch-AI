@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
-import { API_BASE_URL } from '../../../api/axios';
+import api, { API_BASE_URL } from '../../../api/axios';
 import ConsultationChatModal from '../../../components/ConsultationChatModal';
 
 const Appointments = () => {
@@ -16,6 +16,39 @@ const Appointments = () => {
     const [historyFilter, setHistoryFilter] = useState('ALL');
     const [isChatOpen, setIsChatOpen] = useState(false);
 
+    // App Wallet & "Low Balance" Guard State - Strictly Isolated by Account ID & Email
+    const resolveInitialWalletBalance = () => {
+        try {
+            const userKeyId = user?.id || user?.userId;
+            const userKeyEmail = user?.email?.toLowerCase();
+            if (!userKeyId && !userKeyEmail) return 0;
+
+            const keysToCheck = [
+                userKeyId ? `nutrimunch_wallet_balance_id_${userKeyId}` : null,
+                userKeyId ? `nutrimunch_wallet_balance_${userKeyId}` : null,
+                userKeyEmail ? `nutrimunch_wallet_balance_email_${userKeyEmail}` : null,
+                userKeyEmail ? `nutrimunch_wallet_balance_${userKeyEmail}` : null
+            ].filter(Boolean);
+
+            let maxBal = 0;
+            for (const k of keysToCheck) {
+                const val = localStorage.getItem(k);
+                if (val !== null && !isNaN(Number(val))) {
+                    maxBal = Math.max(maxBal, Number(val));
+                }
+            }
+            return maxBal;
+        } catch (e) {
+            return 0;
+        }
+    };
+
+    const [wallet, setWallet] = useState(() => ({ balance: resolveInitialWalletBalance(), currency: 'INR' }));
+    const [walletLoading, setWalletLoading] = useState(false);
+    const [sessionFee, setSessionFee] = useState(500);
+    const [isPayingWithWallet, setIsPayingWithWallet] = useState(false);
+    const [guardBlockedModal, setGuardBlockedModal] = useState(null);
+
     const [bookingForm, setBookingForm] = useState({
         dietitianId: '',
         title: 'Metabolic Baseline Review',
@@ -25,10 +58,165 @@ const Appointments = () => {
         notes: ''
     });
 
+    const fetchWallet = async () => {
+        try {
+            setWalletLoading(true);
+            const userKeyId = user?.id || user?.userId;
+            const userKeyEmail = user?.email?.toLowerCase();
+
+            if (!userKeyId && !userKeyEmail) {
+                setWallet({ balance: 0, currency: 'INR' });
+                return;
+            }
+
+            const res = await api.get('/wallet/me', {
+                params: {
+                    userId: userKeyId || '',
+                    email: userKeyEmail || ''
+                }
+            });
+
+            const cachedBal = resolveInitialWalletBalance();
+
+            if (res.data && typeof res.data.balance !== 'undefined' && res.data.balance !== null) {
+                const sBal = Number(res.data.balance);
+                setWallet({ ...res.data, balance: sBal });
+                if (userKeyId) {
+                    localStorage.setItem(`nutrimunch_wallet_balance_id_${userKeyId}`, String(sBal));
+                    localStorage.setItem(`nutrimunch_wallet_balance_${userKeyId}`, String(sBal));
+                }
+                if (userKeyEmail) {
+                    localStorage.setItem(`nutrimunch_wallet_balance_email_${userKeyEmail}`, String(sBal));
+                    localStorage.setItem(`nutrimunch_wallet_balance_${userKeyEmail}`, String(sBal));
+                }
+                return;
+            }
+        } catch (err) {
+            console.warn('Failed to fetch wallet info, using cached balance:', err);
+        } finally {
+            const fallbackBal = resolveInitialWalletBalance();
+            setWallet(prev => ({
+                ...(prev || {}),
+                balance: (prev?.balance !== undefined) ? prev.balance : fallbackBal,
+                currency: 'INR'
+            }));
+            setWalletLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchAppointments();
         fetchDietitians();
-    }, [user, token]);
+        fetchWallet();
+
+        const handleWalletUpdated = (e) => {
+            const myId = String(user?.id || user?.userId || '');
+            const myEmail = (user?.email || user?.username || '').toLowerCase();
+
+            if (e?.type === 'storage' && e?.key) {
+                const key = e.key;
+                if (!key.startsWith('nutrimunch_wallet_balance')) return;
+                const matchesMe = (myId && key.includes(myId)) || (myEmail && key.includes(myEmail));
+                if (!matchesMe) return;
+                const val = localStorage.getItem(key);
+                if (val !== null && !isNaN(Number(val))) {
+                    setWallet(prev => ({ ...(prev || {}), balance: Number(val), currency: 'INR' }));
+                    return;
+                }
+            }
+
+            if (e?.detail) {
+                const targetId = String(e.detail.recipientId || '');
+                const targetEmail = (e.detail.recipientEmail || '').toLowerCase();
+                const isForMe = (targetId && myId && targetId === myId) || 
+                                (targetEmail && myEmail && targetEmail === myEmail) ||
+                                (!targetId && !targetEmail);
+                if (!isForMe) return;
+
+                const pushedVal = e.detail.newBalance !== undefined && e.detail.newBalance !== null
+                    ? e.detail.newBalance
+                    : e.detail.balance;
+
+                if (pushedVal !== undefined && pushedVal !== null) {
+                    const newBal = Number(pushedVal);
+                    setWallet(prev => ({ ...(prev || {}), balance: newBal, currency: 'INR' }));
+                    if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
+                    if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+                    return;
+                }
+            }
+        };
+
+        const handleAppointmentUpdated = (e) => {
+            if (!e?.detail) return;
+            const eventData = e.detail;
+            if (eventData.action === 'DELETED') {
+                const delId = String(eventData.appointmentId);
+                setAppointments(prev => prev.filter(a => String(a.id) !== delId));
+                if (selectedAppointment && String(selectedAppointment.id) === delId) {
+                    setSelectedAppointment(null);
+                }
+                return;
+            }
+            if (eventData.appointment) {
+                const updatedApt = eventData.appointment;
+                setAppointments(prev => {
+                    const exists = prev.some(a => String(a.id) === String(updatedApt.id));
+                    let next;
+                    if (exists) {
+                        next = prev.map(a => String(a.id) === String(updatedApt.id) ? { ...a, ...updatedApt } : a);
+                    } else {
+                        next = [updatedApt, ...prev];
+                    }
+                    try { localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(next)); } catch (e) {}
+                    return next;
+                });
+                if (selectedAppointment && String(selectedAppointment.id) === String(updatedApt.id)) {
+                    setSelectedAppointment(prev => ({ ...prev, ...updatedApt }));
+                }
+            }
+        };
+
+        window.addEventListener('wallet_updated', handleWalletUpdated);
+        window.addEventListener('storage', handleWalletUpdated);
+        window.addEventListener('appointment_updated', handleAppointmentUpdated);
+
+        let bc;
+        try {
+            bc = new BroadcastChannel('nutrimunch_clinical_channel');
+            bc.onmessage = (event) => {
+                if (event.data?.type === 'WALLET_CREDITED' || event.data?.type === 'WALLET_UPDATED') {
+                    const targetId = String(event.data.recipientId || '');
+                    const targetEmail = (event.data.recipientEmail || '').toLowerCase();
+                    const myId = String(user?.id || user?.userId || '');
+                    const myEmail = (user?.email || user?.username || '').toLowerCase();
+                    const isForMe = (targetId && myId && targetId === myId) || 
+                                    (targetEmail && myEmail && targetEmail === myEmail) ||
+                                    (!targetId && !targetEmail);
+                    if (!isForMe) return;
+
+                    // Direct Push: Apply pushed balance immediately with zero server load
+                    const pushedVal = event.data.newBalance !== undefined && event.data.newBalance !== null
+                        ? event.data.newBalance
+                        : event.data.balance;
+
+                    if (pushedVal !== undefined && pushedVal !== null) {
+                        const newBal = Number(pushedVal);
+                        setWallet(prev => ({ ...(prev || {}), balance: newBal, currency: 'INR' }));
+                        if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
+                        if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
+                    }
+                }
+            };
+        } catch (e) {}
+
+        return () => {
+            window.removeEventListener('wallet_updated', handleWalletUpdated);
+            window.removeEventListener('storage', handleWalletUpdated);
+            window.removeEventListener('appointment_updated', handleAppointmentUpdated);
+            if (bc) bc.close();
+        };
+    }, [user, token, selectedAppointment]);
 
     useEffect(() => {
         if (isBookingModalOpen || selectedAppointment) {
@@ -233,46 +421,62 @@ const Appointments = () => {
                 return;
             }
 
+            const chosenPrice = Number(sessionFee || 500);
+            const chosenDietitianId = bookingForm.dietitianId ? Number(bookingForm.dietitianId) : (dietitians.length > 0 ? dietitians[0].id : null);
+
+            if (!chosenDietitianId) {
+                showToast('Please select a registered nutritionist.');
+                return;
+            }
+
+            setIsPayingWithWallet(true);
+
             const appointmentTime = `${bookingForm.date}T${bookingForm.time}:00`;
             const payload = {
-                dietitianId: bookingForm.dietitianId ? Number(bookingForm.dietitianId) : null,
+                dietitianId: chosenDietitianId,
                 title: bookingForm.title,
                 sessionType: bookingForm.sessionType,
                 appointmentTime: appointmentTime,
                 notes: bookingForm.notes,
+                sessionFee: chosenPrice,
                 status: 'Requested'
             };
 
             let newApt = null;
             try {
-                const res = await fetch(`${API_BASE_URL}/appointments/book`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    newApt = await res.json();
+                const res = await api.post('/appointments/book', payload);
+                newApt = res.data;
+            } catch (err) {
+                const status = err.response?.data?.status;
+                const errData = err.response?.data;
+                if (status === 'LOW_BALANCE' || err.response?.status === 400) {
+                    setGuardBlockedModal({
+                        status: 'LOW_BALANCE',
+                        currentBalance: errData?.currentBalance !== undefined ? errData.currentBalance : wallet.balance,
+                        requiredAmount: errData?.requiredAmount !== undefined ? errData.requiredAmount : chosenPrice,
+                        deficit: errData?.deficit !== undefined ? errData.deficit : (chosenPrice - wallet.balance),
+                        serviceName: `${bookingForm.sessionType}: ${bookingForm.title}`,
+                        transactionReference: errData?.transactionReference || 'TXN-BLOCKED-GUARD'
+                    });
+                    if (errData?.currentBalance !== undefined) {
+                        setWallet(prev => ({ ...(prev || {}), balance: Number(errData.currentBalance) }));
+                    }
+                    setIsPayingWithWallet(false);
+                    return;
                 }
-            } catch (err) {}
-
-            if (!newApt) {
-                newApt = {
-                    id: Date.now(),
-                    dietitianId: payload.dietitianId,
-                    dietitianName: dietitians.find(d => d.id === payload.dietitianId)?.name || primaryDietitian.name,
-                    title: payload.title,
-                    sessionType: payload.sessionType,
-                    appointmentTime: payload.appointmentTime,
-                    notes: payload.notes,
-                    status: 'Requested',
-                    meetingLink: 'https://meet.google.com/nutri-ai-session'
-                };
+                showToast(err.response?.data?.message || err.message || 'Appointment booking failed.');
+                setIsPayingWithWallet(false);
+                return;
             }
 
-            const updatedList = [newApt, ...appointments];
+            // Booking and Escrow Hold succeeded!
+            const newBal = Math.max(0, Number(wallet.balance || 0) - chosenPrice);
+            setWallet(prev => ({
+                ...prev,
+                balance: newBal
+            }));
+
+            const updatedList = [newApt, ...appointments.filter(a => String(a.id) !== String(newApt.id))];
             setAppointments(updatedList);
             try {
                 localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updatedList));
@@ -287,38 +491,40 @@ const Appointments = () => {
                 time: '14:00',
                 notes: ''
             });
-            showToast('Consultation requested with nutritionist! Status: Requested.');
+
+            showToast(`₹${chosenPrice.toFixed(2)} placed in Escrow! Ref: ${newApt.escrowTransactionRef || 'ESCROW-HOLD'}`);
         } catch (err) {
             console.error('Error booking appointment:', err);
             showToast('Error booking appointment.');
+        } finally {
+            setIsPayingWithWallet(false);
         }
     };
 
-    // Marks an upcoming session as cancelled (retains it in Consultation History with Cancelled status)
+    // Marks an upcoming session as cancelled (triggers compensating escrow refund)
     const handleCancelAppointment = async (id) => {
         const stringId = String(id);
-        const updated = appointments.map(a => String(a.id) === stringId ? { ...a, status: 'CANCELLED' } : a);
+        const updated = appointments.map(a => String(a.id) === stringId ? { ...a, status: 'CANCELLED', escrowStatus: 'REFUNDED' } : a);
         setAppointments(updated);
         try {
             localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updated));
         } catch (e) {}
 
         if (selectedAppointment && String(selectedAppointment.id) === stringId) {
-            setSelectedAppointment(prev => prev ? { ...prev, status: 'CANCELLED' } : null);
+            setSelectedAppointment(prev => prev ? { ...prev, status: 'CANCELLED', escrowStatus: 'REFUNDED' } : null);
         }
 
         if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
-            fetch(`${API_BASE_URL}/appointments/${id}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ status: 'CANCELLED' })
-            }).catch(() => {});
+            api.put(`/appointments/${id}/status`, { status: 'CANCELLED' })
+                .then(res => {
+                    if (res.data) {
+                        setAppointments(prev => prev.map(a => String(a.id) === stringId ? { ...a, ...res.data } : a));
+                    }
+                })
+                .catch(() => {});
         }
 
-        showToast('Consultation session marked as Cancelled. Retained in your Consultation History.');
+        showToast('Consultation session cancelled. Locked escrow funds automatically refunded to your wallet.');
     };
 
     // Delete record (Allowed for past dates OR future sessions cancelled/rejected)
@@ -428,6 +634,13 @@ const Appointments = () => {
 
     const openBookingForDietitian = (dietitianId) => {
         setBookingForm(prev => ({ ...prev, dietitianId }));
+        const found = dietitians.find(d => String(d.id) === String(dietitianId));
+        if (found && found.consultationFee) {
+            const parsed = parseFloat(String(found.consultationFee).replace(/[^0-9.]/g, ''));
+            if (!isNaN(parsed) && parsed > 0) {
+                setSessionFee(parsed);
+            }
+        }
         setIsBookingModalOpen(true);
     };
 
@@ -448,13 +661,28 @@ const Appointments = () => {
                     <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white mb-1">Consultations</h1>
                     <p className="text-white/50 text-xs sm:text-sm">Schedule and review 1-on-1 virtual sessions with registered clinical nutritionists.</p>
                 </div>
-                <button 
-                    onClick={() => setIsBookingModalOpen(true)}
-                    className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer flex items-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-sm">calendar_add_on</span>
-                    Initialize Booking
-                </button>
+                <div className="flex items-center gap-3 flex-wrap">
+                    {/* Live Wallet Card */}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-3 backdrop-blur-md">
+                        <div className="w-8 h-8 rounded-xl bg-[#a5d391]/20 flex items-center justify-center text-[#a5d391]">
+                            <span className="material-symbols-outlined text-lg">account_balance_wallet</span>
+                        </div>
+                        <div>
+                            <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider">App Wallet</div>
+                            <div className="text-sm font-bold font-mono text-[#a5d391]">
+                                {walletLoading ? '...' : `₹${Number(wallet.balance || 0).toFixed(2)}`}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={() => setIsBookingModalOpen(true)}
+                        className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer flex items-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-sm">calendar_add_on</span>
+                        Initialize Booking
+                    </button>
+                </div>
             </div>
 
             
@@ -967,6 +1195,119 @@ const Appointments = () => {
                                 ></textarea>
                             </div>
 
+                            {/* Service Fee & Checkout Balance Validation ("Low Balance" Guard) */}
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[#a5d391] text-base">payments</span>
+                                        Wallet Payment &amp; Pricing
+                                    </label>
+                                    <div className="flex items-center gap-1 text-[11px] font-mono">
+                                        <span className="text-white/50">Available:</span>
+                                        <span className="text-[#a5d391] font-bold">₹{Number(wallet.balance || 0).toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Preset Price Pills */}
+                                <div className="space-y-1.5">
+                                    <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider">Select Consultation Tier / Price</div>
+                                    <div className="grid grid-cols-4 gap-1.5">
+                                        {[
+                                            { label: '₹10 Test', val: 10 },
+                                            { label: '₹150 Follow-up', val: 150 },
+                                            { label: '₹500 Session', val: 500 },
+                                            { label: '₹1500 Full', val: 1500 }
+                                        ].map(tier => (
+                                            <button
+                                                key={tier.val}
+                                                type="button"
+                                                onClick={() => setSessionFee(tier.val)}
+                                                className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all border cursor-pointer ${
+                                                    Number(sessionFee) === tier.val
+                                                        ? 'bg-[#a5d391] text-black border-[#a5d391] shadow-[0_0_10px_rgba(165,211,145,0.4)]'
+                                                        : 'bg-black/40 border-white/10 text-white/70 hover:border-white/30'
+                                                }`}
+                                            >
+                                                {tier.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-1">
+                                        <span className="text-[11px] text-white/50">Custom Amount:</span>
+                                        <div className="relative flex-1">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-xs font-mono">₹</span>
+                                            <input 
+                                                type="number"
+                                                min="1"
+                                                step="any"
+                                                value={sessionFee}
+                                                onChange={(e) => setSessionFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                                className="w-full bg-black/60 border border-white/10 rounded-xl pl-7 pr-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-[#a5d391]"
+                                                placeholder="Custom Price"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Condition Check / Low Balance Guard Display */}
+                                {(() => {
+                                    const currentBal = Number(wallet.balance || 0);
+                                    const reqFee = Number(sessionFee || 0);
+                                    const isLow = currentBal < reqFee;
+                                    const deficit = reqFee - currentBal;
+
+                                    if (isLow) {
+                                        return (
+                                            <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-rose-400">
+                                                        <span className="material-symbols-outlined text-sm">gpp_bad</span>
+                                                        LOW_BALANCE Guard
+                                                    </span>
+                                                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-black bg-rose-500/30 text-rose-200 border border-rose-500/40">
+                                                        BLOCKED
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-white/80 leading-snug">
+                                                    Current Balance: <strong className="font-mono text-white">₹{currentBal.toFixed(2)}</strong> &lt; Required Fee: <strong className="font-mono text-white">₹{reqFee.toFixed(2)}</strong>.
+                                                </p>
+                                                <div className="text-[11px] text-rose-300 font-semibold flex items-center justify-between pt-0.5">
+                                                    <span>Balance Deficit:</span>
+                                                    <span className="font-mono font-bold text-rose-400">₹{deficit.toFixed(2)}</span>
+                                                </div>
+                                                <div className="text-[10px] text-white/50 italic pt-0.5">
+                                                    Submitting will trigger instant transaction block &amp; audit logging.
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="p-3 rounded-xl bg-[#a5d391]/15 border border-[#a5d391]/40 text-[#a5d391] space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-[#a5d391]">
+                                                    <span className="material-symbols-outlined text-sm">verified_user</span>
+                                                    Balance Verified
+                                                </span>
+                                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-black bg-[#a5d391]/30 text-black border border-[#a5d391]">
+                                                    READY
+                                                </span>
+                                            </div>
+                                            <p className="text-[11px] text-white/80 leading-snug">
+                                                Available: <strong className="font-mono text-white">₹{currentBal.toFixed(2)}</strong> → Deduction: <strong className="font-mono text-[#a5d391]">-₹{reqFee.toFixed(2)}</strong>
+                                            </p>
+                                            <div className="text-[11px] text-white/70 flex items-center justify-between pt-0.5">
+                                                <span>Updated Balance After Booking:</span>
+                                                <span className="font-mono font-bold text-[#a5d391]">₹{(currentBal - reqFee).toFixed(2)}</span>
+                                            </div>
+                                            <div className="text-[10px] text-white/50 italic pt-0.5">
+                                                Atomic transfer: ₹{reqFee.toFixed(2)} credited directly to nutritionist wallet upon confirmation.
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
                             <div className="flex justify-end gap-3 pt-2">
                                 <button 
                                     type="button"
@@ -977,9 +1318,29 @@ const Appointments = () => {
                                 </button>
                                 <button 
                                     type="submit"
-                                    className="px-6 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer shadow-lg"
+                                    disabled={isPayingWithWallet}
+                                    className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg flex items-center gap-2 ${
+                                        Number(wallet.balance || 0) < Number(sessionFee || 0)
+                                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500 hover:text-white'
+                                            : 'bg-[#a5d391] text-black hover:bg-white'
+                                    }`}
                                 >
-                                    Book Session
+                                    {isPayingWithWallet ? (
+                                        <>
+                                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                                            Authorizing...
+                                        </>
+                                    ) : Number(wallet.balance || 0) < Number(sessionFee || 0) ? (
+                                        <>
+                                            <span className="material-symbols-outlined text-sm">lock</span>
+                                            Pay ₹{Number(sessionFee || 0).toFixed(2)} (Test Low Balance Block)
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                                            Authorize ₹{Number(sessionFee || 0).toFixed(2)} &amp; Book Session
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>
@@ -1080,6 +1441,62 @@ const Appointments = () => {
                                     Close
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: LOW_BALANCE Guard Blocked Dialog */}
+            {guardBlockedModal && (
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fadeIn">
+                    <div className="bg-[#0e0708] border-2 border-rose-500/60 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full relative shadow-[0_0_50px_rgba(244,63,94,0.35)] space-y-5">
+                        <div className="flex items-center gap-3 border-b border-rose-500/20 pb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+                                <span className="material-symbols-outlined text-3xl">gpp_bad</span>
+                            </div>
+                            <div>
+                                <div className="text-xs font-black uppercase tracking-widest text-rose-400">Transaction Blocked</div>
+                                <h3 className="text-lg font-bold text-white font-hero-display">Low Balance Guard Active</h3>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 bg-black/40 border border-rose-500/20 rounded-2xl p-4 text-xs">
+                            <div className="flex justify-between items-center text-white/70">
+                                <span>Status Error:</span>
+                                <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-mono font-bold">
+                                    LOW_BALANCE
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center text-white/70">
+                                <span>Available Balance:</span>
+                                <span className="font-mono text-white font-bold">₹{Number(guardBlockedModal.currentBalance).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-white/70">
+                                <span>Required Service Price:</span>
+                                <span className="font-mono text-white font-bold">₹{Number(guardBlockedModal.requiredAmount).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-rose-300 pt-2 border-t border-white/10 font-bold">
+                                <span>Funding Deficit:</span>
+                                <span className="font-mono text-rose-400 text-sm">₹{Number(guardBlockedModal.deficit).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-white/50 text-[10px] pt-1">
+                                <span>Audit Transaction Ref:</span>
+                                <span className="font-mono text-white/70 truncate max-w-[170px]">{guardBlockedModal.transactionReference}</span>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-white/70 leading-relaxed">
+                            The requested nutritionist appointment was blocked because your app wallet balance is less than the required consultation fee. No funds have been deducted. A security audit record has been logged to the ledger.
+                        </p>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setGuardBlockedModal(null)}
+                                className="w-full py-3 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg"
+                            >
+                                Acknowledge &amp; Return
+                            </button>
                         </div>
                     </div>
                 </div>

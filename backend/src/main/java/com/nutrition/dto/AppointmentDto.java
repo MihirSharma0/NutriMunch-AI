@@ -20,4 +20,8 @@ public class AppointmentDto {
     private String notes;
     private String title;
     private String sessionType;
+    private java.math.BigDecimal sessionFee;
+    private java.math.BigDecimal escrowAmount;
+    private String escrowStatus;
+    private String escrowTransactionRef;
 }

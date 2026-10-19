@@ -9,9 +9,12 @@ spring:
     password: ${DB_PASSWORD:password}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      max-lifetime: 600000
-      idle-timeout: 300000
+      max-lifetime: 60000
+      idle-timeout: 30000
+      keepalive-time: 30000
       validation-timeout: 3000
+      minimum-idle: 3
+      maximum-pool-size: 10
       connection-test-query: SELECT 1
   jpa:
     hibernate:
@@ -61,3 +64,6 @@ gemma:
     key: ${GEMMA_API_KEY:mock-key}
     model: ${GEMMA_MODEL:gemini-1.5-flash}
 
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_TpZmiL9G36VVd4}
+  key-secret: ${RAZORPAY_KEY_SECRET:TW253Q6QppcSG3oEIFyr3fhx}

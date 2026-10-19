@@ -27,7 +27,7 @@ const AdminDashboardLayout = () => {
             subItems: [
                 { name: "System Core", path: "/dashboard/admin", icon: "dashboard" },
                 { name: "Diet Plans Management", path: "/dashboard/admin/diet-plans", icon: "menu_book" },
-                { name: "Analytics", path: "/dashboard/admin/analytics", icon: "analytics" },
+                { name: "Payments", path: "/dashboard/admin/payments", icon: "payments" },
                 { name: "SQL Console", path: "/dashboard/admin/sql", icon: "terminal" }
             ]
         },
@@ -154,6 +154,16 @@ const AdminDashboardLayout = () => {
                     </div>
 
                     <div className="flex items-center gap-4 sm:gap-6">
+                        {/* Quick Payments & Ledger Link */}
+                        <Link 
+                            to="/dashboard/admin/payments"
+                            title="Wallet Allocation & Audit Ledger"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#a5d391]/10 border border-[#a5d391]/30 hover:border-[#a5d391]/60 text-white text-xs font-bold transition-all shadow-sm group cursor-pointer"
+                        >
+                            <span className="material-symbols-outlined text-[#a5d391] text-base group-hover:scale-110 transition-transform">account_balance_wallet</span>
+                            <span className="text-white/70 font-normal text-[11px] hidden sm:inline">Wallet Ledger</span>
+                        </Link>
+
                         <button className="relative text-white/60 hover:text-white transition-colors bg-white/5 w-10 h-10 rounded-full flex items-center justify-center border border-white/10 hover:border-white/30 backdrop-blur-md">
                             <span className="material-symbols-outlined text-sm">notifications</span>
                             <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#a5d391] rounded-full border-2 border-[#080b12] shadow-[0_0_6px_rgba(165,211,145,0.8)]"></span>
