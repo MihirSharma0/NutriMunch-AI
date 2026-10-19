@@ -1,7 +1,33 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
 const FinalCTA = () => {
+    const { user } = useContext(AuthContext);
+    const role = String(user?.role || '').toUpperCase().replace('ROLE_', '');
+    const isAdmin = role === 'ADMIN';
+    const isDietitian = role === 'NUTRITIONIST' || role === 'DIETITIAN';
+    const ctaContent = isAdmin
+        ? {
+            title: <>Platform Administration <br className="hidden md:block"/>& Controls</>,
+            description: 'Manage users, diet plans, payments, and platform operations from the administrative control center.',
+            path: '/dashboard/admin',
+            label: 'Open Admin Dashboard'
+        }
+        : isDietitian
+            ? {
+                title: <>Clinical Operations <br className="hidden md:block"/>& Schedule</>,
+                description: 'Review your patient appointments, manage consultation availability, and keep your clinical workflow organized.',
+                path: '/dashboard/nutritionist/schedule',
+                label: 'Open Clinical Schedule'
+            }
+            : {
+                title: <>Clinical Schedule <br className="hidden md:block"/>& Bookings</>,
+                description: 'Book and manage clinical nutrition consultations with qualified dietitians through one secure, organized schedule.',
+                path: '/dashboard/user/appointments',
+                label: 'Open User Appointments'
+            };
+
     return (
         <section className="py-20 relative z-20">
             <div className="max-w-6xl mx-auto px-4 sm:px-8">
@@ -10,18 +36,18 @@ const FinalCTA = () => {
                     
                     <div className="relative z-10">
                         <h2 className="font-hero-display text-4xl md:text-6xl font-black text-[#080b12] mb-6 tracking-tight">
-                            Stop Guessing. <br className="hidden md:block"/>Start Optimizing.
+                            {ctaContent.title}
                         </h2>
                         <p className="text-[#080b12]/80 font-medium text-lg md:text-xl max-w-2xl mx-auto mb-10">
-                            Join thousands of others who have transformed their bodies and minds with our clinical, AI-driven nutritional protocols.
+                            {ctaContent.description}
                         </p>
                         
                         <div className="flex justify-center items-center">
                             <Link 
-                                to="/appointments" 
+                                to={ctaContent.path}
                                 className="bg-[#080b12] text-white px-10 py-5 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl flex items-center gap-3 cursor-pointer"
                             >
-                                <span>Schedule Consultation</span>
+                                <span>{ctaContent.label}</span>
                                 <span className="material-symbols-outlined text-primary text-xl">arrow_forward</span>
                             </Link>
                         </div>

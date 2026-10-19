@@ -6,9 +6,6 @@ import { AuthProvider } from './context/AuthContext';
 import GlobalLayout from './layouts/GlobalLayout';
 import Home from './pages/Home';
 import About from './pages/About';
-import Services from './pages/Services';
-import Blog from './pages/Blog';
-import Recipes from './pages/Recipes';
 import Testimonials from './pages/Testimonials';
 import Contact from './pages/Contact';
 import UserRoles from './pages/UserRoles';
@@ -21,7 +18,6 @@ import ForgotPassword from './pages/Authentication/ForgotPassword';
 import ResetPassword from './pages/Authentication/ResetPassword';
 
 // User Dashboard Layout & Pages
-import UserDashboardLayout from './layouts/UserDashboardLayout';
 import DashboardHome from './pages/Dashboard/User/DashboardHome';
 import Profile from './pages/Dashboard/User/Profile';
 import Appointments from './pages/Dashboard/User/Appointments';
@@ -39,17 +35,14 @@ import ClientManagement from './pages/Dashboard/Dietitian/ClientManagement';
 import DietPlanBuilder from './pages/Dashboard/Dietitian/DietPlanBuilder';
 import AppointmentManagement from './pages/Dashboard/Dietitian/AppointmentManagement';
 import DietitianReports from './pages/Dashboard/Dietitian/DietitianReports';
-import NutritionistDashboardLayout from './layouts/NutritionistDashboardLayout';
 import NutritionistProfile from './pages/Dashboard/Nutritionist/NutritionistProfile';
 
 // Admin Dashboard Layout & Pages
-import AdminDashboardLayout from './layouts/AdminDashboardLayout';
 import AdminHome from './pages/Dashboard/Admin/AdminHome';
 import UserManagement from './pages/Dashboard/Admin/UserManagement';
 import SqlConsole from './pages/Dashboard/Admin/SqlConsole';
 import DietitianManagement from './pages/Dashboard/Admin/DietitianManagement';
 import PaymentManagement from './pages/Dashboard/Admin/PaymentManagement';
-import AdminAnalytics from './pages/Dashboard/Admin/AdminAnalytics';
 import AdminProfile from './pages/Dashboard/Admin/AdminProfile';
 import DietPlanManagement from './pages/Dashboard/Admin/DietPlanManagement';
 import TransactionHistory from './pages/Dashboard/Shared/TransactionHistory';
