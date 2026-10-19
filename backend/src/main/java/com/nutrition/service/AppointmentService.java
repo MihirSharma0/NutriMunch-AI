@@ -487,18 +487,18 @@ public class AppointmentService {
                         // Stream to Admin Ledger
                         walletSseService.broadcastToAdmins(Map.of(
                                 "type", "LEDGER_UPDATED",
-                                "transaction", Map.of(
-                                        "id", savedTx.getId(),
-                                        "transactionReference", refundRef,
-                                        "amount", refundAmt,
-                                        "currency", userWallet.getCurrency(),
-                                        "transactionType", "ESCROW_REFUND",
-                                        "status", "REFUNDED",
-                                        "senderBalanceBefore", dietitianBalBefore,
-                                        "senderBalanceAfter", dietitianBalAfter,
-                                        "receiverBalanceBefore", userBalBefore,
-                                        "receiverBalanceAfter", userBalAfter,
-                                        "createdAt", savedTx.getCreatedAt() != null ? savedTx.getCreatedAt() : LocalDateTime.now()
+                                "transaction", Map.ofEntries(
+                                        Map.entry("id", savedTx.getId()),
+                                        Map.entry("transactionReference", refundRef),
+                                        Map.entry("amount", refundAmt),
+                                        Map.entry("currency", userWallet.getCurrency()),
+                                        Map.entry("transactionType", "ESCROW_REFUND"),
+                                        Map.entry("status", "REFUNDED"),
+                                        Map.entry("senderBalanceBefore", dietitianBalBefore),
+                                        Map.entry("senderBalanceAfter", dietitianBalAfter),
+                                        Map.entry("receiverBalanceBefore", userBalBefore),
+                                        Map.entry("receiverBalanceAfter", userBalAfter),
+                                        Map.entry("createdAt", savedTx.getCreatedAt() != null ? savedTx.getCreatedAt() : LocalDateTime.now())
                                 )
                         ));
                     }

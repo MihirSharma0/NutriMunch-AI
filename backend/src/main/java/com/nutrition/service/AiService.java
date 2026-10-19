@@ -33,7 +33,7 @@ public class AiService {
     @Value("${gemma.api.key:mock-key}")
     private String gemmaApiKey;
 
-    @Value("${gemma.api.model:gemini-3.6-flash}")
+    @Value("${gemma.api.model:gemini-3.8-flash}")
     private String gemmaModel;
 
     private final UserRepository userRepository;
@@ -47,7 +47,10 @@ public class AiService {
     public String generateDietPlan(String goals, String allergies) {
         if (!"mock-key".equals(gemmaApiKey) && gemmaApiKey != null && !gemmaApiKey.isBlank()) {
             try {
-                return callGemmaText("Create a 1-day diet plan for a user with goals: " + goals + ", and allergies: " + allergies);
+                String plan = callGemmaText("Create a 1-day diet plan for a user with goals: " + goals + ", and allergies: " + allergies);
+                if (plan != null && !plan.isBlank() && !plan.startsWith("Error calling Gemma")) {
+                    return plan;
+                }
             } catch (Exception e) {
                 System.err.println("Gemma API call failed for diet plan: " + e.getMessage());
             }
@@ -56,7 +59,183 @@ public class AiService {
             String prompt = String.format("Create a 1-day diet plan for a user with goals: %s, and allergies: %s.", goals, allergies);
             return callOpenAi(prompt);
         }
-        return "Mock AI Diet Plan: Based on your goals (" + goals + ") and allergies (" + allergies + "), eat more greens and lean proteins. (Set GEMMA_API_KEY to enable live Gemma AI)";
+        return "Mock AI Diet Plan: Based on your goals (" + goals + ") and allergies (" + allergies + "), eat more greens and lean proteins. (Set a valid GEMMA_API_KEY in backend/.env for live Gemma AI)";
+    }
+
+    /**
+     * Validates a single custom user-typed health goal or dietary restriction via AI.
+     * Returns: { valid: boolean, normalized: string, reason: string, category: "GOAL"|"RESTRICTION"|"AMBIGUOUS"|"INVALID" }
+     */
+    public Map<String, Object> validateCustomInput(String value, String category) {
+        if (value == null || value.isBlank()) {
+            return Map.of("valid", false, "normalized", "", "reason", "Empty input.", "category", "INVALID");
+        }
+        String trimmed = value.trim();
+
+        // Prompt AI with Zero Hallucination clinical nutrition & immunology validator prompt
+        String prompt = String.format("""
+            You are an expert clinical nutrition and immunology AI validator powering a diet and wellness plan generator. Your task is to evaluate whether a user-submitted custom string is valid for the "Allergies & Dietary Restrictions" category.
+
+            CRITICAL INSTRUCTIONS:
+            - Zero Hallucination Tolerance: Base your evaluation strictly on established medical, nutritional, and food-safety facts. Do not invent categories or stretch definitions. If the input has no plausible relation to food, diet, ingestion, or recognized cross-reactive allergens, mark it as invalid.
+            - Do not rely on strict keyword matching or rigid lists; use semantic understanding.
+
+            ### Context & Rules:
+            - Target Input Category: "Allergies & Dietary Restrictions"
+            - User Input String: "%s"
+
+            ### Strict Definition Guidelines:
+            1. Dietary Restrictions & Preferences: Recognized nutritional preferences, cultural/religious diets, or structured lifestyle food elimination rules (e.g., "Gluten-Free", "Low-Sodium", "Vegan", "Halal", "Keto", "No dairy", "FODMAP").
+            2. Food Allergies & Intolerances: Proven immune-mediated reactions, metabolic sensitivities, or medical avoidance rules for ingested substances (e.g., "Peanut allergy", "Shellfish sensitivity", "Lactose intolerance", "Celiac disease", "Soy allergy", "Sulfites").
+            3. Related Environmental & Contact Allergens (Cross-Reactive): Allergens directly tied to oral consumption or cross-reactivity (e.g., "Birch pollen" due to oral allergy syndrome, "Latex" due to latex-fruit syndrome).
+
+            ### Output Format:
+            Return a strict, valid JSON object only (no markdown code blocks, no extra text) with the following fields:
+            {
+              "is_valid": true or false,
+              "matched_category": "Allergies & Dietary Restrictions" or "Invalid",
+              "reasoning": "A concise, factual explanation grounded strictly in nutrition or immunology science."
+            }
+            """, trimmed);
+
+        // Try Gemma first
+        if (!"mock-key".equals(gemmaApiKey) && gemmaApiKey != null && !gemmaApiKey.isBlank()) {
+            try {
+                String url = "https://generativelanguage.googleapis.com/v1beta/models/" + gemmaModel + ":generateContent?key=" + gemmaApiKey;
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("x-goog-api-key", gemmaApiKey);
+                Map<String, Object> body = Map.of(
+                    "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+                    "generationConfig", Map.of("response_mime_type", "application/json", "temperature", 0.0)
+                );
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+                ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+                List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
+                Map<String, Object> contentObj = (Map<String, Object>) candidates.get(0).get("content");
+                List<Map<String, Object>> parts = (List<Map<String, Object>>) contentObj.get("parts");
+                String raw = parts.stream()
+                    .filter(p -> !Boolean.TRUE.equals(p.get("thought")) && p.containsKey("text"))
+                    .map(p -> p.get("text").toString())
+                    .collect(Collectors.joining("\n")).trim();
+                raw = raw.replaceAll("```json", "").replaceAll("```", "").trim();
+                int fb = raw.indexOf("{"); int lb = raw.lastIndexOf("}");
+                if (fb != -1 && lb > fb) raw = raw.substring(fb, lb + 1);
+                Map<String, Object> parsed = objectMapper.readValue(raw, Map.class);
+                boolean isValid = Boolean.TRUE.equals(parsed.get("is_valid")) || Boolean.TRUE.equals(parsed.get("valid"));
+                String matchedCat = parsed.get("matched_category") != null ? parsed.get("matched_category").toString()
+                        : (parsed.get("category") != null ? parsed.get("category").toString() : "Invalid");
+                String reason = parsed.get("reasoning") != null ? parsed.get("reasoning").toString()
+                        : (parsed.get("reason") != null ? parsed.get("reason").toString() : "");
+                return Map.of(
+                    "is_valid", isValid,
+                    "valid", isValid,
+                    "matched_category", matchedCat,
+                    "category", matchedCat,
+                    "reasoning", reason,
+                    "reason", reason,
+                    "normalized", isValid ? trimmed.substring(0, 1).toUpperCase() + trimmed.substring(1) : ""
+                );
+            } catch (Exception e) {
+                System.err.println("Gemma validation failed: " + e.getMessage());
+            }
+        }
+
+        // Try OpenAI as fallback
+        if (!"mock-key".equals(apiKey) && apiKey != null && !apiKey.isBlank()) {
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.setBearerAuth(apiKey);
+                Map<String, Object> body = new HashMap<>();
+                body.put("model", "gpt-3.5-turbo");
+                body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
+                body.put("response_format", Map.of("type", "json_object"));
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+                ResponseEntity<Map> response = restTemplate.postForEntity(OPENAI_API_URL, entity, Map.class);
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
+                String content = (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
+                Map<String, Object> parsed = objectMapper.readValue(content, Map.class);
+                boolean isValid = Boolean.TRUE.equals(parsed.get("is_valid")) || Boolean.TRUE.equals(parsed.get("valid"));
+                String matchedCat = parsed.get("matched_category") != null ? parsed.get("matched_category").toString()
+                        : (parsed.get("category") != null ? parsed.get("category").toString() : "Invalid");
+                String reason = parsed.get("reasoning") != null ? parsed.get("reasoning").toString()
+                        : (parsed.get("reason") != null ? parsed.get("reason").toString() : "");
+                return Map.of(
+                    "is_valid", isValid,
+                    "valid", isValid,
+                    "matched_category", matchedCat,
+                    "category", matchedCat,
+                    "reasoning", reason,
+                    "reason", reason,
+                    "normalized", isValid ? trimmed.substring(0, 1).toUpperCase() + trimmed.substring(1) : ""
+                );
+            } catch (Exception e) {
+                System.err.println("OpenAI validation failed: " + e.getMessage());
+            }
+        }
+
+        // Rule-based fallback validation (when AI service is offline / unconfigured)
+        String lower = trimmed.toLowerCase();
+
+        // 1. Definite reject patterns: media/entertainment, numbers + non-health words, junk, URLs, etc.
+        List<String> rejectKeywords = List.of(
+            "movie", "movies", "film", "song", "music", "game", "games", "video", "book", "car", "phone",
+            "computer", "coding", "travel", "flight", "hotel", "clothing", "shopping", "money", "crypto",
+            "stock", "politics", "weapon", "gun", "party", "test", "asdf", "qwerty", "random"
+        );
+        for (String bad : rejectKeywords) {
+            if (lower.matches(".*\\b" + bad + "\\b.*") || lower.contains(bad)) {
+                return Map.of("valid", false, "normalized", "", "reason", "Rejected: \"" + trimmed + "\" is not a recognized health goal or dietary restriction.", "category", "INVALID");
+            }
+        }
+
+        // 2. Comprehensive vocabulary of genuine nutrition / health terms
+        Set<String> goalKeywords = Set.of(
+            "weight loss", "weight gain", "muscle", "muscle gain", "fat loss", "healthy eating",
+            "balanced nutrition", "high protein", "weight maintenance", "digestion", "digestive",
+            "athletic", "performance", "bulking", "cutting", "lean bulk", "endurance", "flexibility",
+            "mobility", "stretching", "stretch", "joint health", "posture", "injury rehab", "rehabilitation",
+            "energy", "energy boost", "detox", "cleanse", "anti-aging", "heart health", "cardio",
+            "aerobic", "anaerobic", "vo2", "calisthenics", "pilates", "yoga", "mindfulness", "stress relief",
+            "cholesterol", "blood sugar", "insulin", "diabetes", "diabetic", "immunity", "immune",
+            "stamina", "strength", "hypertrophy", "tone", "toning", "gut health", "metabolism",
+            "metabolic", "longevity", "recovery", "hydration", "sleep", "vitality", "fitness",
+            "caloric deficit", "caloric surplus", "maintenance", "macro", "micronutrient"
+        );
+
+        Set<String> restrictionKeywords = Set.of(
+            "vegan", "vegetarian", "plant-based", "gluten", "gluten-free", "lactose", "lactose-free",
+            "dairy", "dairy-free", "keto", "ketogenic", "halal", "kosher", "jain", "paleo", "nut",
+            "nuts", "peanut", "peanuts", "tree nut", "shellfish", "crustacean", "egg", "eggs", "soy",
+            "wheat", "fish", "sesame", "low sodium", "low salt", "low sugar", "sugar-free", "diabetic",
+            "fodmap", "low carb", "nightshade", "histamine", "sulfite", "caffeine-free", "no alcohol",
+            "hypoallergenic", "celiac", "allergy", "allergic", "intolerance"
+        );
+
+        boolean matchGoal = goalKeywords.stream().anyMatch(lower::contains);
+        boolean matchRest = restrictionKeywords.stream().anyMatch(lower::contains);
+
+        if (matchGoal || matchRest) {
+            String normalizedCat = matchGoal && matchRest ? "AMBIGUOUS" : (matchGoal ? "GOAL" : "RESTRICTION");
+            String[] words = trimmed.split("\\s+");
+            StringBuilder sb = new StringBuilder();
+            for (String w : words) {
+                if (!w.isBlank()) {
+                    sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1).toLowerCase()).append(" ");
+                }
+            }
+            String normalized = sb.toString().trim();
+            return Map.of("valid", true, "normalized", normalized, "reason", "Validated as a nutrition " + normalizedCat.toLowerCase() + ".", "category", normalizedCat);
+        }
+
+        // 3. If neither AI nor the recognized nutrition vocabulary matches, REJECT
+        return Map.of(
+            "valid", false,
+            "normalized", "",
+            "reason", "Rejected: \"" + trimmed + "\" does not appear to be a recognized health goal or dietary restriction.",
+            "category", "INVALID"
+        );
     }
     
     public String chat(String message) {

@@ -62,7 +62,7 @@ google:
 gemma:
   api:
     key: ${GEMMA_API_KEY:mock-key}
-    model: ${GEMMA_MODEL:gemini-1.5-flash}
+    model: ${GEMMA_MODEL:gemini-3.8-flash}
 
 razorpay:
   key-id: ${RAZORPAY_KEY_ID:rzp_test_TpZmiL9G36VVd4}
