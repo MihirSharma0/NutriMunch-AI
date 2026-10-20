@@ -3,7 +3,7 @@ import api from '../../../api/axios';
 import { Html5Qrcode } from 'html5-qrcode';
 
 const AiImageAnalyzer = () => {
-    const [inputType, setInputType] = useState('FOOD_IMAGE'); // FOOD_IMAGE, NUTRITION_LABEL, BARCODE
+    const [inputType, setInputType] = useState('FOOD_IMAGE'); // FOOD_IMAGE, BARCODE
     const [imageUrl, setImageUrl] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
     const [barcode, setBarcode] = useState('');
@@ -167,7 +167,7 @@ const AiImageAnalyzer = () => {
                     </div>
                 </div>
                 <p className="text-white/60 text-sm font-body-md max-w-3xl">
-                    Powered by Google Gemma AI vision model. Scan food dishes, nutrition panels, or use live camera barcode scanning for instant allergen matching, additive safety, and health verdicts.
+                    Powered by Google Gemma AI vision model. Scan food dishes or use live camera barcode scanning for instant allergen matching, additive safety, and health verdicts.
                 </p>
             </div>
 
@@ -176,7 +176,7 @@ const AiImageAnalyzer = () => {
                 <div className="absolute top-0 right-0 w-80 h-80 bg-[#a5d391]/5 blur-[120px] rounded-full pointer-events-none"></div>
 
                 {/* Input Tabs */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-1.5 bg-[#080b12]/80 rounded-2xl border border-white/10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1.5 bg-[#080b12]/80 rounded-2xl border border-white/10">
                     <button
                         type="button"
                         onClick={() => { setInputType('FOOD_IMAGE'); setErrorMsg(''); setIsCameraScanning(false); }}
@@ -184,14 +184,6 @@ const AiImageAnalyzer = () => {
                     >
                         <span className="material-symbols-outlined text-lg">photo_camera</span>
                         <span>Food Photo</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => { setInputType('NUTRITION_LABEL'); setErrorMsg(''); setIsCameraScanning(false); }}
-                        className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${inputType === 'NUTRITION_LABEL' ? 'bg-[#a5d391] text-black shadow-lg shadow-[#a5d391]/20' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                    >
-                        <span className="material-symbols-outlined text-lg">analytics</span>
-                        <span>Nutrition Facts</span>
                     </button>
                     <button
                         type="button"
@@ -204,14 +196,14 @@ const AiImageAnalyzer = () => {
                 </div>
 
                 <form onSubmit={analyzeFood} className="space-y-6">
-                    {/* Food photo or nutrition facts image upload */}
-                    {(inputType === 'FOOD_IMAGE' || inputType === 'NUTRITION_LABEL') && (
+                    {/* Food photo image upload */}
+                    {inputType === 'FOOD_IMAGE' && (
                         <div className="space-y-4">
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <label className="flex-grow w-full cursor-pointer flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 hover:border-[#a5d391]/60 bg-[#080b12]/60 rounded-2xl transition-all group">
                                     <span className="material-symbols-outlined text-4xl text-[#a5d391] group-hover:scale-110 transition-transform mb-2">cloud_upload</span>
                                     <span className="text-sm font-bold text-white mb-1">Click or drag image file here</span>
-                                    <span className="text-xs text-white/40">Gemma AI analyzes food photo or label OCR scan</span>
+                                    <span className="text-xs text-white/40">Gemma AI analyzes food photo</span>
                                     <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                                 </label>
 
