@@ -24,7 +24,6 @@ import Appointments from './pages/Dashboard/User/Appointments';
 import ProgressTracking from './pages/Dashboard/User/ProgressTracking';
 import DietPlans from './pages/Dashboard/User/DietPlans';
 import Reports from './pages/Dashboard/User/Reports';
-import AiChat from './pages/Dashboard/User/AiChat';
 import AiDietGenerator from './pages/Dashboard/User/AiDietGenerator';
 import AiImageAnalyzer from './pages/Dashboard/User/AiImageAnalyzer';
 import VirtualRoom from './pages/VirtualRoom';
@@ -98,7 +97,6 @@ function App() {
               <Route path="ai-diet" element={<AiDietGenerator />} />
               <Route path="ai-image" element={<AiImageAnalyzer />} />
               <Route path="progress" element={<ProgressTracking />} />
-              <Route path="ai-chat" element={<AiChat />} />
               <Route path="appointments" element={<Appointments />} />
               <Route path="reports" element={<Reports />} />
               <Route path="diet-plans" element={<DietPlans />} />
@@ -115,7 +113,6 @@ function App() {
               <Route path="dashboard/diet-plans" element={<DietPlans />} />
               <Route path="dashboard/appointments" element={<Appointments />} />
               <Route path="dashboard/reports" element={<Reports />} />
-              <Route path="dashboard/user/ai-chat" element={<AiChat />} />
               <Route path="dashboard/user/appointments" element={<Appointments />} />
               <Route path="dashboard/user/reports" element={<Reports />} />
               <Route path="dashboard/user/diet-plans" element={<DietPlans />} />

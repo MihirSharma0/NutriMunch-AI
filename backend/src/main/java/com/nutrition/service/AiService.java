@@ -409,20 +409,6 @@ public class AiService {
                 "category", "INVALID");
     }
 
-    public String chat(String message) {
-        if (!"mock-key".equals(gemmaApiKey) && gemmaApiKey != null && !gemmaApiKey.isBlank()) {
-            try {
-                return callGemmaText("You are a helpful clinical nutrition assistant. User says: " + message);
-            } catch (Exception e) {
-                System.err.println("Gemma API call failed for chat: " + e.getMessage());
-            }
-        }
-        if (!"mock-key".equals(apiKey)) {
-            return callOpenAi("You are a helpful nutrition assistant. User says: " + message);
-        }
-        return "Mock AI Chatbot: Hello! I'm your nutrition assistant. (Configure GEMMA_API_KEY in application.yml/.env for live Gemma response)";
-    }
-
     public String analyzeFoodImage(String imageUrl) {
         if (!"mock-key".equals(gemmaApiKey) && gemmaApiKey != null && !gemmaApiKey.isBlank()) {
             try {

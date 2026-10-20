@@ -124,7 +124,7 @@ const FeatureGate = ({ titleOverride, descOverride, iconOverride }) => {
                 </div>
 
                 <div className="text-xs text-white/40 font-medium">
-                    Guest access available for <Link to="/ai-diet" className="text-[#a5d391] hover:underline">AI Diet Planner</Link>, <Link to="/ai-image" className="text-[#a5d391] hover:underline">AI Food Scanner</Link>, and <Link to="/ai-chat" className="text-[#a5d391] hover:underline">AI Companion Chat</Link>.
+                    Guest access available for <Link to="/ai-diet" className="text-[#a5d391] hover:underline">AI Diet Planner</Link> and <Link to="/ai-image" className="text-[#a5d391] hover:underline">AI Food Scanner</Link>.
                 </div>
             </div>
         </div>
