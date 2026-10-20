@@ -75,6 +75,7 @@ const PaymentManagement = () => {
     const [ledgerStatusFilter, setLedgerStatusFilter] = useState('ALL'); // 'ALL' | 'SUCCESS' | 'LOW_BALANCE'
     const [ledgerUserFilter, setLedgerUserFilter] = useState('ALL'); // 'ALL' or user ID string
     const [ledgerSearch, setLedgerSearch] = useState('');
+    const [isLedgerExpanded, setIsLedgerExpanded] = useState(true);
 
     useEffect(() => {
         fetchRecipientsAndLedger();
@@ -1162,8 +1163,21 @@ const PaymentManagement = () => {
 
             {/* SECTION 2: AUDIT TRANSACTION LEDGER */}
             <div id="audit-transaction-ledger" className="bg-[#0c121e] border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-                    <div>
+                <div
+                    onClick={() => setIsLedgerExpanded(prev => !prev)}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 cursor-pointer"
+                >
+                    <button
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            setIsLedgerExpanded(prev => !prev);
+                        }}
+                        aria-expanded={isLedgerExpanded}
+                        aria-controls="audit-transaction-ledger-content"
+                        className="text-left cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a5d391] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c121e]"
+                        title={isLedgerExpanded ? 'Collapse audit transaction ledger' : 'Expand audit transaction ledger'}
+                    >
                         <span className="text-[#a5d391] text-[10px] font-black uppercase tracking-widest block mb-1">
                             Double-Entry Audit Record
                         </span>
@@ -1175,11 +1189,17 @@ const PaymentManagement = () => {
                                     {totalFailedOrCancelled} Failed / Cancelled
                                 </span>
                             )}
+                            <span className="material-symbols-outlined text-white/50 text-lg" aria-hidden="true">
+                                {isLedgerExpanded ? 'expand_less' : 'expand_more'}
+                            </span>
                         </h2>
-                    </div>
+                    </button>
 
                     {/* Table Filters */}
-                    <div className="flex flex-wrap items-center gap-2">
+                    {isLedgerExpanded && <div
+                        className="flex flex-wrap items-center gap-2"
+                        onClick={(event) => event.stopPropagation()}
+                    >
                         {/* Account Filter */}
                         <select
                             value={ledgerUserFilter}
@@ -1235,11 +1255,12 @@ const PaymentManagement = () => {
                                 className="bg-[#080b12] border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-white/30 outline-none w-36 sm:w-48"
                             />
                         </div>
-                    </div>
+                    </div>}
                 </div>
 
-                {/* Active Recipient Ledger Filter Banner */}
-                {ledgerUserFilter !== 'ALL' && activeRecipient && (
+                {isLedgerExpanded && <div id="audit-transaction-ledger-content" className="space-y-6">
+                    {/* Active Recipient Ledger Filter Banner */}
+                    {ledgerUserFilter !== 'ALL' && activeRecipient && (
                     <div className="p-4 rounded-2xl bg-gradient-to-r from-[#a5d391]/15 via-white/5 to-transparent border border-[#a5d391]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl animate-in fade-in">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-[#a5d391]/20 border border-[#a5d391]/40 flex items-center justify-center font-bold text-sm text-[#a5d391]">
@@ -1280,8 +1301,8 @@ const PaymentManagement = () => {
                     </div>
                 )}
 
-                {/* Ledger Table */}
-                <div className="overflow-x-auto">
+                    {/* Ledger Table */}
+                    <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
                         <thead>
                             <tr className="border-b border-white/10 text-white/40 uppercase tracking-wider text-[10px]">
@@ -1527,7 +1548,8 @@ const PaymentManagement = () => {
                             )}
                         </tbody>
                     </table>
-                </div>
+                    </div>
+                </div>}
             </div>
         </div>
     );
