@@ -36,12 +36,6 @@ public class AiController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/chat")
-    public ResponseEntity<Map<String, String>> chat(@RequestBody Map<String, String> request) {
-        String response = aiService.chat(request.get("message"));
-        return ResponseEntity.ok(Map.of("response", response));
-    }
-
     @PostMapping("/analyze-image")
     public ResponseEntity<Map<String, String>> analyzeImage(@RequestBody Map<String, String> request) {
         String analysis = aiService.analyzeFoodImage(request.get("imageUrl"));

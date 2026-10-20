@@ -36,6 +36,22 @@ also removed:
 - Recipes page sections
 - `frontend/src/pages/Dashboard/Admin/BlogManagement.jsx`
 - `frontend/src/pages/Dashboard/Admin/RecipeManagement.jsx`
+- `frontend/src/pages/HomeSections/GlobalAISection.jsx`
+- `frontend/src/pages/HomeSections/AINutritionCoach.jsx`
+- `frontend/src/pages/HomeSections/BenefitsPersonalizedNutrition.jsx`
+- `frontend/src/pages/HomeSections/FeaturedPrograms.jsx`
+- `frontend/src/pages/HomeSections/HealthTransformation.jsx`
+- `frontend/src/pages/HomeSections/WhyChooseUs.jsx`
+- `frontend/src/pages/TestimonialSections/SuccessMetrics.jsx`
+- `frontend/src/pages/TestimonialSections/VideoTestimonials.jsx`
+- `frontend/src/pages/Dashboard/User/AiChat.jsx`
+
+## Removed orphaned backend dead code
+
+- `BlogController.java`, `BlogService.java`, `BlogRepository.java`, `Blog.java`
+- `RecipeController.java`, `RecipeService.java` (retaining `Recipe.java` and `RecipeRepository.java` for active AI food analyzer alternative suggestions)
+- `BookingController.java` (sessions are managed via `AppointmentController.java`)
+- `NutritionRuleController.java` (unreferenced admin rule controller)
 
 ## Active pages
 

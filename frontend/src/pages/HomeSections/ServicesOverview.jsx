@@ -111,12 +111,6 @@ const getModalServicesForRole = (user) => {
                     desc: 'Quickly scan ingredient photos for clinical nutritional breakdowns.',
                     icon: 'center_focus_strong',
                     path: '/ai-image'
-                },
-                {
-                    title: 'AI Nutrition Companion',
-                    desc: 'Consult 24/7 AI tools for swift nutrient reference and dietary research.',
-                    icon: 'smart_toy',
-                    path: '/ai-chat'
                 }
             ]
         };
@@ -150,12 +144,6 @@ const getModalServicesForRole = (user) => {
                 desc: 'Book one-on-one virtual consultations with certified nutritionists and nutritionists.',
                 icon: 'support_agent',
                 path: '/appointments'
-            },
-            {
-                title: 'AI Nutrition Assistant',
-                desc: '24/7 intelligent AI chatbot for dietary advice, meal ideas, and macro questions.',
-                icon: 'smart_toy',
-                path: '/ai-chat'
             },
             {
                 title: 'Diet Plans Library',

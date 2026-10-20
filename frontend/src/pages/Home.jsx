@@ -4,8 +4,6 @@ import { useContext } from 'react';
 import Starfield from '../components/Starfield';
 import ServicesOverview from './HomeSections/ServicesOverview';
 import { AuthContext } from '../context/AuthContext';
-
-import AINutritionCoach from './HomeSections/AINutritionCoach';
 import HowItWorks from './HomeSections/HowItWorks';
 import FinalCTA from './HomeSections/FinalCTA';
 
@@ -358,10 +356,6 @@ const Home = () => {
                 </div>
                 {!isStaffHome && <div className="w-full bg-[#080b12] text-white py-16 border-t border-white/10">
                     <HowItWorks />
-                </div>}
-
-                {!isStaffHome && <div className="w-full bg-[#080b12] text-white py-12">
-                    <AINutritionCoach />
                 </div>}
 
                 <div className="w-full bg-background text-on-background pb-24">
