@@ -1,8 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
+import { AuthContext } from '../../../context/AuthContext';
+import FeatureGate from '../../../components/FeatureGate';
 
 const UserManagement = () => {
+    const { user } = useContext(AuthContext);
+
+    if (!user) {
+        return <FeatureGate />;
+    }
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterRole, setFilterRole] = useState('ALL');

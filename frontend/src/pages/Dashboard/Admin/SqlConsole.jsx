@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import api from '../../../api/axios';
+import { AuthContext } from '../../../context/AuthContext';
+import FeatureGate from '../../../components/FeatureGate';
 
 const SqlConsole = () => {
+    const { user } = useContext(AuthContext);
+
+    if (!user) {
+        return <FeatureGate />;
+    }
     const [query, setQuery] = useState('SELECT * FROM users LIMIT 10;');
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);

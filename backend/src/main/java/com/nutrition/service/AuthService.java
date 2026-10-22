@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -42,6 +42,10 @@ import com.nutrition.security.CustomUserDetails;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final java.util.Map<String, Integer> OTP_ATTEMPTS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int MAX_OTP_ATTEMPTS = 5;
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -212,7 +216,7 @@ public class AuthService {
         }
 
         if (systemSettingService.isOtpEnabled()) {
-            String otp = String.format("%06d", new Random().nextInt(999999));
+            String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
             user.setOtpCode(otp);
             user.setOtpExpiryDate(LocalDateTime.now().plusMinutes(15));
             userRepository.save(user);
@@ -249,13 +253,39 @@ public class AuthService {
     }
 
     public AuthResponse verifyOtp(String email, String otp) {
-        User user = userRepository.findByEmail(email).orElse(null);
+        if (email == null) {
+            return null;
+        }
+        String normalizedEmail = email.toLowerCase().trim();
+
+        int attempts = OTP_ATTEMPTS.getOrDefault(normalizedEmail, 0);
+        if (attempts >= MAX_OTP_ATTEMPTS) {
+            User user = userRepository.findByEmail(normalizedEmail).orElse(null);
+            if (user != null && user.getOtpCode() != null) {
+                user.setOtpCode(null);
+                user.setOtpExpiryDate(null);
+                userRepository.save(user);
+            }
+            return null;
+        }
+
+        User user = userRepository.findByEmail(normalizedEmail).orElse(null);
         if (user == null || user.getOtpCode() == null || !user.getOtpCode().equals(otp)) {
+            int newAttempts = attempts + 1;
+            OTP_ATTEMPTS.put(normalizedEmail, newAttempts);
+            if (newAttempts >= MAX_OTP_ATTEMPTS && user != null) {
+                user.setOtpCode(null);
+                user.setOtpExpiryDate(null);
+                userRepository.save(user);
+            }
             return null;
         }
         if (user.getOtpExpiryDate() == null || user.getOtpExpiryDate().isBefore(LocalDateTime.now())) {
             return null;
         }
+
+        // On successful verification, clear failed attempt counter
+        OTP_ATTEMPTS.remove(normalizedEmail);
         user.setVerified(true);
         user.setOtpCode(null);
         user.setOtpExpiryDate(null);
@@ -273,9 +303,12 @@ public class AuthService {
     }
 
     public void resendOtp(String email) {
+        if (email != null) {
+            OTP_ATTEMPTS.remove(email.toLowerCase().trim());
+        }
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null && !user.isVerified() && systemSettingService.isOtpEnabled()) {
-            String otp = String.format("%06d", new Random().nextInt(999999));
+            String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
             user.setOtpCode(otp);
             user.setOtpExpiryDate(LocalDateTime.now().plusMinutes(15));
             userRepository.save(user);

@@ -323,6 +323,16 @@ public class AdminController {
         Map<String, Object> result = new HashMap<>();
         try {
             String upperQuery = query.trim().toUpperCase();
+
+            // Safety guard: prevent accidental deletion of shared cloud database or core tables
+            if (upperQuery.contains("DROP DATABASE") || upperQuery.contains("DROP SCHEMA")
+                    || upperQuery.startsWith("DROP TABLE") || upperQuery.contains("DROP TABLE")
+                    || upperQuery.startsWith("TRUNCATE")) {
+                result.put("success", false);
+                result.put("error", "Destructive DDL operations (DROP DATABASE/TABLE, TRUNCATE) are disabled to protect shared database integrity.");
+                return ResponseEntity.ok(result);
+            }
+
             if (upperQuery.startsWith("SELECT") || upperQuery.startsWith("SHOW") || upperQuery.startsWith("DESCRIBE")) {
                 List<Map<String, Object>> rows = jdbcTemplate.queryForList(query);
                 List<String> columns = new ArrayList<>();

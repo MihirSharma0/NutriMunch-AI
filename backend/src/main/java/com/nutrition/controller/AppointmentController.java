@@ -48,11 +48,14 @@ public class AppointmentController {
     @PutMapping("/{id}/status")
     public ResponseEntity<AppointmentDto> updateStatus(
             @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody Map<String, String> body) {
         String status = body.get("status");
         String meetingLink = body.get("meetingLink");
         String notes = body.get("notes");
-        return ResponseEntity.ok(appointmentService.updateAppointmentStatus(id, status, meetingLink, notes));
+        Long callerId = userDetails != null ? userDetails.getId() : null;
+        boolean isAdmin = userDetails != null && userDetails.getUser().getRole() == com.nutrition.entity.Role.ADMIN;
+        return ResponseEntity.ok(appointmentService.updateAppointmentStatus(id, status, meetingLink, notes, callerId, isAdmin));
     }
 
     @PostMapping("/{id}/request-cancel")
@@ -65,8 +68,12 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
-        appointmentService.deleteAppointment(id);
+    public ResponseEntity<Void> deleteAppointment(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long callerId = userDetails != null ? userDetails.getId() : null;
+        boolean isAdmin = userDetails != null && userDetails.getUser().getRole() == com.nutrition.entity.Role.ADMIN;
+        appointmentService.deleteAppointment(id, callerId, isAdmin);
         return ResponseEntity.noContent().build();
     }
 }

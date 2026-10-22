@@ -410,15 +410,30 @@ public class AiService {
     }
 
     public String analyzeFoodImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            return "No image source provided for analysis.";
+        }
+        String cleanUrl = imageUrl.trim();
+        boolean isValidSource = cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://") || cleanUrl.startsWith("data:image/");
+        if (!isValidSource) {
+            return "Invalid image source. Please provide a valid HTTP/HTTPS image URL or upload an image file.";
+        }
+        if (!cleanUrl.startsWith("data:image/")) {
+            cleanUrl = cleanUrl.replaceAll("[\\r\\n\\t]", "");
+            if (cleanUrl.length() > 2048) {
+                return "Image URL is too long. Please provide a standard URL.";
+            }
+        }
+
         if (!"mock-key".equals(gemmaApiKey) && gemmaApiKey != null && !gemmaApiKey.isBlank()) {
             try {
-                return callGemmaText("Analyze this food image URL and estimate calories: " + imageUrl);
+                return callGemmaText("Analyze this food image URL and estimate calories: " + cleanUrl);
             } catch (Exception e) {
                 System.err.println("Gemma API call failed for image analysis: " + e.getMessage());
             }
         }
         if (!"mock-key".equals(apiKey)) {
-            return callOpenAi("Analyze this food image URL and estimate calories: " + imageUrl);
+            return callOpenAi("Analyze this food image URL and estimate calories: " + cleanUrl);
         }
         return "Mock AI Image Analysis: The uploaded image looks like a healthy meal containing approximately 450 calories, high in protein.";
     }
