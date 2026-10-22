@@ -48,8 +48,11 @@ public class NotificationController {
     }
 
     @DeleteMapping("/clear-all")
-    public ResponseEntity<Void> clearAllNotifications() {
-        notificationService.deleteAllNotifications();
+    public ResponseEntity<Void> clearAllNotifications(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails != null ? userDetails.getId() : null;
+        if (userId != null) {
+            notificationService.deleteAllNotificationsForUser(userId);
+        }
         return ResponseEntity.ok().build();
     }
 }

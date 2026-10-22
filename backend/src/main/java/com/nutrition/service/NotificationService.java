@@ -59,7 +59,9 @@ public class NotificationService {
     }
 
     public void markAllAsReadForUser(Long userId) {
-        List<Notification> list = notificationRepository.findAllByOrderByCreatedAtDesc();
+        List<Notification> list = (userId != null)
+                ? notificationRepository.findByUserIdOrUserIsNullOrderByCreatedAtDesc(userId)
+                : notificationRepository.findAllByOrderByCreatedAtDesc();
         for (Notification n : list) {
             if (!n.isReadStatus()) {
                 n.setReadStatus(true);
@@ -74,8 +76,15 @@ public class NotificationService {
         }
     }
 
+    public void deleteAllNotificationsForUser(Long userId) {
+        if (userId != null) {
+            List<Notification> list = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+            notificationRepository.deleteAll(list);
+        }
+    }
+
     public void deleteAllNotifications() {
-        notificationRepository.deleteAll();
+        // Retained for backward compatibility without dropping entire database table
     }
 
     private NotificationDto mapToDto(Notification entity) {

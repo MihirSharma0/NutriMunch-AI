@@ -289,8 +289,22 @@ public class AppointmentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public AppointmentDto updateAppointmentStatus(Long appointmentId, String status, String meetingLink, String notes) {
+        return updateAppointmentStatus(appointmentId, status, meetingLink, notes, null, true);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public AppointmentDto updateAppointmentStatus(Long appointmentId, String status, String meetingLink, String notes, Long callerId, boolean isAdmin) {
         Appointment apt = appointmentRepository.findByIdWithLock(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found: " + appointmentId));
+
+        if (!isAdmin && callerId != null) {
+            Long patientId = apt.getUser() != null ? apt.getUser().getId() : null;
+            Long nutritionistId = apt.getNutritionist() != null ? apt.getNutritionist().getId() : null;
+            if ((patientId == null || !callerId.equals(patientId)) &&
+                (nutritionistId == null || !callerId.equals(nutritionistId))) {
+                throw new org.springframework.security.access.AccessDeniedException("Unauthorized to modify this appointment.");
+            }
+        }
 
         if (meetingLink != null && !meetingLink.trim().isEmpty()) {
             apt.setMeetingLink(meetingLink);
@@ -687,8 +701,21 @@ public class AppointmentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteAppointment(Long appointmentId) {
+        deleteAppointment(appointmentId, null, true);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteAppointment(Long appointmentId, Long callerId, boolean isAdmin) {
         Appointment apt = appointmentRepository.findByIdWithLock(appointmentId).orElse(null);
         if (apt != null) {
+            if (!isAdmin && callerId != null) {
+                Long patientId = apt.getUser() != null ? apt.getUser().getId() : null;
+                Long nutritionistId = apt.getNutritionist() != null ? apt.getNutritionist().getId() : null;
+                if ((patientId == null || !callerId.equals(patientId)) &&
+                    (nutritionistId == null || !callerId.equals(nutritionistId))) {
+                    throw new org.springframework.security.access.AccessDeniedException("Unauthorized to delete this appointment.");
+                }
+            }
             if ("HELD".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
                 User user = apt.getUser();
                 if (user != null) {
