@@ -3,6 +3,7 @@ import Starfield from '../components/Starfield';
 import LocationMap from './ContactSections/LocationMap';
 import OfficeHours from './ContactSections/OfficeHours';
 import SocialLinks from './ContactSections/SocialLinks';
+import FAQLink from './ContactSections/FAQLink';
 import EmergencyContact from './ContactSections/EmergencyContact';
 
 const Contact = () => {
@@ -116,6 +117,7 @@ const Contact = () => {
                     <LocationMap />
                     <OfficeHours />
                     <SocialLinks />
+                    <FAQLink />
                     <EmergencyContact />
                 </div>
             </div>

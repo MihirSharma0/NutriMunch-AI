@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import GlobalLayout from './layouts/GlobalLayout';
 import Home from './pages/Home';
+import About from './pages/About';
 import Testimonials from './pages/Testimonials';
 import Contact from './pages/Contact';
 import UserRoles from './pages/UserRoles';
@@ -85,6 +86,7 @@ function App() {
 
             <Route path="/" element={<GlobalLayout />}>
               <Route index element={<Home />} />
+              <Route path="about" element={<About />} />
               <Route path="user-roles" element={<UserRoles />} />
               <Route path="roles" element={<UserRoles />} />
               <Route path="testimonials" element={<Testimonials />} />
