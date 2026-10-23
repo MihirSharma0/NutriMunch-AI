@@ -257,21 +257,21 @@ const ServicesOverview = () => {
     const modalData = getModalServicesForRole(user);
 
     return (
-        <section className="pt-16 sm:pt-20 pb-16 sm:pb-20 relative overflow-hidden z-20">
-            <div className="absolute top-1/2 left-0 w-96 h-96 bg-[#4a6741]/10 blur-[100px] rounded-full pointer-events-none -translate-y-1/2"></div>
+        <section className="pt-4 sm:pt-6 pb-16 sm:pb-20 relative overflow-hidden z-20">
+            <div className="absolute top-1/2 left-0 w-96 h-96 bg-primary/5 blur-[100px] rounded-full pointer-events-none -translate-y-1/2"></div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8">
                     <div className="max-w-2xl">
-                        <span className="text-[#4a6741] font-bold tracking-widest uppercase text-xs mb-4 block font-label-caps">Instant Visual Intelligence</span>
-                        <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-[#080b12] mb-6">AI Food Photo Scanner & Precision Diet Planner</h2>
-                        <p className="text-[#080b12]/70 text-base leading-relaxed">
+                        <span className="text-primary font-bold tracking-widest uppercase text-sm mb-4 block font-label-caps">Platform Services</span>
+                        <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-on-background mb-6">AI-Powered Health & Nutrition Services</h2>
+                        <p className="text-on-background/70 text-lg leading-relaxed">
                             From personalized calorie tracking to automated AI diet generation, our smart tools are tailored to your unique lifestyle and fitness goals.
                         </p>
                     </div>
                     <button
                         onClick={() => setShowModal(true)}
-                        className="text-[#4a6741] border border-[#4a6741]/30 hover:border-[#4a6741] px-8 py-4 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 group shadow-lg"
+                        className="text-on-background border border-outline-variant/50 hover:border-primary hover:text-primary px-8 py-4 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 group shadow-lg"
                     >
                         <span>View All Services</span>
                         <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">open_in_new</span>
@@ -283,19 +283,19 @@ const ServicesOverview = () => {
                         <div
                             key={idx}
                             onClick={() => navigate(service.path)}
-                            className="bg-white shadow-xl shadow-black/10 border border-[#4a6741]/10 rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-6 group hover:border-[#4a6741]/50 transition-all cursor-pointer"
+                            className="bg-white shadow-xl shadow-black/5 border border-outline-variant/30 rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-6 group hover:border-primary/50 transition-all cursor-pointer"
                         >
-                            <div className="w-20 h-20 bg-[#f6e6d8] rounded-2xl flex items-center justify-center shrink-0 border border-[#4a6741]/10 group-hover:scale-110 transition-transform duration-500">
-                                <span className="material-symbols-outlined text-4xl text-[#080b12]/70 group-hover:text-[#4a6741] transition-colors">{service.icon}</span>
+                            <div className="w-20 h-20 bg-surface rounded-2xl flex items-center justify-center shrink-0 border border-outline-variant/30 group-hover:scale-110 transition-transform duration-500">
+                                <span className="material-symbols-outlined text-4xl text-on-background/70 group-hover:text-primary transition-colors">{service.icon}</span>
                             </div>
                             <div className="flex-grow">
-                                <h3 className="text-2xl font-bold text-[#080b12] mb-3 group-hover:text-[#4a6741] transition-colors">{service.title}</h3>
-                                <p className="text-[#080b12]/70 leading-relaxed">
+                                <h3 className="text-2xl font-bold text-on-background mb-3 group-hover:text-primary transition-colors">{service.title}</h3>
+                                <p className="text-on-background/70 leading-relaxed">
                                     {service.desc}
                                 </p>
                             </div>
                             <div className="ml-auto hidden md:block">
-                                <span className="material-symbols-outlined text-[#080b12]/30 text-3xl group-hover:text-[#4a6741] transition-colors group-hover:translate-x-2 duration-300">arrow_forward</span>
+                                <span className="material-symbols-outlined text-on-background/30 text-3xl group-hover:text-primary transition-colors group-hover:translate-x-2 duration-300">arrow_forward</span>
                             </div>
                         </div>
                     ))}

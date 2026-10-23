@@ -29,20 +29,25 @@ const HowItWorks = () => {
     ];
 
     return (
-        <section className="py-20 max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
-            <div className="text-center mb-16">
-                <span className="text-[#a5d391] font-bold tracking-widest uppercase text-xs mb-3 block font-mono">The Methodology</span>
-                <h2 className="font-hero-display text-3xl sm:text-5xl font-bold text-white mb-4">How NutriMunch AI Works</h2>
-                <p className="text-white/60 text-base max-w-xl mx-auto">From biological assessment to closed-loop adaptive meal reprogramming.</p>
+        <section className="pt-12 pb-16 sm:pb-24 max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
+            <div className="text-center mb-20">
+                <span className="text-primary font-bold tracking-widest uppercase text-sm mb-4 block">The Process</span>
+                <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-white mb-6">How It Works</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
+                {/* Connecting Line */}
+                <div className="hidden lg:block absolute top-12 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                
                 {steps.map((step, idx) => (
-                    <div key={idx} className="relative z-10 flex flex-col text-left group bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 hover:border-[#a5d391]/50 transition-all duration-300">
-                        <div className="w-14 h-14 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center font-black text-lg mb-6 group-hover:scale-110 transition-transform">
-                            {step.num}
+                    <div key={idx} className="relative z-10 flex flex-col items-center text-center group">
+                        <div className="w-24 h-24 bg-black/50 shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 rounded-full flex items-center justify-center mb-6 group-hover:border-primary/50 transition-all relative group-hover:-translate-y-2 duration-500">
+                            <span className="material-symbols-outlined text-3xl text-white/50 group-hover:text-primary transition-colors">{step.icon}</span>
+                            <div className="absolute -top-3 -right-3 w-8 h-8 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-sm">
+                                {step.num}
+                            </div>
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-2 group-hover:text-[#a5d391] transition-colors">{step.title}</h3>
+                        <h3 className="text-xl font-bold text-white mb-3 group-hover:text-primary transition-colors">{step.title}</h3>
                         <p className="text-white/50 text-sm leading-relaxed max-w-xs">{step.desc}</p>
                     </div>
                 ))}

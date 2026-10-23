@@ -5,36 +5,10 @@
 @layer base {
   html, body {
     @apply font-body-md text-on-background selection:bg-primary-container selection:text-on-primary-container;
-    background: #080b12 !important;
+    background-color: #080b12 !important;
     color: #ffffff;
     min-height: 100vh;
     overflow-x: hidden;
-  }
-
-  .app-atmosphere {
-    background: #080b12;
-  }
-
-  .home-atmosphere {
-    background:
-      radial-gradient(circle at 14% 12%, rgba(165, 211, 145, 0.12), transparent 28rem),
-      radial-gradient(circle at 88% 38%, rgba(14, 165, 233, 0.08), transparent 32rem),
-      linear-gradient(
-        180deg,
-        #080b12 0%,
-        #080b12 24%,
-        #4a373d 33%,
-        #f6e6d8 43%,
-        #f6e6d8 53%,
-        #4a373d 61%,
-        #080b12 70%,
-        #080b12 79%,
-        #f6e6d8 88%,
-        #f6e6d8 94%,
-        #080b12 100%
-      );
-    background-attachment: scroll;
-    background-size: 100% 100%;
   }
 
   /* Custom Premium Dark Theme Scrollbar */
