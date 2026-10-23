@@ -88,26 +88,14 @@ File: [ConsultationChatModal.jsx](./frontend/src/components/ConsultationChatModa
 The records include hardcoded IDs, emails, and health goals. They are used as
 fallback patient data in the consultation chat flow.
 
-### 5. About page testimonials
-
-File: [About.jsx](./frontend/src/pages/About.jsx)
-
-The About page contains hardcoded testimonial identities, including:
-
-- Marcus Chen
-- Sarah Jenkins
-
-These should be replaced with records from the testimonial API if the About
-page is expected to show live testimonials.
-
-### 6. Seed testimonials
+### 5. Seed testimonials
 
 File: [testimonialService.js](./frontend/src/services/testimonialService.js)
 
 The testimonial service contains `seed-*` testimonial records. These are
 local/demo records and are not guaranteed to represent database testimonials.
 
-### 7. Admin credential fallback values
+### 6. Admin credential fallback values
 
 File: [AdminHome.jsx](./frontend/src/pages/Dashboard/Admin/AdminHome.jsx)
 
@@ -124,7 +112,7 @@ display the fallback values.
 Displaying default passwords in the UI is inappropriate for production and
 should be removed. The page should show an unavailable/error state instead.
 
-### 8. Admin analytics and system insights
+### 7. Admin analytics and system insights
 
 File: [AdminHome.jsx](./frontend/src/pages/Dashboard/Admin/AdminHome.jsx)
 
@@ -141,7 +129,7 @@ The backend analytics endpoint should be the only source of truth for:
 - Platform activity
 - System uptime
 
-### 9. Home page static biometric display
+### 8. Home page static biometric display
 
 File: [Home.jsx](./frontend/src/pages/Home.jsx)
 
@@ -153,7 +141,7 @@ The home page displays fixed marketing values:
 These values are not connected to the logged-in user profile or daily
 nutritional targets.
 
-### 10. Static home page imagery
+### 9. Static home page imagery
 
 File: [Home.jsx](./frontend/src/pages/Home.jsx)
 

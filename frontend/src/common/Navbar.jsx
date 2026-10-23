@@ -20,7 +20,6 @@ export const getNavItemsForRole = (user) => {
             { label: 'Platform Roles', path: '/user-roles' },
             { label: 'AI Suite & Features', subMenu: aiSubMenu },
             { label: 'Testimonials', path: '/testimonials' },
-            { label: 'About', path: '/about' },
             { label: 'Contact', path: '/contact' }
         ];
     }

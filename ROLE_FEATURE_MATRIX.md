@@ -212,7 +212,6 @@ These routes are registered in the application and may be used by more than
 one role, subject to backend authentication and authorization:
 
 - Home — `/`
-- About — `/about`
 - User Roles — `/user-roles` and `/roles`
 - Testimonials — `/testimonials`
 - Contact — `/contact`
