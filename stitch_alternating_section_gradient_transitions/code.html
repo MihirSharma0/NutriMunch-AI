@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NutriMunch AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,600;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              dark: '#080b12',
+              cardDark: '#0e1422',
+              lime: '#a5d391',
+              limeBright: '#a3e635',
+              greenDark: '#4a6741',
+              accentWarm: '#e2ba8c',
+              warmLight: '#faeade',
+              warmCard: '#ffffff',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Gradient transition styles matching reference image: deep dark (#080b12) <-> warm luminous sand/cream (#ebd0b4) */
+    .grad-dark-to-light {
+      background: linear-gradient(180deg, #080b12 0%, #171622 30%, #3a2e38 55%, #7a5f57 75%, #c8a88f 90%, #f6e6d8 100%);
+    }
+    .grad-light-to-dark {
+      background: linear-gradient(180deg, #f6e6d8 0%, #c8a88f 15%, #7a5f57 35%, #3a2e38 60%, #171622 80%, #080b12 100%);
+    }
+    .light-section-bg {
+      background-color: #f6e6d8;
+    }
+    .dark-section-bg {
+      background-color: #080b12;
+    }
+    .mint-glow {
+      filter: drop-shadow(0 0 14px rgba(165, 211, 145, 0.45));
+    }
+    .text-glow {
+      text-shadow: 0 0 20px rgba(165, 211, 145, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-[#080b12] text-white font-sans antialiased selection:bg-[#a3e635]/30 selection:text-white min-h-screen overflow-x-hidden">
+
+  <!-- Ambient Glow Elements in Dark Space -->
+  <div class="fixed top-[15%] left-0 -translate-x-[40%] -translate-y-1/2 w-[700px] h-[700px] bg-[#a3e635]/10 blur-[160px] rounded-full pointer-events-none z-0"></div>
+  <div class="fixed top-[60%] right-0 translate-x-[40%] w-[700px] h-[700px] bg-[#0ea5e9]/10 blur-[160px] rounded-full pointer-events-none z-0"></div>
+
+  <!-- Persistent Floating Header Nav -->
+  <div class="fixed top-4 left-4 right-4 z-50 pointer-events-none">
+    <nav class="mx-auto max-w-7xl bg-[#080b12]/85 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl pointer-events-auto px-4 sm:px-6 py-3 flex justify-between items-center transition-all">
+      <a class="text-lg sm:text-xl font-extrabold text-white flex items-center gap-2 tracking-tight whitespace-nowrap" href="#">
+        <span class="w-2.5 h-2.5 bg-[#a5d391] rounded-full shadow-[0_0_10px_rgba(165,211,145,0.9)] animate-pulse"></span>
+        NutriMunch <span class="text-[#a5d391] italic font-semibold">AI</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1 bg-white/5 rounded-full px-3 py-1 border border-white/10 shadow-inner">
+        <a class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm" href="#">Home</a>
+        <a class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-colors" href="#">Platform Roles</a>
+        <a class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-1" href="#">
+          <span>AI Suite</span>
+          <span class="material-symbols-outlined text-sm">expand_more</span>
+        </a>
+        <a class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-colors" href="#">Diet Plans</a>
+        <a class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-colors" href="#">Consultations</a>
+        <a class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-colors" href="#">About</a>
+      </div>
+
+      <div class="flex items-center gap-3 shrink-0">
+        <button class="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all">
+          <span class="material-symbols-outlined text-lg">notifications</span>
+        </button>
+        <a href="#" class="bg-gradient-to-r from-[#a5d391] to-[#7ec362] text-black font-extrabold px-5 py-2 rounded-full text-xs shadow-[0_0_15px_rgba(165,211,145,0.4)] hover:shadow-[0_0_25px_rgba(165,211,145,0.7)] transition-all hover:scale-105">
+          Login / Sign up
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- SECTION 1 (DARK): HERO SECTION                 -->
+  <!-- ============================================== -->
+  <section class="relative z-10 dark-section-bg pt-32 sm:pt-40 pb-20 px-4 sm:px-8 max-w-7xl mx-auto">
+    <div class="relative flex flex-col w-full">
+      <div class="mb-10 md:mb-14">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#a5d391]/10 border border-[#a5d391]/30 text-[#a5d391] text-xs font-bold tracking-widest uppercase mb-4">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-ping"></span>
+          Autonomous Dietary Calibration
+        </div>
+        <h1 class="text-[3.5rem] sm:text-[5.5rem] md:text-[8rem] lg:text-[10.5rem] leading-[0.9] font-black text-white tracking-tighter" style="text-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+          Nutrition
+        </h1>
+      </div>
+
+      <div class="grid grid-cols-12 gap-8 items-end mb-16">
+        <div class="col-span-12 md:col-span-4 space-y-4">
+          <div class="flex -space-x-3">
+            <div class="w-12 h-12 rounded-full border-2 border-[#080b12] bg-slate-800 flex items-center justify-center text-xs font-bold ring-2 ring-[#a5d391]/30 overflow-hidden shadow-lg">
+              <span class="material-symbols-outlined text-[#a5d391]">person</span>
+            </div>
+            <div class="w-12 h-12 rounded-full border-2 border-[#080b12] bg-slate-700 flex items-center justify-center text-xs font-bold ring-2 ring-[#a5d391]/30 overflow-hidden shadow-lg">
+              <span class="material-symbols-outlined text-[#38bdf8]">psychology</span>
+            </div>
+            <div class="w-12 h-12 rounded-full border-2 border-[#080b12] bg-slate-900 flex items-center justify-center text-xs font-bold ring-2 ring-[#a5d391]/30 overflow-hidden shadow-lg">
+              <span class="material-symbols-outlined text-[#fbbf24]">vital_signs</span>
+            </div>
+          </div>
+          <div>
+            <div class="text-[#a5d391] text-[11px] font-black tracking-[0.2em] uppercase flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-[#a5d391] animate-pulse"></span>
+              Precision Metabolic Health
+            </div>
+            <p class="text-white/50 text-sm font-medium mt-1">Real-time adaptive AI bio-tracking protocol</p>
+          </div>
+        </div>
+
+        <div class="col-span-12 md:col-span-5">
+          <p class="text-white/70 text-base md:text-lg leading-relaxed font-light">
+            <span class="text-[#a5d391] text-xs font-bold uppercase tracking-widest block mb-2 font-mono">Autonomous Fuel Intelligence</span>
+            Generate personalized macro-split meal plans, automatically scan plate photos with visual AI, and adjust caloric targets based on your metabolic output.
+          </p>
+        </div>
+
+        <div class="col-span-12 md:col-span-3 flex md:justify-end">
+          <a href="#analyzer" class="group flex items-center gap-4 bg-white/5 hover:bg-[#a5d391]/10 border border-white/10 hover:border-[#a5d391]/50 p-4 rounded-2xl backdrop-blur-xl transition-all shadow-xl">
+            <div class="w-12 h-12 rounded-xl bg-[#a5d391]/20 text-[#a5d391] flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined text-2xl">restaurant_menu</span>
+            </div>
+            <div>
+              <span class="text-xs uppercase font-bold text-white/50 tracking-wider block">Get Started</span>
+              <span class="text-sm font-bold text-white group-hover:text-[#a5d391] transition-colors flex items-center gap-1">
+                Start Your Plan <span class="group-hover:translate-x-1 transition-transform">→</span>
+              </span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Dashboard Hero Banner Card -->
+      <div class="relative rounded-3xl overflow-hidden border border-white/10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)] bg-[#0d131f]">
+        <div class="p-8 sm:p-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+          <div class="flex flex-wrap gap-8 sm:gap-14 bg-black/50 backdrop-blur-xl border border-white/10 p-6 rounded-2xl">
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-widest text-[#a5d391] block mb-1">Target Calories</span>
+              <span class="text-3xl sm:text-4xl font-black text-white tracking-tight">2,250 <span class="text-lg font-normal text-white/60">kcal</span></span>
+            </div>
+            <div class="w-px h-12 bg-white/15 self-center hidden sm:block"></div>
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-widest text-[#a5d391] block mb-1">Optimal Macro Ratio</span>
+              <span class="text-3xl sm:text-4xl font-black text-[#a5d391] tracking-tight mint-glow">35% P · 45% C · 20% F</span>
+            </div>
+            <div class="w-px h-12 bg-white/15 self-center hidden sm:block"></div>
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-widest text-[#38bdf8] block mb-1">Hydration Goal</span>
+              <span class="text-3xl sm:text-4xl font-black text-white tracking-tight">3.2 <span class="text-lg font-normal text-white/60">L / day</span></span>
+            </div>
+          </div>
+
+          <button class="w-16 h-16 rounded-full bg-[#a5d391] text-black flex items-center justify-center hover:scale-110 hover:bg-white shadow-[0_0_30px_rgba(165,211,145,0.4)] transition-all shrink-0">
+            <span class="material-symbols-outlined text-3xl">play_arrow</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================== -->
+  <!-- TRANSITION GRADIENT 1: DARK TO LIGHT (Reference Style)     -->
+  <!-- ========================================================== -->
+  <div class="w-full h-36 sm:h-48 md:h-64 grad-dark-to-light relative flex items-center justify-center overflow-hidden">
+    <!-- Subtle horizon line mimicking camera/cinematic gradient banding -->
+    <div class="w-full h-px bg-white/10 absolute top-1/2"></div>
+    <div class="text-[10px] font-mono uppercase tracking-[0.3em] text-[#080b12]/40 font-bold px-4 py-1 rounded-full bg-white/20 backdrop-blur-sm">
+      Metabolic Flow · Calibration
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- SECTION 2 (LIGHT): AI SUITE & FEATURE SPOTLIGHT            -->
+  <!-- ========================================================== -->
+  <section id="analyzer" class="light-section-bg text-[#080b12] py-20 px-4 sm:px-8 relative z-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-14 gap-6">
+        <div class="max-w-2xl">
+          <span class="text-[#4a6741] font-extrabold tracking-widest uppercase text-xs mb-2 block font-mono">Instant Visual Intelligence</span>
+          <h2 class="text-3xl sm:text-5xl font-black text-[#080b12] tracking-tight leading-tight">
+            AI Food Photo Scanner &amp; Precision Diet Planner
+          </h2>
+          <p class="text-[#080b12]/70 text-base sm:text-lg mt-3 font-normal leading-relaxed">
+            Snap your plate with computer vision to calculate nutritional density, or let our generative AI design your entire weekly shopping and macro split.
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold text-[#4a6741] uppercase tracking-wider bg-white/80 px-4 py-2 rounded-full border border-[#4a6741]/20 shadow-sm">
+            Powered by Vision-LLM 4.0
+          </span>
+        </div>
+      </div>
+
+      <!-- Feature Duo Grid on Light Background -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Feature 1: Food Scanner Card -->
+        <div class="lg:col-span-7 bg-white rounded-3xl p-8 sm:p-12 shadow-xl border border-black/5 flex flex-col justify-between hover:-translate-y-1.5 transition-all duration-300">
+          <div>
+            <div class="flex items-center gap-3 mb-6">
+              <span class="w-8 h-1 bg-[#4a6741] rounded-full"></span>
+              <span class="text-xs tracking-widest text-[#4a6741] font-extrabold uppercase">AI Food Calorie Scanner</span>
+            </div>
+            <h3 class="text-3xl sm:text-4xl font-extrabold text-[#080b12] tracking-tight leading-snug mb-4">
+              Snap a photo for <span class="text-[#4a6741] italic underline decoration-[#a5d391]">instant macro</span> &amp; calorie breakdown.
+            </h3>
+            <p class="text-[#080b12]/70 text-base leading-relaxed mb-6">
+              Upload any meal image. Our visual classification neural network calculates protein, carbs, healthy fats, micro-nutrients, and fiber within 1.2 seconds.
+            </p>
+            <div class="grid grid-cols-3 gap-4 p-4 rounded-2xl bg-[#f6e6d8]/60 border border-[#4a6741]/10 mb-8">
+              <div class="text-center">
+                <span class="text-[10px] uppercase font-bold text-[#4a6741] block">Accuracy</span>
+                <span class="text-xl font-black text-[#080b12]">98.4%</span>
+              </div>
+              <div class="text-center border-x border-[#4a6741]/10">
+                <span class="text-[10px] uppercase font-bold text-[#4a6741] block">Detect Time</span>
+                <span class="text-xl font-black text-[#080b12]">1.2s</span>
+              </div>
+              <div class="text-center">
+                <span class="text-[10px] uppercase font-bold text-[#4a6741] block">Food DB</span>
+                <span class="text-xl font-black text-[#080b12]">850k+</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between pt-4 border-t border-black/5">
+            <button class="inline-flex items-center gap-3 text-[#4a6741] font-extrabold text-sm uppercase tracking-wider hover:text-black transition-colors">
+              <span>Launch Food Scanner Demo</span>
+              <span class="material-symbols-outlined text-lg">arrow_forward</span>
+            </button>
+            <span class="material-symbols-outlined text-3xl text-[#4a6741]/40">document_scanner</span>
+          </div>
+        </div>
+
+        <!-- Feature 2: Weekly Diet Planner Card -->
+        <div class="lg:col-span-5 bg-[#080b12] text-white rounded-3xl p-8 sm:p-12 shadow-xl border border-white/10 flex flex-col justify-between hover:-translate-y-1.5 transition-all duration-300">
+          <div>
+            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#a3e635] mb-4">
+              <span class="material-symbols-outlined text-sm">magic_button</span>
+              Generative Meal Architect
+            </div>
+            <h3 class="text-2xl sm:text-3xl font-black tracking-tight leading-snug mb-4">
+              Precision-tailored weekly dietary blueprints.
+            </h3>
+            <p class="text-white/70 text-sm leading-relaxed mb-6">
+              Dynamically adapted to your dietary restrictions, budget parameters, regional groceries, and fitness goals with automated pantry checklists.
+            </p>
+            <div class="space-y-2.5 mb-8">
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                <span class="material-symbols-outlined text-[#a5d391] text-lg">check_circle</span>
+                <span class="text-xs font-semibold text-white/90">Keto, Vegan, Paleo &amp; Low-FODMAP configs</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                <span class="material-symbols-outlined text-[#a5d391] text-lg">check_circle</span>
+                <span class="text-xs font-semibold text-white/90">Automated grocery cost optimizer</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                <span class="material-symbols-outlined text-[#a5d391] text-lg">check_circle</span>
+                <span class="text-xs font-semibold text-white/90">Allergen detection &amp; macro swap safeguards</span>
+              </div>
+            </div>
+          </div>
+
+          <a href="#" class="inline-flex items-center justify-center gap-2 bg-[#a3e635] text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full shadow-[0_0_20px_rgba(163,230,53,0.35)] hover:bg-white transition-all">
+            <span>Generate My Weekly Plan</span>
+            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================== -->
+  <!-- TRANSITION GRADIENT 2: LIGHT TO DARK (Reference Style)     -->
+  <!-- ========================================================== -->
+  <div class="w-full h-36 sm:h-48 md:h-64 grad-light-to-dark relative flex items-center justify-center overflow-hidden">
+    <!-- Horizon Line -->
+    <div class="w-full h-px bg-black/10 absolute top-1/2"></div>
+    <div class="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40 font-bold px-4 py-1 rounded-full bg-black/30 backdrop-blur-sm">
+      Protocol Sequence · Core Pillars
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- SECTION 3 (DARK): THE 4-STEP PROTOCOL PROCESS              -->
+  <!-- ========================================================== -->
+  <section class="dark-section-bg py-20 px-4 sm:px-8 relative z-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-[#a5d391] font-bold tracking-widest uppercase text-xs mb-3 block font-mono">The Methodology</span>
+        <h2 class="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">How NutriMunch AI Works</h2>
+        <p class="text-white/60 text-base max-w-xl mx-auto">From biological assessment to closed-loop adaptive meal reprogramming.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+        <!-- Step 1 -->
+        <div class="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 hover:border-[#a5d391]/50 transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center font-black text-lg mb-6 group-hover:scale-110 transition-transform">
+            01
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2 group-hover:text-[#a5d391] transition-colors">Book Consultation</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Schedule a 1-on-1 virtual clinical consultation to baseline your metabolic health and targets.
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 hover:border-[#a5d391]/50 transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center font-black text-lg mb-6 group-hover:scale-110 transition-transform">
+            02
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2 group-hover:text-[#a5d391] transition-colors">Health Assessment</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Input blood metrics, BMR data, activity frequency, and personal culinary preferences.
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 hover:border-[#a5d391]/50 transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center font-black text-lg mb-6 group-hover:scale-110 transition-transform">
+            03
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2 group-hover:text-[#a5d391] transition-colors">Personalized Plan</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            AI synthesizes your custom daily micro &amp; macro targets with full recipe breakdowns.
+          </p>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 hover:border-[#a5d391]/50 transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center font-black text-lg mb-6 group-hover:scale-110 transition-transform">
+            04
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2 group-hover:text-[#a5d391] transition-colors">Track &amp; Achieve</h3>
+          <p class="text-white/50 text-sm leading-relaxed">
+            Snap meals daily. The AI engine continuously refines your targets to eliminate weight loss plateaus.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================== -->
+  <!-- TRANSITION GRADIENT 3: DARK TO LIGHT (Reference Style)     -->
+  <!-- ========================================================== -->
+  <div class="w-full h-36 sm:h-48 md:h-64 grad-dark-to-light relative flex items-center justify-center overflow-hidden">
+    <div class="w-full h-px bg-white/10 absolute top-1/2"></div>
+    <div class="text-[10px] font-mono uppercase tracking-[0.3em] text-[#080b12]/40 font-bold px-4 py-1 rounded-full bg-white/20 backdrop-blur-sm">
+      Clinical Schedules · Consultations
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- SECTION 4 (LIGHT): CLINICAL APPOINTMENTS & DOCTORS         -->
+  <!-- ========================================================== -->
+  <section class="light-section-bg text-[#080b12] py-20 px-4 sm:px-8 relative z-20">
+    <div class="max-w-6xl mx-auto">
+      <div class="bg-gradient-to-r from-[#4a6741] to-[#a5d391] rounded-[2.5rem] p-8 sm:p-14 md:p-16 text-center text-white shadow-2xl relative overflow-hidden">
+        <div class="relative z-10 max-w-2xl mx-auto">
+          <span class="inline-block px-3 py-1 rounded-full bg-black/20 text-white text-xs font-bold uppercase tracking-widest mb-4">
+            Certified Clinical Nutritionists
+          </span>
+          <h2 class="text-3xl sm:text-5xl font-black text-white mb-4 tracking-tight">
+            Schedule One-on-One Consultations
+          </h2>
+          <p class="text-white/90 font-medium text-base sm:text-lg mb-8 leading-relaxed">
+            Review your AI diet scans with registered clinical dietitians and sports nutrition doctors for certified biometric validation.
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-4">
+            <a href="#" class="bg-[#080b12] text-white hover:bg-white hover:text-black font-extrabold px-8 py-4 rounded-full text-sm shadow-xl transition-all hover:scale-105 flex items-center gap-2">
+              <span>Book Appointment Now</span>
+              <span class="material-symbols-outlined text-lg">calendar_month</span>
+            </a>
+            <a href="#" class="bg-white/20 hover:bg-white/30 text-white font-bold px-6 py-4 rounded-full text-sm backdrop-blur-md transition-all">
+              View Doctor Directory
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================== -->
+  <!-- TRANSITION GRADIENT 4: LIGHT TO DARK (Reference Style)     -->
+  <!-- ========================================================== -->
+  <div class="w-full h-32 sm:h-44 grad-light-to-dark relative flex items-center justify-center overflow-hidden">
+    <div class="w-full h-px bg-black/10 absolute top-1/2"></div>
+    <div class="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40 font-bold px-4 py-1 rounded-full bg-black/30 backdrop-blur-sm">
+      Footer · Operational Systems
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- SECTION 5 (DARK): COMPREHENSIVE FOOTER                     -->
+  <!-- ========================================================== -->
+  <footer class="dark-section-bg border-t border-white/10 w-full py-14 px-4 sm:px-8 relative z-10">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+      <div class="text-center md:text-left">
+        <div class="text-2xl font-black text-white tracking-tighter flex items-center justify-center md:justify-start gap-2 mb-2">
+          <span class="w-3 h-3 bg-[#a5d391] rounded-full shadow-[0_0_10px_rgba(165,211,145,0.8)]"></span>
+          NutriMunch <span class="text-[#a5d391] italic font-semibold">AI</span>
+        </div>
+        <p class="text-white/50 text-xs max-w-sm leading-relaxed">
+          Autonomous dietary calibration and biometric intelligence platform designed to empower your lifestyle goals.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap justify-center md:justify-end gap-4 text-xs font-semibold text-white/70">
+        <a class="hover:text-[#a5d391] transition-colors" href="#">Home</a>
+        <a class="hover:text-[#a5d391] transition-colors" href="#">AI Food Scanner</a>
+        <a class="hover:text-[#a5d391] transition-colors" href="#">Diet Generator</a>
+        <a class="hover:text-[#a5d391] transition-colors" href="#">Clinical Bookings</a>
+        <a class="hover:text-[#a5d391] transition-colors" href="#">Testimonials</a>
+        <a class="hover:text-[#a5d391] transition-colors" href="#">Privacy &amp; Terms</a>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto mt-8 pt-6 border-t border-white/5 text-center text-white/30 text-[10px] font-mono tracking-widest uppercase">
+      © 2026 NUTRIMUNCH AI · DARK/LIGHT GRADIENT PROTOCOL ACTIVE
+    </div>
+  </footer>
+
+</body>
+</html>
