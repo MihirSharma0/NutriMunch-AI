@@ -29,7 +29,7 @@ const FinalCTA = () => {
             };
 
     return (
-        <section className="py-20 relative z-20">
+        <section className="pt-20 pb-8 relative z-20">
             <div className="max-w-6xl mx-auto px-4 sm:px-8">
                 <div className="bg-gradient-to-r from-[#4a6741] to-[#a5d391] rounded-[2.5rem] p-8 sm:p-14 md:p-16 text-center text-white relative overflow-hidden shadow-2xl">
                     <div className="absolute inset-0 bg-[url('https://lh3.googleusercontent.com/aida-public/AB6AXuCUQW1ayK2QptnJC4qRpFZJQfK25SrdzXBlBBKDdfgFsY3fbK5Q9MBP4F2v2a6cli_nEXhYxZdynfefZ9y6wd9ardu7fb6hI4n4NzwrwE4B--Y4wqSMdeuOKZZfTXGlE55PD6O95ZslKGxZFe9jEyC5O4jQKnL_jnYppX1ixe10PJAE_5uvWDiX9c_vA5cz5JtDILmRAtwTwIPmdRfsDOx7e2W8rsEiFw4gzv8YSmBzQ-2grz1UCn8l')] bg-cover bg-center opacity-10 mix-blend-overlay pointer-events-none"></div>

@@ -362,7 +362,7 @@ const Home = () => {
                     </>
                 )}
 
-                <div className="w-full pb-24">
+                <div className="w-full pb-6">
                     <FinalCTA />
                 </div>
             </div>
