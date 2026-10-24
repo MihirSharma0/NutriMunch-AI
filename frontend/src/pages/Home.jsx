@@ -123,7 +123,7 @@ const Home = () => {
     }).join(', ') + ', 20px 12px 50px rgba(0,0,0,0.9)';
 
     return (
-        <div className="relative flex flex-col w-full">
+        <div className="relative flex flex-col w-full max-w-7xl mx-auto px-4 sm:px-8">
             {/* Main Hero Container */}
             <div className="w-full flex-grow relative z-10 flex flex-col justify-between pt-4">
 
@@ -192,7 +192,7 @@ const Home = () => {
 
 
             {/* Below sections restored like before */}
-            <div className="relative bg-background w-full z-20">
+            <div className="relative w-full z-20">
                 {isStaffHome ? (
                     <section className="max-w-7xl mx-auto px-4 sm:px-8 -mt-24 md:-mt-36 relative z-20">
                         <div className="rounded-[2.5rem] border border-[#a5d391]/20 bg-[#0d121c] p-8 sm:p-12 shadow-2xl">
@@ -351,14 +351,18 @@ const Home = () => {
                 )}
 
                 {/* Appended New Sections */}
-                <div className="w-full bg-background text-on-background pt-0 pb-10">
+                <div className="w-full pt-0 pb-10">
                     <ServicesOverview />
                 </div>
-                {!isStaffHome && <div className="w-full bg-[#080b12] text-white py-16 border-t border-white/10">
-                    <HowItWorks />
-                </div>}
+                {!isStaffHome && (
+                    <>
+                        <div className="w-full border-t border-white/10 py-16">
+                            <HowItWorks />
+                        </div>
+                    </>
+                )}
 
-                <div className="w-full bg-background text-on-background pb-24">
+                <div className="w-full pb-24">
                     <FinalCTA />
                 </div>
             </div>
