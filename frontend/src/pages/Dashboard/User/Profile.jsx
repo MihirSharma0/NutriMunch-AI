@@ -794,52 +794,52 @@ const Profile = () => {
             </div>
 
             {/* View Filter Pill Switcher */}
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
+                <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 text-xs overflow-x-auto scrollbar-none">
                     <button
                         onClick={() => setActiveTab('all')}
-                        className={`px-4 py-2 rounded-xl font-bold transition-all cursor-pointer ${activeTab === 'all' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
+                        className={`px-4 py-2 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'all' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
                     >
                         View All Sections
                     </button>
                     <button
                         onClick={() => setActiveTab('body')}
-                        className={`px-3 py-2 rounded-xl font-bold transition-all cursor-pointer ${activeTab === 'body' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
+                        className={`px-3 py-2 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'body' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
                     >
                         Body Data
                     </button>
                     <button
                         onClick={() => setActiveTab('goals')}
-                        className={`px-3 py-2 rounded-xl font-bold transition-all cursor-pointer ${activeTab === 'goals' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
+                        className={`px-3 py-2 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'goals' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
                     >
                         Goals & Diets
                     </button>
                     <button
                         onClick={() => setActiveTab('allergies')}
-                        className={`px-3 py-2 rounded-xl font-bold transition-all cursor-pointer ${activeTab === 'allergies' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
+                        className={`px-3 py-2 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'allergies' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
                     >
                         Allergies & Preferences
                     </button>
                     <button
                         onClick={() => setActiveTab('budget')}
-                        className={`px-3 py-2 rounded-xl font-bold transition-all cursor-pointer ${activeTab === 'budget' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
+                        className={`px-3 py-2 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'budget' ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white'}`}
                     >
                         Budget Profiles
                     </button>
                 </div>
 
                 {/* Units Switcher */}
-                <div className="hidden sm:flex items-center gap-1.5 bg-[#080b12]/80 border border-white/10 p-1.5 rounded-2xl text-xs">
-                    <span className="text-white/40 px-2 font-bold uppercase tracking-wider text-[10px]">Units:</span>
+                <div className="flex items-center gap-1.5 bg-[#080b12]/80 border border-white/10 p-1.5 rounded-2xl text-xs overflow-x-auto scrollbar-none">
+                    <span className="text-white/40 px-2 font-bold uppercase tracking-wider text-[10px] whitespace-nowrap shrink-0">Units:</span>
                     <button
                         onClick={() => setUnitMode('metric')}
-                        className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${unitMode === 'metric' ? 'bg-[#38bdf8] text-black' : 'text-white/50 hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${unitMode === 'metric' ? 'bg-[#38bdf8] text-black' : 'text-white/50 hover:text-white'}`}
                     >
                         Metric (cm / kg)
                     </button>
                     <button
                         onClick={() => setUnitMode('imperial')}
-                        className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${unitMode === 'imperial' ? 'bg-[#38bdf8] text-black' : 'text-white/50 hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${unitMode === 'imperial' ? 'bg-[#38bdf8] text-black' : 'text-white/50 hover:text-white'}`}
                     >
                         Imperial (ft / lbs)
                     </button>
@@ -849,7 +849,7 @@ const Profile = () => {
             {/* NODE 1: BODY DATA */}
             {(activeTab === 'all' || activeTab === 'body') && (
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 mb-8 shadow-xl relative">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-2xl bg-[#a5d391]/20 border border-[#a5d391]/40 flex items-center justify-center text-[#a5d391]">
                                 <span className="material-symbols-outlined">accessibility_new</span>
@@ -1015,7 +1015,7 @@ const Profile = () => {
             {/* NODE 2: GOALS & DIETS */}
             {(activeTab === 'all' || activeTab === 'goals') && (
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 mb-8 shadow-xl relative">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/20 border border-[#38bdf8]/40 flex items-center justify-center text-[#38bdf8]">
                                 <span className="material-symbols-outlined">sports_score</span>
@@ -1088,7 +1088,7 @@ const Profile = () => {
             {/* NODE 3: ALLERGIES & PREFERENCES */}
             {(activeTab === 'all' || activeTab === 'allergies') && (
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 mb-8 shadow-xl relative">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
                                 <span className="material-symbols-outlined">warning</span>
@@ -1244,7 +1244,7 @@ const Profile = () => {
             {/* NODE 4: BUDGET PROFILES */}
             {(activeTab === 'all' || activeTab === 'budget') && (
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 mb-8 shadow-xl relative">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
                                 <span className="material-symbols-outlined">payments</span>
@@ -1573,14 +1573,14 @@ const Profile = () => {
             </div>
 
             {/* Bottom Save Action Bar */}
-            <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-white/10">
                 <div className="text-xs text-white/40">
                     All updates trigger real-time AI meal plan and recommendation recalculation.
                 </div>
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-[#a5d391] hover:bg-white text-black px-8 py-4 rounded-2xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer disabled:opacity-50"
+                    className="bg-[#a5d391] hover:bg-white text-black px-8 py-4 rounded-2xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer disabled:opacity-50 w-full sm:w-auto"
                 >
                     {saving ? 'Saving...' : 'Save & Calibrate Engine'}
                 </button>

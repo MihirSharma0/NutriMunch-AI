@@ -708,7 +708,7 @@ const DietPlanBuilder = () => {
         <div className="w-full relative pb-12">
             {/* Live Notification Feedback Toast */}
             {notification && (
-                <div className="fixed top-24 right-8 z-[9999] bg-[#a5d391] text-[#080b12] px-6 py-3.5 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-2 animate-bounce">
+                <div className="fixed top-24 left-4 right-4 sm:left-auto sm:right-8 z-[9999] bg-[#a5d391] text-[#080b12] px-6 py-3.5 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-2 animate-bounce">
                     <span className="material-symbols-outlined text-lg">check_circle</span>
                     <span>{notification}</span>
                 </div>
@@ -726,22 +726,22 @@ const DietPlanBuilder = () => {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                     {selectedClient && targetMode === 'EXCLUSIVE' && (
                         <button
                             type="button"
                             onClick={() => handleOpenChat(selectedClient)}
-                            className="bg-[#0d131f] border border-[#a5d391]/40 hover:border-[#a5d391] text-[#a5d391] hover:text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                            className="bg-[#0d131f] border border-[#a5d391]/40 hover:border-[#a5d391] text-[#a5d391] hover:text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-none"
                         >
                             <span className="material-symbols-outlined text-base">forum</span>
                             <span>Consultation Chat</span>
                         </button>
                     )}
 
-                    <button 
+                    <button
                         onClick={handleDeployPlan}
                         disabled={isDeploying}
-                        className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-2xl hover:bg-white transition-all shadow-[0_0_20px_rgba(165,211,145,0.35)] cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                        className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-2xl hover:bg-white transition-all shadow-[0_0_20px_rgba(165,211,145,0.35)] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 flex-1 sm:flex-none"
                     >
                         <span className="material-symbols-outlined text-sm">rocket_launch</span>
                         <span>{targetMode === 'GENERAL' ? 'Deploy General Plan (All Users)' : 'Deploy Exclusive Diet Plan'}</span>
@@ -1321,7 +1321,7 @@ const DietPlanBuilder = () => {
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-4 gap-2 pt-1 text-[11px]">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
                                         <div className="bg-black/40 px-2.5 py-1.5 rounded-lg border border-white/5 text-center">
                                             <span className="text-[9px] text-white/40 block">Calories</span>
                                             <span className="font-bold text-white">{meal.calories} kcal</span>

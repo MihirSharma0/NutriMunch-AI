@@ -5,25 +5,25 @@ const HowItWorks = () => {
         {
             num: "01",
             title: "Book Consultation",
-            desc: "Schedule a comprehensive 1-on-1 session with our clinical nutritionists to map out your baseline and objectives.",
+            desc: "Schedule a 1-on-1 virtual clinical consultation to baseline your metabolic health and targets.",
             icon: "event_available"
         },
         {
             num: "02",
             title: "Health Assessment",
-            desc: "We analyze your blood work, metabolic rate, and lifestyle factors to create your unique biometric profile.",
+            desc: "Input blood metrics, BMR data, activity frequency, and personal culinary preferences.",
             icon: "biotech"
         },
         {
             num: "03",
             title: "Personalized Plan",
-            desc: "Our AI engine generates a dynamic, meal-by-meal nutritional protocol tailored exactly to your body's needs.",
+            desc: "AI synthesizes your custom daily micro & macro targets with full recipe breakdowns.",
             icon: "restaurant_menu"
         },
         {
             num: "04",
             title: "Track & Achieve",
-            desc: "Log your progress daily. The system learns and adapts your protocol automatically to prevent plateaus.",
+            desc: "Snap meals daily. The AI engine continuously refines your targets to eliminate weight loss plateaus.",
             icon: "monitoring"
         }
     ];

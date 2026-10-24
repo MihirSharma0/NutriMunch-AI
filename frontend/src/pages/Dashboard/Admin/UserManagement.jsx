@@ -213,17 +213,17 @@ const UserManagement = () => {
                 </div>
 
                 {/* Sub-Menu Navigation Tabs */}
-                <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 shrink-0">
+                <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10 shrink-0 max-w-full overflow-x-auto">
                     <Link
                         to="/dashboard/admin/users"
-                        className="px-4 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-[#080b12] shadow-md shadow-[#a5d391]/20 flex items-center gap-2 transition-all"
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-[#a5d391] text-[#080b12] shadow-md shadow-[#a5d391]/20 flex items-center gap-2 transition-all whitespace-nowrap"
                     >
                         <span className="material-symbols-outlined text-sm">manage_accounts</span>
                         User Directory
                     </Link>
                     <Link
                         to="/dashboard/admin/nutritionists"
-                        className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-2 transition-all"
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-2 transition-all whitespace-nowrap"
                     >
                         <span className="material-symbols-outlined text-sm">badge</span>
                         Nutritionist Verification
@@ -258,13 +258,13 @@ const UserManagement = () => {
                     {/* Filters Container */}
                     <div className="flex flex-wrap items-center gap-3">
                         {/* Role Filter Tabs */}
-                        <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 text-xs font-bold">
-                            <span className="text-[10px] text-white/40 uppercase font-mono px-2 hidden sm:inline">Role:</span>
+                        <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 text-xs font-bold max-w-full overflow-x-auto">
+                            <span className="text-[10px] text-white/40 uppercase font-mono px-2 hidden sm:inline whitespace-nowrap">Role:</span>
                             {['ALL', 'USER', 'NUTRITIONIST', 'ADMIN'].map((role) => (
                                 <button
                                     key={role}
                                     onClick={() => setFilterRole(role)}
-                                    className={`px-3 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${filterRole === role ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' : 'text-white/60 hover:text-white'}`}
+                                    className={`px-3 py-1.5 rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap ${filterRole === role ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' : 'text-white/60 hover:text-white'}`}
                                 >
                                     {role}
                                 </button>
@@ -272,8 +272,8 @@ const UserManagement = () => {
                         </div>
 
                         {/* Verification Status Filter Tabs */}
-                        <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 text-xs font-bold">
-                            <span className="text-[10px] text-white/40 uppercase font-mono px-2 hidden sm:inline">Status:</span>
+                        <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-2xl border border-white/10 text-xs font-bold max-w-full overflow-x-auto">
+                            <span className="text-[10px] text-white/40 uppercase font-mono px-2 hidden sm:inline whitespace-nowrap">Status:</span>
                             {[
                                 { id: 'ALL', label: 'ALL' },
                                 { id: 'VERIFIED', label: 'VERIFIED' },
@@ -282,7 +282,7 @@ const UserManagement = () => {
                                 <button
                                     key={statusItem.id}
                                     onClick={() => setFilterStatus(statusItem.id)}
-                                    className={`px-3 py-1.5 rounded-xl transition-all duration-300 cursor-pointer ${filterStatus === statusItem.id ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' : 'text-white/60 hover:text-white'}`}
+                                    className={`px-3 py-1.5 rounded-xl transition-all duration-300 cursor-pointer whitespace-nowrap ${filterStatus === statusItem.id ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' : 'text-white/60 hover:text-white'}`}
                                 >
                                     {statusItem.label}
                                 </button>

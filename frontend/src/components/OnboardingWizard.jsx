@@ -309,27 +309,27 @@ const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
                         </select>
                     </div>
 
-                    <div className="pt-4 flex items-center justify-between gap-4">
+                    <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <button
                             type="button"
                             onClick={() => setCurrentStep(3)}
-                            className="text-xs text-white/50 hover:text-white px-4 py-2 rounded-xl transition-colors cursor-pointer"
+                            className="text-xs text-white/50 hover:text-white px-4 py-2 rounded-xl transition-colors cursor-pointer order-2 sm:order-1"
                         >
                             Skip Step ➔
                         </button>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
                             <button
                                 type="button"
                                 onClick={() => setCurrentStep(1)}
-                                className="bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+                                className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer"
                             >
                                 Back
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setCurrentStep(3)}
-                                className="bg-[#38bdf8] hover:bg-white text-black font-bold px-7 py-3 rounded-2xl text-xs transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)] cursor-pointer flex items-center gap-2"
+                                className="flex-1 sm:flex-none bg-[#38bdf8] hover:bg-white text-black font-bold px-7 py-3 rounded-2xl text-xs transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)] cursor-pointer flex items-center justify-center gap-2"
                             >
                                 <span>Next: Goals & Diets</span>
                                 <span className="material-symbols-outlined text-sm">arrow_forward</span>
@@ -395,27 +395,27 @@ const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
                         </select>
                     </div>
 
-                    <div className="pt-4 flex items-center justify-between gap-4">
+                    <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <button
                             type="button"
                             onClick={() => setCurrentStep(4)}
-                            className="text-xs text-white/50 hover:text-white px-4 py-2 rounded-xl transition-colors cursor-pointer"
+                            className="text-xs text-white/50 hover:text-white px-4 py-2 rounded-xl transition-colors cursor-pointer order-2 sm:order-1"
                         >
                             Skip Step ➔
                         </button>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
                             <button
                                 type="button"
                                 onClick={() => setCurrentStep(2)}
-                                className="bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+                                className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer"
                             >
                                 Back
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setCurrentStep(4)}
-                                className="bg-yellow-400 hover:bg-white text-black font-bold px-7 py-3 rounded-2xl text-xs transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] cursor-pointer flex items-center gap-2"
+                                className="flex-1 sm:flex-none bg-yellow-400 hover:bg-white text-black font-bold px-7 py-3 rounded-2xl text-xs transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] cursor-pointer flex items-center justify-center gap-2"
                             >
                                 <span>Next: Preferences</span>
                                 <span className="material-symbols-outlined text-sm">arrow_forward</span>
@@ -486,21 +486,21 @@ const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
                         </div>
                     </div>
 
-                    <div className="pt-4 flex items-center justify-between gap-4">
+                    <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <button
                             type="button"
                             onClick={handleFinish}
                             disabled={saving}
-                            className="text-xs text-white/50 hover:text-white px-4 py-2 rounded-xl transition-colors cursor-pointer"
+                            className="text-xs text-white/50 hover:text-white px-4 py-2 rounded-xl transition-colors cursor-pointer order-2 sm:order-1"
                         >
                             Skip & Finish ➔
                         </button>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
                             <button
                                 type="button"
                                 onClick={() => setCurrentStep(3)}
-                                className="bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+                                className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer"
                             >
                                 Back
                             </button>
@@ -508,7 +508,7 @@ const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
                                 type="button"
                                 onClick={handleFinish}
                                 disabled={saving}
-                                className="bg-[#a5d391] hover:bg-white text-black font-bold px-8 py-3.5 rounded-2xl text-xs transition-all shadow-[0_0_20px_rgba(165,211,145,0.4)] cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                                className="flex-1 sm:flex-none bg-[#a5d391] hover:bg-white text-black font-bold px-8 py-3.5 rounded-2xl text-xs transition-all shadow-[0_0_20px_rgba(165,211,145,0.4)] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 <span className="material-symbols-outlined text-sm">rocket_launch</span>
                                 <span>{saving ? 'Finalizing Setup...' : 'Complete Profile & Launch Engine'}</span>

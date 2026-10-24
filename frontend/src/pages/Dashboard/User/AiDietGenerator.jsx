@@ -12,9 +12,7 @@ const PREDEFINED_GOALS = [
 
 const PREDEFINED_RESTRICTIONS = [
   'Peanuts', 'Tree Nuts', 'Milk / Dairy', 'Eggs', 'Soy', 'Wheat / Gluten',
-  'Fish', 'Shellfish', 'Sesame', 'Vegetarian', 'Vegan', 'Jain Diet',
-  'Gluten-Free', 'Lactose-Free', 'Dairy-Free', 'Halal', 'Kosher',
-  'Keto', 'Paleo', 'Low-Sodium', 'Low-Sugar / Diabetic-Friendly', 'FODMAP',
+  'Fish', 'Shellfish', 'Sesame', 'Vegetarian',
 ];
 
 /* ─── SVG Icon helpers (no external font needed) ───────────────────── */
@@ -1016,6 +1014,10 @@ const CSS = `
   .aidg-target-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .aidg-meal-row { align-items: flex-start; flex-direction: column; }
   .aidg-meal-macros { text-align: left; }
+  .aidg-header { flex-wrap: wrap; }
+  .aidg-header-icon-wrap { width: 46px; height: 46px; }
+  .aidg-title { font-size: 21px; }
+  .aidg-form, .aidg-result { padding: 16px; }
 }
 
 .aidg-plan-body { display: flex; flex-direction: column; gap: 14px; }

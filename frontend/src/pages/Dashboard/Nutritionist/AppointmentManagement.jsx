@@ -430,7 +430,7 @@ const AppointmentManagement = () => {
 
             {/* Toast Notification */}
             {notification && (
-                <div className="fixed top-24 right-8 z-50 bg-[#a5d391] text-[#080b12] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-2 animate-bounce">
+                <div className="fixed top-24 left-4 right-4 sm:left-auto sm:right-8 z-50 bg-[#a5d391] text-[#080b12] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-2 animate-bounce">
                     <span className="material-symbols-outlined">event_available</span>
                     {notification}
                 </div>
@@ -453,17 +453,17 @@ const AppointmentManagement = () => {
 
             {/* Pending Requests Alert Banner */}
             {pendingCount > 0 && statusFilter !== 'PENDING' && (
-                <div className="bg-amber-500/15 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between gap-4 animate-fadeIn">
-                    <div className="flex items-center gap-3">
+                <div className="bg-amber-500/15 border border-amber-500/30 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 animate-fadeIn">
+                    <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
                             <span className="material-symbols-outlined text-lg animate-pulse">pending_actions</span>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <div className="text-xs font-bold text-amber-300">Action Required: {pendingCount} Pending Patient Booking Request{pendingCount > 1 ? 's' : ''}</div>
                             <p className="text-[11px] text-white/70">Patients have submitted consultation requests across months awaiting your clinical approval.</p>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={() => { setStatusFilter('PENDING'); setViewMode('All Months'); }}
                         className="px-4 py-2 rounded-xl bg-amber-500 text-[#080b12] text-xs font-bold hover:bg-white transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-md"
                     >
@@ -976,7 +976,7 @@ const AppointmentManagement = () => {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-1">Date</label>
                                     <input 

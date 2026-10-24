@@ -22,10 +22,10 @@ const FinalCTA = () => {
                 label: 'Open Clinical Schedule'
             }
             : {
-                title: <>Clinical Schedule <br className="hidden md:block"/>& Bookings</>,
-                description: 'Book and manage clinical nutrition consultations with qualified nutritionists through one secure, organized schedule.',
+                title: <>Schedule One-on-One <br className="hidden md:block"/>Consultations</>,
+                description: 'Review your AI diet scans with registered clinical dietitians and sports nutrition doctors for certified biometric validation.',
                 path: '/dashboard/user/appointments',
-                label: 'Open User Appointments'
+                label: 'Book Appointment Now'
             };
 
     return (

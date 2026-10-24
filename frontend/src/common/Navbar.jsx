@@ -472,7 +472,7 @@ const Navbar = () => {
         <>
             <div className="fixed top-4 left-4 right-4 z-50 pointer-events-none">
             <nav ref={navContainerRef} className="mx-auto max-w-7xl bg-[#080b12]/85 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-3xl overflow-visible shadow-2xl pointer-events-auto">
-                <div className="flex justify-between items-center px-3 sm:px-6 py-2.5 sm:py-3 gap-2">
+                <div className="flex flex-wrap justify-between items-center px-3 sm:px-6 py-2.5 sm:py-3 gap-2">
                     <Link to="/" className="font-headline-lg text-lg sm:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0">
                         <span className="w-2.5 h-2.5 bg-[#a5d391] rounded-full shadow-[0_0_10px_rgba(165,211,145,0.8)]"></span>
                         NutriMunch <span className="text-[#a5d391] italic font-semibold">AI</span>
@@ -734,9 +734,11 @@ const Navbar = () => {
 
                                 <button
                                     onClick={handleLogout}
-                                    className="cursor-pointer bg-red-500/10 text-red-400 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-sm shrink-0 whitespace-nowrap"
+                                    aria-label="Logout"
+                                    className="cursor-pointer flex items-center gap-1 bg-red-500/10 text-red-400 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-sm shrink-0 whitespace-nowrap"
                                 >
-                                    Logout
+                                    <span className="material-symbols-outlined text-sm">logout</span>
+                                    <span className="hidden min-[420px]:inline">Logout</span>
                                 </button>
                             </div>
                         ) : (

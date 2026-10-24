@@ -2100,7 +2100,7 @@ const Reports = () => {
                 <div className="flex flex-wrap items-center gap-3">
                     {/* TODAY */}
                     {viewMode === 'today' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <div className="flex items-center gap-2 bg-[#080b12] border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs">
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                                 <span className="font-bold text-emerald-300">Live Real-Time Intake Feed</span>
@@ -2121,7 +2121,7 @@ const Reports = () => {
 
                     {/* DAILY VISITS: Custom Dark Calendar Picker */}
                     {viewMode === 'daily' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <DarkCalendarPicker
                                 value={selectedDayDate}
                                 onChange={(val) => setSelectedDayDate(val)}
@@ -2164,7 +2164,7 @@ const Reports = () => {
 
                     {/* WEEKLY VISITS: Custom Dark Calendar Picker (Week Mode) */}
                     {viewMode === 'weekly' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <DarkCalendarPicker
                                 value={selectedWeekDate}
                                 onChange={(val) => setSelectedWeekDate(val)}
@@ -2192,7 +2192,7 @@ const Reports = () => {
 
                     {/* MONTHLY VISITS: Custom Dark Calendar Picker (Month Mode) */}
                     {viewMode === 'monthly' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <DarkCalendarPicker
                                 value={selectedMonthStr}
                                 onChange={(val) => setSelectedMonthStr(val)}
@@ -3082,11 +3082,11 @@ const LogDailyNutritionModal = ({
                     )}
 
                     {/* Input Mode Selector Tabs */}
-                    <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                    <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-2">
                         <button
                             type="button"
                             onClick={() => setActiveTab('direct')}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                                 activeTab === 'direct'
                                     ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
                                     : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
@@ -3098,7 +3098,7 @@ const LogDailyNutritionModal = ({
                         <button
                             type="button"
                             onClick={() => setActiveTab('database')}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
                                 activeTab === 'database'
                                     ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
                                     : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
@@ -3262,7 +3262,7 @@ const LogDailyNutritionModal = ({
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-3">
                                         <div>
                                             <label className="text-[10px] font-bold text-white/50 uppercase block mb-1">Meal</label>
                                             <select
@@ -3487,9 +3487,9 @@ const LogDailyWaterModal = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-[#0c121e] border border-white/15 rounded-3xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl relative">
+            <div className="bg-[#0c121e] border border-white/15 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative">
                 {/* Header */}
-                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#0c121e] via-[#080b12] to-[#0c121e]">
+                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#0c121e] via-[#080b12] to-[#0c121e] shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/15 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8] shrink-0">
                             <span className="material-symbols-outlined text-xl">water_drop</span>
@@ -3514,7 +3514,7 @@ const LogDailyWaterModal = ({
                 </div>
 
                 {/* Body */}
-                <div className="p-5 space-y-5">
+                <div className="p-5 space-y-5 overflow-y-auto">
                     {/* Date Selector */}
                     <div className="bg-[#080b12] p-3.5 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
@@ -3620,7 +3620,7 @@ const LogDailyWaterModal = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-white/10 bg-[#080b12] flex items-center justify-between text-xs">
+                <div className="p-4 border-t border-white/10 bg-[#080b12] flex items-center justify-between text-xs shrink-0">
                     <button
                         type="button"
                         onClick={handleReset}

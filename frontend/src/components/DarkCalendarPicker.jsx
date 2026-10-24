@@ -223,9 +223,8 @@ const DarkCalendarPicker = ({
 
             {/* Custom Dark Theme Calendar Popup Card */}
             {isOpen && (
-                <div 
-                    className="absolute z-[9999] mt-2 left-0 sm:right-auto bg-[#0a0e17] border border-white/15 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl w-[300px] animate-in fade-in zoom-in-95 duration-150 select-none"
-                    style={{ minWidth: '300px' }}
+                <div
+                    className="absolute z-[9999] mt-2 left-0 right-0 sm:right-auto bg-[#0a0e17] border border-white/15 rounded-2xl p-3 sm:p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl w-[calc(100vw-2rem)] max-w-[300px] sm:w-[300px] animate-in fade-in zoom-in-95 duration-150 select-none"
                 >
                     {/* Calendar Header */}
                     <div className="flex items-center justify-between pb-3 mb-2 border-b border-white/10">

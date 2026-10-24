@@ -105,9 +105,9 @@ const Home = () => {
                 icon: 'clinical_notes'
             }
             : {
-                eyebrow: 'Personal nutrition workspace',
+                eyebrow: 'Autonomous Fuel Intelligence',
                 title: 'Make every meal move you forward.',
-                description: 'Generate personalized meal plans, track your targets, analyze food, and get guidance that adapts to your goals.',
+                description: 'Generate personalized macro-split meal plans, automatically scan plate photos with visual AI, and adjust caloric targets based on your metabolic output.',
                 action: 'Start Your Plan',
                 path: '/ai-diet',
                 icon: 'restaurant_menu'
@@ -129,6 +129,10 @@ const Home = () => {
 
                 {/* Top Section - Huge Typography */}
                 <div className="relative mb-12 md:mb-16">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#a5d391]/30 bg-[#a5d391]/5 mb-6">
+                        <span className="w-1.5 h-1.5 bg-[#a5d391] rounded-full"></span>
+                        <span className="text-[#a5d391] text-[10px] font-black uppercase tracking-[0.2em]">Autonomous Dietary Calibration</span>
+                    </div>
                     <h1
                         className="font-hero-display text-[3rem] sm:text-[4.5rem] md:text-[10rem] lg:text-[12rem] leading-none font-bold text-white tracking-tighter relative z-20"
                         style={{ textShadow: blockShadow }}
@@ -156,9 +160,9 @@ const Home = () => {
                         <div>
                             <div className="text-[#a5d391] text-[10px] font-black tracking-[0.2em] flex items-center gap-2 uppercase mb-1 drop-shadow-[0_0_4px_rgba(165,211,145,0.3)]">
                                 <span className="w-1.5 h-1.5 bg-[#a5d391] rounded-full animate-pulse"></span>
-                                Precision Health
+                                Precision Metabolic Health
                             </div>
-                            <div className="text-white/40 text-sm font-medium tracking-wide">Real-time AI Adaptation</div>
+                            <div className="text-white/40 text-sm font-medium tracking-wide">Real-time adaptive AI bio-tracking protocol</div>
                         </div>
                     </div>
 
@@ -181,8 +185,11 @@ const Home = () => {
                                 <span className="material-symbols-outlined text-white text-2xl drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] group-hover:text-[#a5d391] group-hover:drop-shadow-[0_0_18px_rgba(165,211,145,1)] transition-all">{roleContent.icon}</span>
                             </div>
                         </div>
-                        <div className="text-white text-[15px] leading-snug group-hover:text-[#a5d391] transition-colors">
-                            {roleContent.action} <strong className="font-semibold text-white group-hover:text-[#a5d391]">➔</strong>
+                        <div>
+                            <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Get Started</div>
+                            <div className="text-white text-[15px] leading-snug group-hover:text-[#a5d391] transition-colors">
+                                {roleContent.action} <strong className="font-semibold text-white group-hover:text-[#a5d391]">➔</strong>
+                            </div>
                         </div>
                     </div>
 
@@ -192,7 +199,7 @@ const Home = () => {
 
 
             {/* Below sections restored like before */}
-            <div className="relative w-full z-20">
+            <div className="relative bg-[#f6e6d8] w-full z-20">
                 {isStaffHome ? (
                     <section className="max-w-7xl mx-auto px-4 sm:px-8 -mt-24 md:-mt-36 relative z-20">
                         <div className="rounded-[2.5rem] border border-[#a5d391]/20 bg-[#0d121c] p-8 sm:p-12 shadow-2xl">
@@ -224,13 +231,18 @@ const Home = () => {
                         <div className="absolute bottom-4 right-4 sm:bottom-10 sm:left-10 sm:right-10 flex justify-end sm:justify-between items-end">
                             <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl flex gap-16 inner-glow hidden sm:flex">
                                 <div className="flex flex-col">
-                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">DAILY TARGET CALORIES</span>
+                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">TARGET CALORIES</span>
                                     <span className="font-headline-lg text-4xl text-white font-black tracking-tighter">2,250 kcal</span>
                                 </div>
                                 <div className="w-px h-12 bg-white/10 self-center"></div>
                                 <div className="flex flex-col">
-                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">OPTIMAL MACRO SPLIT</span>
-                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter mint-glow">35% P / 45% C / 20% F</span>
+                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">OPTIMAL MACRO RATIO</span>
+                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter mint-glow">35% P · 45% C · 20% F</span>
+                                </div>
+                                <div className="w-px h-12 bg-white/10 self-center"></div>
+                                <div className="flex flex-col">
+                                    <span className="font-label-caps text-label-caps text-sky-400 mb-2 opacity-80">HYDRATION GOAL</span>
+                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter">3.2 L/day</span>
                                 </div>
                             </div>
                             <button className="bg-primary-container text-on-primary-container w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(165,211,145,0.3)] hover:scale-105 hover:bg-white transition-all group shrink-0 ml-auto sm:ml-0">
@@ -242,12 +254,24 @@ const Home = () => {
 
                 {/* Bento Grid Insights */}
                 <section className="pt-12 sm:pt-16 pb-6 sm:pb-8 max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                        <div className="max-w-2xl">
+                            <span className="text-[#4a6741] font-bold tracking-widest uppercase text-xs mb-3 block">Instant Visual Intelligence</span>
+                            <h2 className="font-hero-display text-3xl sm:text-4xl font-bold text-on-background mb-4">AI Food Photo Scanner &amp; Precision Diet Planner</h2>
+                            <p className="text-on-background/70 text-base leading-relaxed">
+                                Snap your plate with computer vision to calculate nutritional density, or let our generative AI design your entire weekly shopping and macro split.
+                            </p>
+                        </div>
+                        <span className="shrink-0 bg-white/80 border border-black/5 text-on-background/70 text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded-full whitespace-nowrap">
+                            Powered by Vision-LLM 4.0
+                        </span>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
                         {/* Card 1: AI Food Calorie & Nutrient Scanner */}
                         <FlipFeatureCard
                             wrapperClass="md:col-span-7 min-h-[480px]"
-                            frontClass="bg-white rounded-[2.5rem] p-10 md:p-14 shadow-xl justify-between shadow-[#4a6741]/10 border border-transparent hover:border-[#4a6741]/20"
+                            frontClass="bg-white rounded-[2.5rem] p-6 sm:p-10 md:p-14 shadow-xl justify-between shadow-[#4a6741]/10 border border-transparent hover:border-[#4a6741]/20"
                             backClass="bg-white shadow-xl shadow-[#4a6741]/10 border border-gray-100"
                             backContent={
                                 <>
@@ -274,14 +298,14 @@ const Home = () => {
                                     <span className="text-[10px] tracking-widest text-[#4a6741] font-bold uppercase">AI Food Calorie Scanner</span>
                                 </div>
                                 <h3 className="font-hero-display text-[2rem] sm:text-[2.75rem] md:text-[3.5rem] leading-[1.05] text-[#111827] tracking-tight font-bold pr-0 sm:pr-8">
-                                    Snap a photo for <span className="text-[#4a6741] italic">instant macro</span><br/>& calorie detection.
+                                    Snap a photo for <span className="text-[#4a6741] italic">instant macro</span><br/>& calorie breakdown.
                                 </h3>
                             </div>
                             <button
                                 onClick={(e) => { e.stopPropagation(); navigate('/ai-image'); }}
                                 className="flex items-center gap-3 mt-16 cursor-pointer group/btn"
                             >
-                                <span className="font-bold text-lg text-[#111827] group-hover/btn:text-[#4a6741] transition-colors">Explore AI Food Analyzer</span>
+                                <span className="font-bold text-lg text-[#111827] group-hover/btn:text-[#4a6741] transition-colors">Launch Food Scanner Demo</span>
                                 <span className="material-symbols-outlined text-[#4a6741] transition-transform duration-500 group-hover/btn:translate-x-4">arrow_forward</span>
                             </button>
                         </FlipFeatureCard>
@@ -315,21 +339,21 @@ const Home = () => {
                                     onClick={(e) => e.stopPropagation()}
                                     className="text-[10px] tracking-widest text-[#a3e635] hover:text-white font-bold uppercase mb-3 inline-flex items-center gap-1.5 transform group-hover:translate-x-2 transition-transform duration-500"
                                 >
-                                    <span>AI DIET PLANNER</span>
+                                    <span>Generative Meal Architect</span>
                                     <span className="material-symbols-outlined text-xs">open_in_new</span>
                                 </Link>
                                 <h3
                                     onClick={(e) => { e.stopPropagation(); navigate('/ai-diet'); }}
                                     className="font-hero-display text-3xl sm:text-4xl md:text-[2.25rem] font-bold tracking-tight leading-[1.1] cursor-pointer hover:text-[#a3e635] transition-colors"
                                 >
-                                    Precision-tailored<br/>weekly meal plans.
+                                    Precision-tailored weekly<br/>dietary blueprints.
                                 </h3>
                                 <div className="mt-5">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); navigate('/ai-diet'); }}
                                         className="inline-flex items-center gap-2 bg-[#a3e635] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(163,230,53,0.35)] hover:scale-105 cursor-pointer"
                                     >
-                                        <span>Explore AI Diet Planner</span>
+                                        <span>Generate My Weekly Plan</span>
                                         <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
                                     </button>
                                 </div>
@@ -351,18 +375,18 @@ const Home = () => {
                 )}
 
                 {/* Appended New Sections */}
-                <div className="w-full pt-0 pb-10">
+                <div className="w-full bg-[#f6e6d8] pt-0 pb-10">
                     <ServicesOverview />
                 </div>
                 {!isStaffHome && (
                     <>
-                        <div className="w-full border-t border-white/10 py-16">
+                        <div className="w-full bg-[#080b12] border-t border-white/10 py-16">
                             <HowItWorks />
                         </div>
                     </>
                 )}
 
-                <div className="w-full pb-6">
+                <div className="w-full bg-[#f6e6d8] pb-6">
                     <FinalCTA />
                 </div>
             </div>

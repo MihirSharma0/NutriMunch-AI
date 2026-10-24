@@ -361,7 +361,7 @@ const ProgressTracking = () => {
 
                 <div className="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
                     {/* Left: Interactive Circular Progress Ring */}
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-wrap items-center justify-center gap-6">
                         <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
                             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                                 <circle
@@ -405,7 +405,7 @@ const ProgressTracking = () => {
                                     <span>Edit Goal</span>
                                 </button>
                             </div>
-                            <h2 className="text-3xl font-extrabold text-white font-hero-display">
+                            <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-hero-display">
                                 {waterConsumed.toLocaleString()} <span className="text-base text-white/50 font-normal">/ {waterTargetMl.toLocaleString()} ml</span>
                             </h2>
                             <p className="text-xs text-white/60">
@@ -677,7 +677,7 @@ const ProgressTracking = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t border-white/10 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs">
                             <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
                                 <span className="material-symbols-outlined text-[#38bdf8] text-sm">water_drop</span>
                                 <span>Water: <strong>{customTargets.water || 2.5} L</strong></span>
@@ -689,18 +689,6 @@ const ProgressTracking = () => {
                             <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
                                 <span className="material-symbols-outlined text-amber-400 text-sm">shield</span>
                                 <span>Iron: <strong>{customTargets.iron || 18} mg</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-purple-400 text-sm">medical_services</span>
-                                <span>Calcium: <strong>{customTargets.calcium || 1000} mg</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-yellow-300 text-sm">wb_sunny</span>
-                                <span>Vit D: <strong>{customTargets.vitD || 15} mcg</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-emerald-400 text-sm">nutrition</span>
-                                <span>Vit C: <strong>{customTargets.vitC || 90} mg</strong></span>
                             </div>
                         </div>
                     </div>
@@ -757,7 +745,7 @@ const ProgressTracking = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t border-white/10 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs">
                             <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
                                 <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
                                     <span className="material-symbols-outlined text-[#38bdf8] text-xs">water_drop</span>
@@ -796,48 +784,6 @@ const ProgressTracking = () => {
                                     type="number"
                                     name="iron"
                                     value={customTargets.iron}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-purple-400 text-xs">medical_services</span>
-                                    <span>Calcium (mg)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="calcium"
-                                    value={customTargets.calcium}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-yellow-300 text-xs">wb_sunny</span>
-                                    <span>Vit D (mcg)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="vitD"
-                                    value={customTargets.vitD}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-emerald-400 text-xs">nutrition</span>
-                                    <span>Vit C (mg)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="vitC"
-                                    value={customTargets.vitC}
                                     onChange={handleCustomTargetChange}
                                     className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
                                 />

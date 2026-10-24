@@ -455,7 +455,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
             </div>
 
             {/* LOGGING MODE TABS */}
-            <div className="flex items-center gap-2 border-b border-white/10 pb-3 relative z-20">
+            <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-3 relative z-20">
                 <button
                     type="button"
                     onClick={() => setEntryMode('search')}

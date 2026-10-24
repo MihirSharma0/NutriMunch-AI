@@ -263,8 +263,8 @@ const ServicesOverview = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8">
                     <div className="max-w-2xl">
-                        <span className="text-[#4a6741] font-bold tracking-widest uppercase text-xs mb-4 block font-label-caps">Instant Visual Intelligence</span>
-                        <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-[#080b12] mb-6">AI Food Photo Scanner & Precision Diet Planner</h2>
+                        <span className="text-[#4a6741] font-bold tracking-widest uppercase text-xs mb-4 block font-label-caps">Platform Services</span>
+                        <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-[#080b12] mb-6">AI-Powered Health &amp; Nutrition Services</h2>
                         <p className="text-[#080b12]/70 text-base leading-relaxed">
                             From personalized calorie tracking to automated AI diet generation, our smart tools are tailored to your unique lifestyle and fitness goals.
                         </p>

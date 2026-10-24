@@ -52,7 +52,7 @@ const FAQ = () => {
                                 expand_more
                             </span>
                         </button>
-                        <div className={`px-6 overflow-hidden transition-all duration-300 ${openIdx === idx ? 'max-h-40 pb-5 opacity-100' : 'max-h-0 opacity-0'}`}>
+                        <div className={`px-6 overflow-hidden transition-all duration-300 ${openIdx === idx ? 'max-h-96 pb-5 opacity-100' : 'max-h-0 opacity-0'}`}>
                             <p className="text-white/60 text-sm leading-relaxed">{faq.a}</p>
                         </div>
                     </div>

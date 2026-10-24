@@ -174,12 +174,12 @@ const ShareYourStoryForm = () => {
 
                 {/* Notification Banner */}
                 {notification && (
-                    <div className={`mb-6 p-4 rounded-2xl border text-sm font-bold flex items-center justify-between animate-fadeIn ${notification.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-300'}`}>
-                        <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-lg">{notification.type === 'success' ? 'check_circle' : 'error'}</span>
-                            <span>{notification.message}</span>
+                    <div className={`mb-6 p-4 rounded-2xl border text-sm font-bold flex items-start sm:items-center justify-between gap-3 flex-wrap animate-fadeIn ${notification.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-300'}`}>
+                        <div className="flex items-start sm:items-center gap-2 min-w-0">
+                            <span className="material-symbols-outlined text-lg shrink-0">{notification.type === 'success' ? 'check_circle' : 'error'}</span>
+                            <span className="break-words">{notification.message}</span>
                         </div>
-                        <button onClick={() => setNotification(null)} className="text-white/50 hover:text-white">
+                        <button onClick={() => setNotification(null)} className="text-white/50 hover:text-white shrink-0">
                             <span className="material-symbols-outlined text-sm">close</span>
                         </button>
                     </div>
@@ -223,7 +223,7 @@ const ShareYourStoryForm = () => {
                             <div className="w-full h-[50px] bg-black/60 border border-white/10 rounded-2xl px-5 text-white/90 text-sm flex items-center justify-between font-semibold select-none cursor-not-allowed">
                                 <span className="flex items-center gap-2 min-w-0">
                                     <span className="material-symbols-outlined text-base text-[#a5d391] shrink-0">verified</span>
-                                    <span className="whitespace-nowrap font-bold text-xs sm:text-sm text-white">{role}</span>
+                                    <span className="truncate font-bold text-xs sm:text-sm text-white">{role}</span>
                                 </span>
                                 <span className="material-symbols-outlined text-sm text-white/40 shrink-0" title="Locked Account Role">lock</span>
                             </div>
@@ -372,7 +372,7 @@ const ShareYourStoryForm = () => {
             {/* Modal: Live Testimonial Preview */}
             {isPreviewOpen && (
                 <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
+                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
                         <div className="flex justify-between items-center border-b border-white/10 pb-4">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-primary">visibility</span>
@@ -385,8 +385,8 @@ const ShareYourStoryForm = () => {
 
                         {/* Card Preview */}
                         <div className="bg-white/5 border border-white/10 rounded-[2rem] p-6 relative overflow-hidden space-y-4">
-                            <div className="flex justify-between items-start">
-                                <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap justify-between items-start gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
                                     <img
                                         src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=38bdf8&color=000`}
                                         alt="Avatar"
@@ -415,16 +415,16 @@ const ShareYourStoryForm = () => {
                             </p>
                         </div>
 
-                        <div className="flex justify-end gap-3 pt-2">
+                        <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
                             <button
                                 onClick={() => setIsPreviewOpen(false)}
-                                className="px-6 py-2.5 bg-white/10 text-white font-bold text-xs rounded-xl hover:bg-white/20 transition-all cursor-pointer"
+                                className="w-full sm:w-auto px-6 py-2.5 bg-white/10 text-white font-bold text-xs rounded-xl hover:bg-white/20 transition-all cursor-pointer"
                             >
                                 Back to Form
                             </button>
                             <button
                                 onClick={handleSubmit}
-                                className="px-6 py-2.5 bg-primary text-[#080b12] font-bold text-xs rounded-xl hover:bg-white transition-all shadow-lg cursor-pointer"
+                                className="w-full sm:w-auto px-6 py-2.5 bg-primary text-[#080b12] font-bold text-xs rounded-xl hover:bg-white transition-all shadow-lg cursor-pointer"
                             >
                                 Confirm & Deploy
                             </button>
