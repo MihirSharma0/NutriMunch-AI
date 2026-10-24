@@ -239,7 +239,7 @@ const AiImageAnalyzer = () => {
                             {previewImage && (
                                 <div className="mt-4 flex flex-col items-center justify-center p-3 bg-[#080b12]/90 rounded-2xl border border-white/10">
                                     <span className="text-xs font-bold text-[#a5d391] mb-2 uppercase tracking-wider">Image Preview Ready</span>
-                                    <img src={previewImage} alt="Preview" className="max-h-56 rounded-xl object-contain border border-[#a5d391]/30 shadow-lg" onError={(e) => e.target.style.display = 'none'} />
+                                    <img src={previewImage} alt="Preview" className="w-full max-w-sm max-h-56 h-auto rounded-xl object-contain border border-[#a5d391]/30 shadow-lg" onError={(e) => e.target.style.display = 'none'} />
                                 </div>
                             )}
                         </div>

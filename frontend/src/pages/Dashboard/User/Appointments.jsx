@@ -1317,7 +1317,7 @@ const Appointments = () => {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-1 flex items-center justify-between">
                                         <span>Consultation Date</span>
@@ -1396,7 +1396,7 @@ const Appointments = () => {
                                 {/* Preset Price Pills */}
                                 <div className="space-y-1.5">
                                     <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider">Select Consultation Tier / Price</div>
-                                    <div className="grid grid-cols-4 gap-1.5">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                                         {[
                                             { label: '₹10 Test', val: 10 },
                                             { label: '₹150 Follow-up', val: 150 },

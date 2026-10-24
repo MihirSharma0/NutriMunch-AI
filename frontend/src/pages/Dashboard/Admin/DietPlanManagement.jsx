@@ -264,17 +264,17 @@ const DietPlanManagement = () => {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <button
                         onClick={loadAllPlans}
-                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap"
                     >
                         <span className="material-symbols-outlined text-sm">refresh</span>
                         <span>Sync Registry</span>
                     </button>
                     <Link
                         to="/dashboard/nutritionist/builder"
-                        className="px-5 py-2.5 bg-[#a5d391] text-black hover:bg-white rounded-2xl text-xs font-bold transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] flex items-center gap-2 cursor-pointer"
+                        className="px-5 py-2.5 bg-[#a5d391] text-black hover:bg-white rounded-2xl text-xs font-bold transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] flex items-center gap-2 cursor-pointer whitespace-nowrap"
                     >
                         <span className="material-symbols-outlined text-sm">add_circle</span>
                         <span>Open Diet Studio</span>

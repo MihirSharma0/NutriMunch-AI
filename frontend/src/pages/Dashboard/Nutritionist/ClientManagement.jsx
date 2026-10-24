@@ -241,7 +241,7 @@ const ClientManagement = () => {
 
             {/* Notification Banner */}
             {notification && (
-                <div className="fixed top-24 right-8 z-50 bg-[#a5d391] text-[#080b12] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-2 animate-bounce">
+                <div className="fixed top-24 left-4 right-4 sm:left-auto sm:right-8 z-50 bg-[#a5d391] text-[#080b12] px-6 py-3 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-2 animate-bounce">
                     <span className="material-symbols-outlined">check_circle</span>
                     {notification}
                 </div>

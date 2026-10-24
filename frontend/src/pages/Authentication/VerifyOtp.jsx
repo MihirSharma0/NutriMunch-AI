@@ -69,7 +69,7 @@ const VerifyOtp = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#080b12] flex items-center justify-center p-4 md:p-8 font-body-md overflow-x-hidden relative">
+        <div className="min-h-screen bg-[#080b12] flex items-start sm:items-center justify-center p-4 pt-20 sm:pt-6 md:p-8 font-body-md overflow-x-hidden relative">
             <Starfield />
             {/* Background Glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-500/10 blur-[100px] rounded-full pointer-events-none z-0"></div>

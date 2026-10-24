@@ -165,13 +165,13 @@ const Login = () => {
                                     <div className="flex flex-col gap-4 w-full">
                                         <button 
                                             onClick={handleUserRoleSelected}
-                                            className="w-full py-4 px-4 rounded-xl font-bold text-sm uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 transition duration-200 cursor-pointer"
+                                            className="w-full py-4 px-4 rounded-xl font-bold text-sm uppercase tracking-wide sm:tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 transition duration-200 cursor-pointer"
                                         >
                                             Continue as User
                                         </button>
                                         <button 
                                             onClick={() => handleRoleSelection('NUTRITIONIST')}
-                                            className="w-full py-4 px-4 rounded-xl font-bold text-sm uppercase tracking-widest text-white bg-white/5 border border-white/10 hover:bg-white/10 transition duration-200 cursor-pointer"
+                                            className="w-full py-4 px-4 rounded-xl font-bold text-sm uppercase tracking-wide sm:tracking-widest text-white bg-white/5 border border-white/10 hover:bg-white/10 transition duration-200 cursor-pointer"
                                         >
                                             Continue as Nutritionist
                                         </button>
@@ -274,7 +274,7 @@ const Login = () => {
                                     key={role}
                                     type="button"
                                     onClick={() => { setActiveTab(role); setError(''); }}
-                                    className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-300 cursor-pointer ${
+                                    className={`flex-1 px-1 py-2 text-center leading-tight text-[10px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-wider rounded-xl transition-all duration-300 cursor-pointer ${
                                         activeTab === role 
                                         ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' 
                                         : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -369,7 +369,7 @@ const Login = () => {
                             <div className="pt-1">
                                 <button 
                                     type="submit" 
-                                    className="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)] transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer"
+                                    className="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide sm:tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)] transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer"
                                 >
                                     <span>Sign In as {activeTab === 'USER' ? 'User' : activeTab === 'NUTRITIONIST' ? 'Nutritionist' : 'Admin'}</span>
                                     <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
