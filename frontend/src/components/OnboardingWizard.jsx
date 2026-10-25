@@ -29,13 +29,13 @@ const STEPS = [
     { id: 4, title: 'Preferences', desc: 'Allergens & Cuisines' }
 ];
 
-const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
+const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLastName = '', onComplete }) => {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(1);
 
     // Form Data State
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
+    const [firstName, setFirstName] = useState(initialFirstName);
+    const [lastName, setLastName] = useState(initialLastName);
     const [age, setAge] = useState('');
     const [gender, setGender] = useState('Male');
 

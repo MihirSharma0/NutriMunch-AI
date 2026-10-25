@@ -8,6 +8,8 @@ import OnboardingWizard from '../../components/OnboardingWizard';
 const VerifyOtp = () => {
     const [searchParams] = useSearchParams();
     const emailParam = searchParams.get('email') || '';
+    const firstNameParam = searchParams.get('firstName') || '';
+    const lastNameParam = searchParams.get('lastName') || '';
     
     const [email, setEmail] = useState(emailParam);
     const [otp, setOtp] = useState('');
@@ -17,7 +19,7 @@ const VerifyOtp = () => {
     const [resendTimer, setResendTimer] = useState(0);
     const [showOnboarding, setShowOnboarding] = useState(false);
     
-    const { verifyOtp, resendOtp } = useContext(AuthContext);
+    const { verifyOtp, resendOtp, user } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -84,7 +86,12 @@ const VerifyOtp = () => {
             </button>
 
             {showOnboarding ? (
-                <OnboardingWizard initialEmail={email} onComplete={() => navigate('/profile')} />
+                <OnboardingWizard 
+                    initialEmail={email} 
+                    initialFirstName={firstNameParam || user?.firstName || ''}
+                    initialLastName={lastNameParam || user?.lastName || ''}
+                    onComplete={() => navigate('/profile')} 
+                />
             ) : (
                 <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl p-6 sm:p-10 relative z-10">
                     <div className="flex flex-col items-center mb-8">

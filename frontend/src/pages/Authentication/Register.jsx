@@ -78,7 +78,7 @@ const Register = () => {
 
             if (result.success) {
                 setSuccess('Registration successful! Redirecting to email verification...');
-                setTimeout(() => navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}`), 1500);
+                setTimeout(() => navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}&firstName=${encodeURIComponent(formData.firstName)}&lastName=${encodeURIComponent(formData.lastName)}`), 1500);
             } else {
                 setError(result.message);
                 setIsLoading(false);

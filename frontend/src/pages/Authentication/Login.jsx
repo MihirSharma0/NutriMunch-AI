@@ -28,7 +28,7 @@ const Login = () => {
     const [credentials, setCredentials] = useState('');
     const [specialization, setSpecialization] = useState('');
 
-    const { login, googleLogin } = useContext(AuthContext);
+    const { user, login, googleLogin } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const handleGoogleLoginSuccess = async (tokenResponse) => {
@@ -149,7 +149,11 @@ const Login = () => {
             {requiresRoleSelection && (
                 <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-[#080b12]/90 backdrop-blur-xl overflow-y-auto animate-fadeIn">
                     {onboardingStep === 3 ? (
-                        <OnboardingWizard onComplete={() => navigate('/profile')} />
+                        <OnboardingWizard 
+                            initialFirstName={user?.firstName || ''}
+                            initialLastName={user?.lastName || ''}
+                            onComplete={() => navigate('/profile')} 
+                        />
                     ) : (
                         <div className="w-full max-w-md bg-[#0d121c] border border-[#a5d391]/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_40px_rgba(165,211,145,0.15)] flex flex-col items-center">
                             <div className="w-12 h-12 bg-gradient-to-tr from-[#a5d391] to-emerald-400 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-[#a5d391]/20">
