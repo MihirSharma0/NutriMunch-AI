@@ -72,4 +72,21 @@
   .mint-glow {
     filter: drop-shadow(0 0 12px rgba(165, 211, 145, 0.4));
   }
+  .chat-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #b7c8c2 #edf2f0;
+  }
+  .chat-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .chat-scroll::-webkit-scrollbar-track {
+    background: #edf2f0 !important;
+  }
+  .chat-scroll::-webkit-scrollbar-thumb {
+    background: #b7c8c2 !important;
+    border: 1px solid #edf2f0;
+  }
+  .chat-scroll::-webkit-scrollbar-thumb:hover {
+    background: #8ca49b !important;
+  }
 }

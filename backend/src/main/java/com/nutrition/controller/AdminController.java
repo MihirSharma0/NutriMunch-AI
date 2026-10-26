@@ -45,19 +45,14 @@ public class AdminController {
     private final com.nutrition.repository.VerificationTokenRepository verificationTokenRepository;
     private final com.nutrition.repository.PasswordResetTokenRepository passwordResetTokenRepository;
 
-    @org.springframework.beans.factory.annotation.Value("${app.admin.email:admin@nutrimunch.com}")
+    @org.springframework.beans.factory.annotation.Value("${app.admin.email:}")
     private String configuredAdminEmail;
 
-    @org.springframework.beans.factory.annotation.Value("${app.admin.password:AdminPass123!}")
-    private String configuredAdminPassword;
-
     private String activeAdminEmail;
-    private String activeAdminPassword;
 
     @jakarta.annotation.PostConstruct
     public void initCredentials() {
         this.activeAdminEmail = configuredAdminEmail;
-        this.activeAdminPassword = configuredAdminPassword;
     }
 
     @GetMapping("/credentials")
@@ -65,8 +60,7 @@ public class AdminController {
         User adminUser = userRepository.findByRole(Role.ADMIN).stream().findFirst().orElse(null);
         String email = adminUser != null ? adminUser.getEmail() : activeAdminEmail;
         return ResponseEntity.ok(Map.of(
-            "email", email,
-            "password", activeAdminPassword != null ? activeAdminPassword : "••••••••",
+            "email", email == null ? "" : email,
             "firstName", adminUser != null && adminUser.getFirstName() != null ? adminUser.getFirstName() : "System",
             "lastName", adminUser != null && adminUser.getLastName() != null ? adminUser.getLastName() : "Admin"
         ));
@@ -94,7 +88,6 @@ public class AdminController {
             if (newLastName != null) adminUser.setLastName(newLastName);
             if (newPassword != null && !newPassword.isBlank()) {
                 adminUser.setPasswordHash(passwordEncoder.encode(newPassword));
-                this.activeAdminPassword = newPassword;
             }
             adminUser.setRole(Role.ADMIN);
             adminUser.setVerified(true);
@@ -102,8 +95,7 @@ public class AdminController {
             this.activeAdminEmail = newEmail;
             return ResponseEntity.ok(Map.of(
                 "message", "Admin credentials updated successfully!",
-                "email", newEmail,
-                "password", activeAdminPassword
+                "email", newEmail
             ));
         } else {
             return ResponseEntity.badRequest().body(Map.of("message", "Admin user account not found in database"));

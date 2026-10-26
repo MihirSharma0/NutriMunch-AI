@@ -3,11 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
-import ConsultationChatModal from '../../../components/ConsultationChatModal';
 import { normalizeAndDeduplicatePlans, getDeletedPlanIds, permanentlyDeleteDietPlan } from '../../../utils/dietPlanSync';
 import { ALLERGEN_OPTIONS, DIET_OPTIONS, planContainsAllergen, planMatchesDiet, parseAllergies } from '../../../utils/dietFilters';
-
-const DEFAULT_GENERAL_PLANS = [];
 
 const DietPlans = () => {
     const navigate = useNavigate();
@@ -39,9 +36,6 @@ const DietPlans = () => {
 
     // Toast Feedback
     const [notification, setNotification] = useState(null);
-
-    // Consultation Chat Modal
-    const [isChatOpen, setIsChatOpen] = useState(false);
 
     const showToast = (msg) => {
         setNotification(msg);
@@ -398,7 +392,7 @@ const DietPlans = () => {
                     {/* Consultation Chat Launcher */}
                     <button
                         type="button"
-                        onClick={() => setIsChatOpen(true)}
+                        onClick={() => navigate('/consultation-chat')}
                         className="bg-[#0d131f] border border-[#a5d391]/40 hover:border-[#a5d391] text-[#a5d391] hover:text-white px-4 py-2.5 rounded-2xl font-bold text-xs transition-all shadow-md flex items-center gap-2 cursor-pointer"
                     >
                         <span className="material-symbols-outlined text-base">forum</span>
@@ -896,7 +890,7 @@ const DietPlans = () => {
                     </p>
                     <button
                         type="button"
-                        onClick={() => setIsChatOpen(true)}
+                        onClick={() => navigate('/consultation-chat')}
                         className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all cursor-pointer shadow-lg"
                     >
                         <span className="material-symbols-outlined text-base">forum</span>
@@ -1074,15 +1068,6 @@ const DietPlans = () => {
                 </div>
             )}
 
-            {/* CONSULTATION CHAT MODAL FOR USER */}
-            {isChatOpen && (
-                <ConsultationChatModal
-                    isOpen={isChatOpen}
-                    onClose={() => setIsChatOpen(false)}
-                    currentUser={user}
-                    targetPatient={{ nutritionistName: selectedPlan?.nutritionistName || 'Nutritionist Mihir Sharma' }}
-                />
-            )}
         </div>
     );
 };

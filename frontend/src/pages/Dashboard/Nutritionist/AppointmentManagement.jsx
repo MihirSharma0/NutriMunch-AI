@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import { API_BASE_URL } from '../../../api/axios';
-import ConsultationChatModal from '../../../components/ConsultationChatModal';
 import { getConsultationOutcome, isHistoryOutcome, OUTCOME_BADGES, describePayment } from '../../../utils/consultationHistory';
 
 const AppointmentManagement = () => {
+    const navigate = useNavigate();
     const { user, token } = useContext(AuthContext);
     const [viewMode, setViewMode] = useState('All Months');
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -19,8 +19,6 @@ const AppointmentManagement = () => {
     const [loading, setLoading] = useState(true);
 
     // Consultation Chat Modal
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [chatTargetPatient, setChatTargetPatient] = useState(null);
     const [cancellationDisclaimer, setCancellationDisclaimer] = useState('No money will be refunded');
 
     // Consultation History (finished sessions)
@@ -33,16 +31,9 @@ const AppointmentManagement = () => {
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, [location.hash, loading]);
 
-    const handleOpenChatFromAppointment = (patientObj) => {
-        const target = {
-            id: selectedEvent?.userId || patientObj?.userId || patientObj?.id || '',
-            userId: selectedEvent?.userId || patientObj?.userId || patientObj?.id || '',
-            name: selectedEvent?.patientName || patientObj?.name || 'Patient',
-            email: selectedEvent?.userEmail || patientObj?.email || '',
-            appointmentId: selectedEvent?.id
-        };
-        setChatTargetPatient(target);
-        setIsChatOpen(true);
+    const handleOpenChatFromAppointment = () => {
+        const appointmentId = selectedEvent?.id;
+        if (appointmentId) navigate(`/consultation-chat?appointmentId=${encodeURIComponent(appointmentId)}`);
     };
 
     const [newSlot, setNewSlot] = useState({
@@ -449,14 +440,7 @@ const AppointmentManagement = () => {
     });
 
     const openChatWithPatient = (ev) => {
-        setChatTargetPatient({
-            id: String(ev.userId || ''),
-            userId: String(ev.userId || ''),
-            name: ev.userName || 'Patient',
-            email: ev.userEmail || '',
-            appointmentId: ev.id
-        });
-        setIsChatOpen(true);
+        if (ev?.id) navigate(`/consultation-chat?appointmentId=${encodeURIComponent(ev.id)}`);
     };
 
     return (
@@ -936,7 +920,7 @@ const AppointmentManagement = () => {
 
                                     <button 
                                         type="button"
-                                        onClick={() => handleOpenChatFromAppointment(patient)}
+                                        onClick={handleOpenChatFromAppointment}
                                         className="px-4 py-2.5 rounded-xl bg-[#a5d391] hover:bg-white text-black font-bold text-xs transition-all cursor-pointer shadow-md flex items-center gap-1.5 shrink-0"
                                     >
                                         <span className="material-symbols-outlined text-sm">chat</span>
@@ -1184,15 +1168,6 @@ const AppointmentManagement = () => {
                         </form>
                     </div>
                 </div>
-            )}
-            {/* Consultation Chat Modal */}
-            {isChatOpen && (
-                <ConsultationChatModal
-                    isOpen={isChatOpen}
-                    onClose={() => setIsChatOpen(false)}
-                    currentUser={user}
-                    targetPatient={chatTargetPatient}
-                />
             )}
         </div>
     );

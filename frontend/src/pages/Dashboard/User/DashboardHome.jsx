@@ -1,14 +1,12 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api, { API_BASE_URL } from '../../../api/axios';
-import ConsultationChatModal from '../../../components/ConsultationChatModal';
 import { normalizeAndDeduplicatePlans, getDeletedPlanIds } from '../../../utils/dietPlanSync';
 
-const DEFAULT_SEEDS = [];
-
 const DashboardHome = () => {
+    const navigate = useNavigate();
     const { user, token } = useContext(AuthContext);
     const [clinicalDirectives, setClinicalDirectives] = useState([]);
 
@@ -18,7 +16,6 @@ const DashboardHome = () => {
     const lastSeenTopIdRef = useRef(null);
     const [isSyncingTargets, setIsSyncingTargets] = useState(false);
     const [syncSuccess, setSyncSuccess] = useState(false);
-    const [isConsultationChatOpen, setIsConsultationChatOpen] = useState(false);
 
     // User Profile Targets
     const [currentUserTargets, setCurrentUserTargets] = useState({
@@ -381,7 +378,7 @@ const DashboardHome = () => {
                 <div className="flex items-center gap-3 flex-wrap">
                     <button
                         type="button"
-                        onClick={() => setIsConsultationChatOpen(true)}
+                        onClick={() => navigate('/consultation-chat')}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#a5d391]/15 hover:bg-[#a5d391]/25 border border-[#a5d391]/30 text-[#a5d391] text-xs font-bold uppercase tracking-wider backdrop-blur-md cursor-pointer transition-all shadow-[0_0_15px_rgba(165,211,145,0.2)]"
                     >
                         <span className="material-symbols-outlined text-sm">forum</span>
@@ -489,7 +486,7 @@ const DashboardHome = () => {
                     </div>
                     <button
                         type="button"
-                        onClick={() => setIsConsultationChatOpen(true)}
+                        onClick={() => navigate('/consultation-chat')}
                         className="w-12 h-12 bg-[#a5d391]/15 hover:bg-[#a5d391] text-[#a5d391] hover:text-black rounded-2xl flex items-center justify-center border border-[#a5d391]/30 transition-all cursor-pointer shadow-md"
                         title="Chat with Nutritionist"
                     >
@@ -519,7 +516,7 @@ const DashboardHome = () => {
                                 {activeDietPlan?.dietType || 'High-Protein Metabolic'}
                             </span>
                             <span className="text-white/40 text-xs">
-                                Formulated by <strong className="text-white">{activeDietPlan?.nutritionistName || 'Nutritionist Mihir Sharma'}</strong>
+                                Formulated by <strong className="text-white">{activeDietPlan?.nutritionistName || 'Your nutritionist'}</strong>
                                 {activeDietPlan?.nutritionistEmail && (
                                     <span className="text-[#a5d391] font-mono ml-1">({activeDietPlan.nutritionistEmail})</span>
                                 )}
@@ -681,11 +678,11 @@ const DashboardHome = () => {
                             <span className="material-symbols-outlined text-[#a5d391] text-lg">restaurant_menu</span>
                             <span>Prescribed Meal Schedule for Today</span>
                         </h4>
-                        <span className="text-xs text-white/40">{activeDietPlan?.meals?.length || 4} scheduled meals</span>
+                        <span className="text-xs text-white/40">{activeDietPlan?.meals?.length || 0} scheduled meals</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {(activeDietPlan?.meals || DEFAULT_SEEDS[0].meals).map((meal, idx) => (
+                        {(activeDietPlan?.meals || []).length > 0 ? activeDietPlan.meals.map((meal, idx) => (
                             <div key={meal.id || idx} className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 rounded-2xl p-4 transition-all space-y-2">
                                 <div className="flex items-center justify-between text-xs">
                                     <span className="font-bold text-[#a5d391] bg-[#a5d391]/10 px-2.5 py-0.5 rounded-full border border-[#a5d391]/20">
@@ -702,7 +699,9 @@ const DashboardHome = () => {
                                     <span>F: <strong className="text-white">{meal.fats}g</strong></span>
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="col-span-full py-8 text-center text-sm text-white/50">No meal schedule is available for this plan.</p>
+                        )}
                     </div>
                 </div>
                     </>
@@ -718,7 +717,7 @@ const DashboardHome = () => {
                         <div className="flex items-center justify-center gap-3 pt-2">
                             <button
                                 type="button"
-                                onClick={() => setIsConsultationChatOpen(true)}
+                                onClick={() => navigate('/consultation-chat')}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#a5d391] text-black font-bold text-xs hover:bg-white transition-all shadow-md cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-sm">forum</span>
@@ -768,7 +767,7 @@ const DashboardHome = () => {
                         <h3 className="font-bold text-lg font-hero-display text-white">AI Generative Insights</h3>
                     </div>
                     <p className="text-white/70 text-sm leading-relaxed">
-                        Biometric feedback confirms high recovery adherence. Your current macro formulation from <strong>{activeDietPlan?.nutritionistName || 'Nutritionist Mihir Sharma'}</strong> is currently yielding optimal glycemic balance with steady sustained energy.
+                        Personalized insights will appear here when progress data is available.
                     </p>
                     <div className="mt-5 flex items-center gap-3">
                         <Link to="/progress" className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl hover:bg-white transition-all shadow-md">
@@ -776,7 +775,7 @@ const DashboardHome = () => {
                         </Link>
                         <button
                             type="button"
-                            onClick={() => setIsConsultationChatOpen(true)}
+                            onClick={() => navigate('/consultation-chat')}
                             className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all"
                         >
                             Consult Nutritionist
@@ -809,14 +808,6 @@ const DashboardHome = () => {
                 </div>
             </div>
 
-            {/* Live Consultation Chat Modal */}
-            {isConsultationChatOpen && (
-                <ConsultationChatModal
-                    isOpen={isConsultationChatOpen}
-                    onClose={() => setIsConsultationChatOpen(false)}
-                    currentUser={user}
-                />
-            )}
         </div>
     );
 };

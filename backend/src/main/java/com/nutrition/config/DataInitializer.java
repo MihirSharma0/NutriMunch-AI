@@ -16,16 +16,19 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${app.admin.email:admin@nutrimunch.com}")
+    @Value("${app.admin.email:}")
     private String adminEmail;
 
-    @Value("${app.admin.password:AdminPass123!}")
+    @Value("${app.admin.password:}")
     private String adminPassword;
 
     @Override
-    public void run(String... args) throws Exception {
-        createOrUpdateAdmin(adminEmail, adminPassword);
-        createOrUpdateAdmin("admin@nutrimunch.com", "AdminPass123!");
+    public void run(String... args) {
+        if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
+            System.out.println(">>> Admin bootstrap skipped: configure ADMIN_EMAIL and ADMIN_PASSWORD.");
+            return;
+        }
+        createOrUpdateAdmin(adminEmail.trim(), adminPassword);
     }
 
     private void createOrUpdateAdmin(String email, String password) {
@@ -42,13 +45,13 @@ public class DataInitializer implements CommandLineRunner {
             admin.setRole(Role.ADMIN);
             admin.setVerified(true);
             userRepository.save(admin);
-            System.out.println(">>> Created default Admin account: " + email);
+            System.out.println(">>> Created configured Admin account: " + email);
         } else {
             admin.setPasswordHash(passwordEncoder.encode(password));
             admin.setRole(Role.ADMIN);
             admin.setVerified(true);
             userRepository.save(admin);
-            System.out.println(">>> Updated default Admin account credentials for: " + email);
+            System.out.println(">>> Updated configured Admin account credentials for: " + email);
         }
     }
 }

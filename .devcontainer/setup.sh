@@ -16,8 +16,6 @@ if [ ! -f "/workspace/frontend/.env" ]; then
   cat << 'EOF' > /workspace/frontend/.env
 VITE_API_BASE_URL=http://localhost:8080/api
 VITE_GOOGLE_CLIENT_ID=821596411066-uue8nf11fgqvpcbj8rn7ugqtqejihd8s.apps.googleusercontent.com
-VITE_ADMIN_EMAIL=admin@gmail.com
-VITE_ADMIN_PASSWORD=admin123
 EOF
 fi
 

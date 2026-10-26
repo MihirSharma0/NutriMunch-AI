@@ -48,10 +48,10 @@ logging:
 app:
   frontend:
     login-url: ${FRONTEND_LOGIN_URL:http://localhost:5173/login}
-    origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+    origin: ${FRONTEND_ORIGIN:http://localhost:5173,http://localhost:5174}
   admin:
-    email: ${ADMIN_EMAIL:admin@nutrimunch.com}
-    password: ${ADMIN_PASSWORD:AdminPass123!}
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
 
 google:
   script:

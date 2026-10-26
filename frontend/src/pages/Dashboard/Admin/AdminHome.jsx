@@ -13,10 +13,7 @@ const AdminHome = () => {
 
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [credentials, setCredentials] = useState({
-        email: import.meta.env.VITE_ADMIN_EMAIL || 'admin@nutrimunch.com',
-        password: import.meta.env.VITE_ADMIN_PASSWORD || 'AdminPass123!'
-    });
+    const [credentials, setCredentials] = useState({ email: user.email || '' });
     const [copied, setCopied] = useState(false);
 
     // Edit Modal state
@@ -38,7 +35,6 @@ const AdminHome = () => {
                 if (credsRes.data && credsRes.data.email) {
                     setCredentials({
                         email: credsRes.data.email,
-                        password: credsRes.data.password || credentials.password
                     });
                 }
             } catch (error) {
@@ -51,14 +47,14 @@ const AdminHome = () => {
     }, []);
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(`Email: ${credentials.email}\nPassword: ${credentials.password}`);
+        navigator.clipboard.writeText(credentials.email);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleOpenEditModal = () => {
         setEditEmail(credentials.email);
-        setEditPassword(credentials.password);
+        setEditPassword('');
         setUpdateMessage(null);
         setUpdateError(null);
         setIsEditModalOpen(true);
@@ -78,7 +74,6 @@ const AdminHome = () => {
 
             setCredentials({
                 email: response.data.email || editEmail,
-                password: response.data.password || editPassword
             });
 
             setUpdateMessage("Admin credentials updated in database!");
@@ -114,11 +109,11 @@ const AdminHome = () => {
                     <div className="space-y-3">
                         <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#a5d391]/15 text-[#a5d391] rounded-full text-xs font-mono font-bold border border-[#a5d391]/30 shadow-[0_0_12px_rgba(165,211,145,0.2)]">
                             <span className="w-2 h-2 rounded-full bg-[#a5d391] animate-pulse"></span>
-                            ENVIRONMENT SEEDED CREDENTIALS
+                            ADMIN ACCOUNT
                         </div>
                         <h2 className="text-2xl font-bold text-white font-hero-display">Master Credentials Node</h2>
                         <p className="text-white/70 text-sm max-w-xl font-light leading-relaxed">
-                            These credentials are synced directly with your backend environment setup. You can copy or edit them dynamically below.
+                            Your password is stored securely and is never displayed here. Update your email or set a new password below.
                         </p>
                     </div>
 
@@ -138,7 +133,7 @@ const AdminHome = () => {
                                     className="text-[#a5d391] hover:text-white font-sans text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                                 >
                                     <span className="material-symbols-outlined text-sm">{copied ? 'check' : 'content_copy'}</span>
-                                    {copied ? 'Copied!' : 'Copy'}
+                                    {copied ? 'Copied!' : 'Copy email'}
                                 </button>
                             </div>
                         </div>
@@ -148,7 +143,7 @@ const AdminHome = () => {
                         </div>
                         <div className="flex flex-wrap justify-between gap-x-2 text-white py-0.5">
                             <span className="text-white/60">Password:</span>
-                            <span className="font-bold text-amber-300 break-all">{credentials.password}</span>
+                            <span className="font-bold text-amber-300 break-all">Stored securely · not displayed</span>
                         </div>
                     </div>
                 </div>
@@ -173,6 +168,16 @@ const AdminHome = () => {
                     <div>
                         <h3 className="font-bold text-white text-base group-hover:text-[#a5d391] transition-colors">User Management</h3>
                         <p className="text-xs text-white/50 font-light mt-1">View user accounts and manage credentials.</p>
+                    </div>
+                </Link>
+
+                <Link to="/consultation-chat" className="p-6 bg-white/5 backdrop-blur-xl hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 rounded-[2rem] transition-all duration-300 group flex flex-col justify-between shadow-xl hover:-translate-y-1">
+                    <div className="w-12 h-12 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center border border-[#a5d391]/30 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(165,211,145,0.2)] mb-4">
+                        <span className="material-symbols-outlined text-2xl">forum</span>
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-white text-base group-hover:text-[#a5d391] transition-colors">Consultation Chats</h3>
+                        <p className="text-xs text-white/50 font-light mt-1">Start private conversations with users and nutritionists.</p>
                     </div>
                 </Link>
 
@@ -268,12 +273,13 @@ const AdminHome = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-white/70 uppercase mb-2">Admin Password</label>
+                                <label className="block text-xs font-bold text-white/70 uppercase mb-2">New Admin Password (optional)</label>
                                 <input
-                                    type="text"
-                                    required
+                                    type="password"
                                     value={editPassword}
                                     onChange={(e) => setEditPassword(e.target.value)}
+                                    autoComplete="new-password"
+                                    placeholder="Leave blank to keep the current password"
                                     className="w-full bg-black/40 border border-white/15 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-[#a5d391] font-mono"
                                 />
                             </div>

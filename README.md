@@ -140,12 +140,12 @@ cd Nutrition-AI-Minor-Project
 2. Connect your GitHub repository.
 3. Set the **Root Directory** to `backend`.
 4. Set the **Environment** to `Docker` (Render will use the included `Dockerfile`).
-5. Add the environment variables from your `.env` to the Render Environment tab.
+5. Add the backend environment variables from your `.env` to the Render Environment tab. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` there to the administrator account you want to bootstrap. The backend creates or updates that admin account at startup; admin credentials are not seeded from Vercel or frontend variables.
 
 ### Frontend (Vercel)
 1. Import the project into Vercel.
 2. Set the **Root Directory** to `frontend`.
-3. Add the `VITE_API_BASE_URL` environment variable pointing to your live Render backend URL.
+3. Add the `VITE_API_BASE_URL` environment variable pointing to your live Render backend API URL ending in `/api`. Do not add admin credentials as `VITE_*` variables; frontend build variables are public.
 4. Deploy!
 
 ---

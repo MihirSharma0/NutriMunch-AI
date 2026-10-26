@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api, { API_BASE_URL } from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
-import ConsultationChatModal from '../../../components/ConsultationChatModal';
 import { permanentlyDeleteDietPlan, getDeletedPlanIds, getDeletedPlanTitles } from '../../../utils/dietPlanSync';
 
 const DietPlanBuilder = () => {
+    const navigate = useNavigate();
     const { user, token } = useContext(AuthContext);
-    const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Nutritionist Mihir Sharma');
+    const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Nutritionist');
     const nutritionistEmail = user?.email || (user?.username && user.username.includes('@') ? user.username : 'sharmamihir012@gmail.com');
 
     // Navigation Tab: 'STUDIO' (Diet Builder Studio) or 'HISTORY' (Formulated Diet Plans History Vault)
@@ -27,8 +28,6 @@ const DietPlanBuilder = () => {
     const [isDossierOpen, setIsDossierOpen] = useState(false);
 
     // Consultation Chat Modal State
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [chatTargetPatient, setChatTargetPatient] = useState(null);
 
     // Notification / Toast Feedback
     const [notification, setNotification] = useState(null);
@@ -274,8 +273,10 @@ const DietPlanBuilder = () => {
 
     // Open Consultation Chat with selected patient
     const handleOpenChat = (patient) => {
-        setChatTargetPatient(patient);
-        setIsChatOpen(true);
+        const participantId = patient?.userId || patient?.id;
+        if (participantId) {
+            navigate(`/consultation-chat?participantId=${encodeURIComponent(participantId)}`);
+        }
     };
 
     const handleUpdateMeal = (mealId, field, value) => {
@@ -1850,15 +1851,6 @@ const DietPlanBuilder = () => {
                 </div>
             )}
 
-            {/* LIVE CONSULTATION CHAT MODAL */}
-            {isChatOpen && (
-                <ConsultationChatModal
-                    isOpen={isChatOpen}
-                    onClose={() => setIsChatOpen(false)}
-                    currentUser={user}
-                    targetPatient={chatTargetPatient || selectedClient}
-                />
-            )}
         </div>
     );
 };

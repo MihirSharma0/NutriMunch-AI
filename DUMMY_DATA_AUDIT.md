@@ -53,8 +53,15 @@ or sample-patient fallback remains.
 File: [ConsultationChatModal.jsx](./frontend/src/components/ConsultationChatModal.jsx)
 
 The default patient fixture and notification/localStorage chat fallbacks were
-removed. Chat now uses authenticated conversation APIs and displays a loading
-state while connecting.
+removed. User-initiated chat requires a real appointment; nutritionists may
+initiate with any registered user. REST handles conversation and message
+operations, while authenticated Server-Sent Events deliver live message and
+chat-status updates. The chat displays an animated loading state until history
+loads. Legacy chat cache keys and
+consultation-message notification entries are cleaned up without removing
+ordinary notifications. Nutritionists can also initiate chats with any
+registered user; users can initiate a chat only from a booked consultation.
+Only the nutritionist can end an active conversation.
 
 ### 5. About page testimonials
 
@@ -75,22 +82,12 @@ File: [testimonialService.js](./frontend/src/services/testimonialService.js)
 The testimonial service contains `seed-*` testimonial records. These are
 local/demo records and are not guaranteed to represent database testimonials.
 
-### 7. Admin credential fallback values
+### 7. Admin credentials
 
-File: [AdminHome.jsx](./frontend/src/pages/Dashboard/Admin/AdminHome.jsx)
-
-The page contains hardcoded fallback credentials:
-
-```js
-email: import.meta.env.VITE_ADMIN_EMAIL || 'admin@nutrimunch.com',
-password: import.meta.env.VITE_ADMIN_PASSWORD || 'AdminPass123!'
-```
-
-The page does call `/admin/credentials`, but if that request fails it can
-display the fallback values.
-
-Displaying default passwords in the UI is inappropriate for production and
-should be removed. The page should show an unavailable/error state instead.
+Admin bootstrap credentials are configured only on the backend using
+`ADMIN_EMAIL` and `ADMIN_PASSWORD`. They must not be stored in Vercel
+`VITE_*` variables or displayed by the frontend. The admin credentials
+endpoint returns the email only; the password remains stored as a hash.
 
 ### 8. Admin analytics and system insights
 

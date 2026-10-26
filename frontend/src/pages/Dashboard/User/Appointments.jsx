@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api, { API_BASE_URL } from '../../../api/axios';
-import ConsultationChatModal from '../../../components/ConsultationChatModal';
 import { subscribeWalletSse } from '../../../utils/walletSse';
 import { getConsultationOutcome, describePayment } from '../../../utils/consultationHistory';
 
 const Appointments = () => {
+    const navigate = useNavigate();
     const { user, token } = useContext(AuthContext);
     const [appointments, setAppointments] = useState([]);
     const [nutritionists, setNutritionists] = useState([]);
@@ -16,7 +16,6 @@ const Appointments = () => {
     const [selectedAppointment, setSelectedAppointment] = useState(null);
     const [notification, setNotification] = useState(null);
     const [historyFilter, setHistoryFilter] = useState('ALL');
-    const [isChatOpen, setIsChatOpen] = useState(false);
 
     // App Wallet & "Low Balance" Guard State - Strictly Isolated by Account ID & Email
     const resolveInitialWalletBalance = () => {
@@ -267,7 +266,7 @@ const Appointments = () => {
             return {
                 ...apt,
                 status: 'Confirmed',
-                notes: apt.notes || 'Cancellation request declined by nutritionist; session remains confirmed.'
+                notes: apt.notes || 'Cancellation was declined by nutritionist; session remains confirmed.'
             };
         }
         return apt;
@@ -485,76 +484,79 @@ const Appointments = () => {
         }
     };
 
-    // Marks an upcoming session as cancelled (triggers compensating escrow refund if unconfirmed)
+    // Cancels an unconfirmed session or opens confirmation for an approved one.
     const handleCancelAppointment = async (id) => {
         const stringId = String(id);
         const appt = appointments.find(a => String(a.id) === stringId);
         const statusUpper = (appt?.status || '').toUpperCase();
 
-        // If approved by nutritionist, user CANNOT cancel unilaterally
         if (isConfirmedOrApproved(statusUpper)) {
             setCancelPromptModal({ open: true, appointmentId: id });
             return;
         }
 
-        const updated = appointments.map(a => String(a.id) === stringId ? { ...a, status: 'CANCELLED', escrowStatus: 'REFUNDED' } : a);
-        setAppointments(updated);
-        try {
-            localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updated));
-        } catch (e) {}
-
-        if (selectedAppointment && String(selectedAppointment.id) === stringId) {
-            setSelectedAppointment(prev => prev ? { ...prev, status: 'CANCELLED', escrowStatus: 'REFUNDED' } : null);
-        }
-
         if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
-            api.put(`/appointments/${id}/status`, { status: 'CANCELLED' })
-                .then(res => {
-                    if (res.data) {
-                        setAppointments(prev => prev.map(a => String(a.id) === stringId ? { ...a, ...res.data } : a));
-                        if (selectedAppointment && String(selectedAppointment.id) === stringId) {
-                            setSelectedAppointment(prev => prev ? { ...prev, ...res.data } : null);
-                        }
-                        // Nutritionist had already confirmed: server turns this into a non-refundable request
-                        if (String(res.data.status || '').toUpperCase() === 'CANCELLATION_REQUESTED') {
-                            showToast('This session was already confirmed by your nutritionist. Cancellation request submitted — the money will not be refunded.');
-                        }
+            try {
+                const response = await api.put(`/appointments/${id}/status`, { status: 'CANCELLED' });
+                if (response.data) {
+                    setAppointments(prev => {
+                        const updated = prev.map(a => String(a.id) === stringId ? { ...a, ...response.data } : a);
+                        try { localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updated)); } catch (e) {}
+                        return updated;
+                    });
+                    if (selectedAppointment && String(selectedAppointment.id) === stringId) {
+                        setSelectedAppointment(prev => prev ? { ...prev, ...response.data } : null);
                     }
-                })
-                .catch(() => {});
+                    if (String(response.data.status || '').toUpperCase() === 'CANCELLATION_REQUESTED') {
+                        showToast('Your cancellation is pending nutritionist review.');
+                        return;
+                    }
+                }
+            } catch (error) {
+                showToast(error.response?.data?.message || 'Unable to cancel this session. Please try again.');
+                return;
+            }
+        } else {
+            const updated = appointments.map(a => String(a.id) === stringId ? { ...a, status: 'CANCELLED' } : a);
+            setAppointments(updated);
+            try {
+                localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updated));
+            } catch (e) {}
+            if (selectedAppointment && String(selectedAppointment.id) === stringId) {
+                setSelectedAppointment(prev => prev ? { ...prev, status: 'CANCELLED' } : null);
+            }
         }
 
-        showToast('Consultation session cancelled. Locked escrow funds automatically refunded to your wallet.');
+        showToast('Consultation session cancelled.');
     };
 
-    // Submits request to cancel to the nutritionist once session is approved
-    const handleRequestCancellation = async (id) => {
+    // Confirmed sessions are sent to the nutritionist for cancellation review.
+    const confirmCancelSession = async (id) => {
         const stringId = String(id);
-        const appt = appointments.find(a => String(a.id) === stringId);
+        if (!token || (typeof id !== 'number' && isNaN(Number(id)))) {
+            showToast('Unable to cancel this session. Please try again.');
+            return;
+        }
 
-        const updated = appointments.map(a => String(a.id) === stringId ? { ...a, status: 'CANCELLATION_REQUESTED' } : a);
-        setAppointments(updated);
         try {
-            localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updated));
-        } catch (e) {}
-
-        if (selectedAppointment && String(selectedAppointment.id) === stringId) {
-            setSelectedAppointment(prev => prev ? { ...prev, status: 'CANCELLATION_REQUESTED' } : null);
-        }
-
-        if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
-            api.post(`/appointments/${id}/request-cancel`, { reason: 'Client requested cancellation. Notice: No money will be refunded.' })
-                .then(res => {
-                    if (res.data) {
-                        setAppointments(prev => prev.map(a => String(a.id) === stringId ? { ...a, ...res.data } : a));
-                    }
-                })
-                .catch(() => {
-                    api.put(`/appointments/${id}/status`, { status: 'CANCELLATION_REQUESTED', notes: 'Client requested cancellation. Notice: No money will be refunded.' }).catch(() => {});
+            const response = await api.post(`/appointments/${id}/request-cancel`, {
+                reason: 'Client requested session cancellation.',
+            });
+            if (response.data) {
+                setAppointments(prev => {
+                    const updated = prev.map(a => String(a.id) === stringId ? { ...a, ...response.data } : a);
+                    try { localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updated)); } catch (e) {}
+                    return updated;
                 });
+                if (selectedAppointment && String(selectedAppointment.id) === stringId) {
+                    setSelectedAppointment(prev => prev ? { ...prev, ...response.data } : null);
+                }
+            }
+            setCancelPromptModal({ open: false, appointmentId: null });
+            showToast('Your cancellation is pending nutritionist review.');
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Unable to cancel this session. Please try again.');
         }
-
-        showToast('Cancellation request submitted. The consultation will be cancelled, but the money will not be refunded.');
     };
 
     // Delete record (Allowed for past dates OR future sessions cancelled/rejected)
@@ -789,7 +791,7 @@ const Appointments = () => {
                                             : (activeDisplayedAppointment.status || '').toUpperCase() === 'COMPLETED'
                                             ? 'Completed'
                                             : (activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED'
-                                            ? 'Cancellation Requested'
+                                            ? 'Cancellation Pending'
                                             : isConfirmedOrApproved(activeDisplayedAppointment.status)
                                             ? 'Confirmed'
                                             : ((activeDisplayedAppointment.status || '').toUpperCase() === 'REQUESTED' || (activeDisplayedAppointment.status || '').toUpperCase().includes('PENDING')) ? 'Requested' : (activeDisplayedAppointment.status || 'Requested')}
@@ -806,7 +808,7 @@ const Appointments = () => {
                                 {((activeDisplayedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (activeDisplayedAppointment.notes || '').toLowerCase().includes('declined by nutritionist')) && (
                                     <div className="mb-4 bg-amber-500/15 border border-amber-500/35 rounded-xl px-3.5 py-2 text-xs text-amber-200 flex items-center gap-2 font-medium">
                                         <span className="material-symbols-outlined text-amber-400 text-base shrink-0">info</span>
-                                        <span>Disclaimer: Cancellation request was declined by the nutritionist. The consultation remains scheduled and confirmed.</span>
+                                        <span>Cancellation was declined by the nutritionist. The consultation remains scheduled and confirmed.</span>
                                     </div>
                                 )}
 
@@ -841,7 +843,7 @@ const Appointments = () => {
                                         <>
                                             <button
                                                 type="button"
-                                                onClick={() => setIsChatOpen(true)}
+                                                onClick={() => navigate(`/consultation-chat?appointmentId=${encodeURIComponent(activeDisplayedAppointment.id)}`)}
                                                 className="bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.2)] cursor-pointer"
                                             >
                                                 <span className="material-symbols-outlined text-sm">forum</span> Chat with Nutritionist
@@ -855,17 +857,8 @@ const Appointments = () => {
                                             {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED' ? (
                                                 <div className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
                                                     <span className="material-symbols-outlined text-sm animate-pulse">hourglass_top</span>
-                                                    <span>Cancellation Requested (Awaiting Nutritionist)</span>
+                                                    <span>Cancellation Pending (Awaiting Nutritionist)</span>
                                                 </div>
-                                            ) : isConfirmedOrApproved(activeDisplayedAppointment.status) ? (
-                                                <button
-                                                    onClick={() => setCancelPromptModal({ open: true, appointmentId: activeDisplayedAppointment.id })}
-                                                    className="border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-black px-5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-                                                    title="Request cancellation from nutritionist. Note: Money will not be refunded."
-                                                >
-                                                    <span className="material-symbols-outlined text-sm">schedule_send</span>
-                                                    <span>Request to Cancel</span>
-                                                </button>
                                             ) : (
                                                 <button
                                                     onClick={() => handleCancelAppointment(activeDisplayedAppointment.id)}
@@ -1527,7 +1520,7 @@ const Appointments = () => {
                             {((selectedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (selectedAppointment.notes || '').toLowerCase().includes('declined by nutritionist')) && (
                                 <div className="bg-amber-500/15 border border-amber-500/35 rounded-2xl p-3.5 text-xs text-amber-200 flex items-center gap-2 font-medium">
                                     <span className="material-symbols-outlined text-amber-400 text-base shrink-0">info</span>
-                                    <span>Disclaimer: Cancellation request was declined by the nutritionist. The session remains confirmed.</span>
+                                    <span>Cancellation was declined by the nutritionist. The session remains confirmed.</span>
                                 </div>
                             )}
 
@@ -1567,24 +1560,15 @@ const Appointments = () => {
                                 (selectedAppointment.status || '').toUpperCase() === 'CANCELLATION_REQUESTED' ? (
                                     <div className="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-500/10 px-4 py-2.5 rounded-xl border border-amber-500/30 font-bold">
                                         <span className="material-symbols-outlined text-sm animate-pulse">hourglass_top</span>
-                                        <span>Cancellation Requested (Awaiting Nutritionist)</span>
+                                        <span>Cancellation Pending (Awaiting Nutritionist)</span>
                                     </div>
-                                ) : isConfirmedOrApproved(selectedAppointment.status) ? (
-                                    <button
-                                        onClick={() => setCancelPromptModal({ open: true, appointmentId: selectedAppointment.id })}
-                                        className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500 hover:text-black transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-                                        title="Request cancellation from nutritionist. Note: Money will not be refunded."
-                                    >
-                                        <span className="material-symbols-outlined text-sm">schedule_send</span>
-                                        <span>Request to Cancel</span>
-                                    </button>
                                 ) : (selectedAppointment.status || '').toUpperCase() !== 'CANCELLED' && (selectedAppointment.status || '').toUpperCase() !== 'REJECTED' ? (
                                     <button
                                         onClick={() => handleCancelAppointment(selectedAppointment.id)}
                                         className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
                                     >
                                         <span className="material-symbols-outlined text-sm">event_busy</span>
-                                        <span>Cancel Booking</span>
+                                        <span>Cancel Session</span>
                                     </button>
                                 ) : (
                                     <div className="flex items-center gap-1.5 text-xs text-white/40 bg-white/5 px-3 py-2 rounded-xl border border-white/10">
@@ -1680,8 +1664,8 @@ const Appointments = () => {
                                 <span className="material-symbols-outlined text-3xl">warning</span>
                             </div>
                             <div>
-                                <div className="text-xs font-black uppercase tracking-widest text-amber-400">Important Policy</div>
-                                <h3 className="text-lg font-bold text-white font-hero-display">Request to Cancel</h3>
+                                <div className="text-xs font-black uppercase tracking-widest text-amber-400">Confirm Action</div>
+                                <h3 className="text-lg font-bold text-white font-hero-display">Cancel Session</h3>
                             </div>
                         </div>
 
@@ -1689,13 +1673,13 @@ const Appointments = () => {
                             <div className="flex items-start gap-2.5">
                                 <span className="material-symbols-outlined text-amber-400 text-lg shrink-0 mt-0.5">info</span>
                                 <p className="text-amber-200/90 font-medium leading-relaxed">
-                                    The consultation will be cancelled, but the money will not be refunded.
+                                    Are you sure you want to cancel this consultation?
                                 </p>
                             </div>
                         </div>
 
                         <p className="text-xs text-white/70 leading-relaxed">
-                            Since this consultation has already been approved and reserved by your nutritionist, submitting this request will notify the nutritionist to cancel the scheduled session. Money cannot be refunded.
+                            Your nutritionist will be notified and can review the cancellation.
                         </p>
 
                         <div className="flex gap-3 pt-2">
@@ -1711,27 +1695,18 @@ const Appointments = () => {
                                 onClick={() => {
                                     const targetId = cancelPromptModal.appointmentId;
                                     setCancelPromptModal({ open: false, appointmentId: null });
-                                    if (targetId) handleRequestCancellation(targetId);
+                                    if (targetId) confirmCancelSession(targetId);
                                 }}
                                 className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5"
                             >
-                                <span className="material-symbols-outlined text-sm">schedule_send</span>
-                                Confirm Request
+                                <span className="material-symbols-outlined text-sm">event_busy</span>
+                                Confirm Cancellation
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Live Consultation Chat Modal */}
-            {isChatOpen && (
-                <ConsultationChatModal
-                    isOpen={isChatOpen}
-                    onClose={() => setIsChatOpen(false)}
-                    currentUser={user}
-                    appointmentId={activeDisplayedAppointment?.id}
-                />
-            )}
         </div>
     );
 };

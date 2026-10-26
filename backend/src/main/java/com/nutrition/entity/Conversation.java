@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 public class Conversation {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "appointment_id", nullable = false, unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "appointment_id", unique = true)
     private Appointment appointment;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "patient_id", nullable = false)
     private User patient;

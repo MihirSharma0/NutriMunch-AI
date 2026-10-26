@@ -340,8 +340,8 @@ public class AppointmentService {
                 throw new org.springframework.security.access.AccessDeniedException("Only the nutritionist can respond to a cancellation request.");
             }
 
-            // Policy: once confirmed, cancellations are non-refundable. Refunding captured
-            // funds is an admin-only override; a nutritionist approval is always no-refund.
+            // Policy: once confirmed, cancellation approval is non-refundable. Refunds require
+            // the explicit admin-only APPROVE_CANCELLATION_REFUND action.
             if (!isAdmin && ("APPROVE_CANCELLATION".equals(upperStatus) || "APPROVE_CANCELLATION_REFUND".equals(upperStatus))) {
                 upperStatus = "APPROVE_CANCELLATION_NO_REFUND";
             }
@@ -439,19 +439,17 @@ public class AppointmentService {
 
             // STEP 2c: Nutritionist APPROVES Cancellation Request with Disclaimer: No money will be refunded
             } else if ("APPROVE_CANCELLATION_NO_REFUND".equals(upperStatus) ||
-                      ("APPROVE_CANCELLATION".equals(upperStatus) && notes != null && notes.toLowerCase().contains("no money will be refunded"))) {
+                      "APPROVE_CANCELLATION".equals(upperStatus)) {
                 apt.setStatus("CANCELLED");
                 if (notes != null && !notes.isBlank()) {
                     apt.setNotes(notes);
                 } else {
                     apt.setNotes("Cancellation approved by nutritionist. Disclaimer: No money will be refunded.");
                 }
-                log.info("Nutritionist approved cancellation with disclaimer (no money refunded) for appointment #{}", apt.getId());
+                log.info("Cancellation approved without refund for appointment #{}", apt.getId());
 
-            // STEP 2c-alt: Admin override - approve cancellation AND refund captured funds.
-            // A plain "CANCELLED" on a confirmed booking no longer lands here; it becomes a
-            // non-refundable cancellation request (STEP 2b).
-            } else if ("APPROVE_CANCELLATION".equals(upperStatus) || "APPROVE_CANCELLATION_REFUND".equals(upperStatus)) {
+            // STEP 2c-alt: Explicit admin override - approve cancellation AND refund captured funds.
+            } else if ("APPROVE_CANCELLATION_REFUND".equals(upperStatus)) {
                 if ("CAPTURED".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
                     User nutritionist = apt.getNutritionist();
                     User user = apt.getUser();
@@ -601,8 +599,8 @@ public class AppointmentService {
     /**
      * Client requests to cancel an appointment.
      * - If still in unconfirmed state: immediately cancels with escrow release back to client.
-     * - If already confirmed/accepted by nutritionist: transitions state to CANCELLATION_REQUESTED
-     *   for nutritionist's review and refund approval.
+     * - If already confirmed/accepted by nutritionist: transitions state to CANCELLATION_REQUESTED.
+     *   Approval cancels the consultation without refund; refunds require an explicit admin override.
      */
     @Transactional(rollbackFor = Exception.class)
     public AppointmentDto requestCancellation(Long appointmentId, Long userId, String reason) {
@@ -623,7 +621,7 @@ public class AppointmentService {
             return updateAppointmentStatus(appointmentId, "CANCELLED", null, reason, userId, true);
         }
 
-        // Already confirmed by nutritionist -> Require nutritionist approval to refund
+        // Already confirmed by nutritionist -> Require nutritionist approval to cancel without refund
         String prevStatusBeforeRequest = apt.getStatus();
         apt.setStatus("CANCELLATION_REQUESTED");
         if (reason != null && !reason.isBlank()) {
@@ -933,4 +931,3 @@ public class AppointmentService {
         return dto;
     }
 }
-

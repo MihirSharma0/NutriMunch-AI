@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { API_BASE_URL } from '../api/axios';
+import api, { API_BASE_URL } from '../api/axios';
 
 export const getNavItemsForRole = (user) => {
     const aiSubMenu = [
@@ -163,25 +163,20 @@ const Navbar = () => {
             let backendNotifs = [];
             if (token) {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/notifications/me`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        backendNotifs = data
-                            .filter(n => !['CONSULTATION_MSG', 'CONSULTATION_CHAT', 'CONSULTATION_REQUEST'].includes(n.type))
-                            .map(n => ({
-                                id: n.id,
-                                title: n.title,
-                                message: n.message,
-                                time: n.timeAgo || 'Just now',
-                                icon: n.icon || 'notifications',
-                                path: n.path || '/progress',
-                                type: n.type,
-                                senderId: n.senderId,
-                                read: Boolean(n.readStatus) || readIds.has(String(n.id))
-                            }));
-                    }
+                    const response = await api.get('/notifications/me');
+                    backendNotifs = response.data
+                        .filter(n => !['CONSULTATION_MSG', 'CONSULTATION_CHAT', 'CONSULTATION_REQUEST'].includes(n.type))
+                        .map(n => ({
+                            id: n.id,
+                            title: n.title,
+                            message: n.message,
+                            time: n.timeAgo || 'Just now',
+                            icon: n.icon || 'notifications',
+                            path: n.path || '/progress',
+                            type: n.type,
+                            senderId: n.senderId,
+                            read: Boolean(n.readStatus) || readIds.has(String(n.id))
+                        }));
                 } catch (err) {
                     console.error("Error fetching backend notifications", err);
                 }
@@ -540,7 +535,7 @@ const Navbar = () => {
                         {user && (
                             <button
                                 type="button"
-                                onClick={() => navigate('/appointments')}
+                                onClick={() => navigate('/consultation-chat')}
                                 aria-label="Clinical Consultation Chat"
                                 className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 flex items-center justify-center text-white/80 hover:text-[#a5d391] transition-all cursor-pointer shadow-sm"
                                 title="Consultation Chat with Nutritionist"
