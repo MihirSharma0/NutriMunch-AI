@@ -9,6 +9,30 @@ const DEFAULT_PATIENTS = [
     { id: "553", userId: "553", name: "James Wilson", email: "james.w@example.com", goal: "Cardiovascular Health" }
 ];
 
+// Message ids embed Date.now(); use it to keep a stable chronological order after merging
+const messageTimestamp = (m) => {
+    const match = String(m?.id || '').match(/(\d{12,})/);
+    return match ? Number(match[1]) : 0;
+};
+
+// Union of message lists by id. Copies of a session are never replaced wholesale, so a stale
+// copy (e.g. one fetched before our own send finished uploading) can never remove a message.
+const mergeMessages = (...lists) => {
+    const byId = new Map();
+    lists.forEach(list => (list || []).forEach(m => {
+        if (m && m.id && !byId.has(m.id)) byId.set(m.id, m);
+    }));
+    return Array.from(byId.values())
+        .map((m, i) => ({ m, i }))
+        .sort((a, b) => (messageTimestamp(a.m) - messageTimestamp(b.m)) || (a.i - b.i))
+        .map(x => x.m);
+};
+
+const sameMessageIds = (a, b) =>
+    a.length === b.length && a.every((m, i) => m.id === b[i].id);
+
+const sessionTime = (session) => Date.parse(session?.updatedAt || '') || 0;
+
 const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) => {
     // Bulletproof User resolution (prop -> localStorage fallback)
     const activeUser = currentUser || (() => {
@@ -111,150 +135,101 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
     const [requestPingSent, setRequestPingSent] = useState(false);
     const messagesEndRef = useRef(null);
     const activeKeyRef = useRef(null);
+    const conversationIdRef = useRef(patientId);
+    const statusUpdatedAtRef = useRef(0);
 
-    // Load Chat Session with unified resolution (localStorage + backend database bridge)
+    // Switching conversation: start clean so messages from the previous chat never merge in
+    useEffect(() => {
+        conversationIdRef.current = patientId;
+        statusUpdatedAtRef.current = 0;
+        setMessages([]);
+        setSessionStatus('NOT_STARTED');
+    }, [patientId]);
+
+    // Merge incoming messages into state and adopt the session status only if it is newer than ours
+    const applySession = (session, incomingMessages) => {
+        setMessages(prev => {
+            const merged = mergeMessages(prev, incomingMessages);
+            return sameMessageIds(prev, merged) ? prev : merged;
+        });
+        const t = sessionTime(session);
+        if (session?.sessionStatus && t >= statusUpdatedAtRef.current) {
+            statusUpdatedAtRef.current = t;
+            setSessionStatus(session.sessionStatus);
+        }
+        const resolvedNutritionist = session?.nutritionistName ||
+            (incomingMessages || []).slice().reverse().find(m => m.sender === 'nutritionist')?.senderName;
+        if (resolvedNutritionist) {
+            setCurrentNutritionistName(resolvedNutritionist.toLowerCase().startsWith('nutritionist') ? resolvedNutritionist : `Nutritionist ${resolvedNutritionist}`);
+        }
+    };
+
+    // Load Chat Session: merge the locally cached copy and every server copy of THIS conversation
     const loadChatSession = async () => {
+        const conversationId = patientId;
         try {
             const allChats = JSON.parse(localStorage.getItem('nutrimunch_consultation_chats') || '{}');
-            let currentSession = null;
-            let resolvedKey = null;
 
             const targetId = isNutritionist
                 ? String(selectedPatient?.userId || selectedPatient?.id || patientId)
-                : String(activeUser?.userId || activeUser?.id || '');
+                : String(activeUser?.userId || activeUser?.id || patientId || '');
             const targetEmail = isNutritionist
                 ? selectedPatient?.email?.toLowerCase()
                 : activeUser?.email?.toLowerCase();
-            const myName = (!isNutritionist && activeUser)
-                ? (activeUser?.firstName ? `${activeUser.firstName} ${activeUser.lastName || ''}`.trim() : (activeUser?.name || '')).toLowerCase()
-                : '';
 
-            if (isNutritionist) {
-                if (targetId && allChats[targetId]) {
-                    currentSession = allChats[targetId];
-                    resolvedKey = targetId;
-                } else if (targetEmail && allChats[targetEmail]) {
-                    currentSession = allChats[targetEmail];
-                    resolvedKey = targetEmail;
-                } else if (allChats['nutrimunch_active_consultation'] && String(allChats['nutrimunch_active_consultation']?.patientId) === targetId) {
-                    currentSession = allChats['nutrimunch_active_consultation'];
-                    resolvedKey = 'nutrimunch_active_consultation';
-                }
+            // A session belongs to this conversation only if it is for this exact patient
+            const belongsHere = (session) => Boolean(session) && (
+                (targetId && String(session.patientId) === targetId) ||
+                (targetEmail && session.patientEmail?.toLowerCase() === targetEmail)
+            );
+
+            let localSession = null;
+            if (targetId && belongsHere(allChats[targetId])) {
+                localSession = allChats[targetId];
+                activeKeyRef.current = targetId;
+            } else if (targetEmail && belongsHere(allChats[targetEmail])) {
+                localSession = allChats[targetEmail];
+                activeKeyRef.current = targetEmail;
             } else {
-                // Patient session resolution:
-                if (targetId && allChats[targetId]) {
-                    currentSession = allChats[targetId];
-                    resolvedKey = targetId;
-                } else if (targetEmail && allChats[targetEmail]) {
-                    currentSession = allChats[targetEmail];
-                    resolvedKey = targetEmail;
-                }
+                activeKeyRef.current = null;
+            }
 
-                if (!currentSession) {
-                    for (const [k, s] of Object.entries(allChats)) {
-                        if (!s) continue;
-                        if (targetId && String(s.patientId) === targetId) {
-                            currentSession = s;
-                            resolvedKey = k;
-                            break;
-                        }
-                        if (targetEmail && s.patientEmail?.toLowerCase() === targetEmail) {
-                            currentSession = s;
-                            resolvedKey = k;
-                            break;
-                        }
-                        if (myName && s.patientName?.toLowerCase() === myName) {
-                            currentSession = s;
-                            resolvedKey = k;
-                            break;
-                        }
-                    }
-                }
+            if (localSession) {
+                applySession(localSession, localSession.messages || []);
+            }
 
-                // Fallback to active consultation
-                if (!currentSession || (!currentSession.messages?.length && currentSession.sessionStatus !== 'ACTIVE')) {
-                    if (allChats['nutrimunch_active_consultation'] && (allChats['nutrimunch_active_consultation'].sessionStatus === 'ACTIVE' || allChats['nutrimunch_active_consultation'].messages?.length > 0)) {
-                        currentSession = allChats['nutrimunch_active_consultation'];
-                        resolvedKey = 'nutrimunch_active_consultation';
-                    } else if (allChats['me'] && (allChats['me'].sessionStatus === 'ACTIVE' || allChats['me'].messages?.length > 0)) {
-                        currentSession = allChats['me'];
-                        resolvedKey = 'me';
-                    }
+            const res = await api.get('/notifications/me');
+            if (conversationIdRef.current !== conversationId) return; // user switched chats meanwhile
+            if (!res.data || !Array.isArray(res.data)) return;
+
+            // Incoming consultation requests for the nutritionist
+            if (isNutritionist) {
+                const reqNotifs = res.data.filter(n => n.type === 'CONSULTATION_REQUEST' && n.message);
+                if (reqNotifs.length > 0) {
+                    try {
+                        const reqData = JSON.parse(reqNotifs[0].message);
+                        setIncomingRequest(reqData && String(reqData.patientId) !== String(targetId) ? reqData : null);
+                    } catch (e) {}
                 }
             }
 
-            activeKeyRef.current = resolvedKey;
+            const serverSessions = res.data
+                .filter(n => n.type === 'CONSULTATION_MSG' && n.message)
+                .map(n => { try { return JSON.parse(n.message); } catch (e) { return null; } })
+                .filter(session => session && Array.isArray(session.messages) && belongsHere(session));
 
-            if (currentSession) {
-                setSessionStatus(currentSession.sessionStatus || 'ACTIVE');
-                setMessages(currentSession.messages || []);
-                const resolvedNutritionist = currentSession.nutritionistName ||
-                    currentSession.messages?.slice().reverse().find(m => m.sender === 'nutritionist')?.senderName;
-                if (resolvedNutritionist) {
-                    setCurrentNutritionistName(resolvedNutritionist.toLowerCase().startsWith('nutritionist') ? resolvedNutritionist : `Nutritionist ${resolvedNutritionist}`);
-                }
-            }
+            if (serverSessions.length === 0) return;
 
-            // Sync with backend notifications database (bridges across incognito / multi-browser / multi-window)
-            try {
-                const res = await api.get('/notifications/me');
-                if (res.data && Array.isArray(res.data)) {
-                    // Check for incoming consultation requests for Nutritionist
-                    if (isNutritionist) {
-                        const reqNotifs = res.data.filter(n => n.type === 'CONSULTATION_REQUEST' && n.message);
-                        if (reqNotifs.length > 0) {
-                            try {
-                                const reqData = JSON.parse(reqNotifs[0].message);
-                                if (reqData && String(reqData.patientId) !== String(targetId)) {
-                                    setIncomingRequest(reqData);
-                                } else {
-                                    setIncomingRequest(null);
-                                }
-                            } catch (e) {}
-                        }
-                    }
+            const newest = serverSessions.reduce((a, b) => (sessionTime(b) > sessionTime(a) ? b : a));
+            const mergedMessages = mergeMessages(localSession?.messages, ...serverSessions.map(x => x.messages));
+            applySession(newest, mergedMessages);
 
-                    // Check for consultation chat state updates
-                    const chatNotifs = res.data.filter(n => n.type === 'CONSULTATION_MSG' && n.message);
-                    if (chatNotifs.length > 0) {
-                        for (const n of chatNotifs) {
-                            try {
-                                const backendSession = JSON.parse(n.message);
-                                if (!backendSession || !Array.isArray(backendSession.messages)) continue;
-
-                                const matches = isNutritionist
-                                    ? String(backendSession.patientId) === String(targetId) || (targetEmail && backendSession.patientEmail?.toLowerCase() === targetEmail)
-                                    : String(backendSession.patientId) === String(targetId) ||
-                                      (targetEmail && backendSession.patientEmail?.toLowerCase() === targetEmail) ||
-                                      (myName && backendSession.patientName?.toLowerCase() === myName) ||
-                                      (backendSession.sessionStatus === 'ACTIVE') ||
-                                      (!targetId && backendSession.messages.length > 0);
-
-                                if (matches) {
-                                    const currCount = currentSession?.messages?.length || 0;
-                                    if (backendSession.messages.length >= currCount || backendSession.sessionStatus !== sessionStatus) {
-                                        setMessages(backendSession.messages);
-                                        setSessionStatus(backendSession.sessionStatus || 'ACTIVE');
-                                        const resolvedNutritionist = backendSession.nutritionistName ||
-                                            backendSession.messages.slice().reverse().find(m => m.sender === 'nutritionist')?.senderName;
-                                        if (resolvedNutritionist) {
-                                            setCurrentNutritionistName(resolvedNutritionist.toLowerCase().startsWith('nutritionist') ? resolvedNutritionist : `Nutritionist ${resolvedNutritionist}`);
-                                        }
-
-                                        // Update local caches
-                                        if (targetId) allChats[targetId] = backendSession;
-                                        if (targetEmail) allChats[targetEmail] = backendSession;
-                                        allChats['nutrimunch_active_consultation'] = backendSession;
-                                        allChats['me'] = backendSession;
-                                        localStorage.setItem('nutrimunch_consultation_chats', JSON.stringify(allChats));
-                                    }
-                                    break;
-                                }
-                            } catch (e) {}
-                        }
-                    }
-                }
-            } catch (err) {}
+            // Refresh the local cache with the merged conversation
+            const latest = sessionTime(localSession) > sessionTime(newest) ? localSession : newest;
+            const cached = { ...latest, messages: mergedMessages };
+            if (targetId) allChats[targetId] = cached;
+            if (targetEmail) allChats[targetEmail] = cached;
+            localStorage.setItem('nutrimunch_consultation_chats', JSON.stringify(allChats));
         } catch (e) {
             console.error('Error loading consultation chat:', e);
         }
@@ -332,14 +307,19 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                 ? (selectedPatient?.email || '')
                 : (activeUser?.email || '');
 
+            const cachedSession = allChats[targetPatientId] || (targetEmail ? allChats[targetEmail.toLowerCase()] : null);
+            const cachedMessages = cachedSession && String(cachedSession.patientId) === targetPatientId ? cachedSession.messages : [];
+            const updatedAt = new Date().toISOString();
+            statusUpdatedAtRef.current = Date.parse(updatedAt);
+
             const sessionData = {
                 patientId: targetPatientId,
                 patientEmail: targetEmail,
                 patientName: patientName,
                 nutritionistName: nutritionistName,
                 sessionStatus: status,
-                updatedAt: new Date().toISOString(),
-                messages: updatedMessages
+                updatedAt,
+                messages: mergeMessages(cachedMessages, updatedMessages)
             };
 
             // Write to all relevant keys so both sides always locate the exact same session
@@ -414,6 +394,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         // Toast notification
         try {
             const chatNotification = {
+                senderId: String(activeUser?.id || activeUser?.userId || ''),
                 id: `chat_notif_${Date.now()}`,
                 title: `Live Consultation Chat Initiated`,
                 message: isNutritionist
@@ -444,6 +425,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
 
         try {
             const notif = {
+                senderId: String(activeUser?.id || activeUser?.userId || ''),
                 id: `req_notif_${Date.now()}`,
                 title: `Consultation Chat Requested`,
                 message: `Patient ${patientName} (#${patientId}) has requested you to initiate a live consultation chat session.`,
@@ -512,7 +494,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
 
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const newMessage = {
-            id: `msg_${Date.now()}`,
+            id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
             sender: isNutritionist ? 'nutritionist' : 'user',
             senderName: isNutritionist ? nutritionistName : patientName,
             text: textToSend,
@@ -532,6 +514,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
                 : `New Message from ${patientName} (#${patientId})`;
             const notifMessage = textToSend;
             const notifPayload = {
+                senderId: String(activeUser?.id || activeUser?.userId || ''),
                 id: `chat_notif_${Date.now()}`,
                 title: notifTitle,
                 message: notifMessage,
@@ -575,11 +558,57 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
         }
     };
 
+    // WhatsApp-style UI state
+    const [mobileShowList, setMobileShowList] = useState(false);
+    const [showQuickReplies, setShowQuickReplies] = useState(false);
+    const [chatSearch, setChatSearch] = useState('');
+
     if (!isOpen) return null;
+
+    const initialsOf = (name) => {
+        const parts = String(name || '').replace(/^(Nutritionist|Dr\.?)\s+/i, '').trim().split(/\s+/).filter(Boolean);
+        return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
+    };
+
+    const chatPartnerName = isNutritionist ? patientName : nutritionistName;
+    const statusLine = sessionStatus === 'ACTIVE'
+        ? 'Active session'
+        : sessionStatus === 'ENDED'
+            ? 'Session ended · send a message to resume'
+            : isNutritionist
+                ? (selectedPatient?.goal || 'Tap Start to begin the consultation')
+                : 'Certified Nutritionist';
+
+    const quickReplies = isNutritionist
+        ? [
+            'Reviewed your weekly adherence. Keep hydration high!',
+            'I updated your Daily Macro Requirements. Please link them.',
+            'Please log your water intake consistently.',
+            'Schedule our upcoming bi-weekly consultation.'
+        ]
+        : [
+            'How do I hit my daily protein target?',
+            'Can you review my meal logs this week?',
+            'I updated my weight and progress measurements.',
+            'Please check my hydration and nutrient intake.'
+        ];
+
+    const showChatList = isNutritionist && patientList.length > 1;
+    const filteredPatients = patientList.filter(p =>
+        !chatSearch.trim() || String(p.name || '').toLowerCase().includes(chatSearch.trim().toLowerCase())
+    );
+
+    const handleComposerKeyDown = (e) => {
+        // Enter sends, Shift+Enter adds a new line (like WhatsApp Web)
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage(e);
+        }
+    };
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[99999] flex flex-col items-center justify-start pt-20 sm:pt-24 pb-6 px-3 sm:px-4 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn pointer-events-auto"
+            className="fixed inset-0 z-[99999] flex items-center justify-center sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn pointer-events-auto"
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     onClose?.();
@@ -587,363 +616,303 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient }) 
             }}
         >
             <div
-                className="relative w-full max-w-2xl bg-[#080b12] border border-[#a5d391]/40 rounded-[2.5rem] shadow-[0_0_80px_rgba(165,211,145,0.25)] flex flex-col h-[78vh] max-h-[calc(100vh-7.5rem)] overflow-hidden shrink-0 my-auto sm:my-0 pointer-events-auto"
+                className={`relative w-full h-full sm:h-[85vh] sm:max-h-[760px] ${showChatList ? 'sm:max-w-5xl' : 'sm:max-w-2xl'} bg-[#0b141a] sm:rounded-2xl sm:border sm:border-white/10 shadow-2xl flex overflow-hidden pointer-events-auto`}
                 onClick={(e) => e.stopPropagation()}
             >
-
-                {/* Header */}
-                <div className="px-5 sm:px-6 py-4 border-b border-white/10 bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-[#a5d391]/20 border border-[#a5d391]/40 flex items-center justify-center text-[#a5d391] shadow-inner shrink-0">
-                            <span className="material-symbols-outlined text-2xl">forum</span>
+                {/* Chat list (nutritionist) */}
+                {showChatList && (
+                    <aside className={`${mobileShowList ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-80 shrink-0 bg-[#111b21] border-r border-white/10`}>
+                        <div className="h-16 px-4 flex items-center justify-between bg-[#202c33] shrink-0">
+                            <span className="text-white font-bold text-base">Chats</span>
+                            <button
+                                type="button"
+                                onClick={() => onClose?.()}
+                                aria-label="Close chat"
+                                className="md:hidden w-9 h-9 rounded-full hover:bg-white/10 text-white/70 flex items-center justify-center cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-xl">close</span>
+                            </button>
                         </div>
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="text-sm sm:text-base font-bold text-white font-hero-display truncate">
-                                    {isNutritionist ? `Consultation with ${patientName}` : `Clinical Consultation with ${nutritionistName}`}
-                                </h3>
-                                <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                                    sessionStatus === 'ACTIVE'
-                                        ? 'bg-[#a5d391]/20 text-[#a5d391] border-[#a5d391]/40 animate-pulse'
-                                        : sessionStatus === 'ENDED'
-                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                                        : 'bg-[#a5d391]/15 text-[#a5d391] border-[#a5d391]/30'
-                                }`}>
-                                    {sessionStatus === 'ACTIVE' ? 'Live Session' : sessionStatus === 'ENDED' ? 'Concluded' : 'Ready to Chat'}
-                                </span>
+                        <div className="px-3 py-2 shrink-0">
+                            <div className="relative">
+                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-lg">search</span>
+                                <input
+                                    type="text"
+                                    value={chatSearch}
+                                    onChange={(e) => setChatSearch(e.target.value)}
+                                    placeholder="Search patients"
+                                    className="w-full bg-[#202c33] rounded-lg pl-10 pr-3 py-2 text-sm text-white placeholder:text-white/40 outline-none"
+                                />
                             </div>
-                            <p className="text-[11px] sm:text-xs text-white/50 truncate">
-                                {isNutritionist
-                                    ? `Patient ID: #${patientId} • Goal: ${selectedPatient?.goal || 'General Health & Nutrition'}`
-                                    : `Certified Nutritionist • Real-time clinical guidance • Patient: ${patientName}`}
-                            </p>
                         </div>
-                    </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            {filteredPatients.map((p) => {
+                                const isSelected = String(p.userId || p.id) === String(patientId);
+                                return (
+                                    <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() => { setSelectedPatient(p); setMobileShowList(false); }}
+                                        className={`w-full flex items-center gap-3 px-3 py-3 text-left transition-colors cursor-pointer border-b border-white/5 ${isSelected ? 'bg-[#2a3942]' : 'hover:bg-[#202c33]'}`}
+                                    >
+                                        <div className="w-11 h-11 rounded-full bg-[#a5d391]/20 text-[#a5d391] flex items-center justify-center font-bold text-sm shrink-0">
+                                            {initialsOf(p.name)}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-white text-sm font-semibold truncate">{p.name}</div>
+                                            <div className="text-white/50 text-xs truncate">{p.goal || p.email || 'Patient'}</div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                            {filteredPatients.length === 0 && (
+                                <div className="text-center text-white/40 text-xs py-8">No patients found</div>
+                            )}
+                        </div>
+                    </aside>
+                )}
 
-                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                        {/* Nutritionist Actions */}
-                        {isNutritionist && (
-                            <>
-                                {sessionStatus === 'ACTIVE' ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowEndConfirm(true)}
-                                        className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-                                        title="End consultation chat session"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">cancel</span>
-                                        <span>End Chat</span>
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={handleInitiateChat}
-                                        className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_0_20px_rgba(165,211,145,0.4)]"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">play_arrow</span>
-                                        <span>{sessionStatus === 'ENDED' ? 'Re-open Chat' : 'Initiate Chat'}</span>
-                                    </button>
-                                )}
-                            </>
+                {/* Conversation */}
+                <section className={`${showChatList && mobileShowList ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-w-0`}>
+                    {/* Header */}
+                    <header className="h-16 px-2 sm:px-4 flex items-center gap-3 bg-[#202c33] shrink-0">
+                        {showChatList && (
+                            <button
+                                type="button"
+                                onClick={() => setMobileShowList(true)}
+                                aria-label="Back to chats"
+                                className="md:hidden w-9 h-9 rounded-full hover:bg-white/10 text-white/80 flex items-center justify-center cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-xl">arrow_back</span>
+                            </button>
                         )}
+                        <div className="w-10 h-10 rounded-full bg-[#a5d391]/20 text-[#a5d391] flex items-center justify-center font-bold text-sm shrink-0 ml-1 sm:ml-0">
+                            {initialsOf(chatPartnerName)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="text-white font-semibold text-[15px] truncate">{chatPartnerName}</div>
+                            <div className={`text-xs truncate ${sessionStatus === 'ACTIVE' ? 'text-[#a5d391]' : 'text-white/50'}`}>{statusLine}</div>
+                        </div>
 
+                        {isNutritionist && (
+                            sessionStatus === 'ACTIVE' ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEndConfirm(true)}
+                                    title="End consultation"
+                                    className="h-9 px-3 rounded-full hover:bg-red-500/15 text-red-300 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-lg">call_end</span>
+                                    <span className="hidden sm:inline">End</span>
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleInitiateChat}
+                                    title={sessionStatus === 'ENDED' ? 'Re-open consultation' : 'Start consultation'}
+                                    className="h-9 px-3 rounded-full hover:bg-[#a5d391]/15 text-[#a5d391] text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                                >
+                                    <span className="material-symbols-outlined text-lg">play_circle</span>
+                                    <span className="hidden sm:inline">{sessionStatus === 'ENDED' ? 'Re-open' : 'Start'}</span>
+                                </button>
+                            )
+                        )}
                         <button
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onClose?.();
                             }}
-                            aria-label="Close consultation modal"
-                            className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white flex items-center justify-center transition-all cursor-pointer pointer-events-auto shadow-sm"
+                            aria-label="Close chat"
+                            className="w-9 h-9 rounded-full hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center cursor-pointer shrink-0"
                         >
-                            <span className="material-symbols-outlined text-lg">close</span>
+                            <span className="material-symbols-outlined text-xl">close</span>
                         </button>
-                    </div>
-                </div>
+                    </header>
 
-                {/* Incoming Patient Consultation Request Alert for Nutritionist */}
-                {isNutritionist && incomingRequest && (
-                    <div className="px-5 sm:px-6 py-2.5 bg-[#a5d391]/15 border-b border-[#a5d391]/30 flex items-center justify-between gap-3 text-xs text-[#a5d391] shrink-0 animate-in fade-in">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <span className="material-symbols-outlined text-base animate-bounce shrink-0">notifications_active</span>
-                            <span className="truncate"><strong>{incomingRequest.patientName}</strong> (#{incomingRequest.patientId}) has requested a live consultation chat!</span>
+                    {/* Incoming chat request (nutritionist) */}
+                    {isNutritionist && incomingRequest && (
+                        <div className="px-4 py-2 bg-[#182229] border-b border-white/5 flex items-center justify-between gap-3 text-xs text-white/80 shrink-0">
+                            <span className="truncate">
+                                <span className="material-symbols-outlined text-sm text-[#a5d391] align-middle mr-1">notifications_active</span>
+                                <strong className="text-white">{incomingRequest.patientName}</strong> wants to chat
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => handleAcceptRequest(incomingRequest)}
+                                className="bg-[#a5d391] hover:bg-white text-black font-bold text-[11px] px-3 py-1 rounded-full cursor-pointer shrink-0"
+                            >
+                                Open
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => handleAcceptRequest(incomingRequest)}
-                            className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-[11px] px-3.5 py-1 rounded-full transition-all cursor-pointer whitespace-nowrap shadow-md shrink-0"
-                        >
-                            Open & Initiate
-                        </button>
-                    </div>
-                )}
+                    )}
 
-                {/* Patient Selector Bar for Nutritionist */}
-                {isNutritionist && patientList.length > 1 && (
-                    <div className="px-5 sm:px-6 py-2 bg-black/60 border-b border-white/10 flex items-center gap-2 overflow-x-auto shrink-0 custom-scrollbar">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 whitespace-nowrap">Select Patient:</span>
-                        {patientList.map((p) => {
-                            const isSelected = String(p.userId || p.id) === String(patientId);
-                            return (
-                                <button
-                                    key={p.id}
-                                    type="button"
-                                    onClick={() => setSelectedPatient(p)}
-                                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-                                        isSelected
-                                            ? 'bg-[#a5d391] text-black shadow-md'
-                                            : 'bg-white/5 hover:bg-white/15 text-white/70 border border-white/10'
-                                    }`}
-                                >
-                                    <span>{p.name}</span>
-                                    <span className="text-[9px] opacity-70">#{p.id}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Session Status Notice Banner */}
-                {sessionStatus === 'ACTIVE' && (
-                    <div className="bg-[#a5d391]/10 border-b border-[#a5d391]/20 px-6 py-2 flex items-center justify-between text-xs text-[#a5d391]">
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[#a5d391] animate-ping"></span>
-                            <span className="font-semibold">Consultation in session. Both parties can exchange real-time messages.</span>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#a5d391]/70">Active</span>
-                    </div>
-                )}
-
-                {sessionStatus === 'ENDED' && (
-                    <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between text-xs text-amber-300">
-                        <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-base text-amber-400">lock</span>
-                            <span className="font-semibold">
-                                {isNutritionist
-                                    ? 'Session concluded. Click "Re-open Chat" above anytime to resume two-way communication.'
-                                    : 'Consultation concluded by Nutritionist. History is archived. You can send a follow-up message below to resume.'}
+                    {/* Messages */}
+                    <div
+                        className="flex-1 overflow-y-auto px-3 sm:px-[6%] py-4 custom-scrollbar"
+                        style={{
+                            backgroundColor: '#0b141a',
+                            backgroundImage: 'radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px)',
+                            backgroundSize: '18px 18px'
+                        }}
+                    >
+                        <div className="flex justify-center mb-4">
+                            <span className="max-w-md text-center px-3 py-1.5 rounded-lg bg-[#182229] text-[11px] text-[#e9c46a]/90 leading-snug">
+                                <span className="material-symbols-outlined text-[12px] align-middle mr-1">lock</span>
+                                Messages are between you and {isNutritionist ? 'your patient' : 'your nutritionist'} for nutrition guidance only. For emergencies call 112.
                             </span>
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded-full">Archived</span>
-                    </div>
-                )}
 
-                {sessionStatus === 'NOT_STARTED' && (
-                    <div className="bg-[#a5d391]/10 border-b border-[#a5d391]/20 px-6 py-2.5 flex items-center justify-between text-xs text-[#a5d391]">
-                        <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-base text-[#a5d391]">forum</span>
-                            <span>
-                                {isNutritionist
-                                    ? `Direct channel ready with ${patientName}. Type below or click "Initiate Chat".`
-                                    : `Direct channel ready with ${nutritionistName}. Type your message below to start chatting.`}
-                            </span>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#a5d391]/80">Two-Way Live</span>
-                    </div>
-                )}
-
-                {/* Messages Body */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 custom-scrollbar bg-gradient-to-b from-transparent via-[#0d131f]/40 to-[#080b12]">
-                    {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 my-auto">
-                            <div className="w-16 h-16 rounded-3xl bg-[#a5d391]/10 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391] shadow-[0_0_30px_rgba(165,211,145,0.2)]">
-                                <span className="material-symbols-outlined text-3xl">chat_bubble_outline</span>
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-bold text-white font-hero-display">
-                                    {isNutritionist
-                                        ? `Start Consultation with ${patientName}`
-                                        : `Consultation with ${nutritionistName}`}
-                                </h4>
-                                <p className="text-xs text-white/50 max-w-md mt-1">
-                                    {isNutritionist
-                                        ? `Send clinical guidance, macro updates, or review nutritional adherence with ${patientName}.`
-                                        : `Ask your nutritionist questions about macro targets, diet adherence, or meal adjustments anytime.`}
-                                </p>
-                            </div>
-
-                            {/* Quick Starter Prompts for Patient */}
-                            {!isNutritionist && (
-                                <div className="w-full max-w-md space-y-2 mt-2">
-                                    <p className="text-[11px] font-bold text-white/60 uppercase tracking-wider text-left">Quick Starters:</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
-                                        {[
-                                            'How do I hit my daily protein target?',
-                                            'Can you review my meal logs this week?',
-                                            'I updated my weight and progress measurements.',
-                                            'Please check my hydration and nutrient intake.'
-                                        ].map((promptText, idx) => (
-                                            <button
-                                                key={idx}
-                                                type="button"
-                                                onClick={() => handleSendMessage(null, promptText)}
-                                                className="p-2.5 rounded-xl bg-white/5 hover:bg-[#a5d391]/20 hover:border-[#a5d391]/40 border border-white/10 text-white/80 hover:text-white text-xs transition-all cursor-pointer flex items-center justify-between group"
-                                            >
-                                                <span className="truncate pr-1">{promptText}</span>
-                                                <span className="material-symbols-outlined text-xs text-[#a5d391] opacity-0 group-hover:opacity-100 transition-opacity">send</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="pt-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleSendPatientRequest}
-                                            disabled={requestPingSent}
-                                            className="text-[11px] text-[#a5d391]/80 hover:text-[#a5d391] flex items-center gap-1.5 mx-auto transition-colors cursor-pointer"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">notifications_active</span>
-                                            <span>{requestPingSent ? 'Notification Sent to Nutritionist' : 'Send Alert Ping to Nutritionist'}</span>
-                                        </button>
+                        {messages.length === 0 ? (
+                            <div className="flex flex-col items-center text-center mt-8 gap-4">
+                                <div className="w-20 h-20 rounded-full bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center text-2xl font-bold">
+                                    {initialsOf(chatPartnerName)}
+                                </div>
+                                <div>
+                                    <div className="text-white font-semibold">{chatPartnerName}</div>
+                                    <div className="text-white/50 text-xs mt-1">
+                                        {isNutritionist ? 'No messages yet. Say hello or start the consultation.' : 'No messages yet. Ask anything about your diet and targets.'}
                                     </div>
                                 </div>
-                            )}
-
-                            {isNutritionist && (
-                                <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
+                                <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                                    {quickReplies.map((text) => (
+                                        <button
+                                            key={text}
+                                            type="button"
+                                            onClick={() => isNutritionist ? setInputText(text) : handleSendMessage(null, text)}
+                                            className="px-3 py-1.5 rounded-full bg-[#202c33] hover:bg-[#2a3942] text-white/80 text-xs border border-white/10 cursor-pointer transition-colors"
+                                        >
+                                            {text}
+                                        </button>
+                                    ))}
+                                </div>
+                                {!isNutritionist && (
                                     <button
                                         type="button"
-                                        onClick={handleInitiateChat}
-                                        className="bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3 rounded-full transition-all shadow-[0_0_25px_rgba(165,211,145,0.4)] cursor-pointer flex items-center gap-2"
+                                        onClick={handleSendPatientRequest}
+                                        disabled={requestPingSent}
+                                        className="text-xs text-[#a5d391] hover:underline disabled:no-underline disabled:opacity-60 flex items-center gap-1 cursor-pointer"
                                     >
-                                        <span className="material-symbols-outlined text-sm font-bold">play_arrow</span>
-                                        <span>Initiate Consultation Now</span>
+                                        <span className="material-symbols-outlined text-sm">notifications_active</span>
+                                        {requestPingSent ? 'Nutritionist notified' : 'Notify nutritionist that you want to chat'}
                                     </button>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        messages.map((msg) => {
-                            if (msg.sender === 'system') {
+                                )}
+                            </div>
+                        ) : (
+                            messages.map((msg, idx) => {
+                                if (msg.sender === 'system') {
+                                    return (
+                                        <div key={msg.id} className="flex justify-center my-3">
+                                            <span className="max-w-[85%] text-center px-3 py-1 rounded-lg bg-[#182229] text-[11px] text-white/60">
+                                                {msg.text}
+                                            </span>
+                                        </div>
+                                    );
+                                }
+
+                                const isMe = isNutritionist ? msg.sender === 'nutritionist' : msg.sender === 'user';
+                                const prev = messages[idx - 1];
+                                const firstOfGroup = !prev || prev.sender !== msg.sender;
+
                                 return (
-                                    <div key={msg.id} className="text-center my-3">
-                                        <span className="inline-block px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] text-white/50 font-medium">
-                                            {msg.text}
-                                        </span>
+                                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${firstOfGroup ? 'mt-3' : 'mt-0.5'}`}>
+                                        <div
+                                            className={`relative max-w-[85%] sm:max-w-[65%] px-2.5 pt-1.5 pb-1 rounded-lg shadow text-sm text-[#e9edef] ${
+                                                isMe ? 'bg-[#005c4b]' : 'bg-[#202c33]'
+                                            } ${firstOfGroup ? (isMe ? 'rounded-tr-none' : 'rounded-tl-none') : ''}`}
+                                        >
+                                            {firstOfGroup && (
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={`absolute top-0 w-0 h-0 border-t-[8px] ${
+                                                        isMe
+                                                            ? '-right-2 border-l-[8px] border-t-[#005c4b] border-l-transparent'
+                                                            : '-left-2 border-r-[8px] border-t-[#202c33] border-r-transparent'
+                                                    }`}
+                                                />
+                                            )}
+                                            <span className="whitespace-pre-wrap break-words leading-relaxed">{msg.text}</span>
+                                            <span className="float-right ml-3 mt-1.5 -mb-0.5 flex items-center gap-0.5 text-[10px] text-white/50 select-none">
+                                                {msg.time}
+                                                {isMe && <span className="material-symbols-outlined text-[14px] text-white/50">done</span>}
+                                            </span>
+                                        </div>
                                     </div>
                                 );
-                            }
+                            })
+                        )}
+                        <div ref={messagesEndRef} />
+                    </div>
 
-                            const isMe = isNutritionist ? msg.sender === 'nutritionist' : msg.sender === 'user';
-                            const isNutritionistMsg = msg.sender === 'nutritionist';
-
-                            return (
-                                <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                                    <div className="flex items-center gap-1.5 mb-1 px-1">
-                                        <span className="text-[11px] font-bold text-white/70">{msg.senderName}</span>
-                                        {isNutritionistMsg && (
-                                            <span className="text-[9px] font-black uppercase tracking-wider text-[#a5d391] bg-[#a5d391]/15 px-1.5 py-0.2 rounded border border-[#a5d391]/30">
-                                                Nutritionist
-                                            </span>
-                                        )}
-                                        <span className="text-[10px] text-white/40">{msg.time}</span>
-                                    </div>
-                                    <div className={`max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                                        isMe
-                                            ? 'bg-[#a5d391] text-black font-medium rounded-tr-none shadow-lg'
-                                            : isNutritionistMsg
-                                                ? 'bg-[#0d131f] border border-[#a5d391]/40 text-white rounded-tl-none shadow-md'
-                                                : 'bg-white/10 border border-white/10 text-white rounded-tl-none shadow-md'
-                                    }`}>
-                                        {msg.text}
-                                    </div>
-                                </div>
-                            );
-                        })
+                    {/* Quick replies tray */}
+                    {showQuickReplies && (
+                        <div className="px-3 py-2 bg-[#111b21] border-t border-white/5 flex gap-2 overflow-x-auto custom-scrollbar shrink-0">
+                            {quickReplies.map((text) => (
+                                <button
+                                    key={text}
+                                    type="button"
+                                    onClick={() => { setInputText(text); setShowQuickReplies(false); }}
+                                    className="whitespace-nowrap px-3 py-1.5 rounded-full bg-[#202c33] hover:bg-[#2a3942] text-white/80 text-xs cursor-pointer transition-colors"
+                                >
+                                    {text}
+                                </button>
+                            ))}
+                        </div>
                     )}
-                    <div ref={messagesEndRef} />
-                </div>
 
-                {/* Quick Action Chips for Nutritionist */}
-                {isNutritionist && (
-                    <div className="px-6 py-2 bg-black/40 border-t border-white/5 flex items-center gap-2 overflow-x-auto shrink-0 custom-scrollbar">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 whitespace-nowrap">Quick Notes:</span>
-                        {[
-                            'Reviewed your weekly adherence. Keep hydration high!',
-                            'I updated your Daily Macro Requirements. Please link them.',
-                            'Please log your water intake consistently.',
-                            'Schedule our upcoming bi-weekly consultation.'
-                        ].map((chip, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setInputText(chip)}
-                                className="whitespace-nowrap px-3 py-1 rounded-full bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-[11px] text-white/70 transition-all cursor-pointer"
-                            >
-                                {chip}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {/* Quick Action Chips for Patient */}
-                {!isNutritionist && messages.length > 0 && (
-                    <div className="px-6 py-2 bg-black/40 border-t border-white/5 flex items-center gap-2 overflow-x-auto shrink-0 custom-scrollbar">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 whitespace-nowrap">Quick Inquiries:</span>
-                        {[
-                            'Can you review my latest meal logs?',
-                            'How can I optimize my protein intake?',
-                            'I have updated my daily activity stats.'
-                        ].map((chip, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setInputText(chip)}
-                                className="whitespace-nowrap px-3 py-1 rounded-full bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-[11px] text-white/70 transition-all cursor-pointer"
-                            >
-                                {chip}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {/* Footer Input Area - ALWAYS ACTIVE AND USABLE FOR BOTH ROLES */}
-                <div className="p-4 sm:p-5 border-t border-white/10 bg-white/5 shrink-0">
-                    <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-                        <input
-                            type="text"
+                    {/* Composer */}
+                    <form onSubmit={handleSendMessage} className="px-2 sm:px-3 py-2 bg-[#202c33] flex items-end gap-2 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setShowQuickReplies(v => !v)}
+                            title="Quick replies"
+                            aria-label="Quick replies"
+                            className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors ${showQuickReplies ? 'text-[#a5d391] bg-white/10' : 'text-white/60 hover:text-white'}`}
+                        >
+                            <span className="material-symbols-outlined text-[22px]">bolt</span>
+                        </button>
+                        <textarea
+                            rows={1}
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
-                            placeholder={isNutritionist ? `Message ${patientName}...` : `Message ${nutritionistName}...`}
-                            className="flex-1 bg-[#080b12] border border-white/15 focus:border-[#a5d391] text-white text-xs sm:text-sm px-4 py-3 rounded-2xl outline-none transition-all placeholder:text-white/40"
+                            onKeyDown={handleComposerKeyDown}
+                            placeholder="Type a message"
+                            className="flex-1 resize-none max-h-32 bg-[#2a3942] text-[#e9edef] text-sm px-4 py-2.5 rounded-3xl outline-none placeholder:text-white/40 custom-scrollbar"
+                            style={{ fieldSizing: 'content' }}
                         />
                         <button
                             type="submit"
                             disabled={!inputText.trim()}
-                            className="bg-[#a5d391] hover:bg-white text-black font-bold text-xs uppercase tracking-widest px-5 py-3 rounded-2xl transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5 shrink-0"
+                            aria-label="Send message"
+                            className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#06cf9c] text-[#0b141a] flex items-center justify-center shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                         >
-                            <span>Send</span>
-                            <span className="material-symbols-outlined text-sm">send</span>
+                            <span className="material-symbols-outlined text-[20px]">send</span>
                         </button>
                     </form>
-                </div>
+                </section>
 
-                {/* Confirmation Modal for Ending Chat */}
+                {/* End consultation confirmation */}
                 {showEndConfirm && (
-                    <div className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-6 animate-fadeIn">
-                        <div className="bg-[#080b12] border border-red-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-center">
-                            <div className="w-14 h-14 rounded-2xl bg-red-500/20 text-red-400 border border-red-500/40 flex items-center justify-center mx-auto">
-                                <span className="material-symbols-outlined text-3xl">cancel</span>
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-bold text-white font-hero-display">End Consultation Session?</h4>
-                                <p className="text-xs text-white/60 mt-1 leading-relaxed">
-                                    Concluded sessions mark the consultation as archived. Either party can resume communication at any time by sending a message or clicking Re-open.
-                                </p>
-                            </div>
-                            <div className="flex items-center justify-center gap-3 pt-2">
+                    <div className="absolute inset-0 z-50 bg-black/70 flex items-center justify-center p-6 animate-fadeIn">
+                        <div className="bg-[#202c33] rounded-xl p-5 max-w-sm w-full shadow-2xl">
+                            <h4 className="text-white font-semibold text-base">End this consultation?</h4>
+                            <p className="text-white/60 text-sm mt-2 leading-relaxed">
+                                The chat will be marked as ended. Either of you can resume it later by sending a message.
+                            </p>
+                            <div className="flex justify-end gap-2 mt-5">
                                 <button
                                     type="button"
                                     onClick={() => setShowEndConfirm(false)}
-                                    className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all cursor-pointer"
+                                    className="px-4 py-2 rounded-full text-[#00a884] hover:bg-white/5 text-sm font-semibold cursor-pointer"
                                 >
-                                    Continue Chat
+                                    Cancel
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleEndChat}
-                                    className="px-5 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs transition-all shadow-[0_0_20px_rgba(239,68,68,0.4)] cursor-pointer"
+                                    className="px-4 py-2 rounded-full bg-red-500 hover:bg-red-400 text-white text-sm font-semibold cursor-pointer"
                                 >
-                                    Yes, End Consultation
+                                    End chat
                                 </button>
                             </div>
                         </div>

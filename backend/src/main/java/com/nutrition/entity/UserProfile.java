@@ -46,6 +46,9 @@ public class UserProfile {
     private Integer proteinTarget;
     private Integer carbsTarget;
     private Integer fatsTarget;
+
+    @Column(name = "sugar_target_g")
+    private Integer sugarTargetG;
     
     // New targets for Module 3
     @Column(name = "daily_water_target_liters")

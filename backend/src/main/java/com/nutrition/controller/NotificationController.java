@@ -20,12 +20,17 @@ public class NotificationController {
     @GetMapping("/me")
     public ResponseEntity<List<NotificationDto>> getMyNotifications(@AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails != null ? userDetails.getId() : null;
-        return ResponseEntity.ok(notificationService.getNotificationsForUser(userId));
+        com.nutrition.entity.Role role = userDetails != null ? userDetails.getUser().getRole() : null;
+        return ResponseEntity.ok(notificationService.getNotificationsForUser(userId, role));
     }
 
     @PostMapping("/send")
-    public ResponseEntity<NotificationDto> sendNotification(@RequestBody NotificationDto dto) {
-        return ResponseEntity.ok(notificationService.sendNotification(dto));
+    public ResponseEntity<NotificationDto> sendNotification(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody NotificationDto dto) {
+        // Sender always comes from the authenticated session, never from the request body
+        Long senderId = userDetails != null ? userDetails.getId() : null;
+        return ResponseEntity.ok(notificationService.sendNotification(dto, senderId));
     }
 
     @PutMapping("/{id}/read")

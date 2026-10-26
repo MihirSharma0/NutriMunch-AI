@@ -1,7 +1,7 @@
 import React, { useState, useContext, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { ArrowLeft, ArrowRight, Sparkles, Camera, Check, User, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Camera, Check, User, ShieldCheck, X, Eye, EyeOff } from 'lucide-react';
 import Starfield from '../../components/Starfield';
 
 const Register = () => {
@@ -15,6 +15,8 @@ const Register = () => {
         credentials: '',
         specialization: ''
     });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState(null);
     const [avatarFile, setAvatarFile] = useState(null);
     const [error, setError] = useState('');
@@ -327,33 +329,53 @@ const Register = () => {
                                 <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-300 mb-1.5" htmlFor="password">
                                     PASSWORD <span className="text-[#a5d391]">*</span>
                                 </label>
-                                <input 
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    minLength="6"
-                                    required
-                                    placeholder="••••••••"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    className="w-full rounded-xl bg-[#090d16]/90 border border-white/10 text-slate-100 placeholder-slate-500 text-sm px-3.5 py-2.5 focus:outline-none focus:border-[#a5d391]/60 focus:ring-1 focus:ring-[#a5d391]/20 tracking-widest transition-all"
-                                />
+                                <div className="relative flex items-center">
+                                    <input
+                                        id="password"
+                                        name="password"
+                                        type={showPassword ? "text" : "password"}
+                                        minLength="6"
+                                        required
+                                        placeholder="••••••••"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        className="w-full rounded-xl bg-[#090d16]/90 border border-white/10 text-slate-100 placeholder-slate-500 text-sm pl-3.5 pr-10 py-2.5 focus:outline-none focus:border-[#a5d391]/60 focus:ring-1 focus:ring-[#a5d391]/20 tracking-widest transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                        className="absolute right-3 text-slate-400 hover:text-slate-200 p-1 focus:outline-none transition-colors cursor-pointer"
+                                    >
+                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-300 mb-1.5" htmlFor="confirmPassword">
                                     CONFIRM PASSWORD <span className="text-[#a5d391]">*</span>
                                 </label>
-                                <input 
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    type="password"
-                                    minLength="6"
-                                    required
-                                    placeholder="••••••••"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    className="w-full rounded-xl bg-[#090d16]/90 border border-white/10 text-slate-100 placeholder-slate-500 text-sm px-3.5 py-2.5 focus:outline-none focus:border-[#a5d391]/60 focus:ring-1 focus:ring-[#a5d391]/20 tracking-widest transition-all"
-                                />
+                                <div className="relative flex items-center">
+                                    <input
+                                        id="confirmPassword"
+                                        name="confirmPassword"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        minLength="6"
+                                        required
+                                        placeholder="••••••••"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        className="w-full rounded-xl bg-[#090d16]/90 border border-white/10 text-slate-100 placeholder-slate-500 text-sm pl-3.5 pr-10 py-2.5 focus:outline-none focus:border-[#a5d391]/60 focus:ring-1 focus:ring-[#a5d391]/20 tracking-widest transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                        className="absolute right-3 text-slate-400 hover:text-slate-200 p-1 focus:outline-none transition-colors cursor-pointer"
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

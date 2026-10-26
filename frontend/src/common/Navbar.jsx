@@ -20,7 +20,6 @@ export const getNavItemsForRole = (user) => {
             { label: 'Platform Roles', path: '/user-roles' },
             { label: 'AI Suite & Features', subMenu: aiSubMenu },
             { label: 'Testimonials', path: '/testimonials' },
-            { label: 'About', path: '/about' },
             { label: 'Contact', path: '/contact' }
         ];
     }
@@ -39,7 +38,8 @@ export const getNavItemsForRole = (user) => {
 
     const clientManagementSubMenu = [
         { label: 'Client Roster', path: '/dashboard/nutritionist/clients', icon: 'group', desc: 'Manage patient roster, health logs & biometrics' },
-        { label: 'Schedule', path: '/dashboard/nutritionist/schedule', icon: 'calendar_month', desc: 'Manage consultation calendar & slots' }
+        { label: 'Schedule', path: '/dashboard/nutritionist/schedule', icon: 'calendar_month', desc: 'Manage consultation calendar & slots' },
+        { label: 'Consultation History', path: '/dashboard/nutritionist/schedule#consultation-history', icon: 'history', desc: 'Completed, cancelled & declined sessions with patients' }
     ];
 
     const clinicalToolsSubMenu = [
@@ -55,6 +55,7 @@ export const getNavItemsForRole = (user) => {
 
     const consultationSubMenu = [
         { label: 'Appointments', path: '/appointments', icon: 'calendar_month', desc: 'Schedule & review 1-on-1 sessions with nutritionists' },
+        { label: 'Consultation History', path: '/appointments#consultation-history', icon: 'history', desc: 'Past, completed & cancelled consultations' },
         { label: 'Transactions', path: '/transactions', icon: 'receipt_long', desc: 'Wallet balance, payment history & escrow audit' }
     ];
 
@@ -154,8 +155,11 @@ const Navbar = () => {
 
     const [notifications, setNotifications] = useState([]);
     const [toastNotification, setToastNotification] = useState(null);
+    // Server notification ids already known to this session; anything new and unread pops a toast
+    const seenServerNotifIdsRef = useRef(null);
 
     useEffect(() => {
+        seenServerNotifIdsRef.current = null;
         const loadNotifications = async () => {
             if (!user) {
                 setNotifications([]);
@@ -189,6 +193,8 @@ const Navbar = () => {
                                 time: n.timeAgo || 'Just now',
                                 icon: n.icon || 'notifications',
                                 path: n.path || '/progress',
+                                type: n.type,
+                                senderId: n.senderId,
                                 read: Boolean(n.readStatus) || readIds.has(String(n.id))
                             }));
                     }
@@ -217,6 +223,8 @@ const Navbar = () => {
 
             const uniqueReal = Array.from(new Map(realNotifs.map(item => [item.id, item])).values())
                 .filter(item => !deletedIds.has(String(item.id)))
+                // Never notify a user about an action they performed themselves
+                .filter(item => !item.senderId || String(item.senderId) !== currentUserId)
                 .filter(item => {
                     // Receiver filtering for targeted chat / exclusive notifications:
                     if (item.targetUserId) {
@@ -245,6 +253,19 @@ const Navbar = () => {
                 }));
 
             setNotifications(uniqueReal);
+
+            // Pop a toast for server alerts that arrived since the last poll (credits, refunds, appointment updates...)
+            const serverItems = uniqueReal.filter(item => typeof item.id === 'number');
+            if (seenServerNotifIdsRef.current === null) {
+                seenServerNotifIdsRef.current = new Set(serverItems.map(item => String(item.id)));
+            } else {
+                const fresh = serverItems.find(item => !item.read && !seenServerNotifIdsRef.current.has(String(item.id)));
+                serverItems.forEach(item => seenServerNotifIdsRef.current.add(String(item.id)));
+                if (fresh) {
+                    setToastNotification(fresh);
+                    setTimeout(() => setToastNotification(null), 8000);
+                }
+            }
         };
 
         loadNotifications();
@@ -265,8 +286,9 @@ const Navbar = () => {
                     const myEmail = user?.email?.toLowerCase() || '';
 
                     // Only show floating toast if this user is the intended receiver:
-                    let shouldShowToast = true;
-                    if (p.targetUserId) {
+                    // Self-triggered events never produce a toast for the user who caused them
+                    let shouldShowToast = !(p.senderId && String(p.senderId) === myId);
+                    if (shouldShowToast && p.targetUserId) {
                         if (!isNutritionist) {
                             shouldShowToast = String(p.targetUserId) === myId || (p.targetUserEmail && p.targetUserEmail.toLowerCase() === myEmail);
                         } else if (p.type === 'CONSULTATION_CHAT') {
@@ -366,7 +388,7 @@ const Navbar = () => {
 
         if (item.type === 'APPOINTMENT' || item.path?.includes('appointment')) {
             const isNutritionist = rawRole.includes('NUTRITIONIST');
-            navigate(isNutritionist ? '/dashboard/nutritionist/appointments' : '/appointments');
+            navigate(isNutritionist ? '/dashboard/nutritionist/schedule' : '/appointments');
             return;
         }
 

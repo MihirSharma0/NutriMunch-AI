@@ -75,6 +75,7 @@ public class UserProfileService {
             if (dto.getProteinTarget() != null) profile.setProteinTarget(dto.getProteinTarget());
             if (dto.getCarbsTarget() != null) profile.setCarbsTarget(dto.getCarbsTarget());
             if (dto.getFatsTarget() != null) profile.setFatsTarget(dto.getFatsTarget());
+            if (dto.getSugarTargetG() != null) profile.setSugarTargetG(dto.getSugarTargetG());
             if (dto.getDailyWaterTargetLiters() != null) profile.setDailyWaterTargetLiters(dto.getDailyWaterTargetLiters());
             if (dto.getDailyFiberTargetG() != null) profile.setDailyFiberTargetG(dto.getDailyFiberTargetG());
             if (dto.getIronTargetMg() != null) profile.setIronTargetMg(dto.getIronTargetMg());
@@ -184,6 +185,8 @@ public class UserProfileService {
         profile.setProteinTarget((int) ((calories * proteinPct) / 4));
         profile.setCarbsTarget((int) ((calories * carbsPct) / 4));
         profile.setFatsTarget((int) ((calories * fatsPct) / 9));
+        // Free sugar limit: WHO guideline of 10% of daily calories (4 kcal per gram)
+        profile.setSugarTargetG((int) ((calories * 0.10) / 4));
 
         // Water and Fiber
         double waterMultiplier = getRuleValue("water_multiplier_liters_per_kg", 0.033);
@@ -235,6 +238,7 @@ public class UserProfileService {
         dto.setProteinTarget(profile.getProteinTarget());
         dto.setCarbsTarget(profile.getCarbsTarget());
         dto.setFatsTarget(profile.getFatsTarget());
+        dto.setSugarTargetG(profile.getSugarTargetG());
         
         dto.setDailyWaterTargetLiters(profile.getDailyWaterTargetLiters());
         dto.setDailyFiberTargetG(profile.getDailyFiberTargetG());

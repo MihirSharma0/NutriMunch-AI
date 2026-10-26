@@ -46,6 +46,7 @@ import AdminProfile from './pages/Dashboard/Admin/AdminProfile';
 import DietPlanManagement from './pages/Dashboard/Admin/DietPlanManagement';
 import TransactionHistory from './pages/Dashboard/Shared/TransactionHistory';
 import TestimonialManagement from './pages/Dashboard/Admin/TestimonialManagement';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -92,52 +93,59 @@ function App() {
               <Route path="testimonials" element={<Testimonials />} />
               <Route path="contact" element={<Contact />} />
 
-              {/* User Platform Feature Routes */}
-              <Route path="profile" element={<Profile />} />
-              <Route path="ai-diet" element={<AiDietGenerator />} />
-              <Route path="ai-image" element={<AiImageAnalyzer />} />
-              <Route path="progress" element={<ProgressTracking />} />
-              <Route path="appointments" element={<Appointments />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="diet-plans" element={<DietPlans />} />
-              <Route path="virtual-room" element={<VirtualRoom />} />
-              <Route path="room" element={<VirtualRoom />} />
+              {/* Logged-in only: everything below requires an authenticated session */}
+              <Route element={<ProtectedRoute />}>
+                {/* User Platform Feature Routes & Dashboard Aliases */}
+                <Route path="profile" element={<Profile />} />
+                <Route path="ai-diet" element={<AiDietGenerator />} />
+                <Route path="ai-image" element={<AiImageAnalyzer />} />
+                <Route path="progress" element={<ProgressTracking />} />
+                <Route path="appointments" element={<Appointments />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="diet-plans" element={<DietPlans />} />
+                <Route path="virtual-room" element={<VirtualRoom />} />
+                <Route path="room" element={<VirtualRoom />} />
+                <Route path="dashboard/user" element={<DashboardHome />} />
+                <Route path="dashboard/user/profile" element={<Profile />} />
+                <Route path="dashboard/user/ai-diet" element={<AiDietGenerator />} />
+                <Route path="dashboard/user/ai-image" element={<AiImageAnalyzer />} />
+                <Route path="dashboard/user/progress" element={<ProgressTracking />} />
+                <Route path="dashboard/progress" element={<ProgressTracking />} />
+                <Route path="dashboard/diet-plans" element={<DietPlans />} />
+                <Route path="dashboard/appointments" element={<Appointments />} />
+                <Route path="dashboard/reports" element={<Reports />} />
+                <Route path="dashboard/user/appointments" element={<Appointments />} />
+                <Route path="dashboard/user/reports" element={<Reports />} />
+                <Route path="dashboard/user/diet-plans" element={<DietPlans />} />
 
-              {/* User Dashboard Aliases */}
-              <Route path="dashboard/user" element={<DashboardHome />} />
-              <Route path="dashboard/user/profile" element={<Profile />} />
-              <Route path="dashboard/user/ai-diet" element={<AiDietGenerator />} />
-              <Route path="dashboard/user/ai-image" element={<AiImageAnalyzer />} />
-              <Route path="dashboard/user/progress" element={<ProgressTracking />} />
-              <Route path="dashboard/progress" element={<ProgressTracking />} />
-              <Route path="dashboard/diet-plans" element={<DietPlans />} />
-              <Route path="dashboard/appointments" element={<Appointments />} />
-              <Route path="dashboard/reports" element={<Reports />} />
-              <Route path="dashboard/user/appointments" element={<Appointments />} />
-              <Route path="dashboard/user/reports" element={<Reports />} />
-              <Route path="dashboard/user/diet-plans" element={<DietPlans />} />
+                {/* Shared wallet & transactions */}
+                <Route path="transactions" element={<TransactionHistory />} />
+                <Route path="dashboard/user/transactions" element={<TransactionHistory />} />
+                <Route path="dashboard/nutritionist/transactions" element={<TransactionHistory />} />
+                <Route path="dashboard/admin/transactions" element={<TransactionHistory />} />
+              </Route>
 
               {/* Nutritionist Platform Routes */}
-              <Route path="dashboard/nutritionist" element={<NutritionistHome />} />
-              <Route path="dashboard/nutritionist/profile" element={<NutritionistProfile />} />
-              <Route path="dashboard/nutritionist/clients" element={<ClientManagement />} />
-              <Route path="dashboard/nutritionist/builder" element={<DietPlanBuilder />} />
-              <Route path="dashboard/nutritionist/schedule" element={<AppointmentManagement />} />
-              <Route path="dashboard/nutritionist/reports" element={<NutritionistReports />} />
+              <Route element={<ProtectedRoute allowedRoles={['NUTRITIONIST', 'ADMIN']} />}>
+                <Route path="dashboard/nutritionist" element={<NutritionistHome />} />
+                <Route path="dashboard/nutritionist/profile" element={<NutritionistProfile />} />
+                <Route path="dashboard/nutritionist/clients" element={<ClientManagement />} />
+                <Route path="dashboard/nutritionist/builder" element={<DietPlanBuilder />} />
+                <Route path="dashboard/nutritionist/schedule" element={<AppointmentManagement />} />
+                <Route path="dashboard/nutritionist/reports" element={<NutritionistReports />} />
+              </Route>
 
               {/* Admin Platform Routes */}
-              <Route path="dashboard/admin" element={<AdminHome />} />
-              <Route path="dashboard/admin/diet-plans" element={<DietPlanManagement />} />
-              <Route path="dashboard/admin/profile" element={<AdminProfile />} />
-              <Route path="dashboard/admin/users" element={<UserManagement />} />
-              <Route path="dashboard/admin/sql" element={<SqlConsole />} />
-              <Route path="dashboard/admin/nutritionists" element={<NutritionistManagement />} />
-              <Route path="dashboard/admin/testimonials" element={<TestimonialManagement />} />
-              <Route path="dashboard/admin/payments" element={<PaymentManagement />} />
-              <Route path="transactions" element={<TransactionHistory />} />
-              <Route path="dashboard/user/transactions" element={<TransactionHistory />} />
-              <Route path="dashboard/nutritionist/transactions" element={<TransactionHistory />} />
-              <Route path="dashboard/admin/transactions" element={<TransactionHistory />} />
+              <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                <Route path="dashboard/admin" element={<AdminHome />} />
+                <Route path="dashboard/admin/diet-plans" element={<DietPlanManagement />} />
+                <Route path="dashboard/admin/profile" element={<AdminProfile />} />
+                <Route path="dashboard/admin/users" element={<UserManagement />} />
+                <Route path="dashboard/admin/sql" element={<SqlConsole />} />
+                <Route path="dashboard/admin/nutritionists" element={<NutritionistManagement />} />
+                <Route path="dashboard/admin/testimonials" element={<TestimonialManagement />} />
+                <Route path="dashboard/admin/payments" element={<PaymentManagement />} />
+              </Route>
 
               <Route path="*" element={<NotFound />} />
             </Route>

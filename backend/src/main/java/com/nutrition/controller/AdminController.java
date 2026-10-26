@@ -34,6 +34,7 @@ public class AdminController {
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
     private final com.nutrition.service.WalletService walletService;
+    private final com.nutrition.service.NotificationService notificationService;
 
     @org.springframework.beans.factory.annotation.Value("${app.admin.email:admin@nutrimunch.com}")
     private String configuredAdminEmail;
@@ -170,7 +171,7 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/role")
-    public ResponseEntity<User> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<User> updateUserRole(@org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails adminDetails, @PathVariable Long id, @RequestBody Map<String, String> body) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         Role newRole = Role.valueOf(body.get("role").toUpperCase());
         user.setRole(newRole);
@@ -195,11 +196,17 @@ public class AdminController {
             nutritionistProfileRepository.findByUserId(id).ifPresent(nutritionistProfileRepository::delete);
         }
 
-        return ResponseEntity.ok(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        notificationService.notifyUser(savedUser, actorId(adminDetails), "Account Role Updated",
+                newRole == Role.NUTRITIONIST
+                        ? "Your account is now a Nutritionist account. Complete your nutritionist profile; it will be reviewed before verification."
+                        : "Your account role was changed to " + newRole.name().charAt(0) + newRole.name().substring(1).toLowerCase() + " by the NutriMunch team.",
+                "SYSTEM", "manage_accounts", newRole == Role.NUTRITIONIST ? "/dashboard/nutritionist/profile" : "/profile");
+        return ResponseEntity.ok(savedUser);
     }
 
     @PostMapping("/users/{id}/reset-password")
-    public ResponseEntity<Map<String, String>> resetUserPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, String>> resetUserPassword(@org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails adminDetails, @PathVariable Long id, @RequestBody Map<String, String> body) {
         String newPassword = body.get("newPassword");
         if (newPassword == null || newPassword.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "New password cannot be empty"));
@@ -210,6 +217,9 @@ public class AdminController {
         user.setOtpCode(null);
         user.setOtpExpiryDate(null);
         userRepository.save(user);
+        notificationService.notifyUser(user, actorId(adminDetails), "Password Changed",
+                "Your password was reset by the NutriMunch team. If you did not request this, use \"Forgot Password?\" on the login page to set a new one.",
+                "SYSTEM", "lock_reset", "/profile");
         return ResponseEntity.ok(Map.of("message", "Password reset successfully for user " + user.getEmail() + ". Account is verified and enabled."));
     }
 
@@ -243,7 +253,7 @@ public class AdminController {
     }
 
     @PutMapping({"/nutritionists/{id}/approve", "/nutritionists/{id}/verify", "/nutritionists/{id}/verify"})
-    public ResponseEntity<Map<String, Object>> approveNutritionist(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> approveNutritionist(@org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails adminDetails, @PathVariable Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) {
             user.setVerified(true);
@@ -263,6 +273,9 @@ public class AdminController {
             profile.setApprovalStatus("APPROVED");
             nutritionistProfileRepository.save(profile);
         }
+        notificationService.notifyUser(user, actorId(adminDetails), "Profile Verified",
+                "Congratulations! Your nutritionist credentials have been verified. Your profile now shows as verified to clients.",
+                "SYSTEM", "verified", "/dashboard/nutritionist/profile");
 
         return ResponseEntity.ok(Map.of(
             "message", "Nutritionist verified & approved successfully!",
@@ -273,7 +286,7 @@ public class AdminController {
     }
 
     @PutMapping({"/nutritionists/{id}/revoke", "/nutritionists/{id}/revoke"})
-    public ResponseEntity<Map<String, Object>> revokeNutritionist(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> revokeNutritionist(@org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails adminDetails, @PathVariable Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) {
             user.setVerified(false);
@@ -285,6 +298,9 @@ public class AdminController {
             profile.setApprovalStatus("PENDING");
             nutritionistProfileRepository.save(profile);
         }
+        notificationService.notifyUser(user, actorId(adminDetails), "Verification Revoked",
+                "Your nutritionist verification was revoked and your profile is back under review. Please check that your credentials and license details are up to date.",
+                "SYSTEM", "gpp_maybe", "/dashboard/nutritionist/profile");
 
         return ResponseEntity.ok(Map.of(
             "message", "Nutritionist verification revoked",
@@ -383,5 +399,9 @@ public class AdminController {
 
         Long adminId = (userDetails != null && userDetails.getId() != null) ? userDetails.getId() : null;
         return ResponseEntity.ok(walletService.adminAllocate(adminId, recipientId, amount, notes));
+    }
+
+    private static Long actorId(com.nutrition.security.CustomUserDetails details) {
+        return details != null ? details.getId() : null;
     }
 }

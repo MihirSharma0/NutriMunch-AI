@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api, { API_BASE_URL } from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
+import { ALLERGEN_OPTIONS, DIET_OPTIONS, parseAllergies } from '../../../utils/dietFilters';
 
 const ClientManagement = () => {
     const { user, token } = useContext(AuthContext);
@@ -16,6 +17,8 @@ const ClientManagement = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [allergyFilter, setAllergyFilter] = useState('ALL'); // 'ALL' | 'NONE' | allergen id
+    const [dietFilter, setDietFilter] = useState('ALL');
     const [selectedClient, setSelectedClient] = useState(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [notification, setNotification] = useState(null);
@@ -66,6 +69,8 @@ const ClientManagement = () => {
                         protein: proteinStr,
                         carbs: carbsStr,
                         fats: fatsStr,
+                        allergies: parseAllergies(p.allergies),
+                        dietType: p.dietType || '',
                         notes: notesText
                     };
                 });
@@ -143,7 +148,15 @@ const ClientManagement = () => {
                               (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
                               client.goal.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'ALL' || client.status === statusFilter;
-        return matchesSearch && matchesStatus;
+
+        const clientAllergies = client.allergies || [];
+        const matchesAllergy = allergyFilter === 'ALL'
+            || (allergyFilter === 'NONE' ? clientAllergies.length === 0
+                : clientAllergies.some(a => a.toLowerCase().includes(allergyFilter.toLowerCase())));
+        const matchesDiet = dietFilter === 'ALL'
+            || String(client.dietType || '').toLowerCase() === dietFilter.toLowerCase();
+
+        return matchesSearch && matchesStatus && matchesAllergy && matchesDiet;
     });
 
     const handleAddClientSubmit = (e) => {
@@ -199,6 +212,7 @@ const ClientManagement = () => {
         }
 
         const newNotification = {
+            senderId: String(user?.id || user?.userId || ''),
             id: `directive_${Date.now()}`,
             title: directiveTitle,
             message: directiveText.trim(),
@@ -279,7 +293,7 @@ const ClientManagement = () => {
             </div>
 
             {/* Health Status Filter Tabs */}
-            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1">
                 <span className="text-[10px] font-mono uppercase text-white/40 font-bold mr-1 shrink-0">Health Status:</span>
                 {['ALL', 'Critical', 'Warning', 'Optimal', 'Good'].map(status => (
                     <button
@@ -290,6 +304,42 @@ const ClientManagement = () => {
                         {status === 'ALL' ? 'All Patients' : status} ({status === 'ALL' ? clientsList.length : clientsList.filter(c => c.status === status).length})
                     </button>
                 ))}
+            </div>
+
+            {/* Allergies / Diet Filter */}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase text-white/40 font-bold">Allergy:</span>
+                    <select
+                        value={allergyFilter}
+                        onChange={(e) => setAllergyFilter(e.target.value)}
+                        className="bg-[#080b12]/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white outline-none cursor-pointer focus:border-[#a5d391]/50"
+                    >
+                        <option value="ALL">All Patients</option>
+                        <option value="NONE">No Allergies</option>
+                        {ALLERGEN_OPTIONS.map(a => <option key={a.id} value={a.id}>{a.icon} {a.label}</option>)}
+                    </select>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase text-white/40 font-bold">Diet:</span>
+                    <select
+                        value={dietFilter}
+                        onChange={(e) => setDietFilter(e.target.value)}
+                        className="bg-[#080b12]/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white outline-none cursor-pointer focus:border-[#a5d391]/50"
+                    >
+                        <option value="ALL">All Diets</option>
+                        {DIET_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                    </select>
+                </div>
+                {(allergyFilter !== 'ALL' || dietFilter !== 'ALL') && (
+                    <button
+                        type="button"
+                        onClick={() => { setAllergyFilter('ALL'); setDietFilter('ALL'); }}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10 transition-all cursor-pointer"
+                    >
+                        Clear
+                    </button>
+                )}
             </div>
             
             {/* Table Container */}

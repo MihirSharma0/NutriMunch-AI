@@ -60,7 +60,9 @@ const DashboardHome = () => {
             try {
                 const storedDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
                 const storedNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
-                const localDirectives = [...storedDirectives, ...storedNotifs.filter(n => n.title && n.title.includes('Clinical Directive'))];
+                const myId = String(user?.id || user?.userId || '');
+                const localDirectives = [...storedDirectives, ...storedNotifs.filter(n => n.title && n.title.includes('Clinical Directive'))]
+                    .filter(n => !n.senderId || String(n.senderId) !== myId);
 
                 const allDirectives = [...backendDirectives, ...localDirectives];
                 const uniqueDirectives = Array.from(new Map(allDirectives.map(item => [item.id, item])).values())

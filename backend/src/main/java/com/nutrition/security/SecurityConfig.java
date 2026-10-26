@@ -35,7 +35,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/diet-plans/all").hasRole("ADMIN")
                 .requestMatchers("/api/diet-plans/me/**").authenticated()
-                .requestMatchers("/api/auth/**", "/api/ai/**", "/api/v1/health", "/api/notifications/**", "/api/diet-plans/published", "/api/diet-plans/general", "/api/wallet/**", "/api/transactions/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // Wallet, transactions, notifications and AI features require a logged-in session
+                .requestMatchers("/api/auth/**", "/api/v1/health", "/api/diet-plans/published", "/api/diet-plans/general", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
