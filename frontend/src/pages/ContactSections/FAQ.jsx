@@ -147,8 +147,8 @@ const FAQ_CATEGORIES = [
                 a: "The consultation fee is deducted from your wallet and held safely (in escrow). When the nutritionist confirms the session, the money is released to them. If the nutritionist declines your request, the full amount is returned to your wallet."
             },
             {
-                q: 'Can I cancel an appointment and get a refund?',
-                a: 'Before the nutritionist confirms: yes, you can cancel and the full amount is refunded to your wallet automatically. After the nutritionist has confirmed: you can only send a cancellation request; if the nutritionist approves it the session is cancelled, but the money is not refunded.'
+                q: 'How do I cancel an appointment?',
+                a: 'Open Appointments, select the session, and choose Cancel Session. If the session is confirmed, your nutritionist will be notified to review the cancellation.'
             },
             {
                 q: 'Are consultations held over video?',
@@ -210,7 +210,7 @@ const FAQ_CATEGORIES = [
             },
             {
                 q: 'How do I manage appointment requests?',
-                a: 'Open your Schedule. You can approve or deny new requests, and approve or decline cancellation requests. Approving a cancellation of a confirmed session does not refund the client.'
+                a: 'Open your Schedule. You can approve or deny new appointments, and review cancellation requests from clients.'
             }
         ]
     },
