@@ -35,7 +35,7 @@ const ALLERGEN_PATTERNS = {
     Sulfites: /\b(wine|sulfites?|sulphites?|dried fruits?|vinegar)\b/i
 };
 
-const MEAT_PATTERN = /\b(chicken|beef|pork|lamb|mutton|turkey|bacon|ham|sausages?|steak|meat|goat|duck|venison|salami|prosciutto)\b/i;
+const MEAT_PATTERN = /\b(chicken|pork|lamb|mutton|turkey|bacon|ham|sausages?|steak|meat|goat|duck|venison|salami|prosciutto)\b/i;
 const HONEY_PATTERN = /\bhoney\b/i;
 
 const mealText = (meal) => {
