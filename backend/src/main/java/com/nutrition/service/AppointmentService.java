@@ -35,6 +35,10 @@ public class AppointmentService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final WalletService walletService;
     private final WalletSseService walletSseService;
+    private final NotificationService notificationService;
+
+    private static final String USER_APPOINTMENTS_PATH = "/appointments";
+    private static final String NUTRITIONIST_SCHEDULE_PATH = "/dashboard/nutritionist/schedule";
 
     public List<AppointmentDto> getMyAppointments(Long userId, Role role) {
         List<Appointment> list;
@@ -279,6 +283,13 @@ public class AppointmentService {
                 )
         ));
 
+        if (nutritionist != null) {
+            notificationService.notifyUser(nutritionist, currentUserId, "New Appointment Request",
+                    String.format("%s requested \"%s\" on %s. ₹%.2f is held in escrow until you respond.",
+                            displayName(user), savedAppointment.getTitle(), formatWhen(savedAppointment), fee),
+                    "APPOINTMENT", "event", NUTRITIONIST_SCHEDULE_PATH);
+        }
+
         return resultDto;
     }
 
@@ -296,6 +307,11 @@ public class AppointmentService {
     public AppointmentDto updateAppointmentStatus(Long appointmentId, String status, String meetingLink, String notes, Long callerId, boolean isAdmin) {
         Appointment apt = appointmentRepository.findByIdWithLock(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found: " + appointmentId));
+
+        // Snapshot for change-based alerts sent once the update is saved
+        String prevStatus = apt.getStatus();
+        String prevEscrow = apt.getEscrowStatus();
+        BigDecimal escrowAmount = apt.getEscrowAmount();
 
         if (!isAdmin && callerId != null) {
             Long patientId = apt.getUser() != null ? apt.getUser().getId() : null;
@@ -315,6 +331,20 @@ public class AppointmentService {
 
         if (status != null && !status.trim().isEmpty()) {
             String upperStatus = status.trim().toUpperCase();
+
+            // Only the nutritionist (or an admin) may approve/decline a cancellation request
+            boolean isCancellationDecision = upperStatus.startsWith("APPROVE_CANCELLATION")
+                    || "DECLINE_CANCELLATION".equals(upperStatus) || "REJECT_CANCELLATION".equals(upperStatus);
+            boolean callerIsPatient = callerId != null && apt.getUser() != null && callerId.equals(apt.getUser().getId());
+            if (isCancellationDecision && !isAdmin && callerIsPatient) {
+                throw new org.springframework.security.access.AccessDeniedException("Only the nutritionist can respond to a cancellation request.");
+            }
+
+            // Policy: once confirmed, cancellations are non-refundable. Refunding captured
+            // funds is an admin-only override; a nutritionist approval is always no-refund.
+            if (!isAdmin && ("APPROVE_CANCELLATION".equals(upperStatus) || "APPROVE_CANCELLATION_REFUND".equals(upperStatus))) {
+                upperStatus = "APPROVE_CANCELLATION_NO_REFUND";
+            }
 
             // STEP 2a: Nutritionist ACCEPTS the booking (Hold & Capture)
             if ("CONFIRMED".equals(upperStatus) || "ACCEPTED".equals(upperStatus) || "APPROVED".equals(upperStatus)) {
@@ -418,8 +448,10 @@ public class AppointmentService {
                 }
                 log.info("Nutritionist approved cancellation with disclaimer (no money refunded) for appointment #{}", apt.getId());
 
-            // STEP 2c-alt: Nutritionist APPROVES Cancellation Request and optionally issues refund
-            } else if ("APPROVE_CANCELLATION".equals(upperStatus) || "APPROVE_CANCELLATION_REFUND".equals(upperStatus) || ("CANCELLED".equals(upperStatus) && "CAPTURED".equalsIgnoreCase(apt.getEscrowStatus()))) {
+            // STEP 2c-alt: Admin override - approve cancellation AND refund captured funds.
+            // A plain "CANCELLED" on a confirmed booking no longer lands here; it becomes a
+            // non-refundable cancellation request (STEP 2b).
+            } else if ("APPROVE_CANCELLATION".equals(upperStatus) || "APPROVE_CANCELLATION_REFUND".equals(upperStatus)) {
                 if ("CAPTURED".equalsIgnoreCase(apt.getEscrowStatus()) && apt.getEscrowAmount() != null && apt.getEscrowAmount().compareTo(BigDecimal.ZERO) > 0) {
                     User nutritionist = apt.getNutritionist();
                     User user = apt.getUser();
@@ -548,6 +580,7 @@ public class AppointmentService {
 
         Appointment updated = appointmentRepository.save(apt);
         AppointmentDto dtoResult = mapToDto(updated);
+        notifyAppointmentChange(updated, prevStatus, prevEscrow, escrowAmount, callerId);
 
         // Push real-time SSE appointment update to both parties
         Map<String, Object> sseEvent = Map.of(
@@ -587,10 +620,11 @@ public class AppointmentService {
 
         // If unconfirmed, process direct refund immediately
         if (!"CONFIRMED".equals(currentStatus) && !"ACCEPTED".equals(currentStatus) && !"CAPTURED".equalsIgnoreCase(apt.getEscrowStatus())) {
-            return updateAppointmentStatus(appointmentId, "CANCELLED", null, reason);
+            return updateAppointmentStatus(appointmentId, "CANCELLED", null, reason, userId, true);
         }
 
         // Already confirmed by nutritionist -> Require nutritionist approval to refund
+        String prevStatusBeforeRequest = apt.getStatus();
         apt.setStatus("CANCELLATION_REQUESTED");
         if (reason != null && !reason.isBlank()) {
             apt.setNotes(apt.getNotes() != null ? apt.getNotes() + " | Cancellation Reason: " + reason : "Cancellation Reason: " + reason);
@@ -598,6 +632,7 @@ public class AppointmentService {
 
         Appointment updated = appointmentRepository.save(apt);
         AppointmentDto dtoResult = mapToDto(updated);
+        notifyAppointmentChange(updated, prevStatusBeforeRequest, updated.getEscrowStatus(), updated.getEscrowAmount(), userId);
 
         Map<String, Object> sseEvent = Map.of(
                 "type", "APPOINTMENT_UPDATED",
@@ -724,6 +759,10 @@ public class AppointmentService {
                     BigDecimal userBalAfter = userBalBefore.add(apt.getEscrowAmount());
                     userWallet.setBalance(userBalAfter);
                     walletRepository.save(userWallet);
+                    notificationService.notifyUser(user, callerId, "Refund Credited",
+                            String.format("₹%.2f was refunded to your wallet because your appointment with %s was removed. New balance: ₹%.2f",
+                                    apt.getEscrowAmount(), displayName(apt.getNutritionist()), userBalAfter),
+                            "WALLET", "account_balance_wallet", "/transactions");
 
                     String refundRef = "ESCROW-REFUND-DEL-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
                     WalletTransaction refundTx = new WalletTransaction();
@@ -771,6 +810,86 @@ public class AppointmentService {
                 walletSseService.sendAppointmentUpdate(apt.getNutritionist().getId(), apt.getNutritionist().getEmail(), delEvent);
             }
         }
+    }
+
+    /**
+     * Sends bell alerts for an appointment change by comparing its state before and after the update.
+     * The person who made the change is never alerted (handled by NotificationService).
+     */
+    private void notifyAppointmentChange(Appointment apt, String prevStatus, String prevEscrow, BigDecimal escrowAmount, Long actorId) {
+        User patient = apt.getUser();
+        User nutritionist = apt.getNutritionist();
+        String status = apt.getStatus() != null ? apt.getStatus().toUpperCase() : "";
+        String before = prevStatus != null ? prevStatus.toUpperCase() : "";
+        String escrow = apt.getEscrowStatus() != null ? apt.getEscrowStatus().toUpperCase() : "";
+        String escrowBefore = prevEscrow != null ? prevEscrow.toUpperCase() : "";
+        BigDecimal amount = escrowAmount != null ? escrowAmount : BigDecimal.ZERO;
+        String when = formatWhen(apt);
+
+        if ("HELD".equals(escrowBefore) && "CAPTURED".equals(escrow)) {
+            notificationService.notifyUser(patient, actorId, "Appointment Confirmed",
+                    String.format("%s confirmed \"%s\" on %s.", displayName(nutritionist), apt.getTitle(), when),
+                    "APPOINTMENT", "event_available", USER_APPOINTMENTS_PATH);
+            notificationService.notifyUser(nutritionist, actorId, "Payment Received",
+                    String.format("₹%.2f from %s was credited to your wallet for the appointment on %s.", amount, displayName(patient), when),
+                    "WALLET", "account_balance_wallet", "/transactions");
+            return;
+        }
+
+        if (!"REFUNDED".equals(escrowBefore) && "REFUNDED".equals(escrow)) {
+            String reason = "REJECTED".equals(status) ? "declined" : "cancelled";
+            notificationService.notifyUser(patient, actorId, "Refund Credited",
+                    String.format("Your appointment with %s on %s was %s. ₹%.2f has been refunded to your wallet.", displayName(nutritionist), when, reason, amount),
+                    "WALLET", "account_balance_wallet", "/transactions");
+            if ("CAPTURED".equals(escrowBefore)) {
+                notificationService.notifyUser(nutritionist, actorId, "Wallet Deduction",
+                        String.format("₹%.2f was deducted from your wallet as a refund to %s for the cancelled appointment on %s.", amount, displayName(patient), when),
+                        "WALLET", "account_balance_wallet", "/transactions");
+            } else {
+                notificationService.notifyUser(nutritionist, actorId, "Appointment Cancelled",
+                        String.format("%s cancelled \"%s\" on %s.", displayName(patient), apt.getTitle(), when),
+                        "APPOINTMENT", "event_busy", NUTRITIONIST_SCHEDULE_PATH);
+            }
+            return;
+        }
+
+        if ("CANCELLATION_REQUESTED".equals(status) && !"CANCELLATION_REQUESTED".equals(before)) {
+            notificationService.notifyUser(nutritionist, actorId, "Cancellation Requested",
+                    String.format("%s asked to cancel the confirmed appointment on %s. Please approve or decline the request.", displayName(patient), when),
+                    "APPOINTMENT", "event_busy", NUTRITIONIST_SCHEDULE_PATH);
+            return;
+        }
+
+        if ("CANCELLATION_REQUESTED".equals(before)) {
+            if ("CANCELLED".equals(status)) {
+                notificationService.notifyUser(patient, actorId, "Cancellation Approved",
+                        String.format("Your cancellation request for the appointment on %s was approved. As per policy, the fee is not refunded.", when),
+                        "APPOINTMENT", "event_busy", USER_APPOINTMENTS_PATH);
+            } else if ("CONFIRMED".equals(status)) {
+                notificationService.notifyUser(patient, actorId, "Cancellation Request Declined",
+                        String.format("%s declined your cancellation request. Your appointment on %s is still confirmed.", displayName(nutritionist), when),
+                        "APPOINTMENT", "event_available", USER_APPOINTMENTS_PATH);
+            }
+            return;
+        }
+
+        if ("REJECTED".equals(status) && !"REJECTED".equals(before)) {
+            notificationService.notifyUser(patient, actorId, "Appointment Declined",
+                    String.format("%s declined your appointment request for %s.", displayName(nutritionist), when),
+                    "APPOINTMENT", "event_busy", USER_APPOINTMENTS_PATH);
+        }
+    }
+
+    private static String formatWhen(Appointment apt) {
+        return apt.getAppointmentTime() != null
+                ? apt.getAppointmentTime().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"))
+                : "the scheduled date";
+    }
+
+    private static String displayName(User u) {
+        if (u == null) return "Your nutritionist";
+        String name = ((u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : "")).trim();
+        return name.isEmpty() ? u.getEmail() : name;
     }
 
     private AppointmentDto mapToDto(Appointment apt) {

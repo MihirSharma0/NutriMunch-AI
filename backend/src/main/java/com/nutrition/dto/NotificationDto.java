@@ -9,6 +9,7 @@ public class NotificationDto {
     private Long userId;
     private String userName;
     private String userEmail;
+    private Long senderId;
     private String title;
     private String message;
     private String type;

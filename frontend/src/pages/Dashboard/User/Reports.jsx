@@ -1193,14 +1193,13 @@ const Reports = () => {
         const fatsData = [];
 
         if (viewMode === 'today' || viewMode === 'daily') {
-            const targetDate = viewMode === 'today' ? todayStr : selectedDayDate;
+            // Same totals as the statement tables (activeStatementData), so tables and charts always agree
             const times = ['Morning (8 AM)', 'Midday (12 PM)', 'Afternoon (4 PM)', 'Night (8 PM)'];
-            const dayMetrics = getRealDayMetrics(targetDate);
-            const totalCals = dayMetrics.calories;
-            const totalWater = dayMetrics.waterMl;
-            const totalProt = dayMetrics.protein;
-            const totalCarb = dayMetrics.carbs;
-            const totalFat = dayMetrics.fats;
+            const totalCals = Number(activeStatementData.calories) || 0;
+            const totalWater = Number(activeStatementData.waterConsumed) || 0;
+            const totalProt = Number(activeStatementData.protein) || 0;
+            const totalCarb = Number(activeStatementData.carbs) || 0;
+            const totalFat = Number(activeStatementData.fats) || 0;
 
             times.forEach((t, idx) => {
                 labels.push(t);
@@ -1265,29 +1264,33 @@ const Reports = () => {
         } else if (viewMode === 'quarterly') {
             const qYear = parseInt(selectedQuarterYear, 10) || new Date().getFullYear();
             const startMonth = selectedQuarter === 'Q1' ? 1 : selectedQuarter === 'Q2' ? 4 : selectedQuarter === 'Q3' ? 7 : 10;
-            const startQuarterDate = new Date(qYear, startMonth - 1, 1);
+            const pad = (n) => String(n).padStart(2, '0');
+            const quarterDays = [];
+            for (let m = startMonth; m <= startMonth + 2; m++) {
+                const daysInM = new Date(qYear, m, 0).getDate();
+                for (let d = 1; d <= daysInM; d++) quarterDays.push(`${qYear}-${pad(m)}-${pad(d)}`);
+            }
 
-            for (let w = 1; w <= 13; w++) {
+            for (let i = 0, w = 1; i < quarterDays.length; i += 7, w++) {
+                const bucket = quarterDays.slice(i, i + 7);
                 labels.push(`Wk ${w}`);
                 let wWater = 0, wCal = 0, wProt = 0, wCarbs = 0, wFats = 0;
-                for (let day = 0; day < 7; day++) {
-                    const d = new Date(startQuarterDate);
-                    d.setDate(d.getDate() + (w - 1) * 7 + day);
-                    const dStr = d.toISOString().split('T')[0];
+                bucket.forEach(dStr => {
                     const metrics = getRealDayMetrics(dStr);
                     wWater += metrics.waterMl;
                     wCal += metrics.calories;
                     wProt += metrics.protein;
                     wCarbs += metrics.carbs;
                     wFats += metrics.fats;
-                }
-                hydrationActual.push(Math.round(wWater / 7));
+                });
+                const n = bucket.length;
+                hydrationActual.push(Math.round(wWater / n));
                 hydrationTargetLine.push(targetWaterMl);
-                caloriesActual.push(Math.round(wCal / 7));
+                caloriesActual.push(Math.round(wCal / n));
                 caloriesTargetLine.push(targetCalories);
-                proteinData.push(Math.round(wProt / 7));
-                carbsData.push(Math.round(wCarbs / 7));
-                fatsData.push(Math.round(wFats / 7));
+                proteinData.push(Math.round(wProt / n));
+                carbsData.push(Math.round(wCarbs / n));
+                fatsData.push(Math.round(wFats / n));
             }
         } else {
             // Yearly
@@ -1328,7 +1331,7 @@ const Reports = () => {
         };
     }, [
         viewMode, selectedWeekDate, selectedMonthStr, selectedQuarter, selectedQuarterYear, selectedYear,
-        selectedDayDate, todayStr, targetWaterMl, targetCalories, getRealDayMetrics
+        selectedDayDate, todayStr, targetWaterMl, targetCalories, getRealDayMetrics, activeStatementData
     ]);
 
     // On-Screen Interactive Chart Data: Synchronized with Real Tracked Data
@@ -1673,47 +1676,35 @@ const Reports = () => {
         setIsDownloadingPdf(true);
 
         const targetScope = scope === 'Active' ? viewMode : scope.toLowerCase();
-        const patientName = user?.name || user?.username || 'Patient';
+        const fullName = [user?.firstName || userProfile?.firstName, user?.lastName || userProfile?.lastName].filter(Boolean).join(' ').trim();
+        const patientName = fullName || user?.name || user?.username || user?.email || 'Patient';
         const patientEmail = user?.email || 'N/A';
         const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         const reportId = `STATEMENT-NMR-${Date.now().toString(36).toUpperCase()}`;
 
-        let scopeTitle = activeStatementData.scopeName;
-        let dateRangeLabel = activeStatementData.dateLabel;
-        let evalSubtitle = activeStatementData.daysCount === 1 ? 'Single-Day Clinical Statement' : `${activeStatementData.daysCount}-Day Aggregated Statement Window`;
+        // Scope wording comes from the same statement object the screen renders (real day counts)
+        const scopeTitle = activeStatementData.scopeName;
+        const dateRangeLabel = activeStatementData.dateLabel;
+        const evalSubtitle = activeStatementData.daysCount === 1
+            ? 'Single-Day Statement'
+            : `${activeStatementData.daysCount}-Day Aggregated Statement`;
 
-        if (targetScope === 'overall') {
-            scopeTitle = 'Lifetime Overall Health & Biometric Statement';
-            dateRangeLabel = 'Complete All-Time Longitudinal Record';
-            evalSubtitle = 'Comprehensive Lifetime Statement';
-        } else if (targetScope === 'quarterly') {
-            const qLbl = getQuarterLabel(selectedQuarter, selectedQuarterYear);
-            scopeTitle = `Quarterly Clinical Statement (${qLbl})`;
-            dateRangeLabel = `${qLbl} (90-Day Aggregated Record)`;
-            evalSubtitle = '90-Day Quarterly Clinical Audit';
-        } else if (targetScope === 'yearly') {
-            scopeTitle = `Annual Clinical Statement (Calendar Year ${selectedYear})`;
-            dateRangeLabel = `Calendar Year ${selectedYear} (365-Day Longitudinal Record)`;
-            evalSubtitle = '365-Day Annual Comprehensive Audit';
-        } else if (targetScope === 'monthly') {
-            scopeTitle = `Monthly Clinical Statement (${getMonthLabel(selectedMonthStr)})`;
-            dateRangeLabel = `${getMonthLabel(selectedMonthStr)} (30-Day Aggregated Record)`;
-            evalSubtitle = '30-Day Monthly Clinical Audit';
-        } else if (targetScope === 'weekly') {
-            const wk = getWeekRange(selectedWeekDate);
-            scopeTitle = `Weekly Clinical Statement (${wk.formatted})`;
-            dateRangeLabel = `${wk.formatted} (7-Day Rolling Record)`;
-            evalSubtitle = '7-Day Weekly Compliance Audit';
-        } else if (targetScope === 'daily') {
-            const dFormatted = new Date(selectedDayDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-            scopeTitle = `Daily Clinical Statement (${dFormatted})`;
-            dateRangeLabel = dFormatted;
-            evalSubtitle = 'Single-Day Verified Intake Statement';
-        } else if (targetScope === 'today') {
-            scopeTitle = "Today's Real-Time Clinical Intake Statement";
-            dateRangeLabel = `Today, ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`;
-            evalSubtitle = 'Live Real-Time Intake Statement';
-        }
+        // Real profile values only - never invented defaults
+        const ageText = userProfile?.age ? `${userProfile.age} Yrs` : 'Age not set';
+        const genderText = userProfile?.gender || 'Gender not set';
+        const heightText = userProfile?.heightCm ? `${userProfile.heightCm} cm` : 'Height not set';
+        const weightText = userProfile?.weightKg ? `${userProfile.weightKg} kg` : 'Weight not set';
+        const bmiText = userProfile?.heightCm && userProfile?.weightKg
+            ? ` (${(userProfile.weightKg / Math.pow(userProfile.heightCm / 100, 2)).toFixed(1)} BMI)`
+            : '';
+        const progressRemark = (pct) => pct >= 100 ? 'Target met' : pct >= 75 ? 'Close to target' : pct > 0 ? 'Below target' : 'No intake logged';
+
+        // Charts in the PDF are exactly the charts shown on screen (same interval & data)
+        const isStatementInterval = selectedInterval === 'STATEMENT';
+        const pdfChartData = chartData;
+        const chartRangeLabel = isStatementInterval
+            ? activeStatementData.dateLabel
+            : (INTERVAL_PRESETS.find(pr => pr.id === selectedInterval)?.label || selectedInterval);
 
         // Determine precise date / duration mentioned for document naming
         let durationMentioned = '';
@@ -1755,9 +1746,9 @@ const Reports = () => {
             unit: 'ml',
             actualLabel: 'Consumed Water',
             targetLabel: 'Water Target',
-            labels: pdfStatementChartData.labels,
-            actualData: pdfStatementChartData.hydrationActual,
-            targetData: pdfStatementChartData.hydrationTargetLine,
+            labels: pdfChartData.labels,
+            actualData: pdfChartData.hydrationActual,
+            targetData: pdfChartData.hydrationTargetLine,
             actualColor: '#38bdf8',
             targetColor: '#a5d391'
         });
@@ -1767,19 +1758,19 @@ const Reports = () => {
             unit: 'kcal',
             actualLabel: 'Calories Consumed',
             targetLabel: 'Calorie Target',
-            labels: pdfStatementChartData.labels,
-            actualData: pdfStatementChartData.caloriesActual,
-            targetData: pdfStatementChartData.caloriesTargetLine,
+            labels: pdfChartData.labels,
+            actualData: pdfChartData.caloriesActual,
+            targetData: pdfChartData.caloriesTargetLine,
             actualColor: '#fbbf24',
             targetColor: '#ef4444'
         });
 
         const svgMacros = generateSvgBarChart({
             title: 'Macros Split (Macronutrient Distribution: Protein, Carbs, Fats)',
-            labels: pdfStatementChartData.labels,
-            proteinData: pdfStatementChartData.proteinData,
-            carbsData: pdfStatementChartData.carbsData,
-            fatsData: pdfStatementChartData.fatsData
+            labels: pdfChartData.labels,
+            proteinData: pdfChartData.proteinData,
+            carbsData: pdfChartData.carbsData,
+            fatsData: pdfChartData.fatsData
         });
 
         // Format clean, printable medical document HTML
@@ -1831,9 +1822,9 @@ const Reports = () => {
                 <div class="meta-grid">
                     <div class="meta-item"><strong>Patient Name</strong> ${patientName}</div>
                     <div class="meta-item"><strong>Patient Email</strong> ${patientEmail}</div>
-                    <div class="meta-item"><strong>Demographics</strong> ${userProfile?.age ? `${userProfile.age} Yrs` : '26 Yrs'} • ${userProfile?.gender || 'Male'}</div>
-                    <div class="meta-item"><strong>Biometrics</strong> ${userProfile?.heightCm ? `${userProfile.heightCm} cm` : '176 cm'} • ${userProfile?.weightKg ? `${userProfile.weightKg} kg` : '72 kg'} (${userProfile?.heightCm && userProfile?.weightKg ? (userProfile.weightKg / Math.pow(userProfile.heightCm / 100, 2)).toFixed(1) : '23.2'} BMI)</div>
-                    <div class="meta-item"><strong>Primary Goal</strong> ${userProfile?.goal || 'Optimal Health'}</div>
+                    <div class="meta-item"><strong>Demographics</strong> ${ageText} • ${genderText}</div>
+                    <div class="meta-item"><strong>Biometrics</strong> ${heightText} • ${weightText}${bmiText}</div>
+                    <div class="meta-item"><strong>Primary Goal</strong> ${userProfile?.goal || 'Not set'}</div>
                     <div class="meta-item"><strong>Daily Targets</strong> ${targetCalories} kcal • ${targets.water} L</div>
                     <div class="meta-item"><strong>Statement Scope</strong> ${scopeTitle}</div>
                     <div class="meta-item"><strong>Evaluated Period</strong> ${dateRangeLabel}</div>
@@ -1878,7 +1869,7 @@ const Reports = () => {
                             <td>${(targets.water * activeStatementData.daysCount).toFixed(0)} L</td>
                             <td>${activeStatementData.totalWaterLiters} L</td>
                             <td><strong>${activeStatementData.hydrationAdherence}</strong></td>
-                            <td><span class="status-pill status-pass">Clinical Grade Adherence</span></td>
+                            <td><span class="status-pill">${progressRemark(parseInt(activeStatementData.hydrationAdherence, 10) || 0)}</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -1907,28 +1898,28 @@ const Reports = () => {
                             <td>${targetProtein} g</td>
                             <td>${activeStatementData.protein} g</td>
                             <td><strong>${activeStatementData.proteinPercent}%</strong></td>
-                            <td>Muscle protein synthesis support target: ${activeStatementData.proteinPercent >= 100 ? 'Optimal' : 'Compliant'}</td>
+                            <td>${progressRemark(activeStatementData.proteinPercent)}</td>
                         </tr>
                         <tr>
                             <td><strong>Carbohydrates</strong></td>
                             <td>${targetCarbs} g</td>
                             <td>${activeStatementData.carbs} g</td>
                             <td><strong>${activeStatementData.carbsPercent}%</strong></td>
-                            <td>Glycemic glycogen maintenance: Balanced</td>
+                            <td>${progressRemark(activeStatementData.carbsPercent)}</td>
                         </tr>
                         <tr>
                             <td><strong>Fats & Essential Lipids</strong></td>
                             <td>${targetFats} g</td>
                             <td>${activeStatementData.fats} g</td>
                             <td><strong>${activeStatementData.fatsPercent}%</strong></td>
-                            <td>Hormonal & cell integrity baseline: Normal</td>
+                            <td>${progressRemark(activeStatementData.fatsPercent)}</td>
                         </tr>
                     </tbody>
                 </table>
 
                 <h2>3. Longitudinal Performance Curves (${activeStatementData.scopeName})</h2>
                 <div style="font-size: 8.5pt; color: #64748b; margin-top: -6px; margin-bottom: 12px;">
-                    Continuous telemetry trajectories dynamically synchronized with evaluated duration: <strong>${activeStatementData.dateLabel}</strong>
+                    Charts cover: <strong>${chartRangeLabel}</strong>${isStatementInterval ? '' : ' (chart range selected on screen)'}
                 </div>
                 ${svgHydration}
                 ${svgCalories}
@@ -1951,7 +1942,7 @@ const Reports = () => {
                             <td>${activeStatementData.avgCalories} kcal / day</td>
                             <td>${activeStatementData.avgWaterLiters} L / day</td>
                             <td>${activeStatementData.loggedVisits}</td>
-                            <td><strong>${activeStatementData.nutritionAdherence} Compliant</strong></td>
+                            <td><strong>${activeStatementData.nutritionAdherence} of calorie target</strong></td>
                         </tr>
                     </tbody>
                 </table>

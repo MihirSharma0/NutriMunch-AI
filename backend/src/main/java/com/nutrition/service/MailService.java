@@ -27,17 +27,20 @@ public class MailService {
     @Autowired
     private RestTemplate restTemplate;
 
-    private final String frontendUrl = "http://localhost:5173";
+    // Base frontend URL derived from the configured login URL (e.g. https://app.example.com/login -> https://app.example.com)
+    private String frontendUrl() {
+        return loginUrl.replaceAll("/login/?$", "").replaceAll("/$", "");
+    }
 
     @Async
     public void sendVerificationEmail(String to, String token) {
-        String link = frontendUrl + "/verify?token=" + token;
+        String link = frontendUrl() + "/verify?token=" + token;
         sendWebhook(to, "verification_link", link);
     }
     
     @Async
     public void sendPasswordResetEmail(String to, String token) {
-        String link = frontendUrl + "/reset-password?token=" + token;
+        String link = frontendUrl() + "/reset-password?token=" + token;
         sendWebhook(to, "password_reset", link);
     }
 

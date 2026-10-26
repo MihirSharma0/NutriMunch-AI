@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api, { API_BASE_URL } from '../../../api/axios';
 import ConsultationChatModal from '../../../components/ConsultationChatModal';
 import { subscribeWalletSse } from '../../../utils/walletSse';
+import { getConsultationOutcome, describePayment } from '../../../utils/consultationHistory';
 
 const Appointments = () => {
     const { user, token } = useContext(AuthContext);
@@ -106,6 +107,14 @@ const Appointments = () => {
             setWalletLoading(false);
         }
     };
+
+    // Deep link: /appointments#consultation-history scrolls straight to the history section
+    const location = useLocation();
+    useEffect(() => {
+        if (location.hash !== '#consultation-history' || loading) return;
+        const el = document.getElementById('consultation-history');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, [location.hash, loading]);
 
     useEffect(() => {
         fetchAppointments();
@@ -290,77 +299,6 @@ const Appointments = () => {
         specialization: 'Algorithmic Biology & Metabolism'
     };
 
-    // Default starter history if user has 0 records yet
-    const getDefaultHistoricalAppointments = () => {
-        const dName = primaryNutritionist.name || 'Dr. Elena Rostova';
-        const dEmail = primaryNutritionist.email || 'elena.rostova@nutrimunch.ai';
-        const dCred = primaryNutritionist.credentials || 'Certified Clinical Nutritionist';
-        const now = Date.now();
-
-        return [
-            {
-                id: 'hist-ongoing-1',
-                title: 'Metabolic Biomarker & Nutrition Assessment',
-                sessionType: 'Clinical Consultation',
-                appointmentTime: new Date(now + 2 * 3600 * 1000).toISOString(), // 2 hours from now (ongoing/future)
-                status: 'Ongoing',
-                nutritionistName: dName,
-                nutritionistEmail: dEmail,
-                nutritionistCredentials: dCred,
-                notes: 'Active assessment of caloric deficit and nutrient partition efficiency.',
-                meetingLink: 'https://meet.google.com/nutri-ai-session'
-            },
-            {
-                id: 'hist-upcoming-2',
-                title: 'Comprehensive Gut Microbiome Consultation',
-                sessionType: 'Dietary Protocol Review',
-                appointmentTime: new Date(now + 4 * 86400 * 1000).toISOString(), // 4 days from now (future)
-                status: 'Scheduled',
-                nutritionistName: dName,
-                nutritionistEmail: dEmail,
-                nutritionistCredentials: dCred,
-                notes: 'Reviewing digestive tolerance, fermented food integration, and fiber targets.',
-                meetingLink: 'https://meet.google.com/nutri-ai-session'
-            },
-            {
-                id: 'hist-past-1',
-                title: 'Initial Macro Calibration & Intake Review',
-                sessionType: 'Macro Calibration',
-                appointmentTime: new Date(now - 5 * 86400 * 1000).toISOString(), // 5 days ago (past)
-                status: 'Completed',
-                nutritionistName: dName,
-                nutritionistEmail: dEmail,
-                nutritionistCredentials: dCred,
-                notes: 'Calibrated daily baseline targets: 2000 kcal, 140g protein. Patient shows positive metabolic adaptation.',
-                meetingLink: 'https://meet.google.com/nutri-ai-session'
-            },
-            {
-                id: 'hist-past-2',
-                title: 'Hydration & Electrolyte Protocol Review',
-                sessionType: 'Clinical Consultation',
-                appointmentTime: new Date(now - 12 * 86400 * 1000).toISOString(), // 12 days ago (past)
-                status: 'Completed',
-                nutritionistName: dName,
-                nutritionistEmail: dEmail,
-                nutritionistCredentials: dCred,
-                notes: 'Increased daily hydration target to 3.0 L with scheduled electrolyte replenishment.',
-                meetingLink: 'https://meet.google.com/nutri-ai-session'
-            },
-            {
-                id: 'hist-past-3',
-                title: 'Biomarker Lipid Profile Follow-up',
-                sessionType: 'Follow-up Check-in',
-                appointmentTime: new Date(now - 19 * 86400 * 1000).toISOString(), // 19 days ago (past)
-                status: 'Cancelled',
-                nutritionistName: dName,
-                nutritionistEmail: dEmail,
-                nutritionistCredentials: dCred,
-                notes: 'Consultation cancelled due to patient business travel. Rescheduled for later date.',
-                meetingLink: 'https://meet.google.com/nutri-ai-session'
-            }
-        ];
-    };
-
     const fetchAppointments = async () => {
         try {
             setLoading(true);
@@ -368,10 +306,12 @@ const Appointments = () => {
             const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
 
             let backendData = [];
+            let backendOk = false;
             try {
                 const res = await fetch(`${API_BASE_URL}/appointments/me`, { headers });
                 if (res.ok) {
                     backendData = await res.json();
+                    backendOk = Array.isArray(backendData);
                 }
             } catch (err) {
                 console.warn('Backend fetch failed, utilizing local appointments cache:', err);
@@ -391,16 +331,24 @@ const Appointments = () => {
                 }
             } catch (e) {}
 
+            // The server is the source of truth for consultation history. The browser cache (per user)
+            // is only used when the server can't be reached; old sample records are never shown.
+            const cacheKey = `nutrimunch_user_appointments_${user?.id || user?.userId || user?.email || 'me'}`;
             let merged = [];
-            if (backendData.length === 0 && storedLocal.length === 0) {
-                const defaults = getDefaultHistoricalAppointments();
-                merged = defaults;
-                localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(defaults));
+            if (backendOk) {
+                merged = backendData;
+                try { localStorage.setItem(cacheKey, JSON.stringify(backendData)); } catch (e) {}
             } else {
-                const map = new Map();
-                storedLocal.forEach(item => map.set(String(item.id), item));
-                backendData.forEach(item => map.set(String(item.id), item));
-                merged = Array.from(map.values());
+                try {
+                    const cachedForUser = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+                    merged = Array.isArray(cachedForUser) ? cachedForUser : [];
+                } catch (e) {}
+            }
+            merged = merged.filter(item => !String(item.id).startsWith('hist-'));
+            if (storedLocal.some(item => String(item.id).startsWith('hist-'))) {
+                try {
+                    localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(storedLocal.filter(item => !String(item.id).startsWith('hist-'))));
+                } catch (e) {}
             }
 
             const activeAppointments = merged
@@ -564,6 +512,13 @@ const Appointments = () => {
                 .then(res => {
                     if (res.data) {
                         setAppointments(prev => prev.map(a => String(a.id) === stringId ? { ...a, ...res.data } : a));
+                        if (selectedAppointment && String(selectedAppointment.id) === stringId) {
+                            setSelectedAppointment(prev => prev ? { ...prev, ...res.data } : null);
+                        }
+                        // Nutritionist had already confirmed: server turns this into a non-refundable request
+                        if (String(res.data.status || '').toUpperCase() === 'CANCELLATION_REQUESTED') {
+                            showToast('This session was already confirmed by your nutritionist. Cancellation request submitted — the money will not be refunded.');
+                        }
                     }
                 })
                 .catch(() => {});
@@ -696,7 +651,7 @@ const Appointments = () => {
 
     const deletableAppointmentsCount = appointments.filter(a => canDeleteAppointment(a)).length;
     const upcomingOrOngoingCount = appointments.filter(a => !isDatePassed(a.appointmentTime) && (a.status || '').toUpperCase() !== 'CANCELLED' && (a.status || '').toUpperCase() !== 'REJECTED').length;
-    const completedCount = appointments.filter(a => (a.status || '').toUpperCase() === 'COMPLETED').length;
+    const completedCount = appointments.filter(a => getConsultationOutcome(a) === 'COMPLETED').length;
     const cancelledCount = appointments.filter(a => {
         const upper = (a.status || '').toUpperCase();
         return upper === 'CANCELLED' || upper === 'REJECTED';
@@ -706,7 +661,7 @@ const Appointments = () => {
         const isPassed = isDatePassed(item.appointmentTime);
         const upper = (item.status || '').toUpperCase();
         if (historyFilter === 'UPCOMING') return !isPassed && upper !== 'CANCELLED' && upper !== 'REJECTED';
-        if (historyFilter === 'COMPLETED') return upper === 'COMPLETED';
+        if (historyFilter === 'COMPLETED') return getConsultationOutcome(item) === 'COMPLETED';
         if (historyFilter === 'CANCELLED') return upper === 'CANCELLED' || upper === 'REJECTED';
         return true;
     });
@@ -943,7 +898,7 @@ const Appointments = () => {
                     )}
 
                     {/* Historical & All Bookings List */}
-                    <div className="mt-10 space-y-4">
+                    <div id="consultation-history" className="mt-10 space-y-4 scroll-mt-28">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <h2 className="text-lg font-bold font-hero-display text-white flex items-center gap-2">
@@ -1035,7 +990,9 @@ const Appointments = () => {
                                 {filteredAppointments.map((item) => {
                                     const dt = formatDate(item.appointmentTime);
                                     const passed = isDatePassed(item.appointmentTime);
-                                    const upper = (item.status || '').toUpperCase();
+                                    // Confirmed sessions whose time has passed are shown as Completed
+                                    const upper = getConsultationOutcome(item) === 'COMPLETED' ? 'COMPLETED' : (item.status || '').toUpperCase();
+                                    const payment = describePayment(item);
                                     const isSelected = String(item.id) === String(activeDisplayedAppointment?.id);
                                     return (
                                         <div
@@ -1062,6 +1019,12 @@ const Appointments = () => {
                                                         <span className="text-white/70">{item.nutritionistName || primaryNutritionist.name}</span>
                                                         <span>•</span>
                                                         <span className="text-white/40">{item.sessionType || 'Consultation'}</span>
+                                                        {payment && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span className="text-white/60">₹{payment.amount.toFixed(2)}{payment.state ? ` ${payment.state}` : ''}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

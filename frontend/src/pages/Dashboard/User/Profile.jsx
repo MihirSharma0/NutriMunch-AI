@@ -35,6 +35,7 @@ const DEFAULT_TARGETS = {
     protein: 140,
     carbs: 200,
     fats: 65,
+    sugar: 50,
     water: 2.5,
     fiber: 28,
     iron: 18,
@@ -317,6 +318,7 @@ const Profile = () => {
                             protein: res.data.proteinTarget || DEFAULT_TARGETS.protein,
                             carbs: res.data.carbsTarget || DEFAULT_TARGETS.carbs,
                             fats: res.data.fatsTarget || DEFAULT_TARGETS.fats,
+                            sugar: res.data.sugarTargetG || DEFAULT_TARGETS.sugar,
                             tdee: res.data.tdee || 2000,
                             bmr: res.data.bmr || 1600,
                             water: res.data.dailyWaterTargetLiters || DEFAULT_TARGETS.water,
@@ -557,6 +559,7 @@ const Profile = () => {
             proteinTarget: parseInt(customTargets.protein, 10) || DEFAULT_TARGETS.protein,
             carbsTarget: parseInt(customTargets.carbs, 10) || DEFAULT_TARGETS.carbs,
             fatsTarget: parseInt(customTargets.fats, 10) || DEFAULT_TARGETS.fats,
+            sugarTargetG: parseInt(customTargets.sugar, 10) || DEFAULT_TARGETS.sugar,
             dailyWaterTargetLiters: parseFloat(customTargets.water) || DEFAULT_TARGETS.water,
             dailyFiberTargetG: parseInt(customTargets.fiber, 10) || DEFAULT_TARGETS.fiber,
             ironTargetMg: parseFloat(customTargets.iron) || DEFAULT_TARGETS.iron,
@@ -575,6 +578,7 @@ const Profile = () => {
                     protein: res.data.proteinTarget,
                     carbs: res.data.carbsTarget,
                     fats: res.data.fatsTarget,
+                    sugar: res.data.sugarTargetG || DEFAULT_TARGETS.sugar,
                     tdee: res.data.tdee,
                     bmr: res.data.bmr,
                     water: res.data.dailyWaterTargetLiters,
@@ -1380,40 +1384,13 @@ const Profile = () => {
                             </div>
 
                             <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
-                                <div className="text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider mb-1">Carbs Target</div>
-                                <div className="text-2xl font-bold text-[#38bdf8]">{customTargets.carbs || 200} <span className="text-xs font-normal text-[#38bdf8]/70">g</span></div>
+                                <div className="text-pink-400/70 text-[10px] font-bold uppercase tracking-wider mb-1">Sugar Limit</div>
+                                <div className="text-2xl font-bold text-pink-400">{customTargets.sugar || 50} <span className="text-xs font-normal text-pink-400/70">g</span></div>
                             </div>
 
                             <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
                                 <div className="text-yellow-400/70 text-[10px] font-bold uppercase tracking-wider mb-1">Fats Target</div>
                                 <div className="text-2xl font-bold text-yellow-400">{customTargets.fats || 65} <span className="text-xs font-normal text-yellow-400/70">g</span></div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t border-white/10 text-xs">
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-[#38bdf8] text-sm">water_drop</span>
-                                <span>Water: <strong>{customTargets.water || 2.5} L</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-[#a5d391] text-sm">grass</span>
-                                <span>Fiber: <strong>{customTargets.fiber || 28} g</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-amber-400 text-sm">shield</span>
-                                <span>Iron: <strong>{customTargets.iron || 18} mg</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-purple-400 text-sm">medical_services</span>
-                                <span>Calcium: <strong>{customTargets.calcium || 1000} mg</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-yellow-300 text-sm">wb_sunny</span>
-                                <span>Vit D: <strong>{customTargets.vitD || 15} mcg</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-emerald-400 text-sm">nutrition</span>
-                                <span>Vit C: <strong>{customTargets.vitC || 90} mg</strong></span>
                             </div>
                         </div>
                     </div>
@@ -1448,16 +1425,16 @@ const Profile = () => {
                                 />
                             </div>
 
-                            {/* Carbs */}
+                            {/* Sugar */}
                             <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10">
-                                <div className="text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider mb-2">Carbs Target (g)</div>
+                                <div className="text-pink-400/70 text-[10px] font-bold uppercase tracking-wider mb-2">Sugar Limit (g)</div>
                                 <input
                                     type="number"
-                                    name="carbs"
-                                    value={customTargets.carbs}
+                                    name="sugar"
+                                    value={customTargets.sugar}
                                     onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-[#38bdf8]/40 px-3 py-2 rounded-xl text-xl font-bold text-[#38bdf8] outline-none focus:border-[#38bdf8]"
-                                    placeholder="e.g. 200"
+                                    className="w-full bg-white/5 border border-pink-400/40 px-3 py-2 rounded-xl text-xl font-bold text-pink-400 outline-none focus:border-pink-400"
+                                    placeholder="e.g. 50"
                                 />
                             </div>
 
@@ -1471,100 +1448,6 @@ const Profile = () => {
                                     onChange={handleCustomTargetChange}
                                     className="w-full bg-white/5 border border-yellow-400/40 px-3 py-2 rounded-xl text-xl font-bold text-yellow-400 outline-none focus:border-yellow-400"
                                     placeholder="e.g. 65"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Additional Micronutrient & Water Inputs Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t border-white/10 text-xs">
-                            {/* Water */}
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[#38bdf8] text-xs">water_drop</span>
-                                    <span>Water (L)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    name="water"
-                                    value={customTargets.water}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            {/* Fiber */}
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[#a5d391] text-xs">grass</span>
-                                    <span>Fiber (g)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="fiber"
-                                    value={customTargets.fiber}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            {/* Iron */}
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-amber-400 text-xs">shield</span>
-                                    <span>Iron (mg)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="iron"
-                                    value={customTargets.iron}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            {/* Calcium */}
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-purple-400 text-xs">medical_services</span>
-                                    <span>Calcium (mg)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="calcium"
-                                    value={customTargets.calcium}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            {/* Vit D */}
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-yellow-300 text-xs">wb_sunny</span>
-                                    <span>Vit D (mcg)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="vitD"
-                                    value={customTargets.vitD}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            {/* Vit C */}
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-emerald-400 text-xs">nutrition</span>
-                                    <span>Vit C (mg)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="vitC"
-                                    value={customTargets.vitC}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
                                 />
                             </div>
                         </div>

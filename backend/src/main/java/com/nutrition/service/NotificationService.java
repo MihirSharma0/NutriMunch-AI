@@ -2,33 +2,124 @@ package com.nutrition.service;
 
 import com.nutrition.dto.NotificationDto;
 import com.nutrition.entity.Notification;
+import com.nutrition.entity.Role;
 import com.nutrition.entity.User;
 import com.nutrition.repository.NotificationRepository;
 import com.nutrition.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final PlatformTransactionManager transactionManager;
 
-    public List<NotificationDto> getNotificationsForUser(Long userId) {
-        List<Notification> list = notificationRepository.findAllByOrderByCreatedAtDesc();
-        return list.stream().map(this::mapToDto).collect(Collectors.toList());
+    /**
+     * Server-generated alert for a system event (wallet credit, refund, appointment change...).
+     * Skipped when the recipient caused the event themselves. When called inside a transaction it is
+     * saved only after that transaction commits, in its own transaction, so a failed payment never
+     * produces an alert and a failed alert never rolls back a payment.
+     */
+    public void notifyUser(User recipient, Long senderId, String title, String message, String type, String icon, String path) {
+        if (recipient == null || recipient.getId() == null) return;
+        Long recipientId = recipient.getId();
+        if (Objects.equals(recipientId, senderId)) return;
+
+        Runnable save = () -> {
+            try {
+                TransactionTemplate tx = new TransactionTemplate(transactionManager);
+                tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                tx.executeWithoutResult(status -> {
+                    Notification n = new Notification();
+                    n.setUser(userRepository.getReferenceById(recipientId));
+                    if (senderId != null) n.setSender(userRepository.getReferenceById(senderId));
+                    n.setTitle(title);
+                    n.setMessage(message);
+                    n.setType(type != null ? type : "SYSTEM");
+                    n.setIcon(icon != null ? icon : "notifications");
+                    n.setPath(path);
+                    n.setReadStatus(false);
+                    notificationRepository.save(n);
+                });
+            } catch (Exception e) {
+                log.warn("Failed to create '{}' notification for user {}: {}", type, recipientId, e.getMessage());
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    save.run();
+                }
+            });
+        } else {
+            save.run();
+        }
     }
 
-    public NotificationDto sendNotification(NotificationDto dto) {
+    // Chat session sync records ride on this table; both chat participants must receive them, sender included
+    private static final String CHAT_TRANSPORT_TYPE = "CONSULTATION_MSG";
+    // Broadcasts (no recipient) of these types are aimed at nutritionists, not other patients
+    private static final List<String> NUTRITIONIST_BROADCAST_TYPES = List.of("CONSULTATION_CHAT", "CONSULTATION_REQUEST");
+
+    public List<NotificationDto> getNotificationsForUser(Long userId, Role role) {
+        List<Notification> list = notificationRepository.findAllByOrderByCreatedAtDesc();
+        return list.stream()
+                .filter(n -> isVisibleTo(n, userId, role))
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * A notification is shown to a user only when it is addressed to them (or to everyone)
+     * and was caused by someone else - users never get notified about their own actions.
+     */
+    private boolean isVisibleTo(Notification n, Long userId, Role role) {
+        if (userId == null) {
+            return false;
+        }
+        if (CHAT_TRANSPORT_TYPE.equals(n.getType())) {
+            // Chat sync copies go to staff and to the patient of that conversation (incl. their own copies)
+            if (role == Role.NUTRITIONIST || role == Role.ADMIN) return true;
+            return (n.getUser() != null && userId.equals(n.getUser().getId()))
+                    || (n.getSender() != null && userId.equals(n.getSender().getId()));
+        }
+        if (n.getSender() != null && userId.equals(n.getSender().getId())) {
+            return false;
+        }
+        if (n.getUser() != null) {
+            return userId.equals(n.getUser().getId());
+        }
+        if (NUTRITIONIST_BROADCAST_TYPES.contains(n.getType())) {
+            return role == Role.NUTRITIONIST || role == Role.ADMIN;
+        }
+        return true;
+    }
+
+    public NotificationDto sendNotification(NotificationDto dto, Long senderId) {
         Notification notification = new Notification();
-        
+        if (senderId != null) {
+            userRepository.findById(senderId).ifPresent(notification::setSender);
+        }
+
         Optional<User> uOpt = Optional.empty();
         if (dto.getUserEmail() != null && !dto.getUserEmail().trim().isEmpty()) {
             uOpt = userRepository.findByEmail(dto.getUserEmail().trim());
@@ -94,6 +185,9 @@ public class NotificationService {
             dto.setUserId(entity.getUser().getId());
             dto.setUserEmail(entity.getUser().getEmail());
             dto.setUserName(entity.getUser().getFirstName() != null ? entity.getUser().getFirstName() + " " + (entity.getUser().getLastName() != null ? entity.getUser().getLastName() : "") : entity.getUser().getEmail());
+        }
+        if (entity.getSender() != null) {
+            dto.setSenderId(entity.getSender().getId());
         }
         dto.setTitle(entity.getTitle());
         dto.setMessage(entity.getMessage());

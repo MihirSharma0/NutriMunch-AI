@@ -5,6 +5,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import ConsultationChatModal from '../../../components/ConsultationChatModal';
 import { normalizeAndDeduplicatePlans, getDeletedPlanIds, permanentlyDeleteDietPlan } from '../../../utils/dietPlanSync';
+import { ALLERGEN_OPTIONS, DIET_OPTIONS, planContainsAllergen, planMatchesDiet, parseAllergies } from '../../../utils/dietFilters';
 
 const DEFAULT_GENERAL_PLANS = [];
 
@@ -15,6 +16,9 @@ const DietPlans = () => {
     const [plansList, setPlansList] = useState([]);
     const [selectedPlanId, setSelectedPlanId] = useState(null);
     const [filterScope, setFilterScope] = useState('ALL'); // 'ALL', 'EXCLUSIVE', 'GENERAL'
+    const [avoidAllergens, setAvoidAllergens] = useState([]); // hide plans containing any of these
+    const [dietFilter, setDietFilter] = useState('ALL');
+    const [profilePrefs, setProfilePrefs] = useState({ allergies: [], dietType: null });
     const lastSeenTopIdRef = useRef(null);
 
     // Current User Profile Targets (for comparison preview)
@@ -56,6 +60,10 @@ const DietPlans = () => {
                     fats: res.data.fatsTarget || 65,
                     water: res.data.dailyWaterTargetLiters || 2.5,
                     fiber: res.data.dailyFiberTargetG || 25
+                });
+                setProfilePrefs({
+                    allergies: parseAllergies(res.data.allergies).filter(a => ALLERGEN_OPTIONS.some(o => o.id === a)),
+                    dietType: DIET_OPTIONS.some(o => o.id === res.data.dietType) ? res.data.dietType : null
                 });
             }
         }).catch(() => {
@@ -254,6 +262,15 @@ const DietPlans = () => {
     }
 
     // Active selected plan
+    // Plans shown in the grid after scope, allergen and diet filters
+    const visiblePlans = plansList.filter(plan => {
+        if (filterScope === 'EXCLUSIVE' && plan.scope !== 'EXCLUSIVE') return false;
+        if (filterScope === 'GENERAL' && plan.scope !== 'GENERAL') return false;
+        if (avoidAllergens.some(a => planContainsAllergen(plan, a))) return false;
+        if (dietFilter !== 'ALL' && !planMatchesDiet(plan, dietFilter)) return false;
+        return true;
+    });
+
     const selectedPlan = plansList.find(p => p.id === selectedPlanId) || (plansList.length > 0 ? plansList[0] : null);
     const isExclusiveActive = selectedPlan?.isExclusiveForUser || selectedPlan?.scope === 'EXCLUSIVE';
 
@@ -442,26 +459,79 @@ const DietPlans = () => {
                     </div>
                 </div>
 
+                {/* Allergies / Diet Filter */}
+                <div className="flex flex-col lg:flex-row lg:items-center gap-3 bg-black/40 p-3 rounded-2xl border border-white/10">
+                    <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                        <span className="text-[10px] font-mono uppercase text-white/40 font-bold mr-1 shrink-0">Avoid Allergens:</span>
+                        {ALLERGEN_OPTIONS.map(a => {
+                            const active = avoidAllergens.includes(a.id);
+                            return (
+                                <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() => setAvoidAllergens(prev => active ? prev.filter(x => x !== a.id) : [...prev, a.id])}
+                                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
+                                        active
+                                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                            : 'bg-white/5 text-white/60 border-white/10 hover:text-white hover:bg-white/10'
+                                    }`}
+                                >
+                                    {a.icon} {a.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-mono uppercase text-white/40 font-bold">Diet:</span>
+                        <select
+                            value={dietFilter}
+                            onChange={(e) => setDietFilter(e.target.value)}
+                            className="bg-[#080b12] border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white outline-none cursor-pointer"
+                        >
+                            <option value="ALL">All Diets</option>
+                            {DIET_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                        </select>
+                        {(profilePrefs.allergies.length > 0 || profilePrefs.dietType) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAvoidAllergens(profilePrefs.allergies);
+                                    setDietFilter(profilePrefs.dietType || 'ALL');
+                                }}
+                                className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30 hover:bg-[#a5d391]/25 transition-all cursor-pointer"
+                                title="Apply the allergies and diet type saved on your profile"
+                            >
+                                Use My Profile
+                            </button>
+                        )}
+                        {(avoidAllergens.length > 0 || dietFilter !== 'ALL') && (
+                            <button
+                                type="button"
+                                onClick={() => { setAvoidAllergens([]); setDietFilter('ALL'); }}
+                                className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-white/5 text-white/60 border border-white/10 hover:text-white transition-all cursor-pointer"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {plansList.filter(plan => {
-                        if (filterScope === 'EXCLUSIVE') return plan.scope === 'EXCLUSIVE';
-                        if (filterScope === 'GENERAL') return plan.scope === 'GENERAL';
-                        return true;
-                    }).length === 0 && (
+                    {visiblePlans.length === 0 && (
                         <div className="col-span-full p-10 text-center bg-white/5 border border-white/10 rounded-3xl space-y-3">
                             <span className="material-symbols-outlined text-4xl text-white/40">restaurant_menu</span>
                             <h4 className="text-white font-bold text-base">
-                                {plansList.length === 0 ? 'No Formulated Protocols Available' : 'No protocols found in this category'}
+                                {plansList.length === 0 ? 'No Formulated Protocols Available' : 'No protocols match your filters'}
                             </h4>
                             <p className="text-white/50 text-xs">
                                 {plansList.length === 0
                                     ? 'Your nutritionist has not deployed any clinical diet plans yet, or previous plans have been removed.'
-                                    : 'Switch to All Formulated Protocols to view your complete clinical library.'}
+                                    : 'Clear the category, allergy or diet filters to view your complete clinical library.'}
                             </p>
                             {plansList.length > 0 && (
                                 <button
                                     type="button"
-                                    onClick={() => setFilterScope('ALL')}
+                                    onClick={() => { setFilterScope('ALL'); setAvoidAllergens([]); setDietFilter('ALL'); }}
                                     className="px-5 py-2.5 bg-[#a5d391] text-black font-bold text-xs rounded-xl shadow-lg hover:bg-white transition-all cursor-pointer"
                                 >
                                     View All Protocols ({plansList.length})
@@ -470,12 +540,7 @@ const DietPlans = () => {
                         </div>
                     )}
 
-                    {plansList
-                        .filter(plan => {
-                            if (filterScope === 'EXCLUSIVE') return plan.scope === 'EXCLUSIVE';
-                            if (filterScope === 'GENERAL') return plan.scope === 'GENERAL';
-                            return true;
-                        })
+                    {visiblePlans
                         .map((plan) => {
                             const isSelected = plan.id === selectedPlanId;
                             const isExcl = plan.scope === 'EXCLUSIVE';

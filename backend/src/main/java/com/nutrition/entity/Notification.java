@@ -18,6 +18,11 @@ public class Notification {
     @JoinColumn(name = "user_id")
     private User user;
 
+    // The user whose action triggered this notification (never shown it themselves)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_id")
+    private User sender;
+
     @Column(nullable = false)
     private String title;
 

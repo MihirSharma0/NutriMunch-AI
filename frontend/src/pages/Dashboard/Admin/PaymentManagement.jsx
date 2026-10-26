@@ -772,10 +772,6 @@ const PaymentManagement = () => {
         .filter(t => String(t.status || '').toUpperCase() === 'LOW_BALANCE')
         .length;
 
-    const totalFailedOrCancelled = ledger
-        .filter(t => t.status === 'FAILED' || t.status === 'CANCELLED')
-        .length;
-
     const totalSystemLiquidity = recipients.reduce((sum, r) => sum + (parseFloat(r.balance) || 0), 0);
 
     return (
@@ -1178,17 +1174,9 @@ const PaymentManagement = () => {
                         className="text-left cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#a5d391] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c121e]"
                         title={isLedgerExpanded ? 'Collapse audit transaction ledger' : 'Expand audit transaction ledger'}
                     >
-                        <span className="text-[#a5d391] text-[10px] font-black uppercase tracking-widest block mb-1">
-                            Double-Entry Audit Record
-                        </span>
                         <h2 className="text-xl font-bold font-hero-display text-white flex items-center gap-2">
                             <span className="material-symbols-outlined text-[#a5d391]">receipt_long</span>
                             <span>Audit Transaction Ledger</span>
-                            {totalFailedOrCancelled > 0 && (
-                                <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                    {totalFailedOrCancelled} Failed / Cancelled
-                                </span>
-                            )}
                             <span className="material-symbols-outlined text-white/50 text-lg" aria-hidden="true">
                                 {isLedgerExpanded ? 'expand_less' : 'expand_more'}
                             </span>
@@ -1240,8 +1228,6 @@ const PaymentManagement = () => {
                             <option value="SUCCESS">Success Only</option>
                             <option value="HELD">Held in Escrow</option>
                             <option value="REFUNDED">Refunded</option>
-                            <option value="CANCELLED">Cancelled</option>
-                            <option value="FAILED">Failed</option>
                             <option value="LOW_BALANCE">Low Balance Blocked</option>
                         </select>
 
@@ -1314,13 +1300,12 @@ const PaymentManagement = () => {
                                 <th className="pb-3 px-3 text-emerald-400 font-bold">Credit (+)</th>
                                 <th className="pb-3 px-3">Status</th>
                                 <th className="pb-3 px-3">Balance Audit (Before → After)</th>
-                                <th className="pb-3 px-3">Audit Memo</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {filteredLedger.length === 0 ? (
                                 <tr>
-                                    <td colSpan="9" className="text-center py-8 text-white/40 text-xs">
+                                    <td colSpan="8" className="text-center py-8 text-white/40 text-xs">
                                         No ledger transactions match the active filter criteria.
                                     </td>
                                 </tr>
@@ -1340,7 +1325,7 @@ const PaymentManagement = () => {
                                         : '—';
 
                                     return (
-                                        <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors">
+                                        <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors" title={tx.notes || undefined}>
                                             {/* Reference */}
                                             <td className="py-3.5 px-3">
                                                 <div className="font-mono text-white font-semibold text-[11px]">
@@ -1536,11 +1521,6 @@ const PaymentManagement = () => {
                                                         )}
                                                     </div>
                                                 )}
-                                            </td>
-
-                                            {/* Notes */}
-                                            <td className="py-3.5 px-3 text-[11px] text-white/50 max-w-xs truncate" title={tx.notes}>
-                                                {tx.notes || '—'}
                                             </td>
                                         </tr>
                                     );
