@@ -1,6 +1,7 @@
 import React from 'react';
 import FAQ from './ContactSections/FAQ';
 
+
 const Contact = () => {
     return (
         <div className="relative pt-32 pb-24 flex flex-col w-full">
@@ -22,6 +23,7 @@ const Contact = () => {
                 </div>
 
                 <FAQ />
+
 
                 {/* Medical Disclaimer */}
                 <div className="max-w-4xl mx-auto mt-16 bg-[#ef4444]/10 border border-[#ef4444]/20 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-4 sm:gap-6 text-center md:text-left">

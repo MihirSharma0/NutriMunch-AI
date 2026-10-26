@@ -772,10 +772,6 @@ const PaymentManagement = () => {
         .filter(t => String(t.status || '').toUpperCase() === 'LOW_BALANCE')
         .length;
 
-    const totalFailedOrCancelled = ledger
-        .filter(t => t.status === 'FAILED' || t.status === 'CANCELLED')
-        .length;
-
     const totalSystemLiquidity = recipients.reduce((sum, r) => sum + (parseFloat(r.balance) || 0), 0);
 
     return (
@@ -1181,11 +1177,6 @@ const PaymentManagement = () => {
                         <h2 className="text-xl font-bold font-hero-display text-white flex items-center gap-2">
                             <span className="material-symbols-outlined text-[#a5d391]">receipt_long</span>
                             <span>Audit Transaction Ledger</span>
-                            {totalFailedOrCancelled > 0 && (
-                                <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                    {totalFailedOrCancelled} Failed / Cancelled
-                                </span>
-                            )}
                             <span className="material-symbols-outlined text-white/50 text-lg" aria-hidden="true">
                                 {isLedgerExpanded ? 'expand_less' : 'expand_more'}
                             </span>
@@ -1237,8 +1228,6 @@ const PaymentManagement = () => {
                             <option value="SUCCESS">Success Only</option>
                             <option value="HELD">Held in Escrow</option>
                             <option value="REFUNDED">Refunded</option>
-                            <option value="CANCELLED">Cancelled</option>
-                            <option value="FAILED">Failed</option>
                             <option value="LOW_BALANCE">Low Balance Blocked</option>
                         </select>
 
