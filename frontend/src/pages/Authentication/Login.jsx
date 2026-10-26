@@ -31,12 +31,21 @@ const Login = () => {
     const { login, googleLogin } = useContext(AuthContext);
     const navigate = useNavigate();
 
+    // Return to the page the visitor originally requested (same-site paths only)
+    const getPostLoginUrl = (role) => {
+        const redirect = new URLSearchParams(window.location.search).get('redirect');
+        if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+            return redirect;
+        }
+        return getDashboardUrl(role);
+    };
+
     const handleGoogleLoginSuccess = async (tokenResponse) => {
         try {
             const credential = tokenResponse.access_token;
             const result = await googleLogin(credential);
             if (result.success) {
-                navigate(getDashboardUrl(result.role));
+                navigate(getPostLoginUrl(result.role));
             } else if (result.requiresRole) {
                 setPendingGoogleCredential(credential);
                 setRequiresRoleSelection(true);
@@ -61,7 +70,7 @@ const Login = () => {
         try {
             const result = await googleLogin(pendingGoogleCredential, 'USER', {});
             if (result.success) {
-                navigate(getDashboardUrl(result.role));
+                navigate(getPostLoginUrl(result.role));
             } else {
                 setError(result.message);
             }
@@ -91,7 +100,7 @@ const Login = () => {
         try {
             const result = await googleLogin(pendingGoogleCredential, selectedRole, profileData);
             if (result.success) {
-                navigate(getDashboardUrl(result.role));
+                navigate(getPostLoginUrl(result.role));
             } else {
                 setError(result.message);
             }
@@ -110,7 +119,7 @@ const Login = () => {
         setError('');
         const result = await login(email, password);
         if (result.success) {
-            navigate(getDashboardUrl(result.role));
+            navigate(getPostLoginUrl(result.role));
         } else {
             setError(result.message);
         }

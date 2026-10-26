@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import { API_BASE_URL } from '../../../api/axios';
 import ConsultationChatModal from '../../../components/ConsultationChatModal';
+import { getConsultationOutcome, isHistoryOutcome, OUTCOME_BADGES, describePayment } from '../../../utils/consultationHistory';
 
 const AppointmentManagement = () => {
     const { user, token } = useContext(AuthContext);
@@ -21,6 +22,16 @@ const AppointmentManagement = () => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [chatTargetPatient, setChatTargetPatient] = useState(null);
     const [cancellationDisclaimer, setCancellationDisclaimer] = useState('No money will be refunded');
+
+    // Consultation History (finished sessions)
+    const [historyFilter, setHistoryFilter] = useState('ALL');
+    const [historySearch, setHistorySearch] = useState('');
+    const location = useLocation();
+    useEffect(() => {
+        if (location.hash !== '#consultation-history' || loading) return;
+        const el = document.getElementById('consultation-history');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, [location.hash, loading]);
 
     const handleOpenChatFromAppointment = (patientObj) => {
         const target = {
@@ -425,6 +436,27 @@ const AppointmentManagement = () => {
         return true;
     });
 
+    const historyItems = eventsList
+        .map(ev => ({ ev, outcome: getConsultationOutcome(ev) }))
+        .filter(({ outcome }) => isHistoryOutcome(outcome))
+        .sort((a, b) => new Date(b.ev.appointmentTime) - new Date(a.ev.appointmentTime));
+    const historyCount = (key) => key === 'ALL' ? historyItems.length : historyItems.filter(h => h.outcome === key).length;
+    const visibleHistory = historyItems.filter(({ ev, outcome }) => {
+        if (historyFilter !== 'ALL' && outcome !== historyFilter) return false;
+        const q = historySearch.trim().toLowerCase();
+        return !q || String(ev.userName || '').toLowerCase().includes(q) || String(ev.title || '').toLowerCase().includes(q);
+    });
+
+    const openChatWithPatient = (ev) => {
+        setChatTargetPatient({
+            id: String(ev.userId || ''),
+            userId: String(ev.userId || ''),
+            name: ev.userName || 'Patient',
+            email: ev.userEmail || ''
+        });
+        setIsChatOpen(true);
+    };
+
     return (
         <div className="w-full relative space-y-6">
 
@@ -666,6 +698,109 @@ const AppointmentManagement = () => {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* Consultation History: finished sessions with outcome, payment and quick actions */}
+            <div id="consultation-history" className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl scroll-mt-28">
+                <div className="p-6 border-b border-white/10 bg-[#080b12]/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <h2 className="text-xl font-bold font-hero-display text-white flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#a5d391]">history</span>
+                            Consultation History ({historyItems.length})
+                        </h2>
+                        <p className="text-white/50 text-xs mt-1">Completed, cancelled, declined and expired sessions with your patients.</p>
+                    </div>
+                    <div className="relative lg:w-64">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-lg">search</span>
+                        <input
+                            type="text"
+                            value={historySearch}
+                            onChange={(e) => setHistorySearch(e.target.value)}
+                            placeholder="Search patient or topic"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-3 py-2 text-xs text-white placeholder:text-white/40 outline-none focus:border-[#a5d391]/50"
+                        />
+                    </div>
+                </div>
+
+                <div className="px-6 py-3 border-b border-white/5 flex items-center gap-2 overflow-x-auto">
+                    {[
+                        { key: 'ALL', label: 'All' },
+                        { key: 'COMPLETED', label: 'Completed' },
+                        { key: 'CANCELLED', label: 'Cancelled' },
+                        { key: 'DECLINED', label: 'Declined' },
+                        { key: 'EXPIRED', label: 'Expired Requests' }
+                    ].map(f => (
+                        <button
+                            key={f.key}
+                            type="button"
+                            onClick={() => setHistoryFilter(f.key)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${historyFilter === f.key ? 'bg-[#a5d391] text-black shadow-md' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                            {f.label}
+                            <span className={`px-1.5 rounded-full text-[10px] ${historyFilter === f.key ? 'bg-black/15' : 'bg-white/10'}`}>{historyCount(f.key)}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {visibleHistory.length === 0 ? (
+                    <div className="py-12 text-center text-white/40 text-xs space-y-2">
+                        <span className="material-symbols-outlined text-3xl text-white/20 block">history</span>
+                        <p>{historyItems.length === 0 ? 'No past consultations yet. Finished sessions will appear here.' : 'No consultations match this filter.'}</p>
+                    </div>
+                ) : (
+                    <div className="divide-y divide-white/5">
+                        {visibleHistory.map(({ ev, outcome }) => {
+                            const badge = OUTCOME_BADGES[outcome];
+                            const payment = describePayment(ev);
+                            return (
+                                <div key={ev.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors">
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className="w-10 h-10 rounded-full bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center font-bold text-xs shrink-0">
+                                            {String(ev.userName || 'P').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="text-sm font-bold text-white truncate">{ev.userName || 'Patient'} <span className="text-white/40 font-normal">· {ev.title || 'Clinical Consultation'}</span></div>
+                                            <div className="text-xs text-white/50 flex items-center gap-1.5 flex-wrap">
+                                                <span>{formatApptTime(ev.appointmentTime)}</span>
+                                                <span>•</span>
+                                                <span>{ev.sessionType || 'Consultation'}</span>
+                                                {payment && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span className="text-white/70">₹{payment.amount.toFixed(2)}{payment.state ? ` ${payment.state}` : ''}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1 ${badge.style}`}>
+                                            <span className="material-symbols-outlined text-xs">{badge.icon}</span>
+                                            {badge.label}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedEvent(ev)}
+                                            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 text-xs font-bold cursor-pointer"
+                                        >
+                                            Details
+                                        </button>
+                                        {ev.userId && (
+                                            <button
+                                                type="button"
+                                                onClick={() => openChatWithPatient(ev)}
+                                                className="px-3 py-1.5 rounded-xl bg-[#a5d391]/15 hover:bg-[#a5d391]/25 border border-[#a5d391]/30 text-[#a5d391] text-xs font-bold cursor-pointer flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">chat</span>
+                                                Message
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* Modal: Event Session Details & Complete Patient Profile Dossier */}

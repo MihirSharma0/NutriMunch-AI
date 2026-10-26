@@ -332,17 +332,20 @@ public class AuthService {
     }
 
     public void requestPasswordReset(String email) {
-        User user = userRepository.findByEmail(email).orElse(null);
-        if (user != null) {
-            String token = UUID.randomUUID().toString();
-            PasswordResetToken resetToken = new PasswordResetToken();
-            resetToken.setToken(token);
-            resetToken.setUser(user);
-            resetToken.setExpiryDate(LocalDateTime.now().plusHours(1));
-            passwordResetTokenRepository.save(resetToken);
+        String normalizedEmail = email.toLowerCase().trim();
+        User user = userRepository.findByEmail(normalizedEmail)
+                .or(() -> userRepository.findByEmail(email.trim()))
+                .orElseThrow(() -> new RuntimeException("This email is not registered. Please enter the email you signed up with."));
 
-            mailService.sendPasswordResetEmail(user.getEmail(), token);
-        }
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setToken(token);
+        resetToken.setUser(user);
+        resetToken.setExpiryDate(LocalDateTime.now().plusHours(1));
+        passwordResetTokenRepository.save(resetToken);
+
+        // Always send to the email stored on the account, never the raw input
+        mailService.sendPasswordResetEmail(user.getEmail(), token);
     }
 
     public boolean resetPassword(String token, String newPassword) {

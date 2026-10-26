@@ -26,6 +26,7 @@ public class WalletService {
     private final UserRepository userRepository;
     private final RazorpayService razorpayService;
     private final WalletSseService walletSseService;
+    private final NotificationService notificationService;
 
     public Wallet getOrCreateWallet(User user) {
         if (user == null || user.getId() == null) {
@@ -264,6 +265,7 @@ public class WalletService {
         ssePayload.put("status", "SUCCESS");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+        notifyWallet(recipient, admin != null ? admin.getId() : null, "Wallet Credited", String.format("₹%.2f was added to your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), receiverBalanceAfter));
 
         // Stream real-time update to live admin ledger
         walletSseService.broadcastToAdmins(Map.of(
@@ -344,6 +346,8 @@ public class WalletService {
             ssePayload.put("status", "SUCCESS");
             ssePayload.put("transaction", txMap);
             walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+            notifyWallet(recipient, admin != null ? admin.getId() : null, diff.signum() > 0 ? "Wallet Credited" : "Wallet Balance Adjusted",
+                    String.format("Your wallet balance was %s by ₹%.2f by the NutriMunch team. New balance: ₹%.2f", diff.signum() > 0 ? "increased" : "reduced", diff.abs(), targetBalance));
 
             walletSseService.broadcastToAdmins(Map.of(
                     "type", "LEDGER_UPDATED",
@@ -408,6 +412,7 @@ public class WalletService {
         ssePayload.put("status", "SUCCESS");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+        notifyWallet(recipient, admin != null ? admin.getId() : null, "Wallet Credited", String.format("₹%.2f was added to your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), after));
 
         walletSseService.broadcastToAdmins(Map.of(
                 "type", "LEDGER_UPDATED",
@@ -477,6 +482,7 @@ public class WalletService {
         ssePayload.put("status", "completed");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+        notifyWallet(recipient, admin != null ? admin.getId() : null, "Wallet Credited", String.format("₹%.2f was added to your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), after));
 
         walletSseService.broadcastToAdmins(Map.of(
                 "type", "LEDGER_UPDATED",
@@ -542,6 +548,7 @@ public class WalletService {
         ssePayload.put("status", "SUCCESS");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+        notifyWallet(recipient, admin != null ? admin.getId() : null, "Bonus Credit Received", String.format("₹%.2f bonus credit was added to your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), after));
 
         walletSseService.broadcastToAdmins(Map.of(
                 "type", "LEDGER_UPDATED",
@@ -610,6 +617,7 @@ public class WalletService {
         ssePayload.put("status", "SUCCESS");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
+        notifyWallet(recipient, admin != null ? admin.getId() : null, "Wallet Deduction", String.format("₹%.2f was deducted from your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), after));
 
         walletSseService.broadcastToAdmins(Map.of(
                 "type", "LEDGER_UPDATED",
@@ -814,6 +822,7 @@ public class WalletService {
         nutriPayload.put("status", "SUCCESS");
         nutriPayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(nutritionist.getId(), nutritionist.getEmail(), nutriPayload);
+        notifyWallet(nutritionist, sender.getId(), "Payment Received", String.format("You received ₹%.2f from %s for \"%s\". New balance: ₹%.2f", servicePrice, displayName(sender), serviceName, receiverBalanceAfter));
 
         // Stream to admin ledger
         walletSseService.broadcastToAdmins(Map.of(
@@ -887,5 +896,18 @@ public class WalletService {
         }
 
         return map;
+    }
+
+    private void notifyWallet(User recipient, Long actorId, String title, String message) {
+        notificationService.notifyUser(recipient, actorId, title, message, "WALLET", "account_balance_wallet", "/transactions");
+    }
+
+    private static String noteSuffix(String notes) {
+        return notes != null && !notes.isBlank() ? " (" + notes.trim() + ")" : "";
+    }
+
+    private static String displayName(User u) {
+        String name = ((u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : "")).trim();
+        return name.isEmpty() ? u.getEmail() : name;
     }
 }

@@ -184,6 +184,7 @@ const DietPlanManagement = () => {
 
             // Dispatch notification with direct link to /diet-plans
             const promoNotif = {
+                senderId: String(user?.id || user?.userId || ''),
                 id: `diet_notif_${Date.now()}`,
                 title: `Platform Active Protocol Promoted`,
                 message: `Nutritional Protocol "${plan.title || plan.planTitle}" has been promoted to the Active Platform Protocol!`,

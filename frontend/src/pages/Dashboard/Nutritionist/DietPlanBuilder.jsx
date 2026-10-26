@@ -524,6 +524,7 @@ const DietPlanBuilder = () => {
 
                 // Dispatch notification for all platform users
                 const generalNotif = {
+                    senderId: String(user?.id || user?.userId || ''),
                     id: `diet_notif_${Date.now()}`,
                     title: `New Nutritional Protocol Published`,
                     message: `Nutritionist ${nutritionistName} published a new nutritional protocol: "${planForm.planTitle}". Check your diet plans to link it.`,
@@ -589,6 +590,7 @@ const DietPlanBuilder = () => {
 
                 // Dispatch notification for targeted user with direct deep link
                 const planNotification = {
+                    senderId: String(user?.id || user?.userId || ''),
                     id: `plan_notif_${Date.now()}`,
                     title: `Exclusive Diet Plan Formulated`,
                     message: `Nutritionist ${nutritionistName} formulated an exclusive diet plan: "${planForm.planTitle}". Review and link to your daily requirements.`,
