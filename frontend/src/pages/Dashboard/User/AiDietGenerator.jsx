@@ -12,9 +12,7 @@ const PREDEFINED_GOALS = [
 
 const PREDEFINED_RESTRICTIONS = [
   'Peanuts', 'Tree Nuts', 'Milk / Dairy', 'Eggs', 'Soy', 'Wheat / Gluten',
-  'Fish', 'Shellfish', 'Sesame', 'Vegetarian', 'Vegan', 'Jain Diet',
-  'Gluten-Free', 'Lactose-Free', 'Dairy-Free', 'Halal', 'Kosher',
-  'Keto', 'Paleo', 'Low-Sodium', 'Low-Sugar / Diabetic-Friendly', 'FODMAP',
+  'Fish', 'Shellfish', 'Sesame', 'Vegetarian',
 ];
 
 /* ─── SVG Icon helpers (no external font needed) ───────────────────── */

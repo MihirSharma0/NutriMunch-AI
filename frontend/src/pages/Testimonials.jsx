@@ -1,7 +1,6 @@
 import React from 'react';
 import Starfield from '../components/Starfield';
 import ClientTestimonials from './HomeSections/ClientTestimonials';
-import BeforeAfterGallery from './TestimonialSections/BeforeAfterGallery';
 import ShareYourStoryForm from './TestimonialSections/ShareYourStoryForm';
 
 const Testimonials = () => {
@@ -29,7 +28,6 @@ const Testimonials = () => {
 
                 {/* Appended Sections */}
                 <ShareYourStoryForm />
-                <BeforeAfterGallery />
             </div>
         </div>
     );
