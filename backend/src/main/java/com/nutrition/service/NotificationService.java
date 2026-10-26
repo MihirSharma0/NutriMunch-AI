@@ -75,15 +75,10 @@ public class NotificationService {
         }
     }
 
-    // Chat session sync records ride on this table; both chat participants must receive them, sender included
-    private static final String CHAT_TRANSPORT_TYPE = "CONSULTATION_MSG";
-    // Broadcasts (no recipient) of these types are aimed at nutritionists, not other patients
-    private static final List<String> NUTRITIONIST_BROADCAST_TYPES = List.of("CONSULTATION_CHAT", "CONSULTATION_REQUEST");
-
     public List<NotificationDto> getNotificationsForUser(Long userId, Role role) {
-        List<Notification> list = notificationRepository.findAllByOrderByCreatedAtDesc();
+        List<Notification> list = notificationRepository.findByUserIdOrUserIsNullOrderByCreatedAtDesc(userId);
         return list.stream()
-                .filter(n -> isVisibleTo(n, userId, role))
+                .filter(n -> isVisibleTo(n, userId))
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
@@ -92,15 +87,9 @@ public class NotificationService {
      * A notification is shown to a user only when it is addressed to them (or to everyone)
      * and was caused by someone else - users never get notified about their own actions.
      */
-    private boolean isVisibleTo(Notification n, Long userId, Role role) {
+    private boolean isVisibleTo(Notification n, Long userId) {
         if (userId == null) {
             return false;
-        }
-        if (CHAT_TRANSPORT_TYPE.equals(n.getType())) {
-            // Chat sync copies go to staff and to the patient of that conversation (incl. their own copies)
-            if (role == Role.NUTRITIONIST || role == Role.ADMIN) return true;
-            return (n.getUser() != null && userId.equals(n.getUser().getId()))
-                    || (n.getSender() != null && userId.equals(n.getSender().getId()));
         }
         if (n.getSender() != null && userId.equals(n.getSender().getId())) {
             return false;
@@ -108,13 +97,13 @@ public class NotificationService {
         if (n.getUser() != null) {
             return userId.equals(n.getUser().getId());
         }
-        if (NUTRITIONIST_BROADCAST_TYPES.contains(n.getType())) {
-            return role == Role.NUTRITIONIST || role == Role.ADMIN;
-        }
-        return true;
+        return n.getUser() == null;
     }
 
     public NotificationDto sendNotification(NotificationDto dto, Long senderId) {
+        if (List.of("CONSULTATION_MSG", "CONSULTATION_CHAT", "CONSULTATION_REQUEST").contains(dto.getType())) {
+            throw new IllegalArgumentException("Consultation messages must use the conversation messaging API");
+        }
         Notification notification = new Notification();
         if (senderId != null) {
             userRepository.findById(senderId).ifPresent(notification::setSender);
@@ -141,18 +130,22 @@ public class NotificationService {
         return mapToDto(saved);
     }
 
-    public void markAsRead(Long notificationId) {
+    public void markAsRead(Long notificationId, Long userId) {
         Optional<Notification> nOpt = notificationRepository.findById(notificationId);
         nOpt.ifPresent(n -> {
+            if (n.getUser() == null || !Objects.equals(n.getUser().getId(), userId)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "Notification is not owned by user");
+            }
             n.setReadStatus(true);
             notificationRepository.save(n);
         });
     }
 
     public void markAllAsReadForUser(Long userId) {
-        List<Notification> list = (userId != null)
-                ? notificationRepository.findByUserIdOrUserIsNullOrderByCreatedAtDesc(userId)
-                : notificationRepository.findAllByOrderByCreatedAtDesc();
+        List<Notification> list = userId != null
+                ? notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                : List.of();
         for (Notification n : list) {
             if (!n.isReadStatus()) {
                 n.setReadStatus(true);
@@ -161,10 +154,14 @@ public class NotificationService {
         }
     }
 
-    public void deleteNotification(Long notificationId) {
-        if (notificationRepository.existsById(notificationId)) {
-            notificationRepository.deleteById(notificationId);
+    public void deleteNotification(Long notificationId, Long userId) {
+        Notification n = notificationRepository.findById(notificationId).orElseThrow(() ->
+                new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND));
+        if (n.getUser() == null || !Objects.equals(n.getUser().getId(), userId)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Notification is not owned by user");
         }
+        notificationRepository.delete(n);
     }
 
     public void deleteAllNotificationsForUser(Long userId) {

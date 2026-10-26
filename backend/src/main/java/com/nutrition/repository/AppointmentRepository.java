@@ -14,6 +14,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByNutritionistIdOrderByAppointmentTimeDesc(Long nutritionistId);
     List<Appointment> findByNutritionistIdOrNutritionistIsNullOrderByAppointmentTimeDesc(Long nutritionistId);
     List<Appointment> findAllByOrderByAppointmentTimeDesc();
+    Optional<Appointment> findFirstByUserIdOrderByAppointmentTimeDesc(Long userId);
+    Optional<Appointment> findFirstByNutritionistIdAndUserIdOrderByAppointmentTimeDesc(Long nutritionistId, Long userId);
     void deleteByUserId(Long userId);
     void deleteByNutritionistId(Long nutritionistId);
 

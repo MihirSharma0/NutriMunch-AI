@@ -35,10 +35,11 @@ const AppointmentManagement = () => {
 
     const handleOpenChatFromAppointment = (patientObj) => {
         const target = {
-            id: selectedEvent?.userId || patientObj?.userId || patientObj?.id || '442',
-            userId: selectedEvent?.userId || patientObj?.userId || patientObj?.id || '442',
+            id: selectedEvent?.userId || patientObj?.userId || patientObj?.id || '',
+            userId: selectedEvent?.userId || patientObj?.userId || patientObj?.id || '',
             name: selectedEvent?.patientName || patientObj?.name || 'Patient',
-            email: selectedEvent?.userEmail || patientObj?.email || ''
+            email: selectedEvent?.userEmail || patientObj?.email || '',
+            appointmentId: selectedEvent?.id
         };
         setChatTargetPatient(target);
         setIsChatOpen(true);
@@ -452,7 +453,8 @@ const AppointmentManagement = () => {
             id: String(ev.userId || ''),
             userId: String(ev.userId || ''),
             name: ev.userName || 'Patient',
-            email: ev.userEmail || ''
+            email: ev.userEmail || '',
+            appointmentId: ev.id
         });
         setIsChatOpen(true);
     };

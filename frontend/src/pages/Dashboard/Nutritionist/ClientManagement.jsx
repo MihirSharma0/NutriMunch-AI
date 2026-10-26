@@ -6,21 +6,14 @@ import { ALLERGEN_OPTIONS, DIET_OPTIONS, parseAllergies } from '../../../utils/d
 const ClientManagement = () => {
     const { user, token } = useContext(AuthContext);
     const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Certified Nutritionist');
-    const initialClients = [
-        { id: "442", name: "David Miller", email: "david.m@example.com", role: "USER", roleBadge: "User", age: 45, goal: "Diabetes Management", adherence: 82, status: "Critical", lastSync: "10m ago", weight: "88 kg", glucose: "142 mg/dL", calories: "1,950 kcal", protein: "140g", carbs: "160g", fats: "55g", notes: "Monitored insulin spike post-lunch. Adjusted carb threshold." },
-        { id: "8472", name: "Marcus Chen", email: "marcus.c@example.com", role: "USER", roleBadge: "User", age: 32, goal: "Lipid Oxidation & Endurance", adherence: 94, status: "Optimal", lastSync: "5m ago", weight: "76 kg", glucose: "92 mg/dL", calories: "2,650 kcal", protein: "175g", carbs: "310g", fats: "65g", notes: "VO2 max training phase. Excellent carbohydrate timing." },
-        { id: "102", name: "Elena Rodriguez", email: "elena.r@example.com", role: "USER", roleBadge: "User", age: 38, goal: "Hormonal Balance & PCOS", adherence: 91, status: "Optimal", lastSync: "1d ago", weight: "61 kg", glucose: "95 mg/dL", calories: "1,850 kcal", protein: "130g", carbs: "170g", fats: "58g", notes: "Consistent REM sleep. Micronutrient balance optimal." },
-        { id: "553", name: "James Wilson", email: "james.w@example.com", role: "USER", roleBadge: "User", age: 51, goal: "Cardiovascular Health", adherence: 88, status: "Good", lastSync: "4h ago", weight: "82 kg", glucose: "110 mg/dL", calories: "2,100 kcal", protein: "150g", carbs: "200g", fats: "60g", notes: "Sodium intake reduced by 15%. Blood pressure stable." },
-    ];
-
-    const [clientsList, setClientsList] = useState(initialClients);
+    const [clientsList, setClientsList] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [rosterError, setRosterError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [allergyFilter, setAllergyFilter] = useState('ALL'); // 'ALL' | 'NONE' | allergen id
     const [dietFilter, setDietFilter] = useState('ALL');
     const [selectedClient, setSelectedClient] = useState(null);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [notification, setNotification] = useState(null);
 
     useEffect(() => {
@@ -38,9 +31,9 @@ const ClientManagement = () => {
             setLoading(true);
             // Fetch live user profiles with updated biometrics, goals, and macro targets
             const response = await api.get('/admin/all-user-profiles');
-            if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+            if (response.data && Array.isArray(response.data)) {
                 const fetchedClients = response.data.map(p => {
-                    const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'Patient User');
+                    const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'User');
                     const weightStr = p.weightKg != null && p.weightKg > 0 ? `${p.weightKg} kg` : 'Not Logged';
                     const caloriesStr = p.dailyCaloriesTarget != null && p.dailyCaloriesTarget > 0 ? `${p.dailyCaloriesTarget.toLocaleString()} kcal` : 'Not Set';
                     const proteinStr = p.proteinTarget != null && p.proteinTarget > 0 ? `${p.proteinTarget}g` : 'Not Set';
@@ -55,16 +48,16 @@ const ClientManagement = () => {
                     return {
                         id: String(p.userId || p.id),
                         name: name,
-                        email: p.email || 'patient@nutrimunch.com',
+                        email: p.email || '',
                         role: 'USER',
                         roleBadge: 'User',
-                        age: p.age || 25,
-                        goal: p.goal || 'General Health & Nutrition',
-                        adherence: p.adherence || 90,
-                        status: p.status || 'Optimal',
+                        age: p.age ?? 'Not set',
+                        goal: p.goal || 'No goal set',
+                        adherence: p.adherence ?? null,
+                        status: p.status || 'Not assessed',
                         lastSync: lastSyncStr,
                         weight: weightStr,
-                        glucose: '95 mg/dL',
+                        glucose: 'Not logged',
                         calories: caloriesStr,
                         protein: proteinStr,
                         carbs: carbsStr,
@@ -75,58 +68,20 @@ const ClientManagement = () => {
                     };
                 });
                 
-                setClientsList(fetchedClients);
+                setClientsList(fetchedClients.filter(client => client.id && client.role === 'USER'));
+                setRosterError('');
+            } else {
+                setClientsList([]);
+                setRosterError('Patient service returned an invalid response.');
             }
         } catch (error) {
-            console.error("Falling back to /admin/all-users endpoint", error);
-            try {
-                const fallbackResponse = await api.get('/admin/all-users');
-                if (fallbackResponse.data && Array.isArray(fallbackResponse.data)) {
-                    const patientOnlyUsers = fallbackResponse.data.filter(u => {
-                        const r = u.role ? String(u.role).toUpperCase().replace('ROLE_', '') : 'USER';
-                        return r === 'USER';
-                    });
-                    const fallbackClients = patientOnlyUsers.map(u => ({
-                        id: String(u.id),
-                        name: u.firstName || u.lastName ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : (u.email ? u.email.split('@')[0] : 'User'),
-                        email: u.email || 'patient@nutrimunch.com',
-                        role: 'USER',
-                        roleBadge: 'User',
-                        age: 28,
-                        goal: 'General Health & AI Calibrated Diet',
-                        adherence: 88,
-                        status: u.verified || u.enabled ? 'Optimal' : 'Good',
-                        lastSync: u.verified || u.enabled ? 'Verified Account' : 'Pending OTP',
-                        weight: 'Not Logged',
-                        glucose: '95 mg/dL',
-                        calories: 'Not Set',
-                        protein: 'Not Set',
-                        carbs: 'Not Set',
-                        fats: 'Not Set',
-                        notes: 'Registered platform user.'
-                    }));
-                    setClientsList(fallbackClients);
-                }
-            } catch (err) {
-                console.error("Failed loading fallback users", err);
-            }
+            console.error("Failed loading patient roster", error);
+            setClientsList([]);
+            setRosterError('Unable to load patients. Check your connection and retry.');
         } finally {
             setLoading(false);
         }
     };
-
-    // New Patient Form State
-    const [newClient, setNewClient] = useState({
-        name: '',
-        email: '',
-        age: '',
-        goal: '',
-        status: 'Optimal',
-        adherence: 90,
-        weight: '70 kg',
-        glucose: '95 mg/dL',
-        calories: '2,000 kcal'
-    });
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -158,27 +113,6 @@ const ClientManagement = () => {
 
         return matchesSearch && matchesStatus && matchesAllergy && matchesDiet;
     });
-
-    const handleAddClientSubmit = (e) => {
-        e.preventDefault();
-        if (!newClient.name.trim() || !newClient.goal.trim()) return;
-
-        const created = {
-            ...newClient,
-            id: String(Math.floor(1000 + Math.random() * 9000)),
-            role: 'USER',
-            roleBadge: 'User',
-            lastSync: 'Just now',
-            notes: 'Initial clinical assessment assigned.'
-        };
-
-        setClientsList([created, ...clientsList]);
-        setIsAddModalOpen(false);
-        setNewClient({ name: '', email: '', age: '', goal: '', status: 'Optimal', adherence: 90, weight: '70 kg', glucose: '95 mg/dL', calories: '2,000 kcal' });
-        
-        setNotification('Patient successfully added to clinical roster.');
-        setTimeout(() => setNotification(null), 3500);
-    };
 
     const [directiveText, setDirectiveText] = useState('');
 
@@ -281,14 +215,6 @@ const ClientManagement = () => {
                         />
                     </div>
 
-                    {/* Add Patient Button */}
-                    <button 
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl hover:bg-white transition-all shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer flex items-center gap-2 shrink-0"
-                    >
-                        <span className="material-symbols-outlined text-sm">person_add</span>
-                        Add Patient
-                    </button>
                 </div>
             </div>
 
@@ -345,9 +271,17 @@ const ClientManagement = () => {
             {/* Table Container */}
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
                 {loading ? (
-                    <div className="p-12 text-center text-white/60 font-mono">
-                        <span className="material-symbols-outlined animate-spin text-3xl text-[#a5d391] mb-2 block">progress_activity</span>
-                        Fetching real patient roster...
+                    <div className="p-12 flex flex-col items-center justify-center gap-4 text-center">
+                        <div className="relative w-16 h-16">
+                            <div className="absolute inset-0 rounded-full border-2 border-[#a5d391]/15" />
+                            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#a5d391] animate-spin" />
+                            <span className="material-symbols-outlined absolute inset-0 flex items-center justify-center text-[#a5d391]">clinical_notes</span>
+                            <div className="absolute -inset-2 rounded-full border border-cyan-400/20 animate-ping" />
+                        </div>
+                        <div>
+                            <p className="text-white font-semibold">Finding your patients</p>
+                            <p className="text-white/45 text-xs mt-1">Securely loading live patient profiles…</p>
+                        </div>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -366,7 +300,12 @@ const ClientManagement = () => {
                                 {filteredClients.length === 0 ? (
                                     <tr>
                                         <td colSpan="6" className="p-12 text-center text-white/40 text-sm">
-                                            No users or patients match your search or filter criteria.
+                                            {rosterError ? (
+                                                <div className="space-y-3">
+                                                    <p className="text-rose-300">{rosterError}</p>
+                                                    <button type="button" onClick={fetchRealUsers} className="rounded-lg bg-white/10 px-4 py-2 text-white hover:bg-white/15">Retry</button>
+                                                </div>
+                                            ) : clientsList.length === 0 ? 'No patient profiles are available yet.' : 'No patients match your search or filter criteria.'}
                                         </td>
                                     </tr>
                                 ) : (
@@ -390,12 +329,12 @@ const ClientManagement = () => {
                                         <td className="p-5">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-20 h-2 bg-white/10 rounded-full overflow-hidden">
-                                                    <div 
-                                                        className={`h-full ${client.adherence >= 85 ? 'bg-[#a5d391]' : client.adherence >= 70 ? 'bg-yellow-400' : 'bg-red-400'}`} 
+                                                    {client.adherence != null && <div
+                                                className={`h-full ${client.adherence >= 85 ? 'bg-[#a5d391]' : client.adherence >= 70 ? 'bg-yellow-400' : 'bg-red-400'}`}
                                                         style={{ width: `${client.adherence}%` }}
-                                                    ></div>
+                                                    />}
                                                 </div>
-                                                <span className="text-xs font-bold text-white/80">{client.adherence}%</span>
+                                                <span className="text-xs font-bold text-white/80">{client.adherence == null ? 'Not set' : `${client.adherence}%`}</span>
                                             </div>
                                         </td>
                                         <td className="p-5">
@@ -542,103 +481,6 @@ const ClientManagement = () => {
                 </div>
             )}
 
-            {/* Modal: Add Patient */}
-            {isAddModalOpen && (
-                <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/20 rounded-3xl p-5 sm:p-6 max-w-md w-full relative shadow-2xl space-y-4 my-auto">
-                        <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                            <h3 className="text-base font-bold text-white flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[#a5d391] text-lg">person_add</span>
-                                Enroll Patient to Clinical Roster
-                            </h3>
-                            <button onClick={() => setIsAddModalOpen(false)} className="text-white/50 hover:text-white cursor-pointer">
-                                <span className="material-symbols-outlined text-base">close</span>
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleAddClientSubmit} className="space-y-3">
-                            <div>
-                                <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Full Name</label>
-                                <input 
-                                    type="text" 
-                                    value={newClient.name} 
-                                    onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#a5d391]" 
-                                    placeholder="e.g. Alex Morgan"
-                                    required 
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Email Address</label>
-                                <input 
-                                    type="email" 
-                                    value={newClient.email} 
-                                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#a5d391]" 
-                                    placeholder="alex.m@example.com"
-                                    required 
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Age</label>
-                                    <input 
-                                        type="number" 
-                                        value={newClient.age} 
-                                        onChange={(e) => setNewClient({ ...newClient, age: e.target.value })}
-                                        className="w-full bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#a5d391]" 
-                                        placeholder="34"
-                                        required 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Status</label>
-                                    <select
-                                        value={newClient.status}
-                                        onChange={(e) => setNewClient({ ...newClient, status: e.target.value })}
-                                        className="w-full bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#a5d391]"
-                                    >
-                                        <option value="Optimal">Optimal</option>
-                                        <option value="Good">Good</option>
-                                        <option value="Warning">Warning</option>
-                                        <option value="Critical">Critical</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Primary Goal / Protocol</label>
-                                <input 
-                                    type="text" 
-                                    value={newClient.goal} 
-                                    onChange={(e) => setNewClient({ ...newClient, goal: e.target.value })}
-                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#a5d391]" 
-                                    placeholder="e.g. Metabolic Conditioning"
-                                    required 
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsAddModalOpen(false)} 
-                                    className="px-4 py-2 rounded-xl border border-white/10 text-white/70 hover:text-white text-xs font-bold cursor-pointer"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="px-5 py-2 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer"
-                                >
-                                    Enroll Patient
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

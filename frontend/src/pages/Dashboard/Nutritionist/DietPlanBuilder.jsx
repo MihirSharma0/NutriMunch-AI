@@ -4,98 +4,6 @@ import { AuthContext } from '../../../context/AuthContext';
 import ConsultationChatModal from '../../../components/ConsultationChatModal';
 import { permanentlyDeleteDietPlan, getDeletedPlanIds, getDeletedPlanTitles } from '../../../utils/dietPlanSync';
 
-const SEED_HISTORY_PLANS = [
-    {
-        id: "plan_hist_1",
-        title: "Clinical Metabolic Optimization Protocol",
-        planTitle: "Clinical Metabolic Optimization Protocol",
-        dietType: "High-Protein Metabolic",
-        scope: "GENERAL",
-        targetMode: "GENERAL",
-        targetUserName: "All Platform Users",
-        targetUserId: null,
-        calories: 2100,
-        protein: 160,
-        carbs: 150,
-        fats: 70,
-        waterLiters: 3.0,
-        fiber: 28,
-        iron: 18,
-        calcium: 1000,
-        vitD: 15,
-        vitC: 90,
-        nutritionistName: "Nutritionist Mihir Sharma",
-        nutritionistEmail: "sharmamihir012@gmail.com",
-        deployedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-        nutritionistNotes: "Maintain strict meal cadence. Hydrate with 500ml water upon waking. Emphasize bioavailable whole-food protein.",
-        meals: [
-            { id: 1, time: '08:00 AM', name: 'Kinetic Synthesis Bowl', mealType: 'Breakfast', ingredients: 'Steel-cut oats, Whey Isolate (1 scoop), Blueberries, Chia seeds, Almond butter', calories: 520, protein: 38, carbs: 58, fats: 14 },
-            { id: 2, time: '01:00 PM', name: 'Pan-Seared Salmon & Quinoa', mealType: 'Lunch', ingredients: 'Wild salmon fillet (180g), Tricolor quinoa, Steamed broccoli, Extra virgin olive oil', calories: 680, protein: 52, carbs: 48, fats: 24 },
-            { id: 3, time: '04:30 PM', name: 'Metabolic Power Snack', mealType: 'Snack', ingredients: 'Greek yogurt (200g), Raw walnuts (25g), Ground flaxseed, Cinnamon', calories: 320, protein: 24, carbs: 16, fats: 14 },
-            { id: 4, time: '07:30 PM', name: 'Lean Herb Turkey & Roasted Vegetables', mealType: 'Dinner', ingredients: 'Lean ground turkey (170g), Sweet potato wedges, Asparagus spears, Avocado oil', calories: 580, protein: 46, carbs: 42, fats: 18 }
-        ]
-    },
-    {
-        id: "plan_hist_2",
-        title: "Ketogenic Glycemic Reset Protocol",
-        planTitle: "Ketogenic Glycemic Reset Protocol",
-        dietType: "Keto Glycemic Reset",
-        scope: "GENERAL",
-        targetMode: "GENERAL",
-        targetUserName: "All Platform Users",
-        targetUserId: null,
-        calories: 2050,
-        protein: 140,
-        carbs: 35,
-        fats: 150,
-        waterLiters: 3.2,
-        fiber: 30,
-        iron: 19,
-        calcium: 1100,
-        vitD: 20,
-        vitC: 85,
-        nutritionistName: "Nutritionist Mihir Sharma",
-        nutritionistEmail: "sharmamihir012@gmail.com",
-        deployedAt: new Date(Date.now() - 86400000).toISOString(),
-        nutritionistNotes: "Carbohydrates strictly limited under 35g net to sustain ketosis. Electrolytes and magnesium supplementation prioritized.",
-        meals: [
-            { id: 1, time: '08:30 AM', name: 'Avocado & Pasture Eggs Scramble', mealType: 'Breakfast', ingredients: '3 pasture-raised eggs, Hass avocado, spinach, grass-fed butter', calories: 540, protein: 28, carbs: 6, fats: 46 },
-            { id: 2, time: '01:30 PM', name: 'MCT Ribeye & Asparagus Skillet', mealType: 'Lunch', ingredients: 'Grass-fed ribeye (200g), butter-sautéed asparagus, sea salt', calories: 720, protein: 50, carbs: 5, fats: 56 },
-            { id: 3, time: '07:00 PM', name: 'Wild Cod in Coconut Herb Broth', mealType: 'Dinner', ingredients: 'Wild Pacific cod, coconut milk, zucchini ribbons, cilantro', calories: 590, protein: 44, carbs: 8, fats: 42 }
-        ]
-    },
-    {
-        id: "plan_hist_3",
-        title: "Exclusive Protocol for David Miller",
-        planTitle: "Exclusive Protocol for David Miller",
-        dietType: "High-Protein Metabolic",
-        scope: "EXCLUSIVE",
-        targetMode: "EXCLUSIVE",
-        targetUserName: "David Miller",
-        targetUserId: "442",
-        targetUserEmail: "david.m@example.com",
-        calories: 2200,
-        protein: 165,
-        carbs: 160,
-        fats: 68,
-        waterLiters: 3.2,
-        fiber: 32,
-        iron: 18,
-        calcium: 1000,
-        vitD: 15,
-        vitC: 90,
-        nutritionistName: "Nutritionist Mihir Sharma",
-        nutritionistEmail: "sharmamihir012@gmail.com",
-        deployedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-        nutritionistNotes: "Formulated for David's diabetes management. Post-prandial glucose stabilized. Maintain 15-minute post-meal walk.",
-        meals: [
-            { id: 1, time: '08:00 AM', name: 'High-Fiber Chia & Berry Porridge', mealType: 'Breakfast', ingredients: 'Chia seeds, unsweetened almond milk, raspberries, vegan protein powder', calories: 480, protein: 36, carbs: 32, fats: 22 },
-            { id: 2, time: '01:00 PM', name: 'Grilled Chicken Breast & Lentil Salad', mealType: 'Lunch', ingredients: 'Chicken breast (200g), black lentils, cucumbers, olive oil vinaigrette', calories: 650, protein: 58, carbs: 45, fats: 18 },
-            { id: 3, time: '07:30 PM', name: 'Steamed Halibut & Braised Bok Choy', mealType: 'Dinner', ingredients: 'Halibut fillet (180g), ginger bok choy, cauliflower rice', calories: 520, protein: 48, carbs: 25, fats: 16 }
-        ]
-    }
-];
-
 const DietPlanBuilder = () => {
     const { user, token } = useContext(AuthContext);
     const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Nutritionist Mihir Sharma');
@@ -110,6 +18,7 @@ const DietPlanBuilder = () => {
     // Users & Patients Roster State
     const [clientsList, setClientsList] = useState([]);
     const [loadingClients, setLoadingClients] = useState(true);
+    const [rosterError, setRosterError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState(null);
 
@@ -133,7 +42,7 @@ const DietPlanBuilder = () => {
     const [selectedHistoryPlan, setSelectedHistoryPlan] = useState(null);
     const [isHistoryDossierOpen, setIsHistoryDossierOpen] = useState(false);
 
-    // Load Diet Plans History from LocalStorage (or seed data)
+    // Load only previously saved diet plan history.
     const loadDietHistory = () => {
         const deletedIds = getDeletedPlanIds();
         const deletedTitles = getDeletedPlanTitles();
@@ -151,14 +60,8 @@ const DietPlanBuilder = () => {
                     return;
                 }
             }
-            // Only initialize with seed history on virgin initial load if key never existed
-            const filteredSeeds = SEED_HISTORY_PLANS.filter(p => {
-                const id = String(p.id);
-                const title = String(p.title || p.planTitle || '').toLowerCase().trim();
-                return !deletedIds.has(id) && !deletedTitles.has(title);
-            });
-            localStorage.setItem('nutrimunch_diet_plans_history', JSON.stringify(filteredSeeds));
-            setDietHistory(filteredSeeds);
+            setDietHistory([]);
+            localStorage.setItem('nutrimunch_diet_plans_history', JSON.stringify([]));
         } catch (e) {
             console.error('Failed loading diet plans history:', e);
             setDietHistory([]);
@@ -254,122 +157,90 @@ const DietPlanBuilder = () => {
         try {
             setLoadingClients(true);
             const response = await api.get('/admin/all-user-profiles');
-            if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+            if (response.data && Array.isArray(response.data)) {
                 const fetched = response.data.map(p => {
-                    const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'Patient User');
-                    const heightCm = p.heightCm || 172;
-                    const weightKg = p.weightKg || 70;
-                    const totalIn = heightCm / 2.54;
+                    const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'User');
+                    const heightCm = p.heightCm || null;
+                    const weightKg = p.weightKg || null;
+                    const totalIn = heightCm ? heightCm / 2.54 : null;
                     const ft = Math.floor(totalIn / 12);
                     const inch = Math.round(totalIn % 12);
-                    const lbs = Math.round(weightKg * 2.20462);
-                    const bmi = weightKg && heightCm ? (weightKg / ((heightCm / 100) * (heightCm / 100))).toFixed(1) : '22.8';
+                    const lbs = weightKg ? Math.round(weightKg * 2.20462) : null;
+                    const bmi = weightKg && heightCm ? (weightKg / ((heightCm / 100) * (heightCm / 100))).toFixed(1) : 'Not set';
 
                     return {
                         id: String(p.userId || p.id),
                         userId: String(p.userId || p.id),
                         name: name,
-                        email: p.email || 'patient@nutrimunch.com',
+                        email: p.email || '',
                         role: 'USER',
-                        age: p.age || 26,
+                        age: p.age ?? 'Not set',
                         gender: p.gender || 'Not specified',
-                        goal: p.goal || 'Metabolic Health & Conditioning',
-                        adherence: p.adherence || 92,
-                        status: p.status || 'Optimal',
+                        goal: p.goal || 'No goal set',
+                        adherence: p.adherence ?? null,
+                        status: p.status || 'Not assessed',
                         heightCm: heightCm,
-                        heightFtIn: `${ft}' ${inch}"`,
+                        heightFtIn: heightCm ? `${ft}' ${inch}"` : 'Not set',
                         weightKg: weightKg,
                         weightLbs: lbs,
-                        weight: `${weightKg} kg`,
-                        targetWeightKg: p.targetWeightKg || weightKg,
+                        weight: weightKg ? `${weightKg} kg` : 'Not set',
+                        targetWeightKg: p.targetWeightKg ?? null,
                         bmi: bmi,
-                        activityLevel: p.activityLevel || 'Moderate',
-                        dietType: p.dietType || 'Balanced',
-                        allergies: p.allergies || 'None reported',
-                        cuisinePreferences: p.cuisinePreferences || 'Mediterranean, Asian, Continental',
-                        favoriteFoods: p.favoriteFoods || 'Oats, Salmon, Berries, Greek Yogurt',
-                        dislikedFoods: p.dislikedFoods || 'Processed Sugar, Deep Fried Foods',
-                        lifestyleClass: p.lifestyleClass || 'Active Professional',
-                        mealBudget: p.mealBudget || 'Standard',
-                        bmr: p.bmr || Math.round(10 * weightKg + 6.25 * heightCm - 5 * (p.age || 26) + 5),
-                        tdee: p.tdee || Math.round((10 * weightKg + 6.25 * heightCm - 5 * (p.age || 26) + 5) * 1.55),
-                        calories: p.dailyCaloriesTarget ? `${p.dailyCaloriesTarget} kcal` : '2,000 kcal',
-                        caloriesNum: p.dailyCaloriesTarget || 2000,
-                        protein: p.proteinTarget ? `${p.proteinTarget}g` : '140g',
-                        proteinNum: p.proteinTarget || 140,
-                        carbs: p.carbsTarget ? `${p.carbsTarget}g` : '180g',
-                        carbsNum: p.carbsTarget || 180,
-                        fats: p.fatsTarget ? `${p.fatsTarget}g` : '60g',
-                        fatsNum: p.fatsTarget || 60,
-                        waterLiters: p.dailyWaterTargetLiters || 2.8,
-                        fiberG: p.dailyFiberTargetG || 28,
-                        ironMg: p.ironTargetMg || 18,
-                        calciumMg: p.calciumTargetMg || 1000,
-                        vitDMcg: p.vitDTargetMcg || 15,
-                        vitCMg: p.vitCTargetMg || 90,
-                        notes: p.dietType ? `Preferred Diet: ${p.dietType}` : 'No known dietary restrictions.'
+                        activityLevel: p.activityLevel || 'Not set',
+                        dietType: p.dietType || 'Not set',
+                        allergies: p.allergies || 'Not set',
+                        cuisinePreferences: p.cuisinePreferences || 'Not set',
+                        favoriteFoods: p.favoriteFoods || 'Not set',
+                        dislikedFoods: p.dislikedFoods || 'Not set',
+                        lifestyleClass: p.lifestyleClass || 'Not set',
+                        mealBudget: p.mealBudget || 'Not set',
+                        bmr: p.bmr ?? null,
+                        tdee: p.tdee ?? null,
+                        calories: p.dailyCaloriesTarget ? `${p.dailyCaloriesTarget} kcal` : 'Not set',
+                        caloriesNum: p.dailyCaloriesTarget ?? null,
+                        protein: p.proteinTarget ? `${p.proteinTarget}g` : 'Not set',
+                        proteinNum: p.proteinTarget ?? null,
+                        carbs: p.carbsTarget ? `${p.carbsTarget}g` : 'Not set',
+                        carbsNum: p.carbsTarget ?? null,
+                        fats: p.fatsTarget ? `${p.fatsTarget}g` : 'Not set',
+                        fatsNum: p.fatsTarget ?? null,
+                        waterLiters: p.dailyWaterTargetLiters ?? null,
+                        fiberG: p.dailyFiberTargetG ?? null,
+                        ironMg: p.ironTargetMg ?? null,
+                        calciumMg: p.calciumTargetMg ?? null,
+                        vitDMcg: p.vitDTargetMcg ?? null,
+                        vitCMg: p.vitCTargetMg ?? null,
+                        notes: p.dietType ? `Preferred Diet: ${p.dietType}` : 'No dietary information recorded.'
                     };
                 });
-                setClientsList(fetched);
-                if (fetched.length > 0 && !selectedClient) {
-                    setSelectedClient(fetched[0]);
+                const patients = fetched.filter(client => client.id);
+                setClientsList(patients);
+                setRosterError('');
+                if (patients.length === 0) {
+                    setSelectedClient(null);
+                } else if (!selectedClient) {
+                    setSelectedClient(patients[0]);
                 }
             } else {
-                fallbackRoster();
+                setClientsList([]);
+                setSelectedClient(null);
+                setRosterError('Patient service returned an invalid response.');
             }
         } catch (error) {
-            fallbackRoster();
+            console.error('Failed loading patient roster', error);
+            setClientsList([]);
+            setSelectedClient(null);
+            setRosterError('Unable to load patients. Check your connection and retry.');
         } finally {
             setLoadingClients(false);
         }
     };
 
-    const fallbackRoster = () => {
-        const fallbacks = [
-            { 
-                id: "442", userId: "442", name: "David Miller", email: "david.m@example.com", role: "USER", age: 45, gender: "Male",
-                goal: "Diabetes Management", adherence: 82, status: "Critical", heightCm: 178, heightFtIn: "5' 10\"", weightKg: 88, weightLbs: 194, weight: "88 kg", targetWeightKg: 80, bmi: "27.8",
-                activityLevel: "Lightly Active", dietType: "Low-Glycemic Mediterranean", allergies: "Peanuts, Shellfish", cuisinePreferences: "Mediterranean, Indian",
-                favoriteFoods: "Grilled Chicken, Brown Rice, Spinach", dislikedFoods: "Sugar, White Bread", lifestyleClass: "Executive", mealBudget: "Premium",
-                bmr: 1780, tdee: 2250, calories: "1,950 kcal", caloriesNum: 1950, protein: "145g", proteinNum: 145, carbs: "160g", carbsNum: 160, fats: "55g", fatsNum: 55, waterLiters: 3.0, fiberG: 32, ironMg: 18, calciumMg: 1000, vitDMcg: 15, vitCMg: 90,
-                notes: "Monitored insulin spike post-lunch. Adjusted carb threshold." 
-            },
-            { 
-                id: "8472", userId: "8472", name: "Marcus Chen", email: "marcus.c@example.com", role: "USER", age: 32, gender: "Male",
-                goal: "Endurance & Muscle Hypertrophy", adherence: 94, status: "Optimal", heightCm: 182, heightFtIn: "6' 0\"", weightKg: 76, weightLbs: 167, weight: "76 kg", targetWeightKg: 80, bmi: "22.9",
-                activityLevel: "Very Active", dietType: "High-Protein Athletic", allergies: "None", cuisinePreferences: "Asian, Mexican, American",
-                favoriteFoods: "Salmon, Sweet Potatoes, Eggs", dislikedFoods: "Pork", lifestyleClass: "Athlete", mealBudget: "Affordable",
-                bmr: 1840, tdee: 2850, calories: "2,650 kcal", caloriesNum: 2650, protein: "175g", proteinNum: 175, carbs: "310g", carbsNum: 310, fats: "65g", fatsNum: 65, waterLiters: 3.5, fiberG: 35, ironMg: 18, calciumMg: 1200, vitDMcg: 20, vitCMg: 100,
-                notes: "VO2 max training phase. Excellent carbohydrate timing." 
-            },
-            { 
-                id: "102", userId: "102", name: "Elena Rodriguez", email: "elena.r@example.com", role: "USER", age: 38, gender: "Female",
-                goal: "Hormonal Balance & PCOS", adherence: 91, status: "Optimal", heightCm: 165, heightFtIn: "5' 5\"", weightKg: 61, weightLbs: 134, weight: "61 kg", targetWeightKg: 58, bmi: "22.4",
-                activityLevel: "Moderate", dietType: "Anti-Inflammatory Keto", allergies: "Dairy / Lactose", cuisinePreferences: "Mediterranean, Latin",
-                favoriteFoods: "Avocado, Walnuts, Wild Greens", dislikedFoods: "Cow Dairy, Refined Oils", lifestyleClass: "Professional", mealBudget: "Middle-Class",
-                bmr: 1380, tdee: 1900, calories: "1,850 kcal", caloriesNum: 1850, protein: "130g", proteinNum: 130, carbs: "170g", carbsNum: 170, fats: "58g", fatsNum: 58, waterLiters: 2.8, fiberG: 30, ironMg: 18, calciumMg: 1000, vitDMcg: 15, vitCMg: 90,
-                notes: "Consistent REM sleep. Micronutrient balance optimal." 
-            },
-            { 
-                id: "553", userId: "553", name: "James Wilson", email: "james.w@example.com", role: "USER", age: 51, gender: "Male",
-                goal: "Cardiovascular Health", adherence: 88, status: "Good", heightCm: 175, heightFtIn: "5' 9\"", weightKg: 82, weightLbs: 180, weight: "82 kg", targetWeightKg: 75, bmi: "26.8",
-                activityLevel: "Lightly Active", dietType: "DASH Low-Sodium", allergies: "Soy", cuisinePreferences: "Continental, Italian",
-                favoriteFoods: "Olive Oil, Berries, Turkey", dislikedFoods: "High Sodium Canned Foods", lifestyleClass: "Middle-Class", mealBudget: "Standard",
-                bmr: 1690, tdee: 2150, calories: "2,100 kcal", caloriesNum: 2100, protein: "150g", proteinNum: 150, carbs: "200g", carbsNum: 200, fats: "60g", fatsNum: 60, waterLiters: 3.0, fiberG: 30, ironMg: 18, calciumMg: 1000, vitDMcg: 15, vitCMg: 90,
-                notes: "Sodium intake reduced by 15%. Blood pressure stable." 
-            }
-        ];
-        setClientsList(fallbacks);
-        if (!selectedClient && fallbacks.length > 0) {
-            setSelectedClient(fallbacks[0]);
-        }
-    };
-
     const filteredClients = clientsList.filter(client => {
-        const matchSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const matchSearch = String(client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            String(client.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                             client.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            client.goal.toLowerCase().includes(searchTerm.toLowerCase());
+                            String(client.goal || '').toLowerCase().includes(searchTerm.toLowerCase());
         return matchSearch;
     });
 
@@ -970,12 +841,22 @@ const DietPlanBuilder = () => {
                             {/* Roster Cards List */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
                                 {loadingClients ? (
-                                    <div className="col-span-full py-8 text-center text-white/40 text-xs">
-                                        Loading platform patient roster...
+                                    <div className="col-span-full py-8 flex flex-col items-center justify-center gap-3">
+                                        <div className="relative h-12 w-12">
+                                            <div className="absolute inset-0 rounded-full border-2 border-[#a5d391]/20" />
+                                            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#a5d391] animate-spin" />
+                                            <span className="material-symbols-outlined absolute inset-0 flex items-center justify-center text-[#a5d391] text-lg">groups</span>
+                                        </div>
+                                        <p className="text-white/55 text-xs animate-pulse">Loading live patient profiles…</p>
+                                    </div>
+                                ) : rosterError ? (
+                                    <div className="col-span-full py-8 text-center">
+                                        <p className="text-rose-300 text-xs mb-3">{rosterError}</p>
+                                        <button type="button" onClick={fetchRealUsers} className="rounded-lg bg-white/10 px-4 py-2 text-xs text-white hover:bg-white/15">Retry</button>
                                     </div>
                                 ) : filteredClients.length === 0 ? (
                                     <div className="col-span-full py-8 text-center text-white/40 text-xs">
-                                        No matching patients found in roster.
+                                        {clientsList.length === 0 ? 'No patient profiles are available yet.' : 'No patients match your search.'}
                                     </div>
                                 ) : (
                                     filteredClients.map(client => {

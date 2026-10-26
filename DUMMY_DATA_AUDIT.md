@@ -28,65 +28,33 @@ The following content is also static:
 The chart and claims are not loaded from a backend adherence or analytics
 endpoint.
 
-### 2. Nutritionist Plan Builder seeded history
+### 2. Nutritionist Plan Builder seeded history — removed
 
 File: [DietPlanBuilder.jsx](./frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx)
 
-`SEED_HISTORY_PLANS` contains fabricated plans:
+The hardcoded seed plans and seed-on-first-load behavior have been removed.
+The history view now starts empty until real plan history exists.
 
-- Clinical Metabolic Optimization Protocol
-- Ketogenic Glycemic Reset Protocol
-- Exclusive Protocol for David Miller
+### 3. Nutritionist patient rosters — sample data removed
 
-The records contain hardcoded:
+Files:
 
-- Patient names
-- Patient IDs
-- Nutritionist name and email
-- Calories and macro targets
-- Meal names and ingredients
-- Nutritionist notes
-- Deployment timestamps
+- [DietPlanBuilder.jsx](./frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx)
+- [ClientManagement.jsx](./frontend/src/pages/Dashboard/Nutritionist/ClientManagement.jsx)
+- [AppointmentManagement.jsx](./frontend/src/pages/Dashboard/Nutritionist/AppointmentManagement.jsx)
 
-The seed data is used when local diet-plan history is unavailable.
+Patient lists now use live API results only. While requests are pending, the
+pages show animated loading indicators; empty responses show an empty state,
+and failures show an error with a retry action. No local-only patient creation
+or sample-patient fallback remains.
 
-### 3. Nutritionist Plan Builder fallback patient roster
-
-File: [DietPlanBuilder.jsx](./frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx)
-
-The fallback roster contains fabricated patient records:
-
-- David Miller
-- Marcus Chen
-- Elena Rodriguez
-- James Wilson
-
-The records include fake:
-
-- IDs and email addresses
-- Age, gender, height, and weight
-- BMI, BMR, and TDEE
-- Goals and allergies
-- Adherence percentages
-- Clinical statuses
-- Calories, protein, carbs, fats, and water targets
-- Clinical notes
-
-This roster is shown when loading real users fails or returns no usable data.
-
-### 4. Consultation chat default patients
+### 4. Consultation chat default patients — removed
 
 File: [ConsultationChatModal.jsx](./frontend/src/components/ConsultationChatModal.jsx)
 
-`DEFAULT_PATIENTS` contains fabricated patients:
-
-- David Miller
-- Marcus Chen
-- Elena Rodriguez
-- James Wilson
-
-The records include hardcoded IDs, emails, and health goals. They are used as
-fallback patient data in the consultation chat flow.
+The default patient fixture and notification/localStorage chat fallbacks were
+removed. Chat now uses authenticated conversation APIs and displays a loading
+state while connecting.
 
 ### 5. About page testimonials
 

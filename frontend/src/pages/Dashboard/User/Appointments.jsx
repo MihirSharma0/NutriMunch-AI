@@ -1729,6 +1729,7 @@ const Appointments = () => {
                     isOpen={isChatOpen}
                     onClose={() => setIsChatOpen(false)}
                     currentUser={user}
+                    appointmentId={activeDisplayedAppointment?.id}
                 />
             )}
         </div>

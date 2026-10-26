@@ -2,7 +2,6 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { API_BASE_URL } from '../api/axios';
-import ConsultationChatModal from '../components/ConsultationChatModal';
 
 export const getNavItemsForRole = (user) => {
     const aiSubMenu = [
@@ -121,21 +120,6 @@ const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-    const [isChatModalOpen, setIsChatModalOpen] = useState(false);
-    const [chatTargetPatient, setChatTargetPatient] = useState(null);
-
-    // Global listener so any component or notification can open chat with a specific patient
-    useEffect(() => {
-        const handleOpenChat = (e) => {
-            if (e.detail?.targetPatient) {
-                setChatTargetPatient(e.detail.targetPatient);
-            }
-            setIsChatModalOpen(true);
-        };
-        window.addEventListener('nutrimunch_open_chat', handleOpenChat);
-        return () => window.removeEventListener('nutrimunch_open_chat', handleOpenChat);
-    }, []);
-
     const navContainerRef = useRef(null);
     const dropdownRef = useRef(null);
     const notificationRef = useRef(null);
@@ -185,7 +169,7 @@ const Navbar = () => {
                     if (res.ok) {
                         const data = await res.json();
                         backendNotifs = data
-                            .filter(n => n.type !== 'CONSULTATION_MSG')
+                            .filter(n => !['CONSULTATION_MSG', 'CONSULTATION_CHAT', 'CONSULTATION_REQUEST'].includes(n.type))
                             .map(n => ({
                                 id: n.id,
                                 title: n.title,
@@ -208,7 +192,7 @@ const Navbar = () => {
                 const stored = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
                 if (stored && Array.isArray(stored)) {
                     localNotifs = stored
-                        .filter(n => n.type !== 'CONSULTATION_MSG')
+                        .filter(n => !['CONSULTATION_MSG', 'CONSULTATION_CHAT', 'CONSULTATION_REQUEST'].includes(n.type))
                         .map(n => ({
                             ...n,
                             read: Boolean(n.read) || readIds.has(String(n.id))
@@ -235,9 +219,6 @@ const Navbar = () => {
                             return targetId === currentUserId || (targetEmail && targetEmail === currentUserEmail);
                         }
                         // For nutritionists: do not show their own outgoing message to patient as an incoming notification!
-                        if (isNutritionist && item.type === 'CONSULTATION_CHAT') {
-                            return false;
-                        }
                     }
                     if (item.targetPatientId) {
                         // Message sent by patient to nutritionists: only nutritionists should see this!
@@ -291,8 +272,6 @@ const Navbar = () => {
                     if (shouldShowToast && p.targetUserId) {
                         if (!isNutritionist) {
                             shouldShowToast = String(p.targetUserId) === myId || (p.targetUserEmail && p.targetUserEmail.toLowerCase() === myEmail);
-                        } else if (p.type === 'CONSULTATION_CHAT') {
-                            shouldShowToast = false;
                         }
                     }
                     if (p.targetPatientId && !isNutritionist) {
@@ -362,24 +341,6 @@ const Navbar = () => {
             }
         } catch (e) {}
         setIsNotificationOpen(false);
-
-        // DIRECT NAVIGATION LOGIC - deep link directly to the exact page/modal!
-        if (
-            item.type === 'CONSULTATION_CHAT' ||
-            item.type === 'CONSULTATION_REQUEST' ||
-            item.path === 'chat' ||
-            (item.title && (item.title.toLowerCase().includes('message') || item.title.toLowerCase().includes('consultation')))
-        ) {
-            if (item.targetPatientId || item.targetUserId) {
-                setChatTargetPatient({
-                    id: String(item.targetPatientId || item.targetUserId),
-                    userId: String(item.targetPatientId || item.targetUserId),
-                    name: item.targetPatientName || item.targetUserName || 'Patient'
-                });
-            }
-            setIsChatModalOpen(true);
-            return;
-        }
 
         if (item.type === 'DIET_PLAN' || item.type === 'EXCLUSIVE_PLAN' || item.path?.includes('diet-plan')) {
             navigate('/diet-plans');
@@ -579,7 +540,7 @@ const Navbar = () => {
                         {user && (
                             <button
                                 type="button"
-                                onClick={() => setIsChatModalOpen(true)}
+                                onClick={() => navigate('/appointments')}
                                 aria-label="Clinical Consultation Chat"
                                 className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 flex items-center justify-center text-white/80 hover:text-[#a5d391] transition-all cursor-pointer shadow-sm"
                                 title="Consultation Chat with Nutritionist"
@@ -841,13 +802,13 @@ const Navbar = () => {
                     <div className="bg-[#121f18] border border-[#a5d391]/40 rounded-2xl p-4 shadow-2xl shadow-emerald-950/90 backdrop-blur-xl flex items-start gap-4 pointer-events-auto">
                         <div className="w-10 h-10 rounded-xl bg-[#a5d391]/20 flex items-center justify-center shrink-0 border border-[#a5d391]/30">
                             <span className="material-symbols-outlined text-[#a5d391] animate-pulse text-xl">
-                                {toastNotification.type === 'CONSULTATION_CHAT' ? 'forum' : 'notifications_active'}
+                                notifications_active
                             </span>
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1">
                                 <span className="text-[10px] font-black uppercase tracking-wider text-[#a5d391] bg-[#a5d391]/10 px-2 py-0.5 rounded-full border border-[#a5d391]/20">
-                                    {toastNotification.type === 'CONSULTATION_CHAT' ? 'Consultation Chat' : 'Notification'}
+                                    Notification
                                 </span>
                                 <button
                                     type="button"
@@ -861,27 +822,7 @@ const Navbar = () => {
                             <h4 className="text-sm font-bold text-white truncate">{toastNotification.title || 'Live Update Received'}</h4>
                             <p className="text-xs text-white/70 line-clamp-2 mt-0.5">{toastNotification.message}</p>
                             <div className="mt-3 flex items-center gap-3">
-                                {toastNotification.type === 'CONSULTATION_CHAT' || toastNotification.path === 'chat' ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (toastNotification.targetPatientId || toastNotification.targetUserId) {
-                                                setChatTargetPatient({
-                                                    id: String(toastNotification.targetPatientId || toastNotification.targetUserId),
-                                                    userId: String(toastNotification.targetPatientId || toastNotification.targetUserId),
-                                                    name: toastNotification.targetPatientName || toastNotification.targetUserName || 'Patient'
-                                                });
-                                            }
-                                            handleDismissToast();
-                                            setIsChatModalOpen(true);
-                                        }}
-                                        className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
-                                    >
-                                        <span>Open Consultation Chat</span>
-                                        <span className="material-symbols-outlined text-xs">forum</span>
-                                    </button>
-                                ) : (
-                                    <Link
+                                <Link
                                         to={toastNotification.path || (toastNotification.type === 'DIET_PLAN' || toastNotification.type === 'EXCLUSIVE_PLAN' ? "/diet-plans" : "/progress")}
                                         onClick={handleDismissToast}
                                         className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
@@ -889,7 +830,6 @@ const Navbar = () => {
                                         <span>View Details</span>
                                         <span className="material-symbols-outlined text-xs">arrow_forward</span>
                                     </Link>
-                                )}
                                 <button
                                     type="button"
                                     onClick={handleDismissToast}
@@ -903,18 +843,6 @@ const Navbar = () => {
                 </div>
             )}
 
-            {/* Consultation Chat Modal */}
-            {isChatModalOpen && (
-                <ConsultationChatModal
-                    isOpen={isChatModalOpen}
-                    onClose={() => {
-                        setIsChatModalOpen(false);
-                        setChatTargetPatient(null);
-                    }}
-                    currentUser={user}
-                    targetPatient={chatTargetPatient}
-                />
-            )}
         </>
     );
 };
