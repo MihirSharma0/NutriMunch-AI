@@ -221,7 +221,7 @@ const AdminHome = () => {
                         </div>
                         <div className="p-7 bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 hover:border-purple-400/40 transition-all duration-300 shadow-xl">
                             <h3 className="text-sm text-white/60 font-medium">Total Platform Revenue</h3>
-                            <p className="text-4xl font-bold text-purple-400 font-hero-display mt-3">${stats.totalRevenue}</p>
+                            <p className="text-4xl font-bold text-purple-400 font-hero-display mt-3">₹{stats.totalRevenue}</p>
                         </div>
                     </div>
                 ) : (
