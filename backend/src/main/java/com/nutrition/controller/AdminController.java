@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,6 +36,14 @@ public class AdminController {
     private final JdbcTemplate jdbcTemplate;
     private final com.nutrition.service.WalletService walletService;
     private final com.nutrition.service.NotificationService notificationService;
+    private final com.nutrition.repository.AppointmentRepository appointmentRepository;
+    private final com.nutrition.repository.ProgressLogRepository progressLogRepository;
+    private final com.nutrition.repository.NotificationRepository notificationRepository;
+    private final com.nutrition.repository.WalletRepository walletRepository;
+    private final com.nutrition.repository.WalletTransactionRepository walletTransactionRepository;
+    private final com.nutrition.repository.TestimonialRepository testimonialRepository;
+    private final com.nutrition.repository.VerificationTokenRepository verificationTokenRepository;
+    private final com.nutrition.repository.PasswordResetTokenRepository passwordResetTokenRepository;
 
     @org.springframework.beans.factory.annotation.Value("${app.admin.email:admin@nutrimunch.com}")
     private String configuredAdminEmail;
@@ -171,14 +180,26 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/role")
+    @Transactional
     public ResponseEntity<User> updateUserRole(@org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails adminDetails, @PathVariable Long id, @RequestBody Map<String, String> body) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        Role newRole = Role.valueOf(body.get("role").toUpperCase());
+        String requestedRole = body.get("role");
+        if (requestedRole == null || requestedRole.isBlank()) {
+            throw new IllegalArgumentException("Role cannot be empty");
+        }
+        Role newRole;
+        try {
+            newRole = Role.valueOf(requestedRole.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid role: " + requestedRole);
+        }
         user.setRole(newRole);
+        // Role changes must not invalidate the user's existing OTP verification.
+        user.setVerified(true);
+        user.setOtpCode(null);
+        user.setOtpExpiryDate(null);
 
         if (newRole == Role.NUTRITIONIST) {
-            // When role is changed to nutritionist, their license state should by default be in pending review stage,
-            // like a newly formed account for that particular role
             NutritionistProfile profile = nutritionistProfileRepository.findByUserId(id).orElseGet(() -> {
                 NutritionistProfile p = new NutritionistProfile();
                 p.setUser(user);
@@ -189,10 +210,7 @@ public class AdminController {
             profile.setLicenseNumber("RD-" + user.getId() + "84920-IN");
             profile.setApprovalStatus("PENDING");
             nutritionistProfileRepository.save(profile);
-            user.setVerified(false);
         } else {
-            // When role is changed away from NUTRITIONIST to USER or ADMIN,
-            // completely remove their nutritionist profile so they no longer appear in nutritionist verification
             nutritionistProfileRepository.findByUserId(id).ifPresent(nutritionistProfileRepository::delete);
         }
 
@@ -233,14 +251,26 @@ public class AdminController {
     }
 
     @DeleteMapping("/users/{id}")
+    @Transactional
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
         String userEmail = user != null ? user.getEmail() : null;
 
-        // If any nutritionist account is deleted, all of their diet plans and settings are deleted as well
-        try {
-            dietPlanRepository.deleteByUserId(id);
-        } catch (Exception ignored) {}
+        // Remove all records owned by or directly linked to the account first.
+        dietPlanRepository.deleteByUserId(id);
+        appointmentRepository.deleteByUserId(id);
+        appointmentRepository.deleteByNutritionistId(id);
+        progressLogRepository.deleteByUserId(id);
+        notificationRepository.deleteByUserIdOrSenderId(id, id);
+        walletTransactionRepository.deleteByInitiatorIdOrRecipientId(id, id);
+        walletTransactionRepository.deleteBySourceWallet_User_IdOrTargetWallet_User_Id(id, id);
+        testimonialRepository.deleteByUserId(id);
+        verificationTokenRepository.deleteByUser_Id(id);
+        passwordResetTokenRepository.deleteByUser_Id(id);
+        walletRepository.deleteByUserId(id);
 
         if (userEmail != null) {
             DietPlanController.purgePlansByAuthor(id, userEmail);

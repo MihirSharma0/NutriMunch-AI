@@ -14,6 +14,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByNutritionistIdOrderByAppointmentTimeDesc(Long nutritionistId);
     List<Appointment> findByNutritionistIdOrNutritionistIsNullOrderByAppointmentTimeDesc(Long nutritionistId);
     List<Appointment> findAllByOrderByAppointmentTimeDesc();
+    void deleteByUserId(Long userId);
+    void deleteByNutritionistId(Long nutritionistId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Appointment a WHERE a.id = :id")

@@ -9,4 +9,6 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
     Optional<WalletTransaction> findByTransactionReference(String transactionReference);
     List<WalletTransaction> findAllByOrderByCreatedAtDesc();
     List<WalletTransaction> findByInitiatorIdOrRecipientIdOrderByCreatedAtDesc(Long initiatorId, Long recipientId);
+    void deleteByInitiatorIdOrRecipientId(Long initiatorId, Long recipientId);
+    void deleteBySourceWallet_User_IdOrTargetWallet_User_Id(Long sourceUserId, Long targetUserId);
 }

@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
 import FeatureGate from '../../../components/FeatureGate';
@@ -51,6 +51,9 @@ const Profile = () => {
 
     if (!user) {
         return <FeatureGate />;
+    }
+    if (String(user.role || '').replace('ROLE_', '').toUpperCase() === 'NUTRITIONIST') {
+        return <Navigate to="/dashboard/nutritionist/profile" replace />;
     }
 
     // Active section tab: 'all' | 'body' | 'goals' | 'allergies' | 'budget'

@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface ProgressLogRepository extends JpaRepository<ProgressLog, Long> {
     List<ProgressLog> findByUserIdOrderByLogDateDesc(Long userId);
     Optional<ProgressLog> findByUserIdAndLogDate(Long userId, LocalDate logDate);
+    void deleteByUserId(Long userId);
 }

@@ -95,6 +95,7 @@ const UserManagement = () => {
                 }
             } catch (error) {
                 console.error("Error deleting user", error);
+                window.alert(error.response?.data?.message || "Unable to delete this user. Please try again.");
             }
         }
     };
