@@ -4,7 +4,7 @@ import React from 'react';
 // Replace them with the real owners' details before going live.
 const OWNERS = [
     {
-        name: 'Aarav Mehta',
+        name: 'Mihir Sharma',
         role: 'Founder & CEO',
         image: '/owners/founder-ceo.svg',
         accent: '#a5d391',
@@ -15,18 +15,18 @@ const OWNERS = [
         linkedin: 'https://www.linkedin.com/in/example-aarav'
     },
     {
-        name: 'Dr. Priya Sharma',
+        name: 'Md Irfan',
         role: 'Co-Founder & Chief Nutrition Officer',
-        image: '/owners/cno.svg',
+        image: '/owners/irfan.png',
         accent: '#38bdf8',
         bio: 'Registered dietitian overseeing clinical guidelines, nutritionist verification and the quality of every diet plan.',
-        email: 'priya.sharma@example.com',
+        email: 'mdi720408@gmail.com',
         phone: '+91 90000 00002',
         location: 'Pune, India',
         linkedin: 'https://www.linkedin.com/in/example-priya'
     },
     {
-        name: 'Rohan Verma',
+        name: 'Himanshu Kumar',
         role: 'Co-Founder & CTO',
         image: '/owners/cto.svg',
         accent: '#fbbf24',
@@ -37,7 +37,7 @@ const OWNERS = [
         linkedin: 'https://www.linkedin.com/in/example-rohan'
     },
     {
-        name: 'Ananya Iyer',
+        name: 'Raj Kumar Prasad',
         role: 'Co-Founder & COO',
         image: '/owners/coo.svg',
         accent: '#c084fc',

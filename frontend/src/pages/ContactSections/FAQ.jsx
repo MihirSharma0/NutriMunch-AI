@@ -70,7 +70,8 @@ const FAQ_CATEGORIES = [
         icon: 'auto_awesome',
         items: [
             {
-                q: 'How does the AI Diet Plan Generator work?' 
+                q: 'How does the AI Diet Plan Generator work?',
+                a: 'Choose one or more health goals and any allergies or dietary restrictions (for example Peanuts, Dairy, Gluten, Fish or Vegetarian), then generate. You get a one-day plan with daily targets, 4 to 7 timed meals with ingredients and macros, and allergy safeguards. You can Save the plan (it then appears in Diet Plans), Import its targets into your profile, or Copy it.'
             },
             {
                 q: 'Does the AI Diet Plan Generator use my profile?',
