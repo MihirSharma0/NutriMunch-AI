@@ -4,6 +4,24 @@ import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
 import { subscribeWalletSse } from '../../../utils/walletSse';
 
+const mergeTransactions = (...lists) => {
+    const transactionsByKey = new Map();
+    lists.flat().forEach(transaction => {
+        if (!transaction) return;
+        const key = transaction.transactionReference
+            ? `ref:${transaction.transactionReference}`
+            : transaction.id != null
+                ? `id:${transaction.id}`
+                : null;
+        if (!key) return;
+        const existing = transactionsByKey.get(key);
+        transactionsByKey.set(key, existing ? { ...existing, ...transaction } : transaction);
+    });
+    return [...transactionsByKey.values()].sort((a, b) => (
+        new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0)
+    ));
+};
+
 const TransactionHistory = () => {
     const { user } = useContext(AuthContext);
     const location = useLocation();
@@ -60,7 +78,7 @@ const TransactionHistory = () => {
                 if (Array.isArray(adminLedger?.data)) txList = adminLedger.data;
             }
 
-            setTransactions(txList);
+            setTransactions(current => mergeTransactions(txList, current));
         } catch (err) {
             console.error('Failed to load transaction history:', err);
         } finally {
@@ -84,12 +102,10 @@ const TransactionHistory = () => {
 
             // Prepend transaction if present in payload
             if (detail.transaction) {
-                setTransactions(prev => {
-                    const exists = prev.some(t => String(t.id) === String(detail.transaction.id) ||
-                        (t.transactionReference && t.transactionReference === detail.transaction.transactionReference));
-                    if (exists) return prev;
-                    return [{ ...detail.transaction, isLive: true }, ...prev];
-                });
+                setTransactions(prev => mergeTransactions(
+                    [{ ...detail.transaction, isLive: true }],
+                    prev
+                ));
             } else if (detail.transactionId || detail.transactionReference) {
                 const syntheticTx = {
                     id: detail.transactionId || Date.now(),
@@ -102,7 +118,7 @@ const TransactionHistory = () => {
                     receiverBalanceAfter: newBal,
                     isLive: true
                 };
-                setTransactions(prev => [syntheticTx, ...prev]);
+                setTransactions(prev => mergeTransactions([syntheticTx], prev));
             }
 
             // Show banner notification
@@ -133,21 +149,25 @@ const TransactionHistory = () => {
     const myId = String(user?.id || user?.userId || '');
     const myEmail = (user?.email || '').toLowerCase();
 
+    const belongsToCurrentUser = (person) => (
+        (person?.id != null && String(person.id) === myId)
+        || (person?.email && person.email.toLowerCase() === myEmail)
+    );
+
     const isCreditForMe = (tx) => {
         const type = String(tx.transactionType || tx.type || '').toUpperCase();
         if (type.includes('ALLOC') || type.includes('TOPUP') || type.includes('BONUS')) return true;
-        if (type === 'REFUND' || type === 'ESCROW_REFUND') return true;
+        if (type.includes('REFUND')) return belongsToCurrentUser(tx.recipient);
         if ((type === 'TRANSFER' || type === 'ESCROW_RELEASE') && isNutritionist) return true;
-        if (tx.recipient?.id && String(tx.recipient.id) === myId) return true;
-        if (tx.recipient?.email && tx.recipient.email.toLowerCase() === myEmail) return true;
+        if (belongsToCurrentUser(tx.recipient)) return true;
         return false;
     };
 
     const isDebitForMe = (tx) => {
         const type = String(tx.transactionType || tx.type || '').toUpperCase();
+        if (type.includes('REFUND')) return belongsToCurrentUser(tx.initiator);
         if (type.includes('DEDUCTION')) return true;
-        if (tx.initiator?.id && String(tx.initiator.id) === myId) return true;
-        if (tx.initiator?.email && tx.initiator.email.toLowerCase() === myEmail) return true;
+        if (belongsToCurrentUser(tx.initiator)) return true;
         if (!isNutritionist && (type === 'ESCROW_LOCK' || type === 'ESCROW_HOLD' || type === 'SERVICE_PAYMENT')) return true;
         return false;
     };
@@ -304,9 +324,11 @@ const TransactionHistory = () => {
         }
         if (type.includes('REFUND')) {
             return {
-                label: 'Credit (Escrow Refund)',
-                icon: 'replay',
-                style: 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                label: isCredit ? 'Credit (Escrow Refund)' : 'Debit (Escrow Refund)',
+                icon: isCredit ? 'replay' : 'undo',
+                style: isCredit
+                    ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                    : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
             };
         }
         if (type.includes('DEDUCTION')) {
@@ -529,11 +551,15 @@ const TransactionHistory = () => {
                                     </tr>
                                 ) : (
                                     filteredTransactions.map((tx) => {
+                                        const type = String(tx.transactionType || tx.type || '').toUpperCase();
                                         const typeBadge = getTypeBadge(tx);
                                         const statusBadge = getStatusBadge(tx.status);
                                         const isCredit = isCreditForMe(tx);
                                         const isDebit = isDebitForMe(tx);
                                         const amtNum = Number(tx.amount || 0);
+                                        const auditBalance = isDebit
+                                            ? tx.senderBalanceAfter ?? tx.receiverBalanceAfter
+                                            : tx.receiverBalanceAfter ?? tx.senderBalanceAfter;
 
                                         return (
                                             <tr
@@ -569,10 +595,18 @@ const TransactionHistory = () => {
                                                 {/* Counterparty */}
                                                 <td className="py-3 px-4">
                                                     <div className="text-white font-semibold">
-                                                        {tx.recipient?.name || tx.initiator?.name || (isCredit ? 'NutriMunch Platform' : 'Consultation Escrow')}
+                                                        {type.includes('REFUND')
+                                                            ? (isCredit
+                                                                ? (tx.initiator?.name || tx.recipient?.name || 'Consultation Refund')
+                                                                : (tx.recipient?.name || tx.initiator?.name || 'Consultation Refund'))
+                                                            : (tx.recipient?.name || tx.initiator?.name || (isCredit ? 'NutriMunch Platform' : 'Consultation Escrow'))}
                                                     </div>
                                                     <div className="text-[10px] text-white/40">
-                                                        {tx.recipient?.email || tx.initiator?.email || (isCredit ? 'System Administrator' : 'Nutritionist Consultation')}
+                                                        {type.includes('REFUND')
+                                                            ? (isCredit
+                                                                ? (tx.initiator?.email || tx.recipient?.email || 'Refund to wallet')
+                                                                : (tx.recipient?.email || tx.initiator?.email || 'Refund to wallet'))
+                                                            : (tx.recipient?.email || tx.initiator?.email || (isCredit ? 'System Administrator' : 'Nutritionist Consultation'))}
                                                     </div>
                                                 </td>
 
@@ -607,10 +641,8 @@ const TransactionHistory = () => {
 
                                                 {/* Balance Audit */}
                                                 <td className="py-3 px-4 font-mono text-[11px] text-white/60">
-                                                    {tx.receiverBalanceAfter !== undefined && tx.receiverBalanceAfter !== null ? (
-                                                        <span>₹{Number(tx.receiverBalanceAfter).toFixed(2)}</span>
-                                                    ) : tx.senderBalanceAfter !== undefined && tx.senderBalanceAfter !== null ? (
-                                                        <span>₹{Number(tx.senderBalanceAfter).toFixed(2)}</span>
+                                                    {auditBalance !== undefined && auditBalance !== null ? (
+                                                        <span>₹{Number(auditBalance).toFixed(2)}</span>
                                                     ) : (
                                                         <span className="text-white/30">—</span>
                                                     )}
