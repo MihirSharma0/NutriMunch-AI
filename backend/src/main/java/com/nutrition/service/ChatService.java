@@ -250,6 +250,23 @@ public class ChatService {
         return conversationDto(conversation);
     }
 
+    @Transactional
+    public ConversationDto reopenConversation(Long conversationId, Long userId, Role role) {
+        Conversation conversation = authorized(conversationId, userId);
+        if (role != Role.NUTRITIONIST || !Objects.equals(conversation.getNutritionist().getId(), userId)) deny();
+        if ("CLOSED".equals(conversation.getStatus())) {
+            conversation.setStatus("ACTIVE");
+            conversation = conversationRepository.save(conversation);
+            Conversation reopenedConversation = conversation;
+            afterCommit(() -> chatSseService.publishStatus(
+                    conversationId,
+                    reopenedConversation.getPatient().getId(),
+                    reopenedConversation.getNutritionist().getId(),
+                    new ConversationStatusDto(conversationId, "ACTIVE")));
+        }
+        return conversationDto(conversation);
+    }
+
     @Transactional(readOnly = true)
     public SseEmitter subscribe(Long conversationId, Long userId) {
         return chatSseService.subscribe(authorized(conversationId, userId), userId);

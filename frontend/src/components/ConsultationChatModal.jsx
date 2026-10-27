@@ -15,6 +15,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [sending, setSending] = useState(false);
     const [ending, setEnding] = useState(false);
+    const [reopening, setReopening] = useState(false);
     const [error, setError] = useState('');
     const [connectionStatus, setConnectionStatus] = useState('CONNECTING');
     const [connectionError, setConnectionError] = useState('');
@@ -285,6 +286,20 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
         }
     };
 
+    const reopenChat = async () => {
+        if (!conversation?.id || reopening) return;
+        setReopening(true);
+        setError('');
+        try {
+            const response = await api.put(`/conversations/${conversation.id}/reopen`);
+            setConversation(response.data);
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || 'Unable to reopen this consultation.');
+        } finally {
+            setReopening(false);
+        }
+    };
+
     const reconnectChat = () => {
         setConnectionStatus('CONNECTING');
         setConnectionError('');
@@ -346,6 +361,16 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
                                 {ending ? 'Ending...' : 'End chat'}
                             </button>
                         )}
+                        {currentUserRole === 'NUTRITIONIST' && conversation?.status === 'CLOSED' && (
+                            <button
+                                type="button"
+                                onClick={reopenChat}
+                                disabled={reopening}
+                                className="rounded-full bg-[#00a884] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#008f72] disabled:opacity-50"
+                            >
+                                {reopening ? 'Reopening...' : 'Reopen chat'}
+                            </button>
+                        )}
                         {!embedded && (
                             <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full text-[#54656f] transition hover:bg-[#e9edef] hover:text-[#111b21]" aria-label="Close chat">
                                 <span className="material-symbols-outlined">close</span>
@@ -370,7 +395,9 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
                 )}
                 {conversation?.status === 'CLOSED' && (
                     <div className="shrink-0 border-b border-[#e9edef] bg-[#f0f2f5] px-4 py-3 text-sm text-[#54656f]">
-                        The nutritionist has ended this chat. You can view previous messages, but sending is disabled.
+                        {currentUserRole === 'NUTRITIONIST'
+                            ? 'This chat has ended. Reopen it to continue the conversation.'
+                            : 'The nutritionist has ended this chat. You can view previous messages, but sending is disabled.'}
                     </div>
                 )}
                 {error && !loading && (

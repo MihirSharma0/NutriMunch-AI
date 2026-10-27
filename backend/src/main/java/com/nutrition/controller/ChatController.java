@@ -66,4 +66,8 @@ public class ChatController {
     public ConversationDto end(@AuthenticationPrincipal CustomUserDetails u, @PathVariable Long id) {
         return chatService.endConversation(id, u.getId(), u.getRole());
     }
+    @PutMapping("/{id}/reopen")
+    public ConversationDto reopen(@AuthenticationPrincipal CustomUserDetails u, @PathVariable Long id) {
+        return chatService.reopenConversation(id, u.getId(), u.getRole());
+    }
 }
