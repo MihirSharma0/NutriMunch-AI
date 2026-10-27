@@ -13,8 +13,8 @@ spring:
       idle-timeout: 30000
       keepalive-time: 30000
       validation-timeout: 3000
-      minimum-idle: 3
-      maximum-pool-size: 10
+      minimum-idle: 10
+      maximum-pool-size: 100
       connection-test-query: SELECT 1
   jpa:
     hibernate:
