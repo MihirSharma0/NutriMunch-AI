@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.Locale;
 import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.Map;
@@ -63,10 +64,12 @@ public class AuthService {
     private String googleClientId;
 
     public String authenticateUser(LoginRequest loginRequest) {
-        String cleanEmail = loginRequest.getEmail() != null ? loginRequest.getEmail().trim() : "";
+        String cleanEmail = loginRequest.getEmail() != null
+                ? loginRequest.getEmail().trim().toLowerCase(Locale.ROOT)
+                : "";
         User user = userRepository.findByEmail(cleanEmail)
                 .orElseGet(() -> userRepository.findAll().stream()
-                        .filter(u -> u.getEmail() != null && u.getEmail().equalsIgnoreCase(cleanEmail))
+                        .filter(u -> u.getEmail() != null && u.getEmail().trim().equalsIgnoreCase(cleanEmail))
                         .findFirst().orElse(null));
 
         if (user == null) {

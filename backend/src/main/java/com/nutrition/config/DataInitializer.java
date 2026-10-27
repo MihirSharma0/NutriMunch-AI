@@ -9,6 +9,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.Locale;
+
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
@@ -25,16 +27,21 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
-            System.out.println(">>> Admin bootstrap skipped: configure ADMIN_EMAIL and ADMIN_PASSWORD.");
+            System.out.println(">>> Admin bootstrap skipped: ADMIN_EMAIL and ADMIN_PASSWORD must both be configured on the backend service.");
             return;
         }
-        createOrUpdateAdmin(adminEmail.trim(), adminPassword);
+        createOrUpdateAdmin(adminEmail.trim().toLowerCase(Locale.ROOT), adminPassword);
     }
 
     private void createOrUpdateAdmin(String email, String password) {
         if (email == null || email.isBlank())
             return;
-        User admin = userRepository.findByEmail(email).orElse(null);
+        User admin = userRepository.findByEmail(email)
+                .orElseGet(() -> userRepository.findAll().stream()
+                        .filter(user -> user.getEmail() != null
+                                && user.getEmail().equalsIgnoreCase(email))
+                        .findFirst()
+                        .orElse(null));
 
         if (admin == null) {
             admin = new User();
@@ -45,13 +52,13 @@ public class DataInitializer implements CommandLineRunner {
             admin.setRole(Role.ADMIN);
             admin.setVerified(true);
             userRepository.save(admin);
-            System.out.println(">>> Created configured Admin account: " + email);
+            System.out.println(">>> Created configured Admin account.");
         } else {
             admin.setPasswordHash(passwordEncoder.encode(password));
             admin.setRole(Role.ADMIN);
             admin.setVerified(true);
             userRepository.save(admin);
-            System.out.println(">>> Updated configured Admin account credentials for: " + email);
+            System.out.println(">>> Updated configured Admin account credentials.");
         }
     }
 }
