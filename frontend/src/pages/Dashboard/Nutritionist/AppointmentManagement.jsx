@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../../api/axios';
+import { AuthContext } from '../../../context/AuthContext';
 import { getConsultationOutcome, isHistoryOutcome, OUTCOME_BADGES, describePayment } from '../../../utils/consultationHistory';
 
 const AppointmentManagement = () => {
+    const { token } = useContext(AuthContext);
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState('All Months');
     const [statusFilter, setStatusFilter] = useState('ALL');
