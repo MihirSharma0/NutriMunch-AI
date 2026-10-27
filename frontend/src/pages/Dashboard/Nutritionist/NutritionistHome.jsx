@@ -273,7 +273,7 @@ const NutritionistHome = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 <Link to="/dashboard/nutritionist/schedule" className="bg-[#a5d391]/10 border border-[#a5d391]/25 rounded-2xl p-5 hover:bg-[#a5d391]/20 transition-colors">
                     <span className="material-symbols-outlined text-[#a5d391]">calendar_month</span>
                     <h2 className="font-bold mt-3">Review schedule</h2>
@@ -283,11 +283,6 @@ const NutritionistHome = () => {
                     <span className="material-symbols-outlined text-[#a5d391]">edit_note</span>
                     <h2 className="font-bold mt-3">Create diet plan</h2>
                     <p className="text-xs text-white/50 mt-1">Build and save a personalized nutrition protocol.</p>
-                </Link>
-                <Link to="/dashboard/nutritionist/clients" className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-[#a5d391]/40 transition-colors">
-                    <span className="material-symbols-outlined text-[#a5d391]">person_search</span>
-                    <h2 className="font-bold mt-3">Manage clients</h2>
-                    <p className="text-xs text-white/50 mt-1">Review client profiles and clinical requirements.</p>
                 </Link>
             </div>
 

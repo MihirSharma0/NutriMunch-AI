@@ -30,7 +30,6 @@ import ConsultationChatPage from './pages/ConsultationChatPage';
 
 // Nutritionist Dashboard Layout & Pages
 import NutritionistHome from './pages/Dashboard/Nutritionist/NutritionistHome';
-import ClientManagement from './pages/Dashboard/Nutritionist/ClientManagement';
 import DietPlanBuilder from './pages/Dashboard/Nutritionist/DietPlanBuilder';
 import AppointmentManagement from './pages/Dashboard/Nutritionist/AppointmentManagement';
 import NutritionistReports from './pages/Dashboard/Nutritionist/NutritionistReports';
@@ -130,7 +129,6 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['NUTRITIONIST', 'ADMIN']} />}>
                 <Route path="dashboard/nutritionist" element={<NutritionistHome />} />
                 <Route path="dashboard/nutritionist/profile" element={<NutritionistProfile />} />
-                <Route path="dashboard/nutritionist/clients" element={<ClientManagement />} />
                 <Route path="dashboard/nutritionist/builder" element={<DietPlanBuilder />} />
                 <Route path="dashboard/nutritionist/schedule" element={<AppointmentManagement />} />
                 <Route path="dashboard/nutritionist/reports" element={<NutritionistReports />} />

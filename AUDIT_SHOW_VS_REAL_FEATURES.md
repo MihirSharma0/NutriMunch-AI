@@ -125,12 +125,7 @@ This document provides an audited breakdown of all features across the 4 user ro
    - 💻 **Frontend Component:** [`NutritionistHome.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Nutritionist/NutritionistHome.jsx)
    - **Details:** Overview KPI cards showing Active Clients (`14`), Pending Requests (`3`), Hours This Week (`28`) are hardcoded summary numbers.
 
-2. **Client Roster Data**:
-   - 🔗 **Test URL:** [http://localhost:5173/dashboard/nutritionist/clients](http://localhost:5173/dashboard/nutritionist/clients)
-   - 💻 **Frontend Component:** [`ClientManagement.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Nutritionist/ClientManagement.jsx)
-   - **Details:** Displays patient profiles and health histories using structured frontend mock data.
-
-3. **Diet Plan Builder**:
+2. **Diet Plan Builder**:
    - 🔗 **Test URL:** [http://localhost:5173/dashboard/nutritionist/builder](http://localhost:5173/dashboard/nutritionist/builder)
    - 💻 **Frontend Component:** [`DietPlanBuilder.jsx`](file:///Users/mihirsharma/Downloads/Projects/Nutrition-AI%20Minor%20Project/frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx)
    - **Details:** Interactive UI for building prescription meal plans; clicking "Assign to Client" displays a success modal rather than linking to a specific patient ID in the database.

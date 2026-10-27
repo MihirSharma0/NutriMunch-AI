@@ -99,7 +99,6 @@ feature role.
 - Clinical workspace messaging
 - Clinical dashboard call-to-action
 - Clinical Dashboard
-- Client Roster
 - Diet Plan Builder
 - Consultation Schedule
 - Clinical Operations & Schedule call-to-action
@@ -117,9 +116,8 @@ feature role.
 - AI Food Analyzer — `/ai-image`
 - AI Health Companion — `/ai-chat`
 
-#### Client & Schedule
+#### Schedule
 
-- Client Roster — `/dashboard/nutritionist/clients`
 - Schedule — `/dashboard/nutritionist/schedule`
 
 #### Diet & Reports
@@ -132,7 +130,6 @@ feature role.
 | Feature | Route |
 |---|---|
 | Clinical command dashboard | `/dashboard/nutritionist` |
-| Patient/client roster | `/dashboard/nutritionist/clients` |
 | Structured diet plan builder | `/dashboard/nutritionist/builder` |
 | Appointment schedule and management | `/dashboard/nutritionist/schedule` |
 | Clinical reports and adherence reporting | `/dashboard/nutritionist/reports` |

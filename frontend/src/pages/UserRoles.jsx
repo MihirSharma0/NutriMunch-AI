@@ -94,7 +94,6 @@ const UserRoles = () => {
         { feature: 'Smart Hydration & BMR Tracking', user: true, nutritionist: true, admin: true },
         { feature: '24/7 AI Health Chat Assistant', user: true, nutritionist: true, admin: true },
         { feature: 'Book Certified Nutritionist Consultations', user: true, nutritionist: false, admin: false },
-        { feature: 'Client Roster & Patient Health History', user: false, nutritionist: true, admin: true },
         { feature: 'Custom Prescription Diet Regimen Builder', user: false, nutritionist: true, admin: true },
         { feature: 'Virtual Consultation Calendar & Scheduling', user: false, nutritionist: true, admin: true },
         { feature: 'Clinical PDF Progress & Compliance Export', user: true, nutritionist: true, admin: true },

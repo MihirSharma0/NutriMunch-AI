@@ -77,12 +77,6 @@ const getModalServicesForRole = (user) => {
                     path: '/dashboard/nutritionist'
                 },
                 {
-                    title: 'Client Roster',
-                    desc: 'View assigned client profiles, health histories, daily logs, and dietary progress.',
-                    icon: 'clinical_notes',
-                    path: '/dashboard/nutritionist/clients'
-                },
-                {
                     title: 'Custom Diet Builder',
                     desc: 'Craft and prescribe personalized macro & micro nutrient meal regimens.',
                     icon: 'menu_book',
@@ -207,12 +201,6 @@ const ServicesOverview = () => {
             desc: 'Review your live patient workload, consultations, and clinical tasks.',
             icon: 'clinical_notes',
             path: '/dashboard/nutritionist'
-        },
-        {
-            title: 'Client Roster',
-            desc: 'Access assigned client profiles, health logs, and dietary progress.',
-            icon: 'groups',
-            path: '/dashboard/nutritionist/clients'
         },
         {
             title: 'Diet Plan Builder',

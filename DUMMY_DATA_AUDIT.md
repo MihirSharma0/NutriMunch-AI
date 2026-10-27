@@ -35,18 +35,16 @@ File: [DietPlanBuilder.jsx](./frontend/src/pages/Dashboard/Nutritionist/DietPlan
 The hardcoded seed plans and seed-on-first-load behavior have been removed.
 The history view now starts empty until real plan history exists.
 
-### 3. Nutritionist patient rosters — sample data removed
+### 3. Nutritionist patient selection — sample data removed
 
 Files:
 
 - [DietPlanBuilder.jsx](./frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx)
-- [ClientManagement.jsx](./frontend/src/pages/Dashboard/Nutritionist/ClientManagement.jsx)
 - [AppointmentManagement.jsx](./frontend/src/pages/Dashboard/Nutritionist/AppointmentManagement.jsx)
 
-Patient lists now use live API results only. While requests are pending, the
-pages show animated loading indicators; empty responses show an empty state,
-and failures show an error with a retry action. No local-only patient creation
-or sample-patient fallback remains.
+Patient selectors in the diet-plan builder and appointment scheduler use live
+API results only. No local-only patient creation or sample-patient fallback
+remains.
 
 ### 4. Consultation chat default patients — removed
 

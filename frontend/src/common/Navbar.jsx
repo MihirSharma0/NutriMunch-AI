@@ -36,8 +36,7 @@ export const getNavItemsForRole = (user) => {
         { label: 'SQL Console', path: '/dashboard/admin/sql', icon: 'terminal', desc: 'Raw database query console & table inspection' }
     ];
 
-    const clientManagementSubMenu = [
-        { label: 'Client Roster', path: '/dashboard/nutritionist/clients', icon: 'group', desc: 'Manage patient roster, health logs & biometrics' },
+    const nutritionistScheduleSubMenu = [
         { label: 'Schedule', path: '/dashboard/nutritionist/schedule', icon: 'calendar_month', desc: 'Manage consultation calendar & slots' },
         { label: 'Consultation History', path: '/dashboard/nutritionist/schedule#consultation-history', icon: 'history', desc: 'Completed, cancelled & declined sessions with patients' }
     ];
@@ -87,7 +86,7 @@ export const getNavItemsForRole = (user) => {
         return [
             { label: 'Home', path: '/' },
             { label: 'Platform Features', subMenu: nutritionistPlatformSubMenu, headerTitle: 'Platform Features' },
-            { label: 'Client & Schedule', subMenu: clientManagementSubMenu, headerTitle: 'Client Management' },
+            { label: 'Consultations', subMenu: nutritionistScheduleSubMenu, headerTitle: 'Consultations' },
             { label: 'Diet & Reports', subMenu: clinicalToolsSubMenu, headerTitle: 'Clinical Protocols' },
             { label: 'Testimonials', path: '/testimonials' },
             { label: 'Contact', path: '/contact' }

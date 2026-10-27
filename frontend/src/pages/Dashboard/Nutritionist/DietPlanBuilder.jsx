@@ -803,27 +803,27 @@ const DietPlanBuilder = () => {
                             <span className="material-symbols-outlined text-xl text-amber-400">shield_person</span>
                             <div>
                                 <span className="font-bold text-white">Targeted Clinical Assignment: </span>
-                                Select a patient from the roster below. Click "Patient Dossier" to inspect their complete health profile, allergy records, and dietary preferences.
+                                Select a patient below. Click "Patient Dossier" to inspect their complete health profile, allergy records, and dietary preferences.
                             </div>
                         </div>
 
-                        {/* User & Patient Roster Integration */}
+                        {/* Patient selection for the diet plan */}
                         <div className="bg-white/5 border border-white/10 rounded-3xl p-5 lg:p-6 space-y-4">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-4">
                                 <div>
                                     <h3 className="font-bold text-base text-white flex items-center gap-2">
                                         <span className="material-symbols-outlined text-[#a5d391]">group</span>
-                                        User & Patient Roster
+                                        Choose a client
                                     </h3>
                                     <p className="text-white/40 text-xs">Select patient to view synced profile dossier or formulate exclusive plan</p>
                                 </div>
 
-                                {/* Search Roster */}
+                                {/* Search clients */}
                                 <div className="relative w-full sm:w-64">
                                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">search</span>
                                     <input 
                                         type="text" 
-                                        placeholder="Search patient by name or ID..."
+                                        placeholder="Search clients by name or ID..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="w-full bg-black/60 border border-white/15 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#a5d391]"
@@ -831,7 +831,7 @@ const DietPlanBuilder = () => {
                                 </div>
                             </div>
 
-                            {/* Roster Cards List */}
+                            {/* Client selection cards */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
                                 {loadingClients ? (
                                     <div className="col-span-full py-8 flex flex-col items-center justify-center gap-3">
