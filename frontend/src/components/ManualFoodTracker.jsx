@@ -267,7 +267,6 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
     const proteinPercent = targetProtein > 0 ? Math.min(Math.round((dailyTotals.protein / targetProtein) * 100), 100) : 0;
     const carbsPercent = targetCarbs > 0 ? Math.min(Math.round((dailyTotals.carbs / targetCarbs) * 100), 100) : 0;
     const fatsPercent = targetFats > 0 ? Math.min(Math.round((dailyTotals.fats / targetFats) * 100), 100) : 0;
-    const fiberPercent = targetFiber > 0 ? Math.min(Math.round((dailyTotals.fiber / targetFiber) * 100), 100) : 0;
 
     // Current preview calculation for selected food
     const activeMultiplier = Math.max(0.1, parseFloat(servingMultiplier) || 1);
@@ -275,7 +274,6 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
     const previewProtein = selectedFood ? (selectedFood.protein * activeMultiplier).toFixed(1) : 0;
     const previewCarbs = selectedFood ? (selectedFood.carbs * activeMultiplier).toFixed(1) : 0;
     const previewFats = selectedFood ? (selectedFood.fats * activeMultiplier).toFixed(1) : 0;
-    const previewFiber = selectedFood ? (selectedFood.fiber * activeMultiplier).toFixed(1) : 0;
 
     return (
         <div className="bg-gradient-to-br from-[#0c121e] via-[#080b12] to-[#0c121e] border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 shadow-[0_0_50px_rgba(165,211,145,0.12)] relative overflow-hidden space-y-8">

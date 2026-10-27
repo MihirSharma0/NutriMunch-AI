@@ -3,9 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
-import { permanentlyDeleteDietPlan, getDeletedPlanIds, normalizeAndDeduplicatePlans } from '../../../utils/dietPlanSync';
-
-const SEED_BACKUP_PLANS = [];
+import { permanentlyDeleteDietPlan, normalizeAndDeduplicatePlans } from '../../../utils/dietPlanSync';
 
 const DietPlanManagement = () => {
     const { user } = useContext(AuthContext);

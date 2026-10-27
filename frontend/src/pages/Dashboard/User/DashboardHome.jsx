@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api, { API_BASE_URL } from '../../../api/axios';
-import { normalizeAndDeduplicatePlans, getDeletedPlanIds } from '../../../utils/dietPlanSync';
+import { normalizeAndDeduplicatePlans } from '../../../utils/dietPlanSync';
 
 const DashboardHome = () => {
     const navigate = useNavigate();

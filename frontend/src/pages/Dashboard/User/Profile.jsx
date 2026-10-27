@@ -96,7 +96,6 @@ const Profile = () => {
     const [favFoodInput, setFavFoodInput] = useState('');
     const [dislikedFoodInput, setDislikedFoodInput] = useState('');
 
-    const [targets, setTargets] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -146,8 +145,6 @@ const Profile = () => {
                     email: userKeyEmail || ''
                 }
             });
-
-            const cachedBal = resolveWalletBalance();
 
             if (res.data && typeof res.data.balance !== 'undefined' && res.data.balance !== null) {
                 const sBal = Number(res.data.balance);

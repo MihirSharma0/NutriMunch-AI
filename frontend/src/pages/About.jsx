@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import Starfield from '../components/Starfield';
 import OurMissionVision from './AboutSections/OurMissionVision';
 import OurApproach from './AboutSections/OurApproach';
 import WhyPersonalizedNutritionMatters from './AboutSections/WhyPersonalizedNutritionMatters';

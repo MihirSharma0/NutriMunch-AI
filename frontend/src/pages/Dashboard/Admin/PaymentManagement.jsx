@@ -61,7 +61,6 @@ const PaymentManagement = () => {
     // State
     const [recipients, setRecipients] = useState([]);
     const [ledger, setLedger] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [recipientTypeFilter, setRecipientTypeFilter] = useState('ALL'); // 'ALL' | 'USER' | 'NUTRITIONIST'
     const [recipientSearch, setRecipientSearch] = useState('');
     const [selectedRecipientId, setSelectedRecipientId] = useState('');

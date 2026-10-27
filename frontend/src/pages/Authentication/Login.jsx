@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, ArrowRight, Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import Starfield from '../../components/Starfield';
 import { getDashboardUrl } from '../../utils/roleUtils';
 import OnboardingWizard from '../../components/OnboardingWizard';
 
@@ -61,21 +60,6 @@ const Login = () => {
         setSelectedRole(role);
         if (role === 'NUTRITIONIST') {
             setOnboardingStep(2);
-        }
-    };
-
-    const handleGoogleOnboardingFinish = async () => {
-        setRequiresRoleSelection(false);
-        if (!pendingGoogleCredential) return;
-        try {
-            const result = await googleLogin(pendingGoogleCredential, 'USER', {});
-            if (result.success) {
-                navigate(getPostLoginUrl(result.role));
-            } else {
-                setError(result.message);
-            }
-        } catch (err) {
-            setError('Google login failed. Please try again.');
         }
     };
 
@@ -149,8 +133,6 @@ const Login = () => {
 
     return (
         <div className="min-h-screen bg-[#080b12] text-slate-200 font-sans antialiased flex flex-col justify-between selection:bg-[#a5d391]/30 selection:text-[#a5d391] relative overflow-x-hidden">
-            <Starfield />
-
             {/* Ambient Background Glows */}
             <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#a5d391]/10 blur-[150px] rounded-full pointer-events-none z-0"></div>
 

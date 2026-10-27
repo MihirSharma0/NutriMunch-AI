@@ -3,7 +3,7 @@
 
 const CONFIRMED_STATES = ['CONFIRMED', 'ACCEPTED', 'SCHEDULED', 'APPROVED', 'ONGOING', 'DECLINE_CANCELLATION', 'REJECT_CANCELLATION'];
 
-export const isPastAppointment = (apt) => {
+const isPastAppointment = (apt) => {
     const t = new Date(apt?.appointmentTime || '').getTime();
     return !isNaN(t) && t <= Date.now();
 };

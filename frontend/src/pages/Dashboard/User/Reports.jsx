@@ -6,7 +6,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api from '../../../api/axios';
 import DarkCalendarPicker from '../../../components/DarkCalendarPicker';
-import { searchFoodDatabase, FOOD_DATABASE } from '../../../data/foodDatabase';
+import { searchFoodDatabase } from '../../../data/foodDatabase';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
@@ -431,12 +431,12 @@ const Reports = () => {
 
     // Daily Nutrition Logging Modal State (Strictly single-day resolution)
     const [isLogNutritionModalOpen, setIsLogNutritionModalOpen] = useState(false);
-    const [logNutritionTargetDate, setLogNutritionTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [logNutritionTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [nutritionLogVersion, setNutritionLogVersion] = useState(0);
 
     // Daily Water Logging Modal State (Strictly single-day resolution)
     const [isLogWaterModalOpen, setIsLogWaterModalOpen] = useState(false);
-    const [logWaterTargetDate, setLogWaterTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [logWaterTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
 
     // Date Range Formatting Helpers (Clicked date is strictly the starting date of the 7-day week)
     const getWeekRange = (dateStr) => {
@@ -680,25 +680,6 @@ const Reports = () => {
     if (!user) {
         return <FeatureGate />;
     }
-
-    // Calculations for Today's Hydration
-    const targetWaterMl = Math.round((targets.water || 2.5) * 1000);
-    const waterPercent = targetWaterMl > 0 ? Math.min(Math.round((waterConsumedMl / targetWaterMl) * 100), 100) : 0;
-    const waterDeficit = Math.max(targetWaterMl - waterConsumedMl, 0);
-
-    // Calculations for Today's Nutrition
-    const targetCalories = targets.calories || 2000;
-    const calPercent = targetCalories > 0 ? Math.min(Math.round((todayNutrition.calories / targetCalories) * 100), 100) : 0;
-    const calRemaining = Math.max(targetCalories - todayNutrition.calories, 0);
-
-    const targetProtein = targets.protein || 140;
-    const proteinPercent = targetProtein > 0 ? Math.min(Math.round((todayNutrition.protein / targetProtein) * 100), 100) : 0;
-
-    const targetCarbs = targets.carbs || 200;
-    const carbsPercent = targetCarbs > 0 ? Math.min(Math.round((todayNutrition.carbs / targetCarbs) * 100), 100) : 0;
-
-    const targetFats = targets.fats || 65;
-    const fatsPercent = targetFats > 0 ? Math.min(Math.round((todayNutrition.fats / targetFats) * 100), 100) : 0;
 
     // Active evaluated metrics according to statement mode (100% Real Synchronized Data)
     const activeStatementData = useMemo(() => {

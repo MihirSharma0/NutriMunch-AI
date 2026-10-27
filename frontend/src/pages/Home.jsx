@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useContext } from 'react';
-import Starfield from '../components/Starfield';
 import ServicesOverview from './HomeSections/ServicesOverview';
 import { AuthContext } from '../context/AuthContext';
 import HowItWorks from './HomeSections/HowItWorks';

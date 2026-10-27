@@ -79,8 +79,6 @@ const Appointments = () => {
                 }
             });
 
-            const cachedBal = resolveInitialWalletBalance();
-
             if (res.data && typeof res.data.balance !== 'undefined' && res.data.balance !== null) {
                 const sBal = Number(res.data.balance);
                 setWallet({ ...res.data, balance: sBal });
