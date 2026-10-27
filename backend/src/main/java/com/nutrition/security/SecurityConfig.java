@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -30,7 +31,7 @@ import java.util.stream.Collectors;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    @Value("${app.frontend.origin:http://localhost:5173,http://localhost:5174}")
+    @Value("${app.frontend.origin}")
     private String frontendOrigins;
 
     @Bean
@@ -42,6 +43,7 @@ public class SecurityConfig {
             .exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/diet-plans/all").hasRole("ADMIN")
                 .requestMatchers("/api/diet-plans/me/**").authenticated()
@@ -69,6 +71,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         List<String> allowedOrigins = Arrays.stream(frontendOrigins.split(","))
                 .map(String::trim)
+                .map(origin -> origin.replaceAll("/+$", ""))
                 .filter(origin -> !origin.isEmpty())
                 .collect(Collectors.toList());
         configuration.setAllowedOrigins(allowedOrigins);

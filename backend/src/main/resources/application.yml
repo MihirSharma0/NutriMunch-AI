@@ -48,7 +48,7 @@ logging:
 app:
   frontend:
     login-url: ${FRONTEND_LOGIN_URL:http://localhost:5173/login}
-    origin: ${FRONTEND_ORIGIN:http://localhost:5173,http://localhost:5174}
+    origin: ${FRONTEND_ORIGIN:https://nutrimunch-ai.vercel.app,http://localhost:5173,http://localhost:5174}
   admin:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}

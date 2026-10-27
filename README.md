@@ -140,7 +140,7 @@ cd Nutrition-AI-Minor-Project
 2. Connect your GitHub repository.
 3. Set the **Root Directory** to `backend`.
 4. Set the **Environment** to `Docker` (Render will use the included `Dockerfile`).
-5. Add the backend environment variables from your `.env` to the Render Environment tab. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` there to the administrator account you want to bootstrap. The backend creates or updates that admin account at startup; admin credentials are not seeded from Vercel or frontend variables.
+5. Add the backend environment variables from your `.env` to the Render Environment tab. Set `FRONTEND_ORIGIN` to `https://nutrimunch-ai.vercel.app` (comma-separated if you also need additional origins), and set `ADMIN_EMAIL` and `ADMIN_PASSWORD` there to the administrator account you want to bootstrap. The backend creates or updates that admin account at startup; admin credentials are not seeded from Vercel or frontend variables.
 
 ### Frontend (Vercel)
 1. Import the project into Vercel.
