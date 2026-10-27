@@ -30,7 +30,7 @@ const ClientManagement = () => {
         try {
             setLoading(true);
             // Fetch live user profiles with updated biometrics, goals, and macro targets
-            const response = await api.get('/admin/all-user-profiles');
+            const response = await api.get('/client-profiles');
             if (response.data && Array.isArray(response.data)) {
                 const fetchedClients = response.data.map(p => {
                     const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'User');

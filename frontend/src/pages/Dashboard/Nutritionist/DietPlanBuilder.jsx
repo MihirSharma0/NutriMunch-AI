@@ -155,7 +155,7 @@ const DietPlanBuilder = () => {
     const fetchRealUsers = async () => {
         try {
             setLoadingClients(true);
-            const response = await api.get('/admin/all-user-profiles');
+            const response = await api.get('/client-profiles');
             if (response.data && Array.isArray(response.data)) {
                 const fetched = response.data.map(p => {
                     const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'User');

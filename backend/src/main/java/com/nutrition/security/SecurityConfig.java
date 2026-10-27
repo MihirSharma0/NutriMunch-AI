@@ -45,6 +45,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/client-profiles").hasAnyRole("ADMIN", "NUTRITIONIST")
                 .requestMatchers("/api/diet-plans/all").hasRole("ADMIN")
                 .requestMatchers("/api/diet-plans/me/**").authenticated()
                 // Wallet, transactions, notifications and AI features require a logged-in session

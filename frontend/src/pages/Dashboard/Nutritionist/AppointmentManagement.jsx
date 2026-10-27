@@ -112,7 +112,7 @@ const AppointmentManagement = () => {
 
     const fetchClients = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/admin/all-user-profiles`, {
+            const res = await fetch(`${API_BASE_URL}/client-profiles`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
