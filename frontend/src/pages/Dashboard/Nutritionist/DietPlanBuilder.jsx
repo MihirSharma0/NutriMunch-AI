@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api, { API_BASE_URL } from '../../../api/axios';
+import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import { permanentlyDeleteDietPlan, getDeletedPlanIds, getDeletedPlanTitles } from '../../../utils/dietPlanSync';
 
 const DietPlanBuilder = () => {
     const navigate = useNavigate();
-    const { user, token } = useContext(AuthContext);
+    const { user } = useContext(AuthContext);
     const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Nutritionist');
     const nutritionistEmail = user?.email || (user?.username && user.username.includes('@') ? user.username : 'sharmamihir012@gmail.com');
 
@@ -568,14 +568,6 @@ const DietPlanBuilder = () => {
             setIsHistoryDossierOpen(false);
             setSelectedHistoryPlan(null);
         }
-    };
-
-    // Quick Re-Deploy from History Vault
-    const handleQuickDeployFromHistory = (plan) => {
-        handleLoadHistoryIntoBuilder(plan);
-        setTimeout(() => {
-            showToast(`Ready to deploy or edit "${plan.title || plan.planTitle}".`);
-        }, 400);
     };
 
     return (

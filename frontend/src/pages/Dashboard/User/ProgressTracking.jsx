@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Droplet, Plus, RotateCcw, CheckCircle2, Sparkles, Edit2, Save, X } from 'lucide-react';
-import api, { API_BASE_URL } from '../../../api/axios';
+import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import ManualFoodTracker from '../../../components/ManualFoodTracker';
@@ -23,7 +23,7 @@ const DEFAULT_TARGETS = {
 };
 
 const ProgressTracking = () => {
-    const { user, token } = useContext(AuthContext);
+    const { user } = useContext(AuthContext);
     const location = useLocation();
     const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const targetDateFromUrl = queryParams.get('date');

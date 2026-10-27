@@ -2,7 +2,6 @@ import React, { useState, useContext, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, ArrowRight, Sparkles, Camera, Check, User, ShieldCheck, X, Eye, EyeOff } from 'lucide-react';
-import Starfield from '../../components/Starfield';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -18,7 +17,6 @@ const Register = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState(null);
-    const [avatarFile, setAvatarFile] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +32,6 @@ const Register = () => {
     const handleImageChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            setAvatarFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 setAvatarPreview(reader.result);
@@ -45,7 +42,6 @@ const Register = () => {
 
     const removeAvatar = () => {
         setAvatarPreview(null);
-        setAvatarFile(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -91,8 +87,6 @@ const Register = () => {
 
     return (
         <div className="min-h-screen bg-[#080b12] text-slate-100 font-sans antialiased flex flex-col justify-between relative selection:bg-[#a5d391]/30 selection:text-[#a5d391] overflow-x-hidden">
-            <Starfield />
-
             {/* Ambient Background Glows */}
             <div aria-hidden="true" className="pointer-events-none fixed inset-0 flex items-center justify-center overflow-hidden z-0">
                 <div className="w-[700px] h-[500px] bg-[#a5d391]/10 blur-[150px] rounded-full"></div>

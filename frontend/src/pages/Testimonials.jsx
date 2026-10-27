@@ -1,5 +1,4 @@
 import React from 'react';
-import Starfield from '../components/Starfield';
 import ClientTestimonials from './HomeSections/ClientTestimonials';
 import ShareYourStoryForm from './TestimonialSections/ShareYourStoryForm';
 

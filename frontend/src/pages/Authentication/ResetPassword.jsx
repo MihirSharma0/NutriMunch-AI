@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import axios from '../../api/axios';
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
-    const navigate = useNavigate();
     
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');

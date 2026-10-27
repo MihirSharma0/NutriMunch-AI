@@ -18,7 +18,6 @@ import {
     ArrowRight,
     Lock
 } from 'lucide-react';
-import Starfield from '../components/Starfield';
 
 const UserRoles = () => {
     const [activeTab, setActiveTab] = useState('user'); // 'user' | 'nutritionist'
@@ -105,8 +104,6 @@ const UserRoles = () => {
 
     return (
         <div className="min-h-screen bg-[#080b12] text-white pt-28 pb-20 relative overflow-hidden font-sans">
-            <Starfield />
-
             {/* Glowing background spotlights */}
             <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/15 blur-[140px] rounded-full pointer-events-none"></div>
 

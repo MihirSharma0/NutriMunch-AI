@@ -269,9 +269,6 @@ const ConsultationChatPage = () => {
         navigate('/consultation-chat');
     };
     const isSelectionRequested = Boolean(requestedAppointmentId || requestedParticipantId || requestedConversationId);
-    const selectionError = isSelectionRequested && !loading && !loadingRecipients && !conversationId && !appointmentId && !selectedRecipient
-        ? 'This consultation is unavailable. Choose an active chat or a booked appointment.'
-        : '';
 
     useEffect(() => {
         if (!requestedConversationId) {

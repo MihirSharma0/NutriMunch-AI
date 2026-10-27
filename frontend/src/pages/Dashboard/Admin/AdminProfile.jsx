@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../../context/AuthContext';
+import React, { useState, useEffect } from 'react';
 import api from '../../../api/axios';
 import { Shield, Key, Mail, CheckCircle } from 'lucide-react';
 
 const AdminProfile = () => {
-    const { user } = useContext(AuthContext);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     

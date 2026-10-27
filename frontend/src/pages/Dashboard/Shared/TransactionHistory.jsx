@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
 import { subscribeWalletSse } from '../../../utils/walletSse';
@@ -24,8 +24,6 @@ const mergeTransactions = (...lists) => {
 
 const TransactionHistory = () => {
     const { user } = useContext(AuthContext);
-    const location = useLocation();
-    const navigate = useNavigate();
 
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);

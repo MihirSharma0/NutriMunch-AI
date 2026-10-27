@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { fetchAllTestimonials, saveTestimonial, deleteTestimonial, getLocalTestimonials } from '../../services/testimonialService';
+import { saveTestimonial, deleteTestimonial, getLocalTestimonials } from '../../services/testimonialService';
 
 const getVerifiedRoleForUser = (user) => {
     if (!user || !user.role) return 'Standard User';

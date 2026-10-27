@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
-import { normalizeAndDeduplicatePlans, getDeletedPlanIds, permanentlyDeleteDietPlan } from '../../../utils/dietPlanSync';
+import { normalizeAndDeduplicatePlans, permanentlyDeleteDietPlan } from '../../../utils/dietPlanSync';
 import { ALLERGEN_OPTIONS, DIET_OPTIONS, planContainsAllergen, planMatchesDiet, parseAllergies } from '../../../utils/dietFilters';
 
 const DietPlans = () => {
