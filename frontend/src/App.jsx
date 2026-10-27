@@ -43,6 +43,7 @@ import UserManagement from './pages/Dashboard/Admin/UserManagement';
 import SqlConsole from './pages/Dashboard/Admin/SqlConsole';
 import NutritionistManagement from './pages/Dashboard/Admin/NutritionistManagement';
 import PaymentManagement from './pages/Dashboard/Admin/PaymentManagement';
+import AppointmentRefundManagement from './pages/Dashboard/Admin/AppointmentRefundManagement';
 import AdminProfile from './pages/Dashboard/Admin/AdminProfile';
 import DietPlanManagement from './pages/Dashboard/Admin/DietPlanManagement';
 import TransactionHistory from './pages/Dashboard/Shared/TransactionHistory';
@@ -147,6 +148,7 @@ function App() {
                 <Route path="dashboard/admin/nutritionists" element={<NutritionistManagement />} />
                 <Route path="dashboard/admin/testimonials" element={<TestimonialManagement />} />
                 <Route path="dashboard/admin/payments" element={<PaymentManagement />} />
+                <Route path="dashboard/admin/appointment-refunds" element={<AppointmentRefundManagement />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

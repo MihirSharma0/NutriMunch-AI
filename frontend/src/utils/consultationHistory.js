@@ -8,12 +8,13 @@ export const isPastAppointment = (apt) => {
     return !isNaN(t) && t <= Date.now();
 };
 
-// UPCOMING | PENDING | CANCEL_REQUESTED | COMPLETED | CANCELLED | DECLINED | EXPIRED
+// UPCOMING | PENDING | CANCEL_REQUESTED | COMPLETED | CANCELLED | NUTRITIONIST_CANCELLED | DECLINED | EXPIRED
 export const getConsultationOutcome = (apt) => {
     const status = String(apt?.status || '').toUpperCase();
     const past = isPastAppointment(apt);
 
     if (status === 'COMPLETED') return 'COMPLETED';
+    if (status === 'CANCELLED_BY_NUTRITIONIST') return 'NUTRITIONIST_CANCELLED';
     if (status === 'CANCELLED') return 'CANCELLED';
     if (status === 'REJECTED' || status === 'DENIED') return 'DECLINED';
     if (status === 'CANCELLATION_REQUESTED') return 'CANCEL_REQUESTED';
@@ -23,11 +24,12 @@ export const getConsultationOutcome = (apt) => {
 };
 
 // Finished consultations: anything that can no longer change
-export const isHistoryOutcome = (outcome) => ['COMPLETED', 'CANCELLED', 'DECLINED', 'EXPIRED'].includes(outcome);
+export const isHistoryOutcome = (outcome) => ['COMPLETED', 'CANCELLED', 'NUTRITIONIST_CANCELLED', 'DECLINED', 'EXPIRED'].includes(outcome);
 
 export const OUTCOME_BADGES = {
     COMPLETED: { label: 'Completed', icon: 'task_alt', style: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
     CANCELLED: { label: 'Cancelled', icon: 'cancel', style: 'bg-red-500/20 text-red-400 border-red-500/30' },
+    NUTRITIONIST_CANCELLED: { label: 'Cancelled by nutritionist · Refunded', icon: 'currency_exchange', style: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
     DECLINED: { label: 'Declined', icon: 'do_not_disturb', style: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
     EXPIRED: { label: 'Expired Request', icon: 'history_toggle_off', style: 'bg-white/10 text-white/60 border-white/20' },
     UPCOMING: { label: 'Upcoming', icon: 'timer', style: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' },

@@ -191,6 +191,16 @@ const AdminHome = () => {
                     </div>
                 </Link>
 
+                <Link to="/dashboard/admin/appointment-refunds" className="p-6 bg-white/5 backdrop-blur-xl hover:bg-white/10 border border-white/10 hover:border-amber-400/40 rounded-[2rem] transition-all duration-300 group flex flex-col justify-between shadow-xl hover:-translate-y-1">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-300 flex items-center justify-center border border-amber-400/30 group-hover:scale-110 transition-transform duration-300 mb-4">
+                        <span className="material-symbols-outlined text-2xl">currency_exchange</span>
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-white text-base group-hover:text-amber-300 transition-colors">Appointment Refunds</h3>
+                        <p className="text-xs text-white/50 font-light mt-1">Review confirmed appointment payments and issue admin refunds.</p>
+                    </div>
+                </Link>
+
                 <Link to="/dashboard/admin/sql" className="p-6 bg-white/5 backdrop-blur-xl hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 rounded-[2rem] transition-all duration-300 group flex flex-col justify-between shadow-xl hover:-translate-y-1">
                     <div className="w-12 h-12 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] flex items-center justify-center border border-[#a5d391]/30 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(165,211,145,0.2)] mb-4">
                         <span className="material-symbols-outlined text-2xl">terminal</span>

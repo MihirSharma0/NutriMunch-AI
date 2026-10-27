@@ -32,6 +32,7 @@ export const getNavItemsForRole = (user) => {
         { label: 'System Core', path: '/dashboard/admin', icon: 'dashboard', desc: 'Master system controls, credentials & live telemetry' },
         { label: 'Diet Plans Management', path: '/dashboard/admin/diet-plans', icon: 'menu_book', desc: 'Audit, inspect, promote, and purge diet plans registry' },
         { label: 'Payments', path: '/dashboard/admin/payments', icon: 'payments', desc: 'Platform credit allocations, wallet transactions & audit ledger' },
+        { label: 'Appointment Refunds', path: '/dashboard/admin/appointment-refunds', icon: 'currency_exchange', desc: 'Review appointments and issue authorized post-confirmation refunds' },
         { label: 'SQL Console', path: '/dashboard/admin/sql', icon: 'terminal', desc: 'Raw database query console & table inspection' }
     ];
 

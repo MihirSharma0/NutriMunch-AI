@@ -144,11 +144,11 @@ const FAQ_CATEGORIES = [
             },
             {
                 q: 'What happens to my money when I book?',
-                a: "The consultation fee is deducted from your wallet and held safely (in escrow). When the nutritionist confirms the session, the money is released to them. If the nutritionist declines your request, the full amount is returned to your wallet."
+                a: "The consultation fee is deducted from your wallet and held safely (in escrow). When the nutritionist confirms the session, the money is released to them. If the nutritionist declines the booking before confirmation, the full amount is returned to your wallet."
             },
             {
                 q: 'How do I cancel an appointment?',
-                a: 'Open Appointments, select the session, and choose Cancel Session. If the session is confirmed, your nutritionist will be notified to review the cancellation.'
+                a: 'Open Appointments, select the session, and choose Cancel Session. Before confirmation, cancelling returns the held fee to your wallet. If you request cancellation after confirmation, your nutritionist reviews it: approval cancels the session without refund, while declining leaves it confirmed. If the nutritionist cancels a confirmed session, the fee is refunded to your wallet. An admin can also issue an explicit refund.'
             },
             {
                 q: 'Are consultations held over video?',
@@ -210,7 +210,7 @@ const FAQ_CATEGORIES = [
             },
             {
                 q: 'How do I manage appointment requests?',
-                a: 'Open your Schedule. You can approve or deny new appointments, and review cancellation requests from clients.'
+                a: 'Open your Schedule. You can approve or deny new appointments, review cancellation requests from clients, or cancel a confirmed session yourself. Approving a client cancellation request leaves the fee in your wallet; declining keeps the session confirmed. If you cancel a confirmed session, its fee is refunded to the client.'
             }
         ]
     },

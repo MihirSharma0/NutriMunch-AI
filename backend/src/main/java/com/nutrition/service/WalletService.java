@@ -65,47 +65,14 @@ public class WalletService {
             wallet.setBalance(BigDecimal.ZERO);
             wallet = walletRepository.save(wallet);
         }
-        return wallet;
+        return reconcileWalletBalance(wallet, user);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> getWalletInfo(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-        Wallet wallet = getOrCreateWallet(user);
-
-        final Long targetWalletId = wallet.getId();
-        final String userEmail = user.getEmail();
-        final Long targetUserId = userId;
-
-        // Auto-reconcile with ledger transactions
-        try {
-            List<WalletTransaction> transactions = walletTransactionRepository.findAllByOrderByCreatedAtDesc();
-            BigDecimal totalCredits = transactions.stream()
-                    .filter(tx -> tx.getRecipient() != null && (tx.getRecipient().getId().equals(targetUserId) 
-                            || (userEmail != null && userEmail.equalsIgnoreCase(tx.getRecipient().getEmail()))
-                            || (targetWalletId != null && tx.getTargetWallet() != null && tx.getTargetWallet().getId().equals(targetWalletId)))
-                            && ("SUCCESS".equalsIgnoreCase(tx.getStatus()) || "REFUNDED".equalsIgnoreCase(tx.getStatus())))
-                    .map(WalletTransaction::getAmount)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal totalDebits = transactions.stream()
-                    .filter(tx -> tx.getInitiator() != null && (tx.getInitiator().getId().equals(targetUserId)
-                            || (userEmail != null && userEmail.equalsIgnoreCase(tx.getInitiator().getEmail()))
-                            || (targetWalletId != null && tx.getSourceWallet() != null && tx.getSourceWallet().getId().equals(targetWalletId)))
-                            && (("SERVICE_PAYMENT".equalsIgnoreCase(tx.getTransactionType()) && "SUCCESS".equalsIgnoreCase(tx.getStatus()))
-                                || ("ESCROW_HOLD".equalsIgnoreCase(tx.getTransactionType()) && ("HELD".equalsIgnoreCase(tx.getStatus()) || "SUCCESS".equalsIgnoreCase(tx.getStatus())))))
-                    .map(WalletTransaction::getAmount)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal ledgerBalance = totalCredits.subtract(totalDebits);
-            if (ledgerBalance.compareTo(BigDecimal.ZERO) >= 0 && (wallet.getBalance() == null || wallet.getBalance().compareTo(ledgerBalance) < 0)) {
-                wallet.setBalance(ledgerBalance);
-                wallet = walletRepository.save(wallet);
-            }
-        } catch (Exception ignored) {}
-
+        Wallet wallet = getOrCreateWalletWithLock(user);
         Map<String, Object> res = new HashMap<>();
         res.put("walletId", wallet.getId());
         res.put("userId", user.getId());
@@ -116,6 +83,75 @@ public class WalletService {
         res.put("currency", wallet.getCurrency());
         res.put("updatedAt", wallet.getUpdatedAt());
         return res;
+    }
+
+    private Wallet reconcileWalletBalance(Wallet wallet, User user) {
+        Wallet reconciledWallet = wallet;
+
+        List<WalletTransaction> transactions = walletTransactionRepository.findAllByOrderByCreatedAtDesc();
+        BigDecimal totalCredits = transactions.stream()
+                .filter(tx -> isWalletCredit(tx) && belongsToWalletSide(tx, reconciledWallet, user, false))
+                .map(WalletTransaction::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalDebits = transactions.stream()
+                .filter(tx -> isWalletDebit(tx, reconciledWallet, user))
+                .map(WalletTransaction::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal ledgerBalance = totalCredits.subtract(totalDebits).max(BigDecimal.ZERO);
+        if (wallet.getBalance() == null || wallet.getBalance().compareTo(ledgerBalance) != 0) {
+            wallet.setBalance(ledgerBalance);
+            wallet = walletRepository.save(wallet);
+        }
+        return wallet;
+    }
+
+    private static boolean isWalletCredit(WalletTransaction tx) {
+        String type = normalize(tx.getTransactionType());
+        String status = normalize(tx.getStatus());
+        if ("ESCROW_HOLD".equals(type)) return false;
+        if ("ESCROW_REFUND".equals(type)) return "REFUNDED".equals(status);
+        if ("ADMIN_ALLOCATION".equals(type)) return "COMPLETED".equals(status);
+        if ("SERVICE_PAYMENT".equals(type) || "ESCROW_RELEASE".equals(type)
+                || "ADMIN_CREDIT_ALLOCATION".equals(type) || "ADMIN_MANUAL_TOPUP".equals(type)
+                || "BONUS_CREDIT".equals(type)) {
+            return "SUCCESS".equals(status);
+        }
+        return false;
+    }
+
+    private static boolean isWalletDebit(WalletTransaction tx, Wallet wallet, User user) {
+        String type = normalize(tx.getTransactionType());
+        String status = normalize(tx.getStatus());
+        if ("ESCROW_HOLD".equals(type)) {
+            return Set.of("HELD", "SUCCESS", "RELEASED", "REFUNDED").contains(status)
+                    && belongsToWalletSide(tx, wallet, user, true);
+        }
+        if ("ESCROW_REFUND".equals(type)) {
+            return "REFUNDED".equals(status) && tx.getSourceWallet() != null
+                    && Objects.equals(tx.getSourceWallet().getId(), wallet.getId());
+        }
+        if ("SERVICE_PAYMENT".equals(type)) {
+            return "SUCCESS".equals(status) && belongsToWalletSide(tx, wallet, user, true);
+        }
+        if ("PLATFORM_DEDUCTION".equals(type) || "ADMIN_BALANCE_ADJUSTMENT".equals(type)) {
+            return "SUCCESS".equals(status) && belongsToWalletSide(tx, wallet, user, false);
+        }
+        return false;
+    }
+
+    private static boolean belongsToWalletSide(WalletTransaction tx, Wallet wallet, User user, boolean source) {
+        Wallet sideWallet = source ? tx.getSourceWallet() : tx.getTargetWallet();
+        User sideUser = source ? tx.getInitiator() : tx.getRecipient();
+        return (sideWallet != null && Objects.equals(sideWallet.getId(), wallet.getId()))
+                || (sideUser != null && Objects.equals(sideUser.getId(), user.getId()));
+    }
+
+    private static String normalize(String value) {
+        return value == null ? "" : value.toUpperCase(Locale.ROOT);
     }
 
     public List<Map<String, Object>> getUserTransactionHistory(Long userId) {

@@ -389,11 +389,12 @@ const Appointments = () => {
             return true;
         }
         const upper = (item.status || '').toUpperCase();
-        if (upper === 'CANCELLED' || upper === 'REJECTED') {
+        if (upper === 'CANCELLED' || upper === 'CANCELLED_BY_NUTRITIONIST' || upper === 'REJECTED') {
             return true;
         }
         return false;
     };
+    const isCancelledStatus = (status) => ['CANCELLED', 'CANCELLED_BY_NUTRITIONIST'].includes(String(status || '').toUpperCase());
 
     const handleBookSubmit = async (e) => {
         e.preventDefault();
@@ -643,7 +644,7 @@ const Appointments = () => {
     const upcomingAppointments = appointments.filter(a => {
         const isPassed = isDatePassed(a.appointmentTime);
         const upper = (a.status || '').toUpperCase();
-        return !isPassed && upper !== 'CANCELLED' && upper !== 'COMPLETED' && upper !== 'REJECTED';
+        return !isPassed && !isCancelledStatus(upper) && upper !== 'COMPLETED' && upper !== 'REJECTED';
     });
     const featuredUpcoming = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
 
@@ -652,19 +653,19 @@ const Appointments = () => {
         || (appointments.length > 0 ? appointments[0] : null);
 
     const deletableAppointmentsCount = appointments.filter(a => canDeleteAppointment(a)).length;
-    const upcomingOrOngoingCount = appointments.filter(a => !isDatePassed(a.appointmentTime) && (a.status || '').toUpperCase() !== 'CANCELLED' && (a.status || '').toUpperCase() !== 'REJECTED').length;
+    const upcomingOrOngoingCount = appointments.filter(a => !isDatePassed(a.appointmentTime) && !isCancelledStatus(a.status) && (a.status || '').toUpperCase() !== 'REJECTED').length;
     const completedCount = appointments.filter(a => getConsultationOutcome(a) === 'COMPLETED').length;
     const cancelledCount = appointments.filter(a => {
         const upper = (a.status || '').toUpperCase();
-        return upper === 'CANCELLED' || upper === 'REJECTED';
+        return isCancelledStatus(upper) || upper === 'REJECTED';
     }).length;
 
     const filteredAppointments = appointments.filter(item => {
         const isPassed = isDatePassed(item.appointmentTime);
         const upper = (item.status || '').toUpperCase();
-        if (historyFilter === 'UPCOMING') return !isPassed && upper !== 'CANCELLED' && upper !== 'REJECTED';
+        if (historyFilter === 'UPCOMING') return !isPassed && !isCancelledStatus(upper) && upper !== 'REJECTED';
         if (historyFilter === 'COMPLETED') return getConsultationOutcome(item) === 'COMPLETED';
-        if (historyFilter === 'CANCELLED') return upper === 'CANCELLED' || upper === 'REJECTED';
+        if (historyFilter === 'CANCELLED') return isCancelledStatus(upper) || upper === 'REJECTED';
         return true;
     });
 
@@ -770,7 +771,7 @@ const Appointments = () => {
                             <div className="flex-grow text-center md:text-left">
                                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
                                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                                        (activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED'
+                                        isCancelledStatus(activeDisplayedAppointment.status)
                                             ? 'bg-red-500/20 text-red-300 border border-red-500/30'
                                             : (activeDisplayedAppointment.status || '').toUpperCase() === 'REJECTED'
                                             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
@@ -784,7 +785,9 @@ const Appointments = () => {
                                             ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
                                             : 'bg-white/10 text-white/80 border border-white/20'
                                     }`}>
-                                        {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED'
+                                        {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST'
+                                            ? 'Cancelled by nutritionist · Refunded'
+                                            : (activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED'
                                             ? 'Cancelled'
                                             : (activeDisplayedAppointment.status || '').toUpperCase() === 'REJECTED'
                                             ? 'Rejected'
@@ -812,12 +815,19 @@ const Appointments = () => {
                                     </div>
                                 )}
 
+                                {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST' && (
+                                    <div className="mb-4 bg-violet-500/15 border border-violet-400/30 rounded-xl px-3.5 py-2 text-xs text-violet-200 flex items-center gap-2 font-medium">
+                                        <span className="material-symbols-outlined text-violet-300 text-base shrink-0">currency_exchange</span>
+                                        <span>Your nutritionist cancelled this confirmed session. The consultation fee was refunded to your wallet.</span>
+                                    </div>
+                                )}
+
                                 <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                                    {(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED' ? (
+                                    {isCancelledStatus(activeDisplayedAppointment.status) ? (
                                         <div className="flex flex-wrap items-center gap-3">
                                             <div className="bg-red-500/15 text-red-300 border border-red-500/30 px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
                                                 <span className="material-symbols-outlined text-sm">cancel</span>
-                                                <span>Session Cancelled</span>
+                                                <span>{(activeDisplayedAppointment.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST' ? 'Cancelled by nutritionist · Fee refunded' : 'Session Cancelled'}</span>
                                             </div>
                                             {canDeleteAppointment(activeDisplayedAppointment) && (
                                                 <button
@@ -1028,6 +1038,11 @@ const Appointments = () => {
                                                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                                                         <span className="material-symbols-outlined text-xs">task_alt</span>
                                                         Completed
+                                                    </span>
+                                                ) : upper === 'CANCELLED_BY_NUTRITIONIST' ? (
+                                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-violet-500/20 text-violet-300 border border-violet-500/30 flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-xs">currency_exchange</span>
+                                                        Cancelled · Refunded
                                                     </span>
                                                 ) : upper === 'CANCELLED' ? (
                                                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
@@ -1498,6 +1513,8 @@ const Appointments = () => {
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                                     isConfirmedOrApproved(selectedAppointment.status)
                                         ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
+                                        : (selectedAppointment.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST'
+                                        ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
                                         : (selectedAppointment.status || '').toUpperCase() === 'CANCELLED'
                                         ? 'bg-red-500/20 text-red-300 border border-red-500/30'
                                         : (selectedAppointment.status || '').toUpperCase() === 'REJECTED'
@@ -1506,7 +1523,13 @@ const Appointments = () => {
                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                                         : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                                 }`}>
-                                    {isConfirmedOrApproved(selectedAppointment.status) ? 'Confirmed' : ((selectedAppointment.status || '').toUpperCase() === 'REQUESTED' || (selectedAppointment.status || '').toUpperCase().includes('PENDING')) ? 'Requested' : (selectedAppointment.status || 'Requested')}
+                                    {(selectedAppointment.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST'
+                                        ? 'Cancelled by nutritionist · Refunded'
+                                        : isConfirmedOrApproved(selectedAppointment.status)
+                                            ? 'Confirmed'
+                                            : ((selectedAppointment.status || '').toUpperCase() === 'REQUESTED' || (selectedAppointment.status || '').toUpperCase().includes('PENDING'))
+                                                ? 'Requested'
+                                                : (selectedAppointment.status || 'Requested')}
                                 </span>
                                 <h3 className="text-xl font-bold text-white mt-2 font-hero-display">{selectedAppointment.title || 'Consultation Session'}</h3>
                                 <p className="text-xs text-[#a5d391] font-semibold">{selectedAppointment.sessionType || 'Clinical Consultation'}</p>
@@ -1517,6 +1540,12 @@ const Appointments = () => {
                         </div>
 
                         <div className="space-y-3">
+                            {(selectedAppointment.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST' && (
+                                <div className="bg-violet-500/15 border border-violet-400/30 rounded-2xl p-3.5 text-xs text-violet-200 flex items-center gap-2 font-medium">
+                                    <span className="material-symbols-outlined text-violet-300 text-base shrink-0">currency_exchange</span>
+                                    <span>Your nutritionist cancelled this confirmed session. The consultation fee was refunded to your wallet.</span>
+                                </div>
+                            )}
                             {((selectedAppointment.status || '').toUpperCase() === 'DECLINE_CANCELLATION' || (selectedAppointment.notes || '').toLowerCase().includes('declined by nutritionist')) && (
                                 <div className="bg-amber-500/15 border border-amber-500/35 rounded-2xl p-3.5 text-xs text-amber-200 flex items-center gap-2 font-medium">
                                     <span className="material-symbols-outlined text-amber-400 text-base shrink-0">info</span>
@@ -1562,7 +1591,7 @@ const Appointments = () => {
                                         <span className="material-symbols-outlined text-sm animate-pulse">hourglass_top</span>
                                         <span>Cancellation Pending (Awaiting Nutritionist)</span>
                                     </div>
-                                ) : (selectedAppointment.status || '').toUpperCase() !== 'CANCELLED' && (selectedAppointment.status || '').toUpperCase() !== 'REJECTED' ? (
+                                ) : !isCancelledStatus(selectedAppointment.status) && (selectedAppointment.status || '').toUpperCase() !== 'REJECTED' ? (
                                     <button
                                         onClick={() => handleCancelAppointment(selectedAppointment.id)}
                                         className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
@@ -1579,7 +1608,7 @@ const Appointments = () => {
                             )}
 
                             <div className="flex gap-2">
-                                {!isDatePassed(selectedAppointment.appointmentTime) && (selectedAppointment.status || '').toUpperCase() !== 'CANCELLED' && (
+                                {!isDatePassed(selectedAppointment.appointmentTime) && !isCancelledStatus(selectedAppointment.status) && (
                                     <Link
                                         to="/virtual-room"
                                         className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer flex items-center gap-1"
@@ -1673,13 +1702,13 @@ const Appointments = () => {
                             <div className="flex items-start gap-2.5">
                                 <span className="material-symbols-outlined text-amber-400 text-lg shrink-0 mt-0.5">info</span>
                                 <p className="text-amber-200/90 font-medium leading-relaxed">
-                                    Are you sure you want to cancel this consultation?
+                                    Are you sure you want to request cancellation of this confirmed consultation?
                                 </p>
                             </div>
                         </div>
 
                         <p className="text-xs text-white/70 leading-relaxed">
-                            Your nutritionist will be notified and can review the cancellation.
+                            Your request does not move funds. If your nutritionist approves, the session is cancelled and the fee remains in their wallet. If they decline, the session remains confirmed. An admin can issue an explicit refund after confirmation.
                         </p>
 
                         <div className="flex gap-3 pt-2">

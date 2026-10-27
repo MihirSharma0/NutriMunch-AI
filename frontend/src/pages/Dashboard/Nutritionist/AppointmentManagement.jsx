@@ -19,8 +19,6 @@ const AppointmentManagement = () => {
     const [loading, setLoading] = useState(true);
 
     // Consultation Chat Modal
-    const [cancellationDisclaimer, setCancellationDisclaimer] = useState('No money will be refunded');
-
     // Consultation History (finished sessions)
     const [historyFilter, setHistoryFilter] = useState('ALL');
     const [historySearch, setHistorySearch] = useState('');
@@ -235,69 +233,58 @@ const AppointmentManagement = () => {
     const handleApproveCancellation = async (id, e) => {
         if (e) e.stopPropagation();
         try {
-            const disclaimerText = cancellationDisclaimer?.trim() || 'No money will be refunded';
-            let updated = null;
-            try {
-                const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        status: 'APPROVE_CANCELLATION_NO_REFUND',
-                        notes: `Cancellation approved by nutritionist. Disclaimer: ${disclaimerText}`
-                    })
-                });
+            const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    status: 'APPROVE_CANCELLATION_NO_REFUND',
+                    notes: 'Cancellation approved by nutritionist. The session fee remains in the nutritionist wallet.'
+                })
+            });
+            if (!res.ok) throw new Error(`Request failed (${res.status})`);
+            const updated = await res.json();
 
-                if (res.ok) {
-                    updated = await res.json();
-                }
-            } catch (err) {}
-
-            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? (updated || { ...ev, status: 'CANCELLED', notes: `Disclaimer: ${disclaimerText}` }) : ev));
+            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? updated : ev));
 
             try {
                 const localApts = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
-                const updatedLocal = localApts.map(a => String(a.id) === String(id) ? { ...a, status: 'CANCELLED', notes: `Disclaimer: ${disclaimerText}` } : a);
+                const updatedLocal = localApts.map(a => String(a.id) === String(id) ? updated : a);
                 localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updatedLocal));
             } catch (e) {}
 
             if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
-            showToast(`Cancellation approved. Disclaimer: ${disclaimerText}`);
+            showToast('Cancellation approved. The session fee remains in your wallet.');
         } catch (err) {
             console.error('Failed to approve cancellation:', err);
-            showToast('Error approving cancellation.');
+            showToast(err.message || 'Error approving cancellation.');
         }
     };
 
     const handleDeclineCancellation = async (id, e) => {
         if (e) e.stopPropagation();
         try {
-            let updated = null;
-            try {
-                const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        status: 'Confirmed',
-                        notes: 'Cancellation request declined by nutritionist; session remains confirmed.'
-                    })
-                });
+            const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    status: 'DECLINE_CANCELLATION',
+                    notes: 'Cancellation request declined by nutritionist; session remains confirmed.'
+                })
+            });
+            if (!res.ok) throw new Error(`Request failed (${res.status})`);
+            const updated = await res.json();
 
-                if (res.ok) {
-                    updated = await res.json();
-                }
-            } catch (err) {}
-
-            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? (updated || { ...ev, status: 'Confirmed', notes: 'Cancellation request declined by nutritionist; session remains confirmed.' }) : ev));
+            setEventsList(prev => prev.map(ev => String(ev.id) === String(id) ? updated : ev));
 
             try {
                 const localApts = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
-                const updatedLocal = localApts.map(a => String(a.id) === String(id) ? { ...a, status: 'Confirmed' } : a);
+                const updatedLocal = localApts.map(a => String(a.id) === String(id) ? updated : a);
                 localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(updatedLocal));
             } catch (e) {}
 
@@ -305,28 +292,89 @@ const AppointmentManagement = () => {
             showToast('Cancellation request declined. Session remains confirmed.');
         } catch (err) {
             console.error('Failed to decline cancellation:', err);
-            showToast('Error declining cancellation.');
+            showToast(err.message || 'Error declining cancellation.');
         }
     };
 
     const handleCancelEvent = async (id, e) => {
         if (e) e.stopPropagation();
+        const appointment = eventsList.find(event => String(event.id) === String(id));
+        if (!appointment) {
+            showToast('Appointment not found in the current schedule.');
+            return;
+        }
+        const status = String(appointment.status || '').toUpperCase();
+        if (!['CONFIRMED', 'ACCEPTED', 'APPROVED', 'SCHEDULED', 'CANCELLATION_REQUESTED'].includes(status)) {
+            showToast('Only confirmed appointments can be cancelled here.');
+            return;
+        }
+        if (!window.confirm('Cancel this confirmed session? The consultation fee will be refunded to the client.')) return;
+
         try {
-            const res = await fetch(`${API_BASE_URL}/appointments/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    status: 'CANCELLED_BY_NUTRITIONIST',
+                    notes: 'Cancelled by nutritionist after confirmation. The consultation fee was refunded.'
+                })
+            });
+            if (!res.ok) throw new Error(`Request failed (${res.status})`);
+            const updated = await res.json();
+            setEventsList(current => current.map(event => String(event.id) === String(id) ? updated : event));
+            try {
+                const cachedAppointments = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
+                localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(
+                    cachedAppointments.map(event => String(event.id) === String(id) ? updated : event)
+                ));
+            } catch (storageError) {
+                console.warn('Unable to update cached appointment history', storageError);
+            }
+            if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
+            showToast('Session cancelled. The consultation fee was refunded to the client.');
+        } catch (err) {
+            console.error('Failed to cancel appointment:', err);
+            showToast(err.message || 'Error cancelling appointment.');
+        }
+    };
+
+    const handleDeleteCancelledAppointment = async (id, e) => {
+        e?.stopPropagation();
+        const appointment = eventsList.find(event => String(event.id) === String(id));
+        if (!['CANCELLED', 'CANCELLED_BY_NUTRITIONIST'].includes(String(appointment?.status || '').toUpperCase())) {
+            showToast('Only cancelled bookings can be deleted.');
+            return;
+        }
+        if (!window.confirm('Delete this cancelled booking from the schedule and history?')) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-
-            if (res.ok || res.status === 204) {
-                setEventsList(eventsList.filter(ev => String(ev.id) !== String(id)));
-                if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
-                showToast('Appointment cancelled.');
+            if (!response.ok && response.status !== 204) {
+                throw new Error(`Request failed (${response.status})`);
             }
-        } catch (err) {
-            console.error('Failed to cancel appointment:', err);
-            showToast('Error cancelling appointment.');
+
+            setEventsList(current => current.filter(event => String(event.id) !== String(id)));
+            if (selectedEvent && String(selectedEvent.id) === String(id)) setSelectedEvent(null);
+            try {
+                const cachedAppointments = JSON.parse(localStorage.getItem('nutrimunch_user_appointments') || '[]');
+                localStorage.setItem('nutrimunch_user_appointments', JSON.stringify(
+                    cachedAppointments.filter(event => String(event.id) !== String(id))
+                ));
+            } catch (storageError) {
+                console.warn('Unable to update cached appointment history', storageError);
+            }
+            showToast('Cancelled booking deleted.');
+        } catch (error) {
+            console.error('Failed to delete cancelled booking:', error);
+            showToast(error.message || 'Unable to delete the cancelled booking.');
         }
     };
 
@@ -432,9 +480,12 @@ const AppointmentManagement = () => {
         .map(ev => ({ ev, outcome: getConsultationOutcome(ev) }))
         .filter(({ outcome }) => isHistoryOutcome(outcome))
         .sort((a, b) => new Date(b.ev.appointmentTime) - new Date(a.ev.appointmentTime));
-    const historyCount = (key) => key === 'ALL' ? historyItems.length : historyItems.filter(h => h.outcome === key).length;
+    const historyCount = (key) => key === 'ALL'
+        ? historyItems.length
+        : historyItems.filter(h => h.outcome === key || (key === 'CANCELLED' && h.outcome === 'NUTRITIONIST_CANCELLED')).length;
     const visibleHistory = historyItems.filter(({ ev, outcome }) => {
-        if (historyFilter !== 'ALL' && outcome !== historyFilter) return false;
+        if (historyFilter !== 'ALL' && outcome !== historyFilter
+                && !(historyFilter === 'CANCELLED' && outcome === 'NUTRITIONIST_CANCELLED')) return false;
         const q = historySearch.trim().toLowerCase();
         return !q || String(ev.userName || '').toLowerCase().includes(q) || String(ev.title || '').toLowerCase().includes(q);
     });
@@ -606,7 +657,7 @@ const AppointmentManagement = () => {
                                 const st = String(event.status || '').toUpperCase();
                                 const isCancelRequested = st === 'CANCELLATION_REQUESTED';
                                 const isPending = !isCancelRequested && (st.includes('REQUEST') || st.includes('PENDING') || event.status === 'Pending Review');
-                                const isCancelled = st === 'CANCELLED';
+                                const isCancelled = st === 'CANCELLED' || st === 'CANCELLED_BY_NUTRITIONIST';
                                 const isRejected = st === 'REJECTED';
 
                                 return (
@@ -637,7 +688,7 @@ const AppointmentManagement = () => {
                                                             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                                                             : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'
                                                     }`}>
-                                                        {isCancelRequested ? 'Cancel Requested' : isPending ? 'Requested' : (event.status || 'Scheduled')}
+                                                        {isCancelRequested ? 'Cancel Requested' : st === 'CANCELLED_BY_NUTRITIONIST' ? 'Cancelled by Nutritionist · Refunded' : isPending ? 'Requested' : (event.status || 'Scheduled')}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-base font-bold text-white mt-2 group-hover:text-[#a5d391] transition-colors">{event.title || 'Clinical Consultation'}</h3>
@@ -673,8 +724,20 @@ const AppointmentManagement = () => {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex justify-end text-[#a5d391] font-bold text-[11px] group-hover:underline">
-                                                    View Details & Notes →
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-right text-[#a5d391] font-bold text-[11px] group-hover:underline">
+                                                        View Details & Notes →
+                                                    </span>
+                                                    {isCancelled && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => handleDeleteCancelledAppointment(event.id, e)}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-bold text-red-300 transition hover:bg-red-500 hover:text-white"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">delete</span>
+                                                            Delete
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -781,6 +844,16 @@ const AppointmentManagement = () => {
                                                 Message
                                             </button>
                                         )}
+                                        {(outcome === 'CANCELLED' || outcome === 'NUTRITIONIST_CANCELLED') && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => handleDeleteCancelledAppointment(ev.id, e)}
+                                                className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500 border border-red-500/20 text-red-300 hover:text-white text-xs font-bold cursor-pointer flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">delete</span>
+                                                Delete
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -804,8 +877,8 @@ const AppointmentManagement = () => {
                             <div className="flex justify-between items-start border-b border-white/10 pb-4">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' || String(selectedEvent.status || '').toUpperCase().includes('REQUEST') ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : selectedEvent.status === 'CANCELLED' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
-                                            {String(selectedEvent.status || '').toUpperCase().includes('REQUEST') ? 'Requested' : (selectedEvent.status || 'Scheduled')}
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${selectedEvent.status === 'Pending Review' || selectedEvent.status === 'PENDING' || String(selectedEvent.status || '').toUpperCase().includes('REQUEST') ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : String(selectedEvent.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' : String(selectedEvent.status || '').toUpperCase() === 'CANCELLED' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                            {String(selectedEvent.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST' ? 'Cancelled by Nutritionist · Refunded' : String(selectedEvent.status || '').toUpperCase().includes('REQUEST') ? 'Requested' : (selectedEvent.status || 'Scheduled')}
                                         </span>
                                         <span className="text-[10px] text-white/40 uppercase tracking-widest font-mono">ID: #{selectedEvent.id}</span>
                                     </div>
@@ -944,34 +1017,16 @@ const AppointmentManagement = () => {
                                                 </p>
                                                 <div className="mt-2.5 bg-amber-500/20 border border-amber-500/40 rounded-xl px-3 py-2 text-xs text-amber-200 font-semibold flex items-center gap-2">
                                                     <span className="material-symbols-outlined text-amber-400 text-base">info</span>
-                                                    <span>Disclaimer: No money will be refunded.</span>
+                                                    <span>If approved, the session ends and the fee remains in your wallet. If declined, the session remains confirmed. The request itself does not move funds.</span>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        {/* Nutritionist disclaimer note input */}
-                                        <div className="space-y-1.5 bg-white/5 border border-white/10 rounded-2xl p-3.5">
-                                            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider flex items-center gap-1.5">
-                                                <span className="material-symbols-outlined text-xs text-[#a5d391]">gavel</span>
-                                                Nutritionist Cancellation Disclaimer:
-                                            </label>
-                                            <input 
-                                                type="text"
-                                                value={cancellationDisclaimer}
-                                                onChange={(e) => setCancellationDisclaimer(e.target.value)}
-                                                placeholder="No money will be refunded"
-                                                className="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#a5d391] transition-all"
-                                            />
-                                            <p className="text-[10px] text-white/50">
-                                                This disclaimer will be written to the consultation record and displayed to the patient.
-                                            </p>
                                         </div>
 
                                         <div className="flex flex-wrap justify-between items-center gap-3">
                                             <button 
                                                 onClick={(e) => handleApproveCancellation(selectedEvent.id, e)}
                                                 className="px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs transition-all cursor-pointer shadow-md flex items-center gap-1.5"
-                                                title="Approve cancellation with disclaimer (no money will be refunded)"
+                                                title="Cancel the session while leaving the fee in your wallet"
                                             >
                                                 <span className="material-symbols-outlined text-sm">check_circle</span>
                                                 Approve Cancellation
@@ -1018,6 +1073,24 @@ const AppointmentManagement = () => {
                                                 Close
                                             </button>
                                         </div>
+                                    </div>
+                                ) : ['CANCELLED', 'CANCELLED_BY_NUTRITIONIST'].includes(String(selectedEvent.status || '').toUpperCase()) ? (
+                                    <div className="flex flex-wrap justify-between items-center gap-3 w-full">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => handleDeleteCancelledAppointment(selectedEvent.id, e)}
+                                            className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">delete</span>
+                                            Delete Cancelled Booking
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedEvent(null)}
+                                            className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                                        >
+                                            Close
+                                        </button>
                                     </div>
                                 ) : (
                                     <div className="flex flex-wrap justify-between items-center gap-3 w-full">
