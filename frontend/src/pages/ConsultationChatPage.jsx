@@ -6,23 +6,32 @@ import { AuthContext } from '../context/AuthContext';
 
 const roleOf = (user) => String(user?.role || '').replace(/^ROLE_/i, '').toUpperCase();
 
-const adminConversationPeer = (conversation, currentUserId) => (
-    String(conversation.patientId) === String(currentUserId)
-        ? {
+const adminConversationPeer = (conversation, currentUser) => {
+    const matchesCurrentUser = (id, email) => (
+        (currentUser?.id != null && String(id) === String(currentUser.id)) ||
+        (currentUser?.email && email?.toLowerCase() === currentUser.email.toLowerCase())
+    );
+    const patientIsCurrentUser = matchesCurrentUser(conversation.patientId, conversation.patientEmail);
+    const nutritionistIsCurrentUser = matchesCurrentUser(conversation.nutritionistId, conversation.nutritionistEmail);
+
+    if (patientIsCurrentUser || (!nutritionistIsCurrentUser && conversation.patientRole === 'ADMIN')) {
+        return {
             id: conversation.nutritionistId,
             userId: conversation.nutritionistId,
             name: conversation.nutritionistName,
             email: conversation.nutritionistEmail,
-            role: 'NUTRITIONIST',
-        }
-        : {
-            id: conversation.patientId,
-            userId: conversation.patientId,
-            name: conversation.patientName,
-            email: conversation.patientEmail,
-            role: 'USER',
-        }
-);
+            role: conversation.nutritionistRole || 'NUTRITIONIST',
+        };
+    }
+
+    return {
+        id: conversation.patientId,
+        userId: conversation.patientId,
+        name: conversation.patientName,
+        email: conversation.patientEmail,
+        role: conversation.patientRole || 'USER',
+    };
+};
 
 const ConsultationChatPage = () => {
     const { user } = useContext(AuthContext);
@@ -231,7 +240,7 @@ const ConsultationChatPage = () => {
         targetPatient = role === 'NUTRITIONIST'
             ? { id: selectedConversation.patientId, userId: selectedConversation.patientId, name: selectedConversation.patientName }
             : role === 'ADMIN'
-                ? adminConversationPeer(selectedConversation, user?.id)
+                ? adminConversationPeer(selectedConversation, user)
                 : { id: selectedConversation.nutritionistId, nutritionistName: selectedConversation.nutritionistName };
     } else if (selectedAppointment) {
         appointmentId = selectedAppointment.id;
@@ -306,7 +315,7 @@ const ConsultationChatPage = () => {
     if (['USER', 'NUTRITIONIST', 'ADMIN'].includes(role)) {
         const selected = Boolean(isSelectionRequested && (conversationId || appointmentId || selectedRecipient));
         const visibleConversations = uniqueConversations.filter((item) =>
-            `${item.patientName || ''} ${item.patientEmail || ''} ${item.nutritionistName || ''} ${item.nutritionistEmail || ''} ${item.status || ''}`
+            `${item.patientName || ''} ${item.patientEmail || ''} ${item.patientRole || ''} ${item.nutritionistName || ''} ${item.nutritionistEmail || ''} ${item.nutritionistRole || ''} ${item.status || ''}`
                 .toLowerCase()
                 .includes(search.toLowerCase()),
         );
@@ -501,43 +510,46 @@ const ConsultationChatPage = () => {
                                         </button>
                                     )}
                                 </div>
-                            ) : visibleConversations.map((item) => (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() => openConversation(item.id)}
-                                    className={`flex w-full items-center gap-3 border-b border-[#e4eae8] px-4 py-3 text-left transition hover:bg-[#edf3f1] ${String(item.id) === requestedConversationId ? 'bg-[#e6efec]' : ''}`}
-                                >
-                                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#dfe8df] font-semibold text-[#075e54]">
-                                        {(role === 'ADMIN'
-                                            ? adminConversationPeer(item, user?.id).name || 'P'
-                                            : role === 'USER'
-                                                ? item.nutritionistName || 'N'
-                                                : item.patientName || 'U').slice(0, 1).toUpperCase()}
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="flex items-center justify-between gap-2">
-                                            <span className="truncate text-sm font-medium">
-                                                {role === 'ADMIN'
-                                                    ? adminConversationPeer(item, user?.id).name || 'Private conversation'
-                                                    : role === 'USER'
-                                                        ? item.nutritionistName || 'Nutritionist'
-                                                    : item.patientName || 'Patient'}
+                            ) : visibleConversations.map((item) => {
+                                const peer = role === 'ADMIN' ? adminConversationPeer(item, user) : null;
+                                const peerRole = peer?.role || (role === 'USER'
+                                    ? item.nutritionistRole || 'NUTRITIONIST'
+                                    : item.patientRole || 'USER');
+                                const peerName = peer?.name || (role === 'USER' ? item.nutritionistName : item.patientName);
+                                const peerEmail = peer?.email || (role === 'USER' ? item.nutritionistEmail : item.patientEmail);
+                                const roleLabel = peerRole.toLowerCase();
+
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => openConversation(item.id)}
+                                        className={`flex w-full items-center gap-3 border-b border-[#e4eae8] px-4 py-3 text-left transition hover:bg-[#edf3f1] ${String(item.id) === requestedConversationId ? 'bg-[#e6efec]' : ''}`}
+                                    >
+                                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#dfe8df] font-semibold text-[#075e54]">
+                                            {(peerName || (peerRole === 'NUTRITIONIST' ? 'N' : 'U')).slice(0, 1).toUpperCase()}
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="flex items-center justify-between gap-2">
+                                                <span className="truncate text-sm font-medium">
+                                                    {peerName || 'Private conversation'}
+                                                </span>
+                                                <span className="shrink-0 text-[10px] text-[#667781]">
+                                                    {item.status === 'ACTIVE' ? 'Active' : 'Ended'}
+                                                </span>
                                             </span>
-                                            <span className="shrink-0 text-[10px] text-[#667781]">
-                                                {item.status === 'ACTIVE' ? 'Active' : 'Ended'}
+                                            <span className="mt-1 flex min-w-0 items-center gap-2">
+                                                <span className="shrink-0 rounded-full bg-[#e6efec] px-2 py-0.5 text-[10px] font-semibold text-[#075e54]">
+                                                    {roleLabel}
+                                                </span>
+                                                <span className="truncate text-xs text-[#667781]">
+                                                    {peerEmail || (item.appointmentId ? 'Booked consultation' : 'Private consultation')}
+                                                </span>
                                             </span>
                                         </span>
-                                        <span className="mt-1 block truncate text-xs text-[#667781]">
-                                            {role === 'ADMIN'
-                                                ? `${adminConversationPeer(item, user?.id).email || ''} · ${adminConversationPeer(item, user?.id).role.toLowerCase()}`
-                                                : role === 'USER'
-                                                    ? item.appointmentId ? 'Booked consultation' : 'Nutritionist initiated'
-                                                : item.patientEmail || (item.appointmentId ? 'Booked consultation' : 'Private consultation')}
-                                        </span>
-                                    </span>
-                                </button>
-                            ))}
+                                    </button>
+                                );
+                            })}
                             {!newChatMode && loadingMoreConversations && (
                                 <div className="flex items-center justify-center gap-2 py-4 text-xs text-[#667781]">
                                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d1d7db] border-t-[#008069]" />

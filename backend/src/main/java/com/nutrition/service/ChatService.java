@@ -304,8 +304,10 @@ public class ChatService {
         d.setPatientId(c.getPatient().getId()); d.setNutritionistId(c.getNutritionist().getId());
         d.setPatientName(displayName(c.getPatient()));
         d.setPatientEmail(c.getPatient().getEmail());
+        d.setPatientRole(c.getPatient().getRole().name());
         d.setNutritionistName(displayName(c.getNutritionist()));
         d.setNutritionistEmail(c.getNutritionist().getEmail());
+        d.setNutritionistRole(c.getNutritionist().getRole().name());
         d.setStatus(c.getStatus());
         d.setCreatedAt(c.getCreatedAt()); d.setUpdatedAt(c.getUpdatedAt()); return d;
     }
