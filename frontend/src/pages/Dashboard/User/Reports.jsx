@@ -512,6 +512,11 @@ const Reports = () => {
     // Targets State
     const [targets, setTargets] = useState(DEFAULT_TARGETS);
     const [userProfile, setUserProfile] = useState(null);
+    const targetWaterMl = Math.round(targets.water * 1000);
+    const targetCalories = targets.calories;
+    const targetProtein = targets.protein;
+    const targetCarbs = targets.carbs;
+    const targetFats = targets.fats;
 
     // Backend Progress Logs State (for historical synchronization)
     const [backendProgressLogs, setBackendProgressLogs] = useState({});
