@@ -79,10 +79,9 @@ public class AuthService {
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Incorrect Password");
         }
-
         if (!user.isVerified()) {
-            user.setVerified(true);
-            user = userRepository.save(user);
+            throw new RuntimeException(
+                    "Please verify your email before logging in.");
         }
 
         Authentication authentication = authenticationManager.authenticate(
@@ -100,13 +99,12 @@ public class AuthService {
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(accessToken);
             HttpEntity<String> entity = new HttpEntity<>("", headers);
-            
+
             ResponseEntity<Map> response = restTemplate.exchange(
-                "https://www.googleapis.com/oauth2/v3/userinfo", 
-                HttpMethod.GET, 
-                entity, 
-                Map.class
-            );
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    HttpMethod.GET,
+                    entity,
+                    Map.class);
 
             Map<String, Object> payload = response.getBody();
             if (payload != null && payload.containsKey("email")) {
@@ -115,12 +113,13 @@ public class AuthService {
                 String lastName = (String) payload.get("family_name");
 
                 User user = userRepository.findByEmail(email).orElse(null);
-                
+
                 if (user == null) {
                     if (roleStr == null || roleStr.isBlank()) {
-                        throw new com.nutrition.exception.RoleRequiredException("Role selection required for new Google login");
+                        throw new com.nutrition.exception.RoleRequiredException(
+                                "Role selection required for new Google login");
                     }
-                    
+
                     Role selectedRole;
                     try {
                         selectedRole = Role.valueOf(roleStr.toUpperCase());
@@ -140,8 +139,13 @@ public class AuthService {
                     if (selectedRole == Role.NUTRITIONIST) {
                         NutritionistProfile profile = new NutritionistProfile();
                         profile.setUser(user);
-                        profile.setCredentials(request.getCredentials() != null && !request.getCredentials().isBlank() ? request.getCredentials() : "N/A");
-                        profile.setSpecialization(request.getSpecialization() != null && !request.getSpecialization().isBlank() ? request.getSpecialization() : "General");
+                        profile.setCredentials(request.getCredentials() != null && !request.getCredentials().isBlank()
+                                ? request.getCredentials()
+                                : "N/A");
+                        profile.setSpecialization(
+                                request.getSpecialization() != null && !request.getSpecialization().isBlank()
+                                        ? request.getSpecialization()
+                                        : "General");
                         nutritionistProfileRepository.save(profile);
                     } else if (selectedRole == Role.USER) {
                         UserProfile profile = new UserProfile();
@@ -158,9 +162,10 @@ public class AuthService {
                 }
 
                 CustomUserDetails userDetails = new CustomUserDetails(user);
-                Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
+                        userDetails.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                
+
                 return jwtUtils.generateJwtToken(authentication);
             } else {
                 throw new RuntimeException("Failed to retrieve email from Google.");
@@ -168,7 +173,8 @@ public class AuthService {
         } catch (com.nutrition.exception.RoleRequiredException e) {
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Google authentication failed: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+            throw new RuntimeException(
+                    "Google authentication failed: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
         }
     }
 
@@ -179,7 +185,8 @@ public class AuthService {
                 if (existingUser.isVerified()) {
                     throw new RuntimeException("Error: Email is already in use!");
                 } else {
-                    // User exists but is not verified. Delete the old unverified record so they can register again.
+                    // User exists but is not verified. Delete the old unverified record so they can
+                    // register again.
                     // Cascading will handle related tokens or profiles.
                     userRepository.delete(existingUser);
                     userRepository.flush(); // ensure deletion before inserting new record with same email
@@ -192,7 +199,7 @@ public class AuthService {
         user.setLastName(signUpRequest.getLastName());
         user.setEmail(signUpRequest.getEmail());
         user.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
-        
+
         Role userRole = Role.USER;
         if (signUpRequest.getRole() != null) {
             try {
@@ -202,7 +209,7 @@ public class AuthService {
             }
         }
         user.setRole(userRole);
-        user.setVerified(false); 
+        user.setVerified(false);
 
         try {
             user = userRepository.save(user);
@@ -214,7 +221,8 @@ public class AuthService {
             NutritionistProfile profile = new NutritionistProfile();
             profile.setUser(user);
             profile.setCredentials(signUpRequest.getCredentials() != null ? signUpRequest.getCredentials() : "N/A");
-            profile.setSpecialization(signUpRequest.getSpecialization() != null ? signUpRequest.getSpecialization() : "General");
+            profile.setSpecialization(
+                    signUpRequest.getSpecialization() != null ? signUpRequest.getSpecialization() : "General");
             nutritionistProfileRepository.save(profile);
         }
 
@@ -223,10 +231,10 @@ public class AuthService {
             user.setOtpCode(otp);
             user.setOtpExpiryDate(LocalDateTime.now().plusMinutes(15));
             userRepository.save(user);
-            
+
             try {
                 emailService.sendOtpVerificationEmail(user.getEmail(), user.getFirstName(), otp);
-            } catch(Exception e) {
+            } catch (Exception e) {
                 System.err.println("Failed to send OTP email: " + e.getMessage());
             }
         } else {
@@ -295,14 +303,16 @@ public class AuthService {
         userRepository.save(user);
 
         try {
-            String fullName = user.getFirstName() + (user.getLastName() != null && !user.getLastName().isBlank() ? " " + user.getLastName() : "");
+            String fullName = user.getFirstName()
+                    + (user.getLastName() != null && !user.getLastName().isBlank() ? " " + user.getLastName() : "");
             emailService.sendAccountVerifiedEmail(user.getEmail(), fullName);
-        } catch(Exception e) {
+        } catch (Exception e) {
             System.err.println("Failed to send account verified email: " + e.getMessage());
         }
 
         String token = jwtUtils.generateTokenFromUsername(user.getEmail(), user.getRole().name(), user.getId());
-        return new AuthResponse(token, user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), user.getRole().name());
+        return new AuthResponse(token, user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(),
+                user.getRole().name());
     }
 
     public void resendOtp(String email) {
@@ -315,10 +325,10 @@ public class AuthService {
             user.setOtpCode(otp);
             user.setOtpExpiryDate(LocalDateTime.now().plusMinutes(15));
             userRepository.save(user);
-            
+
             try {
                 emailService.sendOtpVerificationEmail(user.getEmail(), user.getFirstName(), otp);
-            } catch(Exception e) {
+            } catch (Exception e) {
                 System.err.println("Failed to resend OTP email: " + e.getMessage());
             }
         }
@@ -338,7 +348,8 @@ public class AuthService {
         String normalizedEmail = email.toLowerCase().trim();
         User user = userRepository.findByEmail(normalizedEmail)
                 .or(() -> userRepository.findByEmail(email.trim()))
-                .orElseThrow(() -> new RuntimeException("This email is not registered. Please enter the email you signed up with."));
+                .orElseThrow(() -> new RuntimeException(
+                        "This email is not registered. Please enter the email you signed up with."));
 
         String token = UUID.randomUUID().toString();
         PasswordResetToken resetToken = new PasswordResetToken();
