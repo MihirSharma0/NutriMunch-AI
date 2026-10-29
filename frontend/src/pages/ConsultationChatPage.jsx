@@ -6,33 +6,6 @@ import { AuthContext } from '../context/AuthContext';
 
 const roleOf = (user) => String(user?.role || '').replace(/^ROLE_/i, '').toUpperCase();
 
-const adminConversationPeer = (conversation, currentUser) => {
-    const matchesCurrentUser = (id, email) => (
-        (currentUser?.id != null && String(id) === String(currentUser.id)) ||
-        (currentUser?.email && email?.toLowerCase() === currentUser.email.toLowerCase())
-    );
-    const patientIsCurrentUser = matchesCurrentUser(conversation.patientId, conversation.patientEmail);
-    const nutritionistIsCurrentUser = matchesCurrentUser(conversation.nutritionistId, conversation.nutritionistEmail);
-
-    if (patientIsCurrentUser || (!nutritionistIsCurrentUser && conversation.patientRole === 'ADMIN')) {
-        return {
-            id: conversation.nutritionistId,
-            userId: conversation.nutritionistId,
-            name: conversation.nutritionistName,
-            email: conversation.nutritionistEmail,
-            role: conversation.nutritionistRole || 'NUTRITIONIST',
-        };
-    }
-
-    return {
-        id: conversation.patientId,
-        userId: conversation.patientId,
-        name: conversation.patientName,
-        email: conversation.patientEmail,
-        role: conversation.patientRole || 'USER',
-    };
-};
-
 const ConsultationChatPage = () => {
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -68,7 +41,7 @@ const ConsultationChatPage = () => {
             setLoading(true);
             setError('');
             try {
-                if (role === 'NUTRITIONIST' || role === 'ADMIN') {
+                if (role === 'NUTRITIONIST') {
                     conversationPageRef.current = 0;
                     setConversations([]);
                     setHasMoreConversations(false);
@@ -103,7 +76,7 @@ const ConsultationChatPage = () => {
                 }
             } catch (requestError) {
                 if (!cancelled) {
-                    setError(role === 'NUTRITIONIST' || role === 'ADMIN'
+                    setError(role === 'NUTRITIONIST'
                         ? `Existing chats could not be loaded: ${errorMessage(requestError)}`
                         : `Unable to load consultation chats: ${errorMessage(requestError)}`);
                 }
@@ -118,7 +91,7 @@ const ConsultationChatPage = () => {
     }, [role, reloadKey]);
 
     const loadMoreConversations = async () => {
-        if (!['NUTRITIONIST', 'ADMIN'].includes(role) || !hasMoreConversations || loadingMoreRef.current) return;
+        if (role !== 'NUTRITIONIST' || !hasMoreConversations || loadingMoreRef.current) return;
         loadingMoreRef.current = true;
         setLoadingMoreConversations(true);
         try {
@@ -143,11 +116,11 @@ const ConsultationChatPage = () => {
     };
 
     useEffect(() => {
-        if (!['NUTRITIONIST', 'ADMIN'].includes(role) || (!newChatMode && !requestedParticipantId) || recipientsLoaded) return undefined;
+        if (role !== 'NUTRITIONIST' || (!newChatMode && !requestedParticipantId) || recipientsLoaded) return undefined;
         let cancelled = false;
         setLoadingRecipients(true);
         setRecipientsError('');
-        api.get(role === 'ADMIN' ? '/admin/conversations/recipients' : '/conversations/recipients')
+        api.get('/conversations/recipients')
             .then((response) => {
                 if (!cancelled) {
                     setRecipients(Array.isArray(response.data) ? response.data : []);
@@ -198,10 +171,10 @@ const ConsultationChatPage = () => {
         () => new Set(conversations.filter((item) => item.appointmentId != null).map((item) => String(item.appointmentId))),
         [conversations],
     );
-    const bookedAppointments = appointments.filter((appointment) => {
-        const status = String(appointment.status || '').toUpperCase();
-        return status !== 'CANCELLED' && status !== 'REJECTED';
-    });
+    // A chat only exists for an accepted consultation, so only those can be picked here.
+    const acceptedAppointmentStatuses = ['CONFIRMED', 'ACCEPTED', 'APPROVED', 'SCHEDULED'];
+    const bookedAppointments = appointments.filter((appointment) =>
+        acceptedAppointmentStatuses.includes(String(appointment.status || '').toUpperCase()));
     const eligibleAppointments = bookedAppointments.filter(
         (appointment) => !activeConversationAppointmentIds.has(String(appointment.id)),
     );
@@ -239,38 +212,43 @@ const ConsultationChatPage = () => {
         conversationId = selectedConversation.id;
         targetPatient = role === 'NUTRITIONIST'
             ? { id: selectedConversation.patientId, userId: selectedConversation.patientId, name: selectedConversation.patientName }
-            : role === 'ADMIN'
-                ? adminConversationPeer(selectedConversation, user)
-                : { id: selectedConversation.nutritionistId, nutritionistName: selectedConversation.nutritionistName };
+            : { id: selectedConversation.nutritionistId, nutritionistName: selectedConversation.nutritionistName };
     } else if (selectedAppointment) {
         appointmentId = selectedAppointment.id;
         targetPatient = role === 'NUTRITIONIST'
             ? { id: selectedAppointment.userId, userId: selectedAppointment.userId, name: selectedAppointment.userName, appointmentId: selectedAppointment.id }
             : { nutritionistName: selectedAppointment.nutritionistName, appointmentId: selectedAppointment.id };
     } else if (selectedRecipient) {
+        appointmentId = selectedRecipient.appointmentId || null;
         targetPatient = {
             id: selectedRecipient.id,
             userId: selectedRecipient.id,
             name: selectedRecipient.name,
             email: selectedRecipient.email,
             role: selectedRecipient.role,
+            appointmentId: selectedRecipient.appointmentId || undefined,
         };
     }
 
     const openConversation = (id) => navigate(`/consultation-chat?conversationId=${encodeURIComponent(id)}`);
     const openAppointment = (id) => navigate(`/consultation-chat?appointmentId=${encodeURIComponent(id)}`);
-    const openRecipient = (id) => {
-        const activeConversation = conversations.find((item) => {
-            const isParticipant = role === 'ADMIN'
-                ? String(item.patientId) === String(id) || String(item.nutritionistId) === String(id)
-                : String(item.patientId) === String(id);
-            return isParticipant && item.status === 'ACTIVE';
-        });
+    const openRecipient = (recipient) => {
+        const activeConversation = conversations.find((item) =>
+            String(item.patientId) === String(recipient.id) && item.status === 'ACTIVE');
         if (activeConversation) {
             openConversation(activeConversation.id);
             return;
         }
-        navigate(`/consultation-chat?participantId=${encodeURIComponent(id)}`);
+        // The chat always hangs off the accepted consultation, never off a bare user id.
+        if (recipient.appointmentId) {
+            openAppointment(recipient.appointmentId);
+            return;
+        }
+        if (recipient.conversationId) {
+            openConversation(recipient.conversationId);
+            return;
+        }
+        setError('This patient has no accepted consultation yet, so no chat can be opened.');
     };
     const closeChat = () => {
         setNewChatMode(false);
@@ -301,7 +279,7 @@ const ConsultationChatPage = () => {
         };
     }, [requestedConversationId, conversations, role]);
 
-    if (loading && !['USER', 'NUTRITIONIST', 'ADMIN'].includes(role)) {
+    if (loading && !['USER', 'NUTRITIONIST'].includes(role)) {
         return (
             <main className="min-h-[70vh] flex items-center justify-center bg-[#080b12] text-white">
                 <div className="flex flex-col items-center gap-4">
@@ -312,7 +290,7 @@ const ConsultationChatPage = () => {
         );
     }
 
-    if (['USER', 'NUTRITIONIST', 'ADMIN'].includes(role)) {
+    if (['USER', 'NUTRITIONIST'].includes(role)) {
         const selected = Boolean(isSelectionRequested && (conversationId || appointmentId || selectedRecipient));
         const visibleConversations = uniqueConversations.filter((item) =>
             `${item.patientName || ''} ${item.patientEmail || ''} ${item.patientRole || ''} ${item.nutritionistName || ''} ${item.nutritionistEmail || ''} ${item.nutritionistRole || ''} ${item.status || ''}`
@@ -324,13 +302,9 @@ const ConsultationChatPage = () => {
                 .toLowerCase()
                 .includes(search.toLowerCase()),
         );
-        const sidebarRecipients = ['NUTRITIONIST', 'ADMIN'].includes(role) ? visibleRecipients.filter((recipient) =>
-            !conversations.some((item) => {
-                const isRecipient = role === 'ADMIN'
-                    ? String(item.patientId) === String(recipient.id) || String(item.nutritionistId) === String(recipient.id)
-                    : String(item.patientId) === String(recipient.id);
-                return isRecipient && item.status === 'ACTIVE';
-            }),
+        const sidebarRecipients = role === 'NUTRITIONIST' ? visibleRecipients.filter((recipient) =>
+            !conversations.some((item) =>
+                String(item.patientId) === String(recipient.id) && item.status === 'ACTIVE'),
         ) : [];
 
         return (
@@ -345,11 +319,11 @@ const ConsultationChatPage = () => {
                                 <div className="min-w-0">
                                     <h1 className="truncate text-sm font-semibold">Consultation chats</h1>
                                     <p className="text-xs text-[#667781]">
-                                        {role === 'ADMIN' ? 'Private admin conversations' : role === 'USER' ? 'Your consultations' : 'Nutritionist workspace'}
+                                        {role === 'USER' ? 'Your consultations' : 'Nutritionist workspace'}
                                     </p>
                                 </div>
                             </div>
-                            {['USER', 'NUTRITIONIST', 'ADMIN'].includes(role) && <button
+                            {['USER', 'NUTRITIONIST'].includes(role) && <button
                                 type="button"
                                 onClick={() => {
                                     setNewChatMode((open) => !open);
@@ -371,19 +345,15 @@ const ConsultationChatPage = () => {
                                     value={search}
                                     onChange={(event) => setSearch(event.target.value)}
                                     placeholder={newChatMode
-                                        ? role === 'ADMIN'
-                                            ? 'Search users and nutritionists'
-                                            : role === 'USER'
-                                                ? 'Search appointments'
-                                                : 'Search users to chat'
+                                        ? role === 'USER'
+                                            ? 'Search appointments'
+                                            : 'Search patients to chat'
                                         : 'Search conversations'}
                                     className="min-w-0 flex-1 bg-transparent text-sm text-[#111b21] outline-none placeholder:text-[#667781]"
                                     aria-label={newChatMode
-                                        ? role === 'ADMIN'
-                                            ? 'Search users and nutritionists'
-                                            : role === 'USER'
-                                                ? 'Search appointments'
-                                                : 'Search users to chat'
+                                        ? role === 'USER'
+                                            ? 'Search appointments'
+                                            : 'Search patients to chat'
                                         : 'Search conversations'}
                                 />
                             </label>
@@ -446,11 +416,11 @@ const ConsultationChatPage = () => {
                                         <span className="material-symbols-outlined text-xl text-[#008069]">chat</span>
                                     </button>
                                 ))
-                            ) : ['NUTRITIONIST', 'ADMIN'].includes(role) && newChatMode ? (
+                            ) : role === 'NUTRITIONIST' && newChatMode ? (
                                 loadingRecipients ? (
                                     <div className="flex flex-col items-center gap-3 px-6 py-10 text-sm text-[#667781]">
                                         <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#d1d7db] border-t-[#008069]" />
-                                        {role === 'ADMIN' ? 'Loading people...' : 'Loading users...'}
+                                        Loading your patients...
                                     </div>
                                 ) : sidebarRecipients.length === 0 ? (
                                     <div className="px-6 py-10 text-center text-sm text-[#667781]">
@@ -464,7 +434,7 @@ const ConsultationChatPage = () => {
                                     <button
                                         key={recipient.id}
                                         type="button"
-                                        onClick={() => openRecipient(recipient.id)}
+                                        onClick={() => openRecipient(recipient)}
                                         className="flex w-full items-center gap-3 border-b border-[#e4eae8] px-4 py-3 text-left transition hover:bg-[#edf3f1]"
                                     >
                                         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#dfe8df] font-semibold text-[#075e54]">
@@ -473,7 +443,7 @@ const ConsultationChatPage = () => {
                                         <span className="min-w-0 flex-1">
                                             <span className="block truncate text-sm font-medium">{recipient.name || recipient.email}</span>
                                             <span className="mt-1 block truncate text-xs text-[#667781]">
-                                                {recipient.email}{role === 'ADMIN' && recipient.role ? ` · ${recipient.role.toLowerCase()}` : ''}
+                                                {recipient.email}
                                             </span>
                                         </span>
                                     </button>
@@ -494,24 +464,22 @@ const ConsultationChatPage = () => {
                                 <div className="px-6 py-10 text-center text-sm text-[#667781]">
                                     {conversations.length
                                         ? 'No conversations match your search.'
-                                        : role === 'ADMIN'
-                                            ? 'No private conversations yet. Start a chat with a user or nutritionist.'
-                                            : role === 'USER'
-                                                ? 'No chats yet. Choose a booked consultation to start one.'
-                                                : 'No chats yet. Start a new chat to contact a user.'}
+                                        : role === 'USER'
+                                            ? 'No chats yet. Choose an accepted consultation to start one.'
+                                            : 'No chats yet. Chats open once you accept a consultation.'}
                                     {!conversations.length && role === 'USER' && (
                                         <button type="button" onClick={() => setNewChatMode(true)} className="mt-3 block w-full font-semibold text-[#008069]">
                                             Choose an appointment
                                         </button>
                                     )}
-                                    {!conversations.length && ['NUTRITIONIST', 'ADMIN'].includes(role) && (
+                                    {!conversations.length && role === 'NUTRITIONIST' && (
                                         <button type="button" onClick={() => setNewChatMode(true)} className="mt-3 block w-full font-semibold text-[#008069]">
                                             Start a new chat
                                         </button>
                                     )}
                                 </div>
                             ) : visibleConversations.map((item) => {
-                                const peer = role === 'ADMIN' ? adminConversationPeer(item, user) : null;
+                                const peer = null;
                                 const peerRole = peer?.role || (role === 'USER'
                                     ? item.nutritionistRole || 'NUTRITIONIST'
                                     : item.patientRole || 'USER');
@@ -576,17 +544,15 @@ const ConsultationChatPage = () => {
                                 </div>
                                 <h2 className="text-3xl font-light text-[#41525d]">Your chats</h2>
                                 <p className="mt-3 max-w-md text-sm leading-6 text-[#667781]">
-                                    {role === 'ADMIN'
-                                        ? 'Select a private conversation or start a new one with any user or nutritionist.'
-                                        : role === 'USER'
-                                            ? 'Select a conversation to continue chatting with your nutritionist, or choose a booked appointment to start a chat.'
-                                            : 'Select a conversation from the left to continue messaging, or start a new private chat with a user.'}
+                                    {role === 'USER'
+                                        ? 'Select a conversation to continue chatting with your nutritionist, or choose an accepted consultation to start a chat.'
+                                        : 'Select a conversation from the left to continue messaging a patient.'}
                                 </p>
                                 {role === 'USER' ? (
                                     <button type="button" onClick={() => setNewChatMode(true)} className="mt-6 rounded-full bg-[#008069] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#006f5b]">
                                         Choose an appointment
                                     </button>
-                                ) : ['NUTRITIONIST', 'ADMIN'].includes(role) && (
+                                ) : role === 'NUTRITIONIST' && (
                                     <button type="button" onClick={() => setNewChatMode(true)} className="mt-6 rounded-full bg-[#008069] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#006f5b]">
                                         Start a new chat
                                     </button>

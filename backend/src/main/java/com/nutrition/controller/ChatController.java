@@ -30,6 +30,10 @@ public class ChatController {
     public List<ConversationDto> conversations(@AuthenticationPrincipal CustomUserDetails u) {
         return chatService.listConversations(u.getId(), u.getRole());
     }
+    @GetMapping("/unread")
+    public UnreadSummaryDto unread(@AuthenticationPrincipal CustomUserDetails u) {
+        return chatService.unreadSummary(u.getId());
+    }
     @GetMapping("/page")
     public ConversationPageDto conversationPage(
             @AuthenticationPrincipal CustomUserDetails u,
@@ -43,10 +47,14 @@ public class ChatController {
     }
     @GetMapping(value = "/{id}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<SseEmitter> events(@AuthenticationPrincipal CustomUserDetails u, @PathVariable Long id) {
+        // Authorise and refresh first, in a short transaction that is already finished by the
+        // time the stream is returned - otherwise a pooled connection stays checked out for the
+        // whole 30 minute stream and the pool runs dry.
+        ConversationStatusDto authorization = chatService.authorizeSubscription(id, u.getId());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
                 .header("X-Accel-Buffering", "no")
-                .body(chatService.subscribe(id, u.getId()));
+                .body(chatService.subscribe(id, u.getId(), authorization.getStatus()));
     }
     @GetMapping("/{id}/messages")
     public ChatHistoryDto history(@AuthenticationPrincipal CustomUserDetails u, @PathVariable Long id,

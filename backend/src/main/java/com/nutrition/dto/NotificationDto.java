@@ -15,6 +15,8 @@ public class NotificationDto {
     private String type;
     private String icon;
     private String path;
+    /** Set when the notification points at a consultation chat. */
+    private Long conversationId;
     private boolean readStatus;
     private LocalDateTime createdAt;
     private String timeAgo;

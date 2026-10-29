@@ -46,36 +46,22 @@ public class WalletController {
         response.setHeader("Connection", "keep-alive");
         response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
 
-        Long targetUserId = null;
-        String targetEmail = null;
-        boolean isAdmin = false;
-
-        if (userDetails != null) {
-            targetUserId = userDetails.getId();
-            targetEmail = userDetails.getUsername();
-            isAdmin = userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("ADMIN"));
-        }
-        if (paramUserId != null) {
-            targetUserId = paramUserId;
-        }
-        if (paramEmail != null && !paramEmail.isBlank()) {
-            targetEmail = paramEmail.trim();
-        }
-        if ("ADMIN".equalsIgnoreCase(paramRole)) {
-            isAdmin = true;
+        // The stream is always bound to the authenticated principal. The legacy userId/email/role
+        // query parameters are intentionally ignored: trusting them let any signed-in user listen
+        // to somebody else's wallet and appointment events.
+        if (userDetails == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Sign in to open a live stream");
         }
 
-        if (targetUserId == null && targetEmail != null && !targetEmail.isBlank()) {
-            User found = userRepository.findByEmail(targetEmail).orElse(null);
-            if (found != null) {
-                targetUserId = found.getId();
-            }
-        } else if ((targetEmail == null || targetEmail.isBlank()) && targetUserId != null) {
-            User found = userRepository.findById(targetUserId).orElse(null);
-            if (found != null) {
-                targetEmail = found.getEmail();
-            }
-        }
+        // No repository call here on purpose: this method's response is a long-lived stream, and
+        // running a query on this request keeps a pooled connection checked out for as long as
+        // the stream lives (which is what previously exhausted the pool). The principal already
+        // carries both the id and the email, so no lookup is needed.
+        Long targetUserId = userDetails.getId();
+        String targetEmail = userDetails.getUsername();
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().contains("ADMIN"));
 
         return walletSseService.subscribe(targetUserId, targetEmail, isAdmin);
     }

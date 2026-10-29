@@ -137,6 +137,38 @@ public class WalletSseService {
         }
     }
 
+    /**
+     * Pushes a named event to one user's live stream. Reuses the single authenticated
+     * /api/wallet/stream connection so the browser does not have to open a second
+     * EventSource (HTTP/1.1 allows only a handful per origin).
+     */
+    public void sendUserEvent(Long userId, String email, String eventName, Object payload) {
+        List<SseEmitter> targetEmitters = new CopyOnWriteArrayList<>();
+
+        if (userId != null && userEmitters.containsKey(userId)) {
+            targetEmitters.addAll(userEmitters.get(userId));
+        }
+        if (email != null && !email.isBlank()) {
+            List<SseEmitter> byEmail = emailEmitters.get(email.trim().toLowerCase());
+            if (byEmail != null) {
+                for (SseEmitter em : byEmail) {
+                    if (!targetEmitters.contains(em)) {
+                        targetEmitters.add(em);
+                    }
+                }
+            }
+        }
+
+        for (SseEmitter emitter : targetEmitters) {
+            try {
+                emitter.send(SseEmitter.event().name(eventName).data(payload));
+            } catch (Exception e) {
+                log.debug("Dropping dead emitter while pushing {} to userId={}: {}", eventName, userId, e.getMessage());
+                removeEmitter(userId, email, false, emitter);
+            }
+        }
+    }
+
     public void sendWalletUpdate(Long userId, com.nutrition.entity.WalletTransaction transaction, java.math.BigDecimal newBalance, String eventType) {
         Map<String, Object> payload = new java.util.HashMap<>();
         payload.put("eventType", eventType != null ? eventType : "WALLET_UPDATED");

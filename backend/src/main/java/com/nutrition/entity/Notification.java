@@ -32,6 +32,10 @@ public class Notification {
     private String type = "SYSTEM";
     private String icon = "notifications";
     private String path;
+
+    /** Set for consultation-chat notifications so they can be routed and aggregated per conversation. */
+    @Column(name = "conversation_id")
+    private Long conversationId;
     
     @Column(name = "read_status")
     private boolean readStatus = false;
