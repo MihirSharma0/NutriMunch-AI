@@ -8,6 +8,10 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Data Transfer Object returning AI food nutrition analysis.
+ * Contains calorie estimates, macronutrient compositions, ingredients, and allergen warnings.
+ */
 @Data
 @Builder
 @NoArgsConstructor

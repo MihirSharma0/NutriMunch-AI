@@ -1,3 +1,8 @@
+/**
+ * Personal Diet Plans Library
+ * Displays active and historical weekly meal plans, recipe ingredient breakdowns,
+ * macronutrient profiles, and targets synchronization.
+ */
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../api/axios';
@@ -6,6 +11,10 @@ import FeatureGate from '../../../components/FeatureGate';
 import { normalizeAndDeduplicatePlans, permanentlyDeleteDietPlan } from '../../../utils/dietPlanSync';
 import { ALLERGEN_OPTIONS, DIET_OPTIONS, planContainsAllergen, planMatchesDiet, parseAllergies } from '../../../utils/dietFilters';
 
+/**
+ * DietPlans Component
+ * Explores prescribed and AI-generated diet plans with allergen filtering and recipe cards.
+ */
 const DietPlans = () => {
     const navigate = useNavigate();
     const { user, token } = useContext(AuthContext);

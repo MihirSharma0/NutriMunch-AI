@@ -1,3 +1,8 @@
+/**
+ * Unit Test Suite for ConsultationLifecycleService.
+ * Validates consultation chat window derivation, 5-day active windows,
+ * overdue expiry, thread closures, and nutritionist reopening limits.
+ */
 package com.nutrition.service;
 
 import com.nutrition.entity.Appointment;
@@ -44,6 +49,9 @@ class ConsultationLifecycleServiceTest {
 
     private ConsultationLifecycleService service;
 
+    /**
+     * Initializes test fixtures, mock repositories, and default consultation records before each test.
+     */
     @BeforeEach
     void setUp() {
         Clock fixed = Clock.fixed(Instant.parse("2026-03-10T09:00:00Z"), ZoneOffset.UTC);

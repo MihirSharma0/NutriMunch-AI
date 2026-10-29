@@ -1,3 +1,7 @@
+/**
+ * Services Overview Section
+ * Interactive catalog showcasing AI-driven nutritional capabilities, clinical features, and modal dialogs.
+ */
 import React, { useState, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -5,6 +9,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, X } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 
+/**
+ * Resolves modal service offerings based on the current user's role.
+ * 
+ * @param {Object|null} user - Current user object
+ * @returns {Array<Object>} List of feature service descriptions
+ */
 const getModalServicesForRole = (user) => {
     const rawRole = user?.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'GUEST';
 
@@ -161,6 +171,10 @@ const getModalServicesForRole = (user) => {
     };
 };
 
+/**
+ * ServicesOverview Component
+ * Grid of platform service cards with interactive feature detail modals.
+ */
 const ServicesOverview = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);

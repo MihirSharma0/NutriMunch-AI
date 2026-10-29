@@ -1,6 +1,12 @@
+/**
+ * Help & Frequently Asked Questions (FAQ)
+ * Displays categorized questions and answers regarding platform capabilities,
+ * account settings, nutritionist consultations, and technical support.
+ */
 import React, { useState } from 'react';
 
 // Answers reflect how the platform currently works; update them when features change.
+/** FAQ categorized question-and-answer repository. */
 const FAQ_CATEGORIES = [
     {
         id: 'account',
@@ -235,6 +241,10 @@ const FAQ_CATEGORIES = [
     }
 ];
 
+/**
+ * FAQ Component
+ * Interactive accordion rendering categorized frequently asked questions and search filter.
+ */
 const FAQ = () => {
     const [activeCategory, setActiveCategory] = useState('ALL');
     const [search, setSearch] = useState('');

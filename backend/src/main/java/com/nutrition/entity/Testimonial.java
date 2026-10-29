@@ -8,6 +8,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Data
+/**
+ * Testimonial Entity.
+ * Represents patient transformation reviews, star ratings, and clinical testimonials
+ * moderated by platform administrators.
+ */
 @Entity
 @Table(name = "testimonials")
 public class Testimonial {

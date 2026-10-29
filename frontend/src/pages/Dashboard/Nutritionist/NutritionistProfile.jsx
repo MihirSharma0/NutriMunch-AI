@@ -1,8 +1,17 @@
+/**
+ * Certified Nutritionist Profile & Practice Settings
+ * Manages clinical credentials, medical license, specialization focus,
+ * consultation fees, and public biography.
+ */
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
 import { User, Award, CheckCircle, Shield, Clock, DollarSign, Globe, BadgeCheck, Stethoscope, Sparkles, Mail, Calendar } from 'lucide-react';
 
+/**
+ * NutritionistProfile Component
+ * Professional credentials and consultation rate management interface for nutritionists.
+ */
 const NutritionistProfile = () => {
     const { user } = useContext(AuthContext);
     const [profile, setProfile] = useState(null);

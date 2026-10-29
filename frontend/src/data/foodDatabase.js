@@ -1,6 +1,7 @@
-// Comprehensive Food Nutrition Repository for Manual Food Logging
-// Standard servings with calories (kcal), protein (g), carbs (g), fats (g), and fiber (g)
-
+/**
+ * Comprehensive Food Nutrition Repository for Manual Food Logging.
+ * Standard servings mapped with calories (kcal), protein (g), carbs (g), fats (g), and fiber (g).
+ */
 export const FOOD_DATABASE = [
     // Grains, Rice & Breads
     { id: 'g1', name: 'Oatmeal (Cooked)', category: 'Grains', servingSize: '1 cup (234g)', calories: 158, protein: 6.0, carbs: 27.0, fats: 3.2, fiber: 4.0 },
@@ -134,7 +135,13 @@ export const FOOD_DATABASE = [
     { id: 'b8', name: 'Roasted Makhana (Fox Nuts)', category: 'Snacks', servingSize: '1 bowl (35g)', calories: 125, protein: 3.5, carbs: 24.0, fats: 1.5, fiber: 2.5 }
 ];
 
-// High-speed search utility supporting multi-token matching, category filtering, and ranking
+/**
+ * High-speed search utility supporting multi-token matching, category filtering, and ranking.
+ * 
+ * @param {string} query - The search query term
+ * @param {number} [limit=15] - Maximum number of matching food items to return
+ * @returns {Array<Object>} Sorted list of matching food records
+ */
 export const searchFoodDatabase = (query, limit = 15) => {
     if (!query || typeof query !== 'string' || !query.trim()) {
         return [];

@@ -5,6 +5,11 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * Appointment Entity.
+ * Represents a scheduled telehealth consultation between a client user and a certified nutritionist,
+ * tracking consultation timing, session notes, meeting link, and escrow payment status.
+ */
 @Entity
 @Table(name = "appointments")
 @Data

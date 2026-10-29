@@ -1,3 +1,8 @@
+/**
+ * Real-time Wallet Server-Sent Events (SSE) Client
+ * Maintains a live streaming connection with the Spring Boot backend
+ * for instant balance updates, escrow state transitions, and ledger refreshes.
+ */
 import { API_BASE_URL } from '../api/axios';
 
 /**
@@ -29,6 +34,13 @@ try {
     // BroadcastChannel unsupported or restricted in environment
 }
 
+/**
+ * Processes an incoming wallet payload, reconciles local caches,
+ * triggers registered callbacks, and broadcasts changes across browser tabs.
+ * 
+ * @param {Object} data - Parsed wallet and transaction balance payload
+ * @param {boolean} [shouldBroadcast=true] - Whether to replicate via BroadcastChannel
+ */
 function handleParsedWalletPayload(data, shouldBroadcast = true) {
     if (!data) return;
 
@@ -87,6 +99,13 @@ function handleParsedWalletPayload(data, shouldBroadcast = true) {
     }
 }
 
+/**
+ * Establishes and manages the Server-Sent Events (SSE) stream for wallet updates,
+ * configuring heartbeat monitors, error retry backoff, and event listeners.
+ * 
+ * @param {Object} user - Current authenticated user context
+ * @returns {EventSource|null} Active EventSource instance or null
+ */
 function initEventSource(user) {
     if (!user) return;
 
@@ -240,12 +259,23 @@ try {
 } catch (e) { }
 
 /** Call on logout so no stream outlives the session. */
+/**
+ * Closes the active Server-Sent Events connection and resets internal retry counters.
+ */
 export const closeWalletSse = () => {
     updateCallbacks.clear();
     ledgerCallbacks.clear();
     closeConnection();
 };
 
+/**
+ * Subscribes a consumer component to wallet balance changes and transaction updates.
+ * 
+ * @param {Object} user - User authentication context
+ * @param {Function} [onUpdate] - Callback receiving balance updates
+ * @param {Function} [onLedgerUpdate] - Callback receiving full transaction ledger updates
+ * @returns {Function} Unsubscribe teardown function
+ */
 export const subscribeWalletSse = (user, onUpdate, onLedgerUpdate) => {
     if (!user) return () => { };
 

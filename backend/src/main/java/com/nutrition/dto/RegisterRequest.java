@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * Data Transfer Object for new account registrations.
+ * Transmits user name, email, password, and desired role.
+ */
 @Data
 public class RegisterRequest {
     @NotBlank

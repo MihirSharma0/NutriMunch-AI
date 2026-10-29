@@ -3,6 +3,10 @@ package com.nutrition.dto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+/**
+ * Data Transfer Object for Google OAuth sign-in requests.
+ * Carries the Google ID token credential, optional selected role, and initial biometrics.
+ */
 @Data
 public class GoogleLoginRequest {
     @NotBlank

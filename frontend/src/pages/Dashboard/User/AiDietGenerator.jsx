@@ -1,3 +1,8 @@
+/**
+ * AI Autonomous Diet Generator
+ * Leverages Gemini AI to generate custom 7-day meal plans calibrated to user calorie targets,
+ * macronutrient splits, health goals, and allergen restrictions.
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../../../api/axios';
 
@@ -229,6 +234,10 @@ const PlanDisplay = ({ plan, planData }) => {
 };
 
 /* ─── Main ──────────────────────────────────────────────────────────── */
+/**
+ * AiDietGenerator Component
+ * Parameterized generator interface for generating, inspecting, and deploying AI-crafted diet plans.
+ */
 const AiDietGenerator = () => {
   const [selectedGoals, setSelectedGoals] = useState([]);
 

@@ -8,6 +8,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Digital Wallet Entity.
+ * Maintains real-time financial credit balances for patients and earnings for nutritionists
+ * supporting consultation bookings, escrow locks, and payouts.
+ */
 @Entity
 @Table(name = "wallets")
 @Data

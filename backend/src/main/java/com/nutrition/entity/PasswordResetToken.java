@@ -6,6 +6,10 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
+/**
+ * PasswordResetToken Entity.
+ * Represents secure time-limited tokens generated for self-service password recovery.
+ */
 @Entity
 @Table(name = "password_reset_tokens")
 public class PasswordResetToken {

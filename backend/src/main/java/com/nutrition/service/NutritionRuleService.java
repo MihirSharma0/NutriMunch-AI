@@ -9,18 +9,28 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Clinical Nutrition Rule Engine Service.
+Evaluates dietary constraint guidelines, BMR/TDEE calculations, and allergen safety checks.
+ */
 @Service
 @RequiredArgsConstructor
 public class NutritionRuleService {
 
     private final NutritionRuleRepository nutritionRuleRepository;
 
+    /**
+     * Executes get all rules operation.
+     */
     public List<NutritionRuleDto> getAllRules() {
         return nutritionRuleRepository.findAll().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Executes update rule operation.
+     */
     public NutritionRuleDto updateRule(Long id, NutritionRuleDto dto) {
         NutritionRule rule = nutritionRuleRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rule not found with id " + id));
@@ -34,6 +44,9 @@ public class NutritionRuleService {
         return mapToDto(rule);
     }
 
+    /**
+     * Executes map to dto operation.
+     */
     private NutritionRuleDto mapToDto(NutritionRule rule) {
         NutritionRuleDto dto = new NutritionRuleDto();
         dto.setId(rule.getId());

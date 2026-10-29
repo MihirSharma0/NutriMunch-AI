@@ -1,4 +1,10 @@
-/** @type {import('tailwindcss').Config} */
+/**
+ * Tailwind CSS Configuration
+ * Configures the design system tokens, color palettes, dark mode handling,
+ * typography scales, spacing tokens, and content purge paths for the NutriMunch application.
+ *
+ * @type {import('tailwindcss').Config}
+ */
 export default {
   content: [
     "./index.html",

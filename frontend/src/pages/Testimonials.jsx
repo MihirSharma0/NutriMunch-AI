@@ -1,7 +1,15 @@
+/**
+ * Testimonials Page
+ * Showcases verified transformation stories, success metrics, and review submission forms.
+ */
 import React from 'react';
 import ClientTestimonials from './HomeSections/ClientTestimonials';
 import ShareYourStoryForm from './TestimonialSections/ShareYourStoryForm';
 
+/**
+ * Testimonials Component
+ * Renders verified community reviews and provides story submission access for logged-in members.
+ */
 const Testimonials = () => {
     return (
         <div className="relative pt-32 pb-24 flex flex-col w-full">

@@ -10,10 +10,26 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Spring Data JPA Repository for ChatMessage entities.
+Handles chat message persistence, cursor-based pagination, unread counts, and read receipt updates.
+ */
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
+    /**
+     * Executes query to find by conversation id and id less than order by id desc.
+     */
     List<ChatMessage> findByConversationIdAndIdLessThanOrderByIdDesc(Long conversationId, Long beforeId, Pageable pageable);
+    /**
+     * Executes query to find by conversation id order by id desc.
+     */
     List<ChatMessage> findByConversationIdOrderByIdDesc(Long conversationId, Pageable pageable);
+    /**
+     * Executes query to find by conversation id and sender id and client message id.
+     */
     Optional<ChatMessage> findByConversationIdAndSenderIdAndClientMessageId(Long conversationId, Long senderId, String clientMessageId);
+    /**
+     * Executes query to mark read for conversation and recipient.
+     */
     @Modifying
     @Query("update ChatMessage m set m.readAt = :readAt where m.conversation.id = :conversationId and m.sender.id <> :readerId and m.readAt is null")
     int markReadForConversationAndRecipient(@Param("conversationId") Long conversationId, @Param("readerId") Long readerId, @Param("readAt") java.time.LocalDateTime readAt);
@@ -31,9 +47,15 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Query("SELECT COUNT(m) FROM ChatMessage m " +
            "WHERE m.readAt IS NULL AND m.sender.id <> :userId " +
            "AND (m.conversation.patient.id = :userId OR m.conversation.nutritionist.id = :userId)")
+    /**
+     * Executes query to count total unread for user.
+     */
     long countTotalUnreadForUser(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(m) FROM ChatMessage m " +
            "WHERE m.readAt IS NULL AND m.sender.id <> :userId AND m.conversation.id = :conversationId")
+    /**
+     * Executes query to count unread for conversation.
+     */
     long countUnreadForConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
 }

@@ -6,12 +6,17 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Clock;
 
 /**
- * Single source of "now" for the consultation chat lifecycle so the five day window
- * can be driven by a fixed clock in tests instead of by sleeping.
+ * System Time & Clock Configuration.
+ * Single source of "now" for consultation lifecycles allowing deterministic time mocking in tests.
  */
 @Configuration
 public class TimeConfig {
 
+    /**
+     * Supplies the system default zone Clock bean.
+     *
+     * @return system default zone Clock instance
+     */
     @Bean
     public Clock clock() {
         return Clock.systemDefaultZone();

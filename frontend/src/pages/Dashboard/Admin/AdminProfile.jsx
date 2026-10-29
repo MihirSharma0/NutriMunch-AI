@@ -1,7 +1,15 @@
+/**
+ * Administrator Profile Settings
+ * Manages administrator credentials, secure account information, and master security preferences.
+ */
 import React, { useState, useEffect } from 'react';
 import api from '../../../api/axios';
 import { Shield, Key, Mail, CheckCircle } from 'lucide-react';
 
+/**
+ * AdminProfile Component
+ * Administration settings interface for updating system credentials and contact email.
+ */
 const AdminProfile = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);

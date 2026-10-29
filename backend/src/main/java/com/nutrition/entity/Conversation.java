@@ -6,6 +6,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * Conversation Entity.
+ * Represents an active or historical consultation chat thread tied to an appointment,
+ * enforcing 5-day consultation windows, close states, and nutritionist reopening extensions.
+ */
 @Entity
 @Table(name = "conversations")
 @Data

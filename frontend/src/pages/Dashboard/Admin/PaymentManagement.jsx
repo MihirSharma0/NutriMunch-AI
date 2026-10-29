@@ -1,3 +1,8 @@
+/**
+ * Administrator Payment & Financial Ledger Management
+ * System-wide financial oversight tool for reviewing user wallet balances, escrow accounts,
+ * credit allocations, and manual ledger adjustments.
+ */
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
@@ -55,6 +60,10 @@ const deduplicateTransactions = (list) => {
     return result.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 };
 
+/**
+ * PaymentManagement Component
+ * Financial management console displaying user wallets, ledger audits, and credit grant actions.
+ */
 const PaymentManagement = () => {
     const { user } = useContext(AuthContext);
 

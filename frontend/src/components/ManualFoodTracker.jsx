@@ -1,8 +1,14 @@
+/**
+ * Manual Food & Macro Tracker
+ * Comprehensive daily food intake tracking interface with nutrition database search,
+ * custom manual macro entry, meal categorization, and historical date switching.
+ */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { searchFoodDatabase, FOOD_DATABASE } from '../data/foodDatabase';
 import api from '../api/axios';
 import DarkCalendarPicker from './DarkCalendarPicker';
 
+/** Meal categorization configuration options. */
 const MEAL_TYPES = [
     { id: 'Breakfast', label: 'Breakfast', icon: 'wb_twilight' },
     { id: 'Lunch', label: 'Lunch', icon: 'light_mode' },
@@ -10,6 +16,14 @@ const MEAL_TYPES = [
     { id: 'Snack', label: 'Snack', icon: 'cookie' }
 ];
 
+/**
+ * ManualFoodTracker Component
+ * Allows users to log consumed food items, calculate daily macronutrients, and monitor goals.
+ * 
+ * @param {Object} props - Component properties
+ * @param {Object} [props.customTargets={}] - Custom calorie and macronutrient targets
+ * @param {string} [props.initialDate] - Initial date string in YYYY-MM-DD format
+ */
 const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
     // Current date & backdated daily logging state
     const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);

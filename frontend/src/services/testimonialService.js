@@ -1,7 +1,14 @@
+/**
+ * Testimonial Service
+ * Manages client testimonials with dual-layer synchronization
+ * between backend REST endpoints and browser localStorage caching.
+ */
 import api from '../api/axios';
 
+/** LocalStorage cache key for persisting testimonials. */
 const STORAGE_KEY = 'nutrimunch_testimonials_v1';
 
+/** Initial default seed testimonials used when no persisted records exist. */
 const INITIAL_SEED_TESTIMONIALS = [
     {
         id: 'seed-1',
@@ -44,6 +51,11 @@ const INITIAL_SEED_TESTIMONIALS = [
     }
 ];
 
+/**
+ * Retrieves cached testimonials from localStorage or initializes default seeds.
+ * 
+ * @returns {Array<Object>} List of cached testimonial records
+ */
 export const getLocalTestimonials = () => {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -57,6 +69,12 @@ export const getLocalTestimonials = () => {
     }
 };
 
+/**
+ * Fetches approved testimonials from the backend API, syncing them into
+ * localStorage, or falls back to locally stored cache if the network fails.
+ * 
+ * @returns {Promise<Array<Object>>} List of approved testimonials
+ */
 export const fetchAllTestimonials = async () => {
     try {
         const res = await api.get('/testimonials/approved');
@@ -71,6 +89,12 @@ export const fetchAllTestimonials = async () => {
     return getLocalTestimonials();
 };
 
+/**
+ * Creates or updates a testimonial via the backend API and syncs local storage.
+ * 
+ * @param {Object} testimonialData - Testimonial details including author and content
+ * @returns {Promise<Object>} The saved testimonial item
+ */
 export const saveTestimonial = async (testimonialData) => {
     let savedItem = null;
     try {
@@ -107,6 +131,12 @@ export const saveTestimonial = async (testimonialData) => {
     return newItem;
 };
 
+/**
+ * Deletes a testimonial by ID from the backend API and local storage cache.
+ * 
+ * @param {string|number} id - Identifier of the testimonial to remove
+ * @returns {Promise<boolean>} True if deletion succeeded
+ */
 export const deleteTestimonial = async (id) => {
     try {
         if (!String(id).startsWith('seed-') && !String(id).startsWith('local-')) {

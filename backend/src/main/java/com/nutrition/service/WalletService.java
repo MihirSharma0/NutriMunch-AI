@@ -16,6 +16,10 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Digital Wallet & Ledger Service.
+Executes double-entry financial accounting, wallet balances, escrow allocations, and refund transactions.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -28,6 +32,9 @@ public class WalletService {
     private final WalletSseService walletSseService;
     private final NotificationService notificationService;
 
+    /**
+     * Executes get or create wallet operation.
+     */
     public Wallet getOrCreateWallet(User user) {
         if (user == null || user.getId() == null) {
             Wallet fallback = new Wallet();
@@ -50,6 +57,9 @@ public class WalletService {
         return wallet;
     }
 
+    /**
+     * Executes get or create wallet with lock operation.
+     */
     public Wallet getOrCreateWalletWithLock(User user) {
         if (user == null || user.getId() == null) {
             return getOrCreateWallet(user);
@@ -85,6 +95,9 @@ public class WalletService {
         return res;
     }
 
+    /**
+     * Executes reconcile wallet balance operation.
+     */
     private Wallet reconcileWalletBalance(Wallet wallet, User user) {
         Wallet reconciledWallet = wallet;
 
@@ -109,6 +122,9 @@ public class WalletService {
         return wallet;
     }
 
+    /**
+     * Executes is wallet credit operation.
+     */
     private static boolean isWalletCredit(WalletTransaction tx) {
         String type = normalize(tx.getTransactionType());
         String status = normalize(tx.getStatus());
@@ -123,6 +139,9 @@ public class WalletService {
         return false;
     }
 
+    /**
+     * Executes is wallet debit operation.
+     */
     private static boolean isWalletDebit(WalletTransaction tx, Wallet wallet, User user) {
         String type = normalize(tx.getTransactionType());
         String status = normalize(tx.getStatus());
@@ -143,6 +162,9 @@ public class WalletService {
         return false;
     }
 
+    /**
+     * Executes belongs to wallet side operation.
+     */
     private static boolean belongsToWalletSide(WalletTransaction tx, Wallet wallet, User user, boolean source) {
         Wallet sideWallet = source ? tx.getSourceWallet() : tx.getTargetWallet();
         User sideUser = source ? tx.getInitiator() : tx.getRecipient();
@@ -150,6 +172,9 @@ public class WalletService {
                 || (sideUser != null && Objects.equals(sideUser.getId(), user.getId()));
     }
 
+    /**
+     * Executes normalize operation.
+     */
     private static String normalize(String value) {
         return value == null ? "" : value.toUpperCase(Locale.ROOT);
     }
@@ -934,14 +959,23 @@ public class WalletService {
         return map;
     }
 
+    /**
+     * Executes notify wallet operation.
+     */
     private void notifyWallet(User recipient, Long actorId, String title, String message) {
         notificationService.notifyUser(recipient, actorId, title, message, "WALLET", "account_balance_wallet", "/transactions");
     }
 
+    /**
+     * Executes note suffix operation.
+     */
     private static String noteSuffix(String notes) {
         return notes != null && !notes.isBlank() ? " (" + notes.trim() + ")" : "";
     }
 
+    /**
+     * Executes display name operation.
+     */
     private static String displayName(User u) {
         String name = ((u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : "")).trim();
         return name.isEmpty() ? u.getEmail() : name;

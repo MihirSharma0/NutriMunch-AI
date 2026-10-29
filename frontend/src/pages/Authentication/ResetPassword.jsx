@@ -1,7 +1,15 @@
+/**
+ * Reset Password Page
+ * Validates the reset security token provided in URL params and updates account password.
+ */
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import axios from '../../api/axios';
 
+/**
+ * ResetPassword Component
+ * Accepts new password and confirmation, verifying the security token with the backend.
+ */
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');

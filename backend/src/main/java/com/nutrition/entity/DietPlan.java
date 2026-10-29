@@ -6,6 +6,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * DietPlan Entity.
+ * Stores 7-day structured meal plans created either by Gemini AI or certified nutritionists,
+ * including target scope (GENERAL vs EXCLUSIVE for a patient), calories, and macronutrient targets.
+ */
 @Entity
 @Table(name = "diet_plans")
 @Data

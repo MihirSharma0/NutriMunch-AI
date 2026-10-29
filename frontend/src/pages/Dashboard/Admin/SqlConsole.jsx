@@ -1,8 +1,17 @@
+/**
+ * Administrator SQL Console & Database Explorer
+ * Interactive raw SQL execution console with table schema browser, query execution,
+ * and tabular result inspection.
+ */
 import React, { useState, useContext } from 'react';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 
+/**
+ * SqlConsole Component
+ * Administration database query tool with query editor, schema browser, and execution telemetry.
+ */
 const SqlConsole = () => {
     const { user } = useContext(AuthContext);
 

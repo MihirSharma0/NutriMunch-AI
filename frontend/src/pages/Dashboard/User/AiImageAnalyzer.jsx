@@ -1,7 +1,16 @@
+/**
+ * AI Food & Barcode Visual Analyzer
+ * Computer-vision nutritional analysis using camera capture, photo upload, or barcode scans
+ * to estimate calorie/macro compositions and detect allergen safety conflicts.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../../api/axios';
 import { Html5Qrcode } from 'html5-qrcode';
 
+/**
+ * AiImageAnalyzer Component
+ * Interactive scanner providing image upload, real-time camera barcode reading, and AI macronutrient analysis.
+ */
 const AiImageAnalyzer = () => {
     const [inputType, setInputType] = useState('FOOD_IMAGE'); // FOOD_IMAGE, BARCODE
     const [imageUrl, setImageUrl] = useState('');

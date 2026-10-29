@@ -12,6 +12,10 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Transactional Email Service.
+Dispatches templated email notifications including verification OTPs, appointment confirmations, and password reset links.
+ */
 @Service
 public class EmailService {
 
@@ -27,6 +31,9 @@ public class EmailService {
     @Autowired
     private RestTemplate restTemplate;
 
+    /**
+     * Executes send otp verification email operation.
+     */
     @Async
     public void sendOtpVerificationEmail(String toEmail, String userName, String otp) {
         try {
@@ -49,6 +56,9 @@ public class EmailService {
         }
     }
 
+    /**
+     * Executes send account verified email operation.
+     */
     @Async
     public void sendAccountVerifiedEmail(String toEmail, String userName) {
         try {

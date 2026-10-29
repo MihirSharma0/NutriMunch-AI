@@ -5,6 +5,11 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * ChatMessage Entity.
+ * Stores individual chat messages exchanged between participants during an active consultation conversation,
+ * including sender metadata, message body, and read receipts.
+ */
 @Entity
 @Table(name = "chat_messages", uniqueConstraints = @UniqueConstraint(
         name = "uk_chat_message_idempotency", columnNames = {"conversation_id", "sender_id", "client_message_id"}))

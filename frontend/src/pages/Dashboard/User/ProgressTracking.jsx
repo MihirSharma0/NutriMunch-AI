@@ -1,3 +1,8 @@
+/**
+ * Biometric Progress Tracking & Hydration Suite
+ * Real-time daily fluid tracking with circular SVG gauges, weight target calibration,
+ * historical progress logging, and manual meal nutrition tracking.
+ */
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Droplet, Plus, RotateCcw, CheckCircle2, Sparkles, Edit2, Save, X } from 'lucide-react';
@@ -22,6 +27,10 @@ const DEFAULT_TARGETS = {
     zinc: 11
 };
 
+/**
+ * ProgressTracking Component
+ * Interactive hydration rings, weight milestone charts, and daily meal food log interface.
+ */
 const ProgressTracking = () => {
     const { user } = useContext(AuthContext);
     const location = useLocation();

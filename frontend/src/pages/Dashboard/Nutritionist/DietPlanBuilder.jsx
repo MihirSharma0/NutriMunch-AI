@@ -1,9 +1,18 @@
+/**
+ * Clinical Diet Plan Builder Studio
+ * Professional authoring suite for certified nutritionists to construct custom 7-day
+ * macronutrient regimes, meal schedules, and deploy plans to assigned patients.
+ */
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import { permanentlyDeleteDietPlan, getDeletedPlanIds, getDeletedPlanTitles } from '../../../utils/dietPlanSync';
 
+/**
+ * DietPlanBuilder Component
+ * Interactive meal builder and deployment studio supporting exclusive patient prescribing and general publication.
+ */
 const DietPlanBuilder = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);

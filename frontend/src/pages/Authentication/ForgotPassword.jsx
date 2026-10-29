@@ -1,7 +1,15 @@
+/**
+ * Forgot Password Request Page
+ * Initiates self-service password recovery by requesting a secure token link via email.
+ */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../../api/axios';
 
+/**
+ * ForgotPassword Component
+ * Form allowing registered users to input their email and request a reset link.
+ */
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState('idle'); // idle, loading, success, error

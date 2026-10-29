@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * AI Nutrition and Vision Controller.
+Exposes endpoints for Gemini-powered autonomous diet plan generation and visual food/barcode nutritional analysis.
+ */
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -51,6 +55,9 @@ public class AiController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Handles request to resolve string or list.
+     */
     @SuppressWarnings("unchecked")
     private String resolveStringOrList(Object value) {
         if (value == null)

@@ -1,7 +1,15 @@
+/**
+ * Contact & Support Page
+ * Provides support channels, executive team profiles, and searchable FAQ documentation.
+ */
 import React from 'react';
 import FAQ from './ContactSections/FAQ';
 import Owners from './ContactSections/Owners';
 
+/**
+ * Contact Component
+ * Layout presenting contact cards, founding leadership profiles, and interactive FAQ sections.
+ */
 const Contact = () => {
     return (
         <div className="relative pt-32 pb-24 flex flex-col w-full">

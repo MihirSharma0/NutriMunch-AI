@@ -13,6 +13,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * User Biometric Profile Service.
+Handles patient demographic profiles, dietary restrictions, allergen tags, and hydration target calculations.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserProfileService {
@@ -21,6 +25,9 @@ public class UserProfileService {
     private final UserRepository userRepository;
     private final NutritionRuleRepository nutritionRuleRepository;
 
+    /**
+     * Executes get all user profiles operation.
+     */
     public List<UserProfileDto> getAllUserProfiles() {
         List<User> users = userRepository.findByRole(Role.USER);
         return users.stream().map(u -> {
@@ -33,12 +40,18 @@ public class UserProfileService {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * Executes get profile operation.
+     */
     public UserProfileDto getProfile(Long userId) {
         UserProfile profile = userProfileRepository.findByUserId(userId)
             .orElseGet(() -> createEmptyProfile(userId));
         return mapToDto(profile);
     }
 
+    /**
+     * Executes update profile operation.
+     */
     public UserProfileDto updateProfile(Long userId, UserProfileDto dto) {
         UserProfile profile = userProfileRepository.findByUserId(userId)
             .orElseGet(() -> createEmptyProfile(userId));
@@ -94,6 +107,9 @@ public class UserProfileService {
         return mapToDto(profile);
     }
 
+    /**
+     * Executes create empty profile operation.
+     */
     private UserProfile createEmptyProfile(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         UserProfile profile = new UserProfile();
@@ -101,12 +117,18 @@ public class UserProfileService {
         return userProfileRepository.save(profile);
     }
 
+    /**
+     * Executes get rule value operation.
+     */
     private double getRuleValue(String key, double defaultValue) {
         return nutritionRuleRepository.findByRuleKey(key)
                 .map(NutritionRule::getRuleValue)
                 .orElse(defaultValue);
     }
 
+    /**
+     * Executes recalculate bmr tdee only operation.
+     */
     private void recalculateBmrTdeeOnly(UserProfile profile) {
         if (profile.getAge() == null || profile.getHeightCm() == null || profile.getWeightKg() == null || profile.getGender() == null) {
             return;
@@ -132,6 +154,9 @@ public class UserProfileService {
         profile.setTdee(bmr * multiplier);
     }
 
+    /**
+     * Executes recalculate nutrition targets operation.
+     */
     private void recalculateNutritionTargets(UserProfile profile) {
         if (profile.getAge() == null || profile.getHeightCm() == null || profile.getWeightKg() == null || profile.getGender() == null) {
             return;
@@ -207,6 +232,9 @@ public class UserProfileService {
         profile.setZincTargetMg(isFemale ? 8.0 : 11.0);
     }
 
+    /**
+     * Executes map to dto operation.
+     */
     private UserProfileDto mapToDto(UserProfile profile) {
         UserProfileDto dto = new UserProfileDto();
         dto.setId(profile.getId());

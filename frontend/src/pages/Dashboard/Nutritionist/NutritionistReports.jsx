@@ -1,3 +1,8 @@
+/**
+ * Nutritionist Patient Reports & Clinical Analytics
+ * Patient progress monitoring console allowing nutritionists to inspect biometric adherence,
+ * macro trends, and issue clinical health notes.
+ */
 import React from 'react';
 import { Line } from 'react-chartjs-2';
 
@@ -6,6 +11,10 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
+/**
+ * NutritionistReports Component
+ * Analytics dashboard providing cross-patient telemetry and biometric progression logs.
+ */
 const NutritionistReports = () => {
     const data = {
         labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],

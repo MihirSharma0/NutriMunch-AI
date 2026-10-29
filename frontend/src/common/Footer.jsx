@@ -1,8 +1,19 @@
+/**
+ * Global Footer Component
+ * Renders the bottom site footer with brand mission statement, dynamic role-based navigation links,
+ * and system copyright information.
+ */
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { getNavItemsForRole } from './Navbar';
 
+/**
+ * Flattens and deduplicates navigation links suitable for display in the footer.
+ * 
+ * @param {Object|null} user - Authenticated user object
+ * @returns {Array<Object>} Flattened array of navigation link items
+ */
 const getFooterNavItems = (user) => {
     const navItems = getNavItemsForRole(user);
     const flattened = [];
@@ -26,6 +37,10 @@ const getFooterNavItems = (user) => {
     return flattened;
 };
 
+/**
+ * Footer Component
+ * Visual site footer displaying quick links, company bio, and copyright metadata.
+ */
 const Footer = () => {
     const { user } = useContext(AuthContext);
     const navItems = getFooterNavItems(user);

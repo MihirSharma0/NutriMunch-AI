@@ -21,6 +21,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Administrative Command Controller.
+Provides endpoints for system telemetry, user role management, SQL query console, appointment refunds, and nutritionist licensing audits.
+ */
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -50,6 +54,9 @@ public class AdminController {
 
     private String activeAdminEmail;
 
+    /**
+     * Handles request to init credentials.
+     */
     @jakarta.annotation.PostConstruct
     public void initCredentials() {
         this.activeAdminEmail = configuredAdminEmail;
@@ -102,16 +109,25 @@ public class AdminController {
         }
     }
 
+    /**
+     * Handles request to get all users list.
+     */
     @GetMapping("/all-users")
     public ResponseEntity<List<User>> getAllUsersList() {
         return ResponseEntity.ok(userRepository.findAll());
     }
 
+    /**
+     * Handles request to get all user profiles.
+     */
     @GetMapping("/all-user-profiles")
     public ResponseEntity<List<UserProfileDto>> getAllUserProfiles() {
         return ResponseEntity.ok(userProfileService.getAllUserProfiles());
     }
 
+    /**
+     * Handles request to get all users.
+     */
     @GetMapping("/users")
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userRepository.findByRole(Role.USER));
@@ -171,6 +187,9 @@ public class AdminController {
         return ResponseEntity.ok(resultList);
     }
 
+    /**
+     * Handles request to update user role.
+     */
     @PutMapping("/users/{id}/role")
     @Transactional
     public ResponseEntity<User> updateUserRole(@org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails adminDetails, @PathVariable Long id, @RequestBody Map<String, String> body) {
@@ -233,6 +252,9 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Password reset successfully for user " + user.getEmail() + ". Account is verified and enabled."));
     }
 
+    /**
+     * Handles request to verify user.
+     */
     @PutMapping("/users/{id}/verify")
     public ResponseEntity<User> verifyUser(@PathVariable Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
@@ -242,6 +264,9 @@ public class AdminController {
         return ResponseEntity.ok(userRepository.save(user));
     }
 
+    /**
+     * Handles request to delete user.
+     */
     @DeleteMapping("/users/{id}")
     @Transactional
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
@@ -423,6 +448,9 @@ public class AdminController {
         return ResponseEntity.ok(walletService.adminAllocate(adminId, recipientId, amount, notes));
     }
 
+    /**
+     * Handles request to actor id.
+     */
     private static Long actorId(com.nutrition.security.CustomUserDetails details) {
         return details != null ? details.getId() : null;
     }

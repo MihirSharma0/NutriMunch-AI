@@ -1,3 +1,8 @@
+/**
+ * Clinical Health Reports & Biometrics Exporter
+ * Generates interactive macro/calorie/hydration compliance trends and compiles
+ * exportable, print-ready clinical health report summaries.
+ */
 import React, { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Line, Bar } from 'react-chartjs-2';
@@ -397,6 +402,10 @@ const generateSvgBarChart = ({ title, labels, proteinData, carbsData, fatsData }
     `;
 };
 
+/**
+ * Reports Component
+ * Analytical health reporting dashboard with preset timeframes and printable document export.
+ */
 const Reports = () => {
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();

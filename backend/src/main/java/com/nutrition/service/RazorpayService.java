@@ -20,6 +20,10 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Razorpay Payment Gateway Integration Service.
+Creates payment orders and cryptographically verifies webhook and checkout payment signatures.
+ */
 @Service
 @Slf4j
 public class RazorpayService {
@@ -30,6 +34,9 @@ public class RazorpayService {
     @Value("${razorpay.key-secret:TW253Q6QppcSG3oEIFyr3fhx}")
     private String keySecret;
 
+    /**
+     * Executes get key id operation.
+     */
     public String getKeyId() {
         return keyId;
     }

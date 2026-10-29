@@ -19,6 +19,10 @@ import com.nutrition.service.WalletSseService;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+/**
+ * Digital Wallet & Payment Controller.
+Manages user wallet balance inquiries, Razorpay payment verification, credit top-ups, and live SSE balance streams.
+ */
 @RestController
 @RequestMapping("/api/wallet")
 @RequiredArgsConstructor

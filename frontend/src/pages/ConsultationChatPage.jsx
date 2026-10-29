@@ -1,11 +1,26 @@
+/**
+ * Full-page Consultation Messaging Hub
+ * Unified messaging center displaying active conversation threads, unread counters,
+ * participant directories, and embedded live chat stream.
+ */
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
 import ConsultationChatModal from '../components/ConsultationChatModal';
 import { AuthContext } from '../context/AuthContext';
 
+/**
+ * Normalizes user role string by stripping ROLE_ prefix.
+ * 
+ * @param {Object} user - User object
+ * @returns {string} Uppercase role identifier
+ */
 const roleOf = (user) => String(user?.role || '').replace(/^ROLE_/i, '').toUpperCase();
 
+/**
+ * ConsultationChatPage Component
+ * Full-screen responsive chat dashboard supporting thread selection, recipient search, and embedded messaging.
+ */
 const ConsultationChatPage = () => {
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();

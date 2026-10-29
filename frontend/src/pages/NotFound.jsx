@@ -1,6 +1,14 @@
+/**
+ * Not Found (404) Page
+ * Visual error fallback displayed when a user navigates to an unrecognized URL route.
+ */
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+/**
+ * NotFound Component
+ * Displays cosmic 404 illustration and return-to-home navigation button.
+ */
 const NotFound = () => {
     return (
         <div className="py-section-gap max-w-container-max mx-auto px-4 sm:px-edge-margin text-center min-h-[50vh] flex flex-col items-center justify-center">

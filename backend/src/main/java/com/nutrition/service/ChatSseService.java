@@ -13,6 +13,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+/**
+ * Chat SSE Emitter Service.
+Manages active Server-Sent Event (SSE) emitter subscriptions for real-time consultation chat streaming.
+ */
 @Slf4j
 @Service
 public class ChatSseService {
@@ -39,10 +43,16 @@ public class ChatSseService {
         return emitter;
     }
 
+    /**
+     * Executes publish message operation.
+     */
     public void publishMessage(Long conversationId, Long patientId, Long nutritionistId, ChatMessageDto message) {
         publish(conversationId, patientId, nutritionistId, "message", message);
     }
 
+    /**
+     * Executes publish status operation.
+     */
     public void publishStatus(Long conversationId, Long patientId, Long nutritionistId, ConversationStatusDto status) {
         publish(conversationId, patientId, nutritionistId, "status", status);
     }
@@ -63,6 +73,9 @@ public class ChatSseService {
         });
     }
 
+    /**
+     * Executes send keepalives operation.
+     */
     @Scheduled(fixedDelay = 15000)
     public void sendKeepalives() {
         subscribers.forEach((conversationId, listeners) -> listeners.forEach(listener -> {
@@ -74,6 +87,9 @@ public class ChatSseService {
         }));
     }
 
+    /**
+     * Executes publish operation.
+     */
     private void publish(Long conversationId, Long patientId, Long nutritionistId, String event, Object data) {
         CopyOnWriteArraySet<Subscriber> listeners = subscribers.get(conversationId);
         if (listeners == null) return;
@@ -85,6 +101,9 @@ public class ChatSseService {
         });
     }
 
+    /**
+     * Executes send to operation.
+     */
     private void sendTo(Long conversationId, Subscriber subscriber, String event, Object data) {
         try {
             subscriber.emitter().send(SseEmitter.event().name(event).data(data));
@@ -95,6 +114,9 @@ public class ChatSseService {
         }
     }
 
+    /**
+     * Executes remove operation.
+     */
     private void remove(Long conversationId, Subscriber subscriber) {
         CopyOnWriteArraySet<Subscriber> listeners = subscribers.get(conversationId);
         if (listeners != null) {
@@ -103,5 +125,8 @@ public class ChatSseService {
         }
     }
 
+    /**
+     * Executes subscriber operation.
+     */
     private record Subscriber(Long userId, SseEmitter emitter) {}
 }

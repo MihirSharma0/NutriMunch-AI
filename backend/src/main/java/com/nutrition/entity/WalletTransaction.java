@@ -7,6 +7,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * WalletTransaction Entity.
+ * Financial ledger recording double-entry debit, credit, escrow hold, and refund operations
+ * with audit references and transaction notes.
+ */
 @Entity
 @Table(name = "wallet_transactions")
 @Data

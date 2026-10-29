@@ -1,7 +1,12 @@
+/**
+ * Feature Gate Component
+ * Displays an access card and sign-in prompt when a guest attempts to access authenticated features.
+ */
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Starfield from './Starfield';
 
+/** Feature metadata descriptions mapped by route path for guest previews. */
 const FEATURE_DESCRIPTIONS = {
     '/progress': {
         title: 'Smart Hydration & Progress Tracking',
@@ -47,6 +52,12 @@ const FEATURE_DESCRIPTIONS = {
     }
 };
 
+/**
+ * FeatureGate Component
+ * Interstitial component encouraging guests to register or log in to unlock feature functionality.
+ * 
+ * @param {Object} props - Optional override props for title, description, and icon
+ */
 const FeatureGate = ({ titleOverride, descOverride, iconOverride }) => {
     const location = useLocation();
     const currentPath = location.pathname;

@@ -1,9 +1,20 @@
+/**
+ * Shared Transaction History Ledger
+ * Displays chronological wallet transactions, escrow releases, appointment payouts,
+ * and refunds for both patients and nutritionists.
+ */
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
 import { subscribeWalletSse } from '../../../utils/walletSse';
 
+/**
+ * Merges and deduplicates transactions across multiple sources and local caches.
+ * 
+ * @param {...Array<Object>} lists - Transaction lists to merge
+ * @returns {Array<Object>} Deduplicated transaction list
+ */
 const mergeTransactions = (...lists) => {
     const transactionsByKey = new Map();
     lists.flat().forEach(transaction => {
@@ -22,6 +33,10 @@ const mergeTransactions = (...lists) => {
     ));
 };
 
+/**
+ * TransactionHistory Component
+ * Shared financial audit table with type filters, search, and live balance sync.
+ */
 const TransactionHistory = () => {
     const { user } = useContext(AuthContext);
 

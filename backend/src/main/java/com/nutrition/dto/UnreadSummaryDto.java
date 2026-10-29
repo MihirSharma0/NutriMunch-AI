@@ -7,8 +7,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Unread chat summary for the signed-in user. The navbar badge shows {@code total};
- * the conversation list shows one aggregated count per conversation.
+ * Data Transfer Object aggregating unread notification and chat message counts for user badges.
  */
 @Data
 @NoArgsConstructor

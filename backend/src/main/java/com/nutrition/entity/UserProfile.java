@@ -6,6 +6,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * UserProfile Entity.
+ * Stores patient demographic and biometric details including age, height, weight,
+ * activity level, dietary lifestyle, allergen exclusions, and hydration goals.
+ */
 @Entity
 @Table(name = "user_profiles")
 @Data

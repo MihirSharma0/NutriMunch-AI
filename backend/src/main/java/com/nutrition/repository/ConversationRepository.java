@@ -11,19 +11,38 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Spring Data JPA Repository for Conversation entities.
+Manages active consultation chat sessions, lifecycle windows, participant queries, and dead-session closures.
+ */
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
+    /**
+     * Executes query to find by appointment id.
+     */
     Optional<Conversation> findByAppointmentId(Long appointmentId);
     Optional<Conversation> findFirstByPatient_IdAndNutritionist_IdAndStatusOrderByUpdatedAtDesc(
             Long patientId, Long nutritionistId, String status);
 
+    /**
+     * Executes query to find by patient id order by updated at desc.
+     */
     @EntityGraph(attributePaths = {"patient", "nutritionist", "appointment"})
     List<Conversation> findByPatient_IdOrderByUpdatedAtDesc(Long patientId);
 
+    /**
+     * Executes query to find by nutritionist id order by updated at desc.
+     */
     @EntityGraph(attributePaths = {"patient", "nutritionist", "appointment"})
     List<Conversation> findByNutritionist_IdOrderByUpdatedAtDesc(Long nutritionistId);
 
+    /**
+     * Executes query to find by patient id or nutritionist id order by updated at desc id desc.
+     */
     List<Conversation> findByPatient_IdOrNutritionist_IdOrderByUpdatedAtDescIdDesc(Long patientId, Long nutritionistId);
 
+    /**
+     * Executes query to find by nutritionist id order by updated at desc id desc.
+     */
     @EntityGraph(attributePaths = {"patient", "nutritionist", "appointment"})
     Slice<Conversation> findByNutritionist_IdOrderByUpdatedAtDescIdDesc(Long nutritionistId, Pageable pageable);
 

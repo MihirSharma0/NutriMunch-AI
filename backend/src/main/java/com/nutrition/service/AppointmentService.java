@@ -26,6 +26,10 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Consultation Appointment Service.
+Coordinates consultation slot bookings, status transitions, escrow locks/releases, and cancellation refunds.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -45,6 +49,9 @@ public class AppointmentService {
     private static final String USER_APPOINTMENTS_PATH = "/appointments";
     private static final String NUTRITIONIST_SCHEDULE_PATH = "/dashboard/nutritionist/schedule";
 
+    /**
+     * Executes get my appointments operation.
+     */
     public List<AppointmentDto> getMyAppointments(Long userId, Role role) {
         List<Appointment> list;
         if (role == Role.NUTRITIONIST) {
@@ -308,6 +315,9 @@ public class AppointmentService {
         return updateAppointmentStatus(appointmentId, status, meetingLink, notes, null, true);
     }
 
+    /**
+     * Executes update appointment status operation.
+     */
     @Transactional(rollbackFor = Exception.class)
     public AppointmentDto updateAppointmentStatus(Long appointmentId, String status, String meetingLink, String notes, Long callerId, boolean isAdmin) {
         Appointment apt = appointmentRepository.findByIdWithLock(appointmentId)
@@ -718,6 +728,9 @@ public class AppointmentService {
         return dtoResult;
     }
 
+    /**
+     * Executes refund captured escrow to user operation.
+     */
     private void refundCapturedEscrowToUser(Appointment apt, User initiator) {
         User user = apt.getUser();
         User nutritionist = apt.getNutritionist();
@@ -812,6 +825,9 @@ public class AppointmentService {
         ));
     }
 
+    /**
+     * Executes refund escrow hold to user operation.
+     */
     private void refundEscrowHoldToUser(Appointment apt, String finalStatus) {
         if ("REFUNDED".equalsIgnoreCase(apt.getEscrowStatus())) return;
         if (!"HELD".equalsIgnoreCase(apt.getEscrowStatus())) return;
@@ -901,6 +917,9 @@ public class AppointmentService {
         deleteAppointment(appointmentId, null, true);
     }
 
+    /**
+     * Executes delete appointment operation.
+     */
     @Transactional(rollbackFor = Exception.class)
     public void deleteAppointment(Long appointmentId, Long callerId, boolean isAdmin) {
         Appointment apt = appointmentRepository.findByIdWithLock(appointmentId).orElse(null);
@@ -1061,18 +1080,27 @@ public class AppointmentService {
         }
     }
 
+    /**
+     * Executes format when operation.
+     */
     private static String formatWhen(Appointment apt) {
         return apt.getAppointmentTime() != null
                 ? apt.getAppointmentTime().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"))
                 : "the scheduled date";
     }
 
+    /**
+     * Executes display name operation.
+     */
     private static String displayName(User u) {
         if (u == null) return "Your nutritionist";
         String name = ((u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : "")).trim();
         return name.isEmpty() ? u.getEmail() : name;
     }
 
+    /**
+     * Executes map to dto operation.
+     */
     private AppointmentDto mapToDto(Appointment apt) {
         AppointmentDto dto = new AppointmentDto();
         dto.setId(apt.getId());

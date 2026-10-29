@@ -8,6 +8,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Data
+/**
+ * Core User Account Entity.
+ * Represents platform user credentials, authentication attributes, assigned Role,
+ * verification status, and one-time password (OTP) verification codes.
+ */
 @Entity
 @Table(name = "users")
 public class User {

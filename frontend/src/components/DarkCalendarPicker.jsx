@@ -1,3 +1,8 @@
+/**
+ * Dark Glassmorphic Calendar Picker
+ * Custom popup date picker supporting day, week, and month view modes
+ * with min/max constraint validation.
+ */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 const MONTH_NAMES = [

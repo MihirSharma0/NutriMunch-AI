@@ -1,7 +1,13 @@
+/**
+ * New User Onboarding Wizard
+ * Multi-step onboarding dialog collecting biometrics, dietary preferences,
+ * allergens, and health targets upon initial account creation.
+ */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
+/** Predefined selectable allergen list for onboarding setup. */
 const PREDEFINED_ALLERGENS = [
     { id: 'Nuts', label: 'Nuts & Peanuts', icon: '🥜' },
     { id: 'Dairy', label: 'Dairy & Milk', icon: '🥛' },
@@ -13,6 +19,7 @@ const PREDEFINED_ALLERGENS = [
     { id: 'Sesame', label: 'Sesame', icon: '🫛' }
 ];
 
+/** Selectable cuisine preferences. */
 const CUISINES = [
     { id: 'Indian', label: 'Indian 🇮🇳' },
     { id: 'Italian', label: 'Italian 🇮🇹' },
@@ -22,6 +29,7 @@ const CUISINES = [
     { id: 'Fast Food', label: 'Fast Food 🍔' }
 ];
 
+/** Onboarding workflow step definitions. */
 const STEPS = [
     { id: 1, title: 'Basic Info', desc: 'Mandatory Account Profile' },
     { id: 2, title: 'Body Data', desc: 'Height, Weight & Activity' },
@@ -29,6 +37,14 @@ const STEPS = [
     { id: 4, title: 'Preferences', desc: 'Allergens & Cuisines' }
 ];
 
+/**
+ * OnboardingWizard Component
+ * Guides newly verified users through setting up their biometric profile.
+ * 
+ * @param {Object} props - Component properties
+ * @param {string} [props.initialEmail=''] - Pre-populated email address
+ * @param {Function} props.onComplete - Callback invoked upon wizard completion
+ */
 const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(1);

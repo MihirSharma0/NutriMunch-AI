@@ -59,10 +59,16 @@ public class ConsultationLifecycleService {
     private final WalletSseService walletSseService;
     private final Clock clock;
 
+    /**
+     * Executes is accepted appointment status operation.
+     */
     public static boolean isAcceptedAppointmentStatus(String status) {
         return status != null && ACCEPTED_APPOINTMENT_STATUSES.contains(status.trim().toUpperCase(Locale.ROOT));
     }
 
+    /**
+     * Executes is dead appointment status operation.
+     */
     public static boolean isDeadAppointmentStatus(String status) {
         return status != null && DEAD_APPOINTMENT_STATUSES.contains(status.trim().toUpperCase(Locale.ROOT));
     }
@@ -181,6 +187,9 @@ public class ConsultationLifecycleService {
         }
     }
 
+    /**
+     * Executes close as cancelled operation.
+     */
     private Conversation closeAsCancelled(Conversation conversation) {
         conversation.setStatus(Conversation.STATUS_CLOSED);
         conversation.setClosedAt(LocalDateTime.now(clock));
@@ -190,6 +199,9 @@ public class ConsultationLifecycleService {
         return saved;
     }
 
+    /**
+     * Executes expire operation.
+     */
     private Conversation expire(Conversation conversation, boolean publish) {
         LocalDateTime closedAt = conversation.getExpiresAt() != null
                 ? conversation.getExpiresAt()
@@ -294,6 +306,9 @@ public class ConsultationLifecycleService {
         });
     }
 
+    /**
+     * Executes can send operation.
+     */
     public boolean canSend(Conversation conversation) {
         if (conversation == null) return false;
         if (!Conversation.STATUS_ACTIVE.equals(conversation.getStatus())) return false;
@@ -303,6 +318,9 @@ public class ConsultationLifecycleService {
         return expiresAt == null || expiresAt.isAfter(LocalDateTime.now(clock));
     }
 
+    /**
+     * Executes can reopen operation.
+     */
     public boolean canReopen(Conversation conversation, Long userId) {
         if (conversation == null || userId == null) return false;
         if (conversation.getNutritionist() == null
@@ -315,6 +333,9 @@ public class ConsultationLifecycleService {
         return isAcceptedAppointmentStatus(status) && !isDeadAppointmentStatus(status);
     }
 
+    /**
+     * Executes publish status operation.
+     */
     private void publishStatus(Conversation conversation, String status) {
         Long conversationId = conversation.getId();
         Long patientId = conversation.getPatient() != null ? conversation.getPatient().getId() : null;
@@ -339,6 +360,9 @@ public class ConsultationLifecycleService {
         }
     }
 
+    /**
+     * Executes notify activated operation.
+     */
     private void notifyActivated(Conversation conversation, Appointment appointment) {
         String until = conversation.getExpiresAt() != null
                 ? conversation.getExpiresAt().format(DATE_FORMAT) : "the end of the consultation";
@@ -356,6 +380,9 @@ public class ConsultationLifecycleService {
                 "/consultation-chat?conversationId=" + conversation.getId());
     }
 
+    /**
+     * Executes notify expired operation.
+     */
     private void notifyExpired(Conversation conversation) {
         notificationService.notifyUser(conversation.getPatient(), null,
                 "Consultation Chat Expired",
@@ -371,6 +398,9 @@ public class ConsultationLifecycleService {
                 "/consultation-chat?conversationId=" + conversation.getId());
     }
 
+    /**
+     * Executes notify reopened operation.
+     */
     private void notifyReopened(Conversation conversation) {
         String until = conversation.getExpiresAt() != null
                 ? conversation.getExpiresAt().format(DATE_FORMAT) : "the end of the new window";
@@ -382,6 +412,9 @@ public class ConsultationLifecycleService {
                 "/consultation-chat?conversationId=" + conversation.getId());
     }
 
+    /**
+     * Executes display name operation.
+     */
     private static String displayName(User user) {
         if (user == null) return "Your contact";
         String name = ((user.getFirstName() == null ? "" : user.getFirstName()) + " "

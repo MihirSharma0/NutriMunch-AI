@@ -12,6 +12,10 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Low-level Mail Dispatch Service.
+Wraps JavaMailSender to execute asynchronous SMTP email delivery.
+ */
 @Service
 public class MailService {
     
@@ -32,18 +36,27 @@ public class MailService {
         return loginUrl.replaceAll("/login/?$", "").replaceAll("/$", "");
     }
 
+    /**
+     * Executes send verification email operation.
+     */
     @Async
     public void sendVerificationEmail(String to, String token) {
         String link = frontendUrl() + "/verify?token=" + token;
         sendWebhook(to, "verification_link", link);
     }
     
+    /**
+     * Executes send password reset email operation.
+     */
     @Async
     public void sendPasswordResetEmail(String to, String token) {
         String link = frontendUrl() + "/reset-password?token=" + token;
         sendWebhook(to, "password_reset", link);
     }
 
+    /**
+     * Executes send webhook operation.
+     */
     private void sendWebhook(String toEmail, String type, String link) {
         try {
             HttpHeaders headers = new HttpHeaders();

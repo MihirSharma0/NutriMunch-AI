@@ -1,8 +1,19 @@
+/**
+ * Global Navigation Header Component
+ * Provides responsive multi-tier navigation menus, role-specific submenus (Admin, Nutritionist, User),
+ * real-time notification drop-down alerts, unread chat indicators, and mobile drawer toggling.
+ */
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/axios';
 
+/**
+ * Builds role-specific navigation menu structures and dropdown submenus based on the authenticated user.
+ * 
+ * @param {Object|null} user - Current user object containing role
+ * @returns {Array<Object>} List of top-level navigation items and child submenus
+ */
 export const getNavItemsForRole = (user) => {
     const aiSubMenu = [
         { label: 'AI Diet Generator', path: '/ai-diet', icon: 'magic_button', desc: 'Generate instant macro-balanced meal plans' },
@@ -104,6 +115,13 @@ export const getNavItemsForRole = (user) => {
     ];
 };
 
+/**
+ * Determines whether a navigation route item is currently active based on browser location.
+ * 
+ * @param {string} pathname - Current URL pathname
+ * @param {string} itemPath - Target item URL path
+ * @returns {boolean} True if route is currently active
+ */
 const checkIsActive = (pathname, itemPath) => {
     if (!itemPath) return false;
     if (pathname === itemPath) return true;
@@ -113,6 +131,11 @@ const checkIsActive = (pathname, itemPath) => {
     return pathname.startsWith(itemPath + '/');
 };
 
+/**
+ * Navbar Component
+ * Main navigation header bar with brand logo, interactive dropdown menus, notification drawer,
+ * quick links, and user authentication actions.
+ */
 const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();

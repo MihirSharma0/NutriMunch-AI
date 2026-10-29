@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import java.util.HashMap;
 
+/**
+ * System Health and Telemetry Controller.
+Exposes application health status and operational telemetry probes.
+ */
 @RestController
 @RequestMapping("/api/v1")
 public class HealthController {
