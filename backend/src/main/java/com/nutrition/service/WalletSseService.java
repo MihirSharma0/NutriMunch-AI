@@ -1,11 +1,14 @@
 package com.nutrition.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -52,8 +55,7 @@ public class WalletSseService {
                             "status", "CONNECTED",
                             "userId", userId != null ? userId : "",
                             "email", email != null ? email : "",
-                            "timestamp", System.currentTimeMillis()
-                    )));
+                            "timestamp", System.currentTimeMillis())));
         } catch (IOException e) {
             log.warn("Failed to send initial SSE handshake: {}", e.getMessage());
             cleanup.run();
@@ -63,12 +65,58 @@ public class WalletSseService {
         return emitter;
     }
 
+    /**
+     * A stream whose browser has gone away cannot be detected by reading the maps -
+     * the server only
+     * finds out when it tries to write. This periodic comment does two jobs: it
+     * keeps proxies from
+     * idling the connection out, and it surfaces dead streams so their emitters are
+     * released
+     * instead of accumulating in memory until the 30 minute timeout.
+     */
+    @Scheduled(fixedDelay = 30000, initialDelay = 15000)
+    public void reapDeadStreams() {
+        Set<SseEmitter> all = new LinkedHashSet<>();
+        userEmitters.values().forEach(all::addAll);
+        emailEmitters.values().forEach(all::addAll);
+        all.addAll(adminEmitters);
+        if (all.isEmpty())
+            return;
+
+        int removed = 0;
+        for (SseEmitter emitter : all) {
+            try {
+                emitter.send(SseEmitter.event().comment("keepalive"));
+            } catch (Exception e) {
+                removeFromAll(emitter);
+                try {
+                    emitter.complete();
+                } catch (Exception ignored) {
+                    // already finished
+                }
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            log.info("Released {} dead wallet event stream(s)", removed);
+        }
+    }
+
+    private void removeFromAll(SseEmitter emitter) {
+        userEmitters.forEach((key, list) -> list.remove(emitter));
+        userEmitters.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+        emailEmitters.forEach((key, list) -> list.remove(emitter));
+        emailEmitters.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+        adminEmitters.remove(emitter);
+    }
+
     private void removeEmitter(Long userId, String email, boolean isAdmin, SseEmitter emitter) {
         if (userId != null) {
             List<SseEmitter> list = userEmitters.get(userId);
             if (list != null) {
                 list.remove(emitter);
-                if (list.isEmpty()) userEmitters.remove(userId);
+                if (list.isEmpty())
+                    userEmitters.remove(userId);
             }
         }
         if (email != null && !email.isBlank()) {
@@ -76,7 +124,8 @@ public class WalletSseService {
             List<SseEmitter> list = emailEmitters.get(lower);
             if (list != null) {
                 list.remove(emitter);
-                if (list.isEmpty()) emailEmitters.remove(lower);
+                if (list.isEmpty())
+                    emailEmitters.remove(lower);
             }
         }
         if (isAdmin) {
@@ -102,7 +151,8 @@ public class WalletSseService {
         }
 
         if (targetEmitters.isEmpty()) {
-            log.info("No active SSE listeners for userId={} email={}. (Balance updated in database/ledger)", userId, email);
+            log.info("No active SSE listeners for userId={} email={}. (Balance updated in database/ledger)", userId,
+                    email);
             return;
         }
 
@@ -119,7 +169,8 @@ public class WalletSseService {
             data.put("newBalance", data.get("balance"));
         }
 
-        log.info("Pushing SSE wallet_update to {} listener(s) for userId={} email={}", targetEmitters.size(), userId, email);
+        log.info("Pushing SSE wallet_update to {} listener(s) for userId={} email={}", targetEmitters.size(), userId,
+                email);
         for (SseEmitter emitter : targetEmitters) {
             try {
                 emitter.send(SseEmitter.event()
@@ -138,7 +189,8 @@ public class WalletSseService {
     }
 
     /**
-     * Pushes a named event to one user's live stream. Reuses the single authenticated
+     * Pushes a named event to one user's live stream. Reuses the single
+     * authenticated
      * /api/wallet/stream connection so the browser does not have to open a second
      * EventSource (HTTP/1.1 allows only a handful per origin).
      */
@@ -169,7 +221,8 @@ public class WalletSseService {
         }
     }
 
-    public void sendWalletUpdate(Long userId, com.nutrition.entity.WalletTransaction transaction, java.math.BigDecimal newBalance, String eventType) {
+    public void sendWalletUpdate(Long userId, com.nutrition.entity.WalletTransaction transaction,
+            java.math.BigDecimal newBalance, String eventType) {
         Map<String, Object> payload = new java.util.HashMap<>();
         payload.put("eventType", eventType != null ? eventType : "WALLET_UPDATED");
         if (transaction != null) {
@@ -213,7 +266,8 @@ public class WalletSseService {
             }
         }
 
-        log.info("Pushing SSE appointment update to {} listener(s) for userId={} email={}", targetEmitters.size(), userId, email);
+        log.info("Pushing SSE appointment update to {} listener(s) for userId={} email={}", targetEmitters.size(),
+                userId, email);
         for (SseEmitter emitter : targetEmitters) {
             try {
                 emitter.send(SseEmitter.event()
@@ -229,7 +283,8 @@ public class WalletSseService {
     }
 
     public void broadcastToAdmins(Map<String, Object> data) {
-        if (adminEmitters.isEmpty()) return;
+        if (adminEmitters.isEmpty())
+            return;
         for (SseEmitter emitter : adminEmitters) {
             try {
                 emitter.send(SseEmitter.event()

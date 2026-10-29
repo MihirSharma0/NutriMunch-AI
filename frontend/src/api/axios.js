@@ -28,6 +28,9 @@ api.interceptors.response.use(
             if (!isAuthRoute && localStorage.getItem('token')) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
+                // Release the live streams before navigating away so an expired session can
+                // never leave a socket open behind it.
+                window.dispatchEvent(new Event('nutrimunch_logout'));
                 window.location.href = '/login?expired=true';
             }
         }
