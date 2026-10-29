@@ -89,6 +89,9 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        // Release live streams immediately; the layout effect would also catch this, but an
+        // explicit signal keeps every logout path behaving identically.
+        try { window.dispatchEvent(new Event('nutrimunch_logout')); } catch (e) {}
         setToken(null);
         setUser(null);
     };

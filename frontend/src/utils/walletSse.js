@@ -21,7 +21,7 @@ try {
             handleParsedWalletPayload(event.data, false);
         } else if (event.data.type === 'LEDGER_UPDATED') {
             for (const cb of ledgerCallbacks) {
-                try { cb(event.data); } catch (e) {}
+                try { cb(event.data); } catch (e) { }
             }
         }
     };
@@ -46,13 +46,13 @@ function handleParsedWalletPayload(data, shouldBroadcast = true) {
         try {
             localStorage.setItem(`nutrimunch_wallet_balance_id_${targetId}`, String(newBal));
             localStorage.setItem(`nutrimunch_wallet_balance_${targetId}`, String(newBal));
-        } catch (e) {}
+        } catch (e) { }
     }
     if (targetEmail) {
         try {
             localStorage.setItem(`nutrimunch_wallet_balance_email_${targetEmail}`, String(newBal));
             localStorage.setItem(`nutrimunch_wallet_balance_${targetEmail}`, String(newBal));
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const eventDetail = {
@@ -65,7 +65,7 @@ function handleParsedWalletPayload(data, shouldBroadcast = true) {
     try {
         window.dispatchEvent(new CustomEvent('wallet_update', { detail: eventDetail }));
         window.dispatchEvent(new CustomEvent('wallet_updated', { detail: eventDetail }));
-    } catch (e) {}
+    } catch (e) { }
 
     // Multi-tab cross-broadcast
     if (shouldBroadcast && broadcastChannel) {
@@ -74,7 +74,7 @@ function handleParsedWalletPayload(data, shouldBroadcast = true) {
                 type: 'WALLET_UPDATED',
                 ...eventDetail
             });
-        } catch (e) {}
+        } catch (e) { }
     }
 
     // Direct callback triggers
@@ -103,7 +103,7 @@ function initEventSource(user) {
     }
 
     if (activeEventSource) {
-        try { activeEventSource.close(); } catch (e) {}
+        try { activeEventSource.close(); } catch (e) { }
         activeEventSource = null;
     }
 
@@ -127,8 +127,8 @@ function initEventSource(user) {
                 const targetEmail = (data.recipientEmail || data.email || '').toLowerCase();
 
                 const isForMe = (targetId && myId && targetId === myId) ||
-                                (targetEmail && myEmail && targetEmail === myEmail) ||
-                                (!targetId && !targetEmail);
+                    (targetEmail && myEmail && targetEmail === myEmail) ||
+                    (!targetId && !targetEmail);
 
                 if (!isForMe) return;
 
@@ -143,16 +143,16 @@ function initEventSource(user) {
                 const data = JSON.parse(event.data);
                 window.dispatchEvent(new CustomEvent('ledger_updated', { detail: data }));
                 for (const cb of ledgerCallbacks) {
-                    try { cb(data); } catch (e) {}
+                    try { cb(data); } catch (e) { }
                 }
-            } catch (e) {}
+            } catch (e) { }
         };
 
         const onAppointmentMessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
                 window.dispatchEvent(new CustomEvent('appointment_updated', { detail: data }));
-            } catch (e) {}
+            } catch (e) { }
         };
 
         // Chat + notification events ride the same authenticated stream so the browser keeps
@@ -160,19 +160,19 @@ function initEventSource(user) {
         const onChatMessage = (event) => {
             try {
                 window.dispatchEvent(new CustomEvent('nutrimunch_chat_message', { detail: JSON.parse(event.data) }));
-            } catch (e) {}
+            } catch (e) { }
         };
 
         const onConversationStatus = (event) => {
             try {
                 window.dispatchEvent(new CustomEvent('nutrimunch_conversation_status', { detail: JSON.parse(event.data) }));
-            } catch (e) {}
+            } catch (e) { }
         };
 
         const onNotificationEvent = (event) => {
             try {
                 window.dispatchEvent(new CustomEvent('nutrimunch_notification', { detail: JSON.parse(event.data) }));
-            } catch (e) {}
+            } catch (e) { }
         };
 
         activeEventSource.addEventListener('chat_message', onChatMessage);
@@ -209,8 +209,45 @@ function initEventSource(user) {
  * @param {Function} onLedgerUpdate Optional callback for admin real-time ledger updates
  * @returns {Function} Unsubscribe / close function to call on unmount
  */
+/**
+ * Closes the shared stream and forgets its callbacks. This is what actually tells the server to
+ * end the SSE request: without it the connection stays open until the server's own timeout, even
+ * though the user has signed out and the token is gone.
+ */
+const closeConnection = () => {
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+    if (activeEventSource) {
+        try { activeEventSource.close(); } catch (e) { }
+        activeEventSource = null;
+    }
+    activeUserKey = null;
+};
+
+/**
+ * Global logout signal. Any code path that ends the session - the manual button, the 401
+ * interceptor, or a future client-side redirect - can fire this and the stream is released
+ * immediately, without waiting for the page to unload or for the server timeout.
+ */
+try {
+    window.addEventListener('nutrimunch_logout', () => {
+        updateCallbacks.clear();
+        ledgerCallbacks.clear();
+        closeConnection();
+    });
+} catch (e) { }
+
+/** Call on logout so no stream outlives the session. */
+export const closeWalletSse = () => {
+    updateCallbacks.clear();
+    ledgerCallbacks.clear();
+    closeConnection();
+};
+
 export const subscribeWalletSse = (user, onUpdate, onLedgerUpdate) => {
-    if (!user) return () => {};
+    if (!user) return () => { };
 
     if (typeof onUpdate === 'function') {
         updateCallbacks.add(onUpdate);
@@ -227,6 +264,11 @@ export const subscribeWalletSse = (user, onUpdate, onLedgerUpdate) => {
         }
         if (typeof onLedgerUpdate === 'function') {
             ledgerCallbacks.delete(onLedgerUpdate);
+        }
+        // Nobody is listening any more (logout, or the last subscribed page unmounted):
+        // release the stream instead of leaving it open on the server.
+        if (updateCallbacks.size === 0 && ledgerCallbacks.size === 0) {
+            closeConnection();
         }
     };
 };
