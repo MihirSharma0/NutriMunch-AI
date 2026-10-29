@@ -12,11 +12,12 @@ spring:
       pool-name: nutrimunch-pool
       maximum-pool-size: 50
       minimum-idle: 5
-      connection-timeout: 20000
+      connection-timeout: 10000
       max-lifetime: 300000
       idle-timeout: 120000
       keepalive-time: 60000
       validation-timeout: 3000
+      leak-detection-threshold: 25000
       connection-test-query: SELECT 1
   jpa:
     hibernate:
