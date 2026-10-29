@@ -10,7 +10,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       pool-name: nutrimunch-pool
-      maximum-pool-size: 20
+      maximum-pool-size: 50
       minimum-idle: 5
       connection-timeout: 20000
       max-lifetime: 300000
