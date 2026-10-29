@@ -100,7 +100,6 @@ function App() {
                 <Route path="ai-image" element={<AiImageAnalyzer />} />
                 <Route path="progress" element={<ProgressTracking />} />
                 <Route path="appointments" element={<Appointments />} />
-                <Route path="consultation-chat" element={<ConsultationChatPage />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="diet-plans" element={<DietPlans />} />
                 <Route path="virtual-room" element={<VirtualRoom />} />
@@ -123,6 +122,11 @@ function App() {
                 <Route path="dashboard/user/transactions" element={<TransactionHistory />} />
                 <Route path="dashboard/nutritionist/transactions" element={<TransactionHistory />} />
                 <Route path="dashboard/admin/transactions" element={<TransactionHistory />} />
+              </Route>
+
+              {/* Consultation chat is limited to the two parties of a consultation */}
+              <Route element={<ProtectedRoute allowedRoles={['USER', 'NUTRITIONIST']} />}>
+                <Route path="consultation-chat" element={<ConsultationChatPage />} />
               </Route>
 
               {/* Nutritionist Platform Routes */}

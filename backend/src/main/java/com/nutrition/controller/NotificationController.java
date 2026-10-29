@@ -33,6 +33,12 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.sendNotification(dto, senderId));
     }
 
+    @GetMapping("/unread-count")
+    public ResponseEntity<java.util.Map<String, Long>> unreadCount(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails != null ? userDetails.getId() : null;
+        return ResponseEntity.ok(java.util.Map.of("total", notificationService.getUnreadCount(userId)));
+    }
+
     @PutMapping("/{id}/read")
     public ResponseEntity<Void> markAsRead(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable Long id) {
         notificationService.markAsRead(id, userDetails.getId());

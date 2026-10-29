@@ -29,31 +29,31 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
     const resolvedAppointmentId = appointmentId || targetPatient?.appointmentId;
     const participantId = targetPatient?.userId || targetPatient?.id || null;
     const currentUserRole = roleOf(currentUser);
+    // Which chat states the server says this viewer may act on.
+    const chatExpired = conversation?.status === 'EXPIRED';
+    const chatClosed = conversation?.status === 'CLOSED';
+    const chatUsable = Boolean(conversation?.canSend);
+
+    const expiryLabel = useMemo(() => {
+        if (!conversation?.expiresAt) return null;
+        const when = new Date(conversation.expiresAt);
+        if (Number.isNaN(when.getTime())) return null;
+        return when.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    }, [conversation?.expiresAt]);
+
+    // Opening the thread clears the badge and the aggregated chat notification.
     useEffect(() => {
-        try {
-            localStorage.removeItem('nutrimunch_consultation_chats');
-            localStorage.removeItem('nutrimunch_active_consultation');
-            localStorage.removeItem('nutrimunch_active_consultation_status');
-            const storedNotifications = localStorage.getItem('nutrimunch_user_notifications');
-            if (storedNotifications) {
-                const notifications = JSON.parse(storedNotifications);
-                if (Array.isArray(notifications)) {
-                    localStorage.setItem('nutrimunch_user_notifications', JSON.stringify(
-                        notifications.filter((notification) =>
-                            !['CONSULTATION_MSG', 'CONSULTATION_CHAT', 'CONSULTATION_REQUEST'].includes(notification.type)
-                        )
-                    ));
-                }
-            }
-        } catch (storageError) {
-            console.error('Unable to clean legacy consultation cache', storageError);
-        }
-    }, []);
+        if (!isOpen || !conversation?.id || messages.length === 0) return;
+        if (typeof conversation.id !== 'number') return;
+        api.put(`/conversations/${conversation.id}/read`)
+            .then(() => window.dispatchEvent(new Event('nutrimunch_notification')))
+            .catch(() => {});
+    }, [isOpen, conversation?.id, messages.length]);
+
     const partnerName = useMemo(() => {
         if (currentUserRole === 'NUTRITIONIST') {
             return targetPatient?.name || targetPatient?.email || null;
         }
-        if (currentUserRole === 'ADMIN') return targetPatient?.name || null;
         return targetPatient?.nutritionistName || null;
     }, [currentUserRole, targetPatient]);
 
@@ -266,7 +266,15 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
             pendingRef.current.delete(clientMessageId);
             setMessages((previous) => previous.filter((message) => message.clientMessageId !== clientMessageId));
             setInput(content);
-            setError(requestError.response?.data?.message || 'Message failed to send. Please retry.');
+            if (requestError.response?.status === 410) {
+                setError('This consultation chat has expired. The nutritionist can reopen it, or book a new consultation.');
+                setRetryCount((count) => count + 1);
+            } else if (requestError.response?.status === 409) {
+                setError(requestError.response?.data?.message || 'This consultation chat has ended.');
+                setRetryCount((count) => count + 1);
+            } else {
+                setError(requestError.response?.data?.message || 'Message failed to send. Please retry.');
+            }
         } finally {
             setSending(false);
         }
@@ -340,11 +348,13 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
                             <>
                                 <h2 className="truncate font-semibold text-[#111b21]">{partnerName || 'Consultation'}</h2>
                                 <p className="text-xs text-[#667781]">
-                                    {conversation?.status === 'CLOSED'
-                                        ? 'Chat ended'
-                                        : connectionStatus === 'CONNECTED'
-                                            ? 'Secure consultation'
-                                            : 'Connecting...'}
+                                    {chatExpired
+                                        ? 'Chat expired'
+                                        : chatClosed
+                                            ? 'Chat ended'
+                                            : connectionStatus === 'CONNECTED'
+                                                ? (expiryLabel ? `Secure consultation · open until ${expiryLabel}` : 'Secure consultation')
+                                                : 'Connecting...'}
                                 </p>
                             </>
                         )}
@@ -361,7 +371,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
                                 {ending ? 'Ending...' : 'End chat'}
                             </button>
                         )}
-                        {currentUserRole === 'NUTRITIONIST' && conversation?.status === 'CLOSED' && (
+                        {currentUserRole === 'NUTRITIONIST' && conversation?.canReopen && (
                             <button
                                 type="button"
                                 onClick={reopenChat}
@@ -393,11 +403,15 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
                         )}
                     </div>
                 )}
-                {conversation?.status === 'CLOSED' && (
+                {(chatExpired || chatClosed) && (
                     <div className="shrink-0 border-b border-[#e9edef] bg-[#f0f2f5] px-4 py-3 text-sm text-[#54656f]">
-                        {currentUserRole === 'NUTRITIONIST'
-                            ? 'This chat has ended. Reopen it to continue the conversation.'
-                            : 'The nutritionist has ended this chat. You can view previous messages, but sending is disabled.'}
+                        {chatExpired
+                            ? (currentUserRole === 'NUTRITIONIST'
+                                ? `This chat expired${expiryLabel ? ` on ${expiryLabel}` : ''}. Reopen it to continue (${conversation?.reopenCount ?? 0}/3 reopens used).`
+                                : `This consultation chat expired${expiryLabel ? ` on ${expiryLabel}` : ''}. Your nutritionist can reopen it, or you can book a new consultation.`)
+                            : (currentUserRole === 'NUTRITIONIST'
+                                ? 'This chat has ended. Reopen it to continue the conversation.'
+                                : 'The nutritionist has ended this chat. You can view previous messages, but sending is disabled.')}
                     </div>
                 )}
                 {error && !loading && (
@@ -462,8 +476,8 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
                     )}
                 </div>
                 <form onSubmit={sendMessage} className="flex shrink-0 items-end gap-2 bg-[#f0f2f5] px-3 py-2.5 sm:gap-3 sm:px-5">
-                    <textarea value={input} onChange={(event) => setInput(event.target.value)} maxLength={MAX_MESSAGE_LENGTH} rows={1} placeholder={conversation?.status === 'CLOSED' ? 'This chat has ended' : 'Type a message'} className="min-h-12 max-h-32 flex-1 resize-y rounded-3xl border border-transparent bg-white px-4 py-3.5 text-[#111b21] outline-none placeholder:text-[#667781] focus:border-[#d1d7db]" disabled={!conversation || loading || conversation.status !== 'ACTIVE'} />
-                    <button type="submit" aria-label="Send message" disabled={!input.trim() || sending || !conversation || conversation.status !== 'ACTIVE'} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white transition hover:bg-[#008f72] disabled:opacity-40">
+                    <textarea value={input} onChange={(event) => setInput(event.target.value)} maxLength={MAX_MESSAGE_LENGTH} rows={1} placeholder={chatExpired ? 'This chat has expired' : chatClosed ? 'This chat has ended' : 'Type a message'} className="min-h-12 max-h-32 flex-1 resize-y rounded-3xl border border-transparent bg-white px-4 py-3.5 text-[#111b21] outline-none placeholder:text-[#667781] focus:border-[#d1d7db]" disabled={!conversation || loading || !chatUsable} />
+                    <button type="submit" aria-label="Send message" disabled={!input.trim() || sending || !conversation || !chatUsable} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white transition hover:bg-[#008f72] disabled:opacity-40">
                         <span className="material-symbols-outlined text-xl">{sending ? 'hourglass_top' : 'send'}</span>
                     </button>
                 </form>

@@ -2,7 +2,6 @@ package com.nutrition.service;
 
 import com.nutrition.dto.ChatMessageDto;
 import com.nutrition.dto.ConversationStatusDto;
-import com.nutrition.entity.Conversation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -20,18 +19,23 @@ public class ChatSseService {
     private static final long STREAM_TIMEOUT_MILLIS = 30 * 60 * 1000L;
     private final Map<Long, CopyOnWriteArraySet<Subscriber>> subscribers = new ConcurrentHashMap<>();
 
-    public SseEmitter subscribe(Conversation conversation, Long userId) {
+    /**
+     * Registers a stream for a conversation. Takes plain values rather than a JPA entity so the
+     * caller can finish its database work first: nothing may stay checked out for the lifetime
+     * of the stream.
+     */
+    public SseEmitter subscribe(Long conversationId, Long userId, String status) {
         SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MILLIS);
         Subscriber subscriber = new Subscriber(userId, emitter);
-        subscribers.computeIfAbsent(conversation.getId(), ignored -> new CopyOnWriteArraySet<>()).add(subscriber);
-        emitter.onCompletion(() -> remove(conversation.getId(), subscriber));
+        subscribers.computeIfAbsent(conversationId, ignored -> new CopyOnWriteArraySet<>()).add(subscriber);
+        emitter.onCompletion(() -> remove(conversationId, subscriber));
         emitter.onTimeout(() -> {
-            remove(conversation.getId(), subscriber);
+            remove(conversationId, subscriber);
             emitter.complete();
         });
-        emitter.onError(error -> remove(conversation.getId(), subscriber));
-        sendTo(conversation.getId(), subscriber, "connected",
-                Map.of("conversationId", conversation.getId(), "status", conversation.getStatus()));
+        emitter.onError(error -> remove(conversationId, subscriber));
+        sendTo(conversationId, subscriber, "connected",
+                Map.of("conversationId", conversationId, "status", status == null ? "ACTIVE" : status));
         return emitter;
     }
 
@@ -41,6 +45,22 @@ public class ChatSseService {
 
     public void publishStatus(Long conversationId, Long patientId, Long nutritionistId, ConversationStatusDto status) {
         publish(conversationId, patientId, nutritionistId, "status", status);
+    }
+
+    /**
+     * Ends every stream attached to a conversation (used when it expires) so an open
+     * chat window cannot keep receiving events for a session that is no longer usable.
+     */
+    public void closeConversation(Long conversationId) {
+        CopyOnWriteArraySet<Subscriber> listeners = subscribers.remove(conversationId);
+        if (listeners == null) return;
+        listeners.forEach(listener -> {
+            try {
+                listener.emitter().complete();
+            } catch (Exception ignored) {
+                // stream already gone
+            }
+        });
     }
 
     @Scheduled(fixedDelay = 15000)

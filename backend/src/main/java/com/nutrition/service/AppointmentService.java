@@ -9,6 +9,7 @@ import com.nutrition.entity.Wallet;
 import com.nutrition.entity.WalletTransaction;
 import com.nutrition.exception.LowBalanceException;
 import com.nutrition.repository.AppointmentRepository;
+import com.nutrition.repository.ConversationRepository;
 import com.nutrition.repository.NutritionistProfileRepository;
 import com.nutrition.repository.UserRepository;
 import com.nutrition.repository.WalletRepository;
@@ -38,6 +39,8 @@ public class AppointmentService {
     private final WalletService walletService;
     private final WalletSseService walletSseService;
     private final NotificationService notificationService;
+    private final ConversationRepository conversationRepository;
+    private final ConsultationLifecycleService consultationLifecycleService;
 
     private static final String USER_APPOINTMENTS_PATH = "/appointments";
     private static final String NUTRITIONIST_SCHEDULE_PATH = "/dashboard/nutritionist/schedule";
@@ -45,10 +48,9 @@ public class AppointmentService {
     public List<AppointmentDto> getMyAppointments(Long userId, Role role) {
         List<Appointment> list;
         if (role == Role.NUTRITIONIST) {
-            list = appointmentRepository.findByNutritionistIdOrNutritionistIsNullOrderByAppointmentTimeDesc(userId);
-            if (list.isEmpty()) {
-                list = appointmentRepository.findAllByOrderByAppointmentTimeDesc();
-            }
+            // Only this nutritionist's own consultations: never unassigned rows, never another
+            // nutritionist's patients, and no "show everything" fallback.
+            list = appointmentRepository.findByNutritionistIdOrderByAppointmentTimeDesc(userId);
         } else if (role == Role.ADMIN) {
             list = appointmentRepository.findAllByOrderByAppointmentTimeDesc();
         } else {
@@ -121,24 +123,24 @@ public class AppointmentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public AppointmentDto bookAppointment(Long currentUserId, Role role, AppointmentDto dto) {
-        User user = null;
-        if (dto.getUserId() != null) {
-            user = userRepository.findById(dto.getUserId()).orElse(null);
-        }
-        if (user == null) {
-            user = userRepository.findById(currentUserId).orElseThrow(() -> new RuntimeException("User not found"));
-        }
+        // The booking belongs to the authenticated caller; only an admin may book for someone else.
+        Long ownerId = role == Role.ADMIN && dto.getUserId() != null ? dto.getUserId() : currentUserId;
+        User user = userRepository.findById(ownerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        User nutritionist = null;
+        User nutritionist;
         if (dto.getNutritionistId() != null) {
-            nutritionist = userRepository.findById(dto.getNutritionistId()).orElse(null);
+            nutritionist = userRepository.findById(dto.getNutritionistId())
+                    .filter(candidate -> candidate.getRole() == Role.NUTRITIONIST)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Choose a registered nutritionist for this consultation"));
         } else if (role == Role.NUTRITIONIST) {
-            nutritionist = userRepository.findById(currentUserId).orElse(null);
+            nutritionist = userRepository.findById(currentUserId)
+                    .filter(candidate -> candidate.getRole() == Role.NUTRITIONIST)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nutritionist not found"));
         } else {
-            List<User> nutritionists = userRepository.findByRole(Role.NUTRITIONIST);
-            if (!nutritionists.isEmpty()) {
-                nutritionist = nutritionists.get(0);
-            }
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Choose a registered nutritionist for this consultation");
         }
 
         // Calculate session fee
@@ -204,7 +206,8 @@ public class AppointmentService {
         appointment.setTitle(dto.getTitle() != null && !dto.getTitle().trim().isEmpty() ? dto.getTitle() : "Clinical Nutrition Consultation");
         appointment.setSessionType(dto.getSessionType() != null && !dto.getSessionType().trim().isEmpty() ? dto.getSessionType() : "Clinical Consultation");
         appointment.setNotes(dto.getNotes() != null ? dto.getNotes() : "");
-        appointment.setStatus(dto.getStatus() != null && !dto.getStatus().isBlank() ? dto.getStatus() : "Requested");
+        // A new booking always starts as a request: the client can no longer self-confirm.
+        appointment.setStatus("Requested");
         appointment.setMeetingLink(dto.getMeetingLink() != null ? dto.getMeetingLink() : "https://meet.google.com");
         appointment.setEscrowAmount(fee);
         appointment.setEscrowStatus("HELD");
@@ -333,6 +336,18 @@ public class AppointmentService {
 
         if (status != null && !status.trim().isEmpty()) {
             String upperStatus = status.trim().toUpperCase();
+
+            // Accepting or declining a consultation is the nutritionist's decision alone. Without
+            // this the patient could confirm their own request and unlock the chat.
+            boolean callerIsAssignedNutritionist = callerId != null && apt.getNutritionist() != null
+                    && callerId.equals(apt.getNutritionist().getId());
+            boolean isAcceptOrDecline = "CONFIRMED".equals(upperStatus) || "ACCEPTED".equals(upperStatus)
+                    || "APPROVED".equals(upperStatus) || "REJECTED".equals(upperStatus)
+                    || "DENIED".equals(upperStatus);
+            if (isAcceptOrDecline && !isAdmin && !callerIsAssignedNutritionist) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Only the assigned nutritionist can accept or decline this consultation.");
+            }
 
             // Only the nutritionist (or an admin) may approve/decline a cancellation request
             boolean isCancellationDecision = upperStatus.startsWith("APPROVE_CANCELLATION")
@@ -631,6 +646,7 @@ public class AppointmentService {
         }
 
         Appointment updated = appointmentRepository.save(apt);
+        syncConversationWithAppointment(updated);
         AppointmentDto dtoResult = mapToDto(updated);
         notifyAppointmentChange(updated, prevStatus, prevEscrow, escrowAmount, callerId);
 
@@ -942,6 +958,10 @@ public class AppointmentService {
                 }
             }
 
+            // conversations.appointment_id is a foreign key: the thread has to go first.
+            conversationRepository.findByAppointmentId(apt.getId())
+                    .ifPresent(conversationRepository::delete);
+
             appointmentRepository.delete(apt);
 
             Map<String, Object> delEvent = Map.of(
@@ -1023,6 +1043,21 @@ public class AppointmentService {
             notificationService.notifyUser(patient, actorId, "Appointment Declined",
                     String.format("%s declined your appointment request for %s.", displayName(nutritionist), when),
                     "APPOINTMENT", "event_busy", USER_APPOINTMENTS_PATH);
+        }
+    }
+
+    /**
+     * A conversation is a projection of its consultation: it opens when the consultation is
+     * accepted and closes for good when the consultation is cancelled or declined.
+     */
+    private void syncConversationWithAppointment(Appointment appointment) {
+        if (appointment == null || appointment.getId() == null) return;
+        String status = appointment.getStatus() != null
+                ? appointment.getStatus().toUpperCase(Locale.ROOT) : "";
+        if (ConsultationLifecycleService.isAcceptedAppointmentStatus(status)) {
+            consultationLifecycleService.openForAppointment(appointment);
+        } else if (ConsultationLifecycleService.isDeadAppointmentStatus(status)) {
+            consultationLifecycleService.closeForConsultation(appointment);
         }
     }
 

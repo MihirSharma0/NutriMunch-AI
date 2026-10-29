@@ -109,10 +109,8 @@ function initEventSource(user) {
 
     activeUserKey = userKey;
 
+    // Only the token identifies the caller; the server derives everything else from it.
     const params = new URLSearchParams();
-    if (userId) params.append('userId', String(userId));
-    if (email) params.append('email', String(email));
-    if (role) params.append('role', String(role));
     if (token) params.append('token', token);
 
     const sseUrl = `${API_BASE_URL}/wallet/stream?${params.toString()}`;
@@ -156,6 +154,30 @@ function initEventSource(user) {
                 window.dispatchEvent(new CustomEvent('appointment_updated', { detail: data }));
             } catch (e) {}
         };
+
+        // Chat + notification events ride the same authenticated stream so the browser keeps
+        // a single EventSource per tab (HTTP/1.1 allows only a handful per origin).
+        const onChatMessage = (event) => {
+            try {
+                window.dispatchEvent(new CustomEvent('nutrimunch_chat_message', { detail: JSON.parse(event.data) }));
+            } catch (e) {}
+        };
+
+        const onConversationStatus = (event) => {
+            try {
+                window.dispatchEvent(new CustomEvent('nutrimunch_conversation_status', { detail: JSON.parse(event.data) }));
+            } catch (e) {}
+        };
+
+        const onNotificationEvent = (event) => {
+            try {
+                window.dispatchEvent(new CustomEvent('nutrimunch_notification', { detail: JSON.parse(event.data) }));
+            } catch (e) {}
+        };
+
+        activeEventSource.addEventListener('chat_message', onChatMessage);
+        activeEventSource.addEventListener('conversation_status', onConversationStatus);
+        activeEventSource.addEventListener('notification', onNotificationEvent);
 
         activeEventSource.onmessage = onWalletMessage;
         activeEventSource.addEventListener('wallet_update', onWalletMessage);

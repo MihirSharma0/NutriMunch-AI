@@ -8,12 +8,15 @@ import com.nutrition.repository.NotificationRepository;
 import com.nutrition.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -26,6 +29,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationService {
+
+    /** Chat message notifications are aggregated per conversation, always with this type. */
+    public static final String TYPE_CONSULTATION_MSG = "CONSULTATION_MSG";
+    public static final String TYPE_CONSULTATION_ACTIVATED = "CONSULTATION_ACTIVATED";
+    public static final String TYPE_CONSULTATION_EXPIRED = "CONSULTATION_EXPIRED";
+    public static final String TYPE_CONSULTATION_REOPENED = "CONSULTATION_REOPENED";
+
+    private static final int PREVIEW_LENGTH = 120;
+    private static final String CONSULTATION_CHAT_PATH = "/consultation-chat";
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
@@ -42,71 +54,111 @@ public class NotificationService {
         Long recipientId = recipient.getId();
         if (Objects.equals(recipientId, senderId)) return;
 
-        Runnable save = () -> {
-            try {
-                TransactionTemplate tx = new TransactionTemplate(transactionManager);
-                tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-                tx.executeWithoutResult(status -> {
-                    Notification n = new Notification();
-                    n.setUser(userRepository.getReferenceById(recipientId));
-                    if (senderId != null) n.setSender(userRepository.getReferenceById(senderId));
-                    n.setTitle(title);
-                    n.setMessage(message);
-                    n.setType(type != null ? type : "SYSTEM");
-                    n.setIcon(icon != null ? icon : "notifications");
-                    n.setPath(path);
-                    n.setReadStatus(false);
-                    notificationRepository.save(n);
-                });
-            } catch (Exception e) {
-                log.warn("Failed to create '{}' notification for user {}: {}", type, recipientId, e.getMessage());
-            }
-        };
-
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    save.run();
-                }
+        runAfterCommit(() -> {
+            TransactionTemplate tx = new TransactionTemplate(transactionManager);
+            tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            tx.executeWithoutResult(status -> {
+                Notification n = new Notification();
+                n.setUser(userRepository.getReferenceById(recipientId));
+                if (senderId != null) n.setSender(userRepository.getReferenceById(senderId));
+                n.setTitle(title);
+                n.setMessage(message);
+                n.setType(type != null ? type : "SYSTEM");
+                n.setIcon(icon != null ? icon : "notifications");
+                n.setPath(path);
+                n.setReadStatus(false);
+                notificationRepository.save(n);
             });
-        } else {
-            save.run();
-        }
+        }, "notification '" + type + "' for user " + recipientId);
+    }
+
+    /**
+     * One aggregated unread notification per (recipient, conversation): a burst of messages
+     * bumps the existing row instead of filling the bell with one entry per message.
+     */
+    public void notifyChatMessage(User recipient, User sender, Long conversationId, String senderName,
+                                  String preview, long unreadCount) {
+        if (recipient == null || recipient.getId() == null || conversationId == null) return;
+        if (sender != null && Objects.equals(sender.getId(), recipient.getId())) return;
+
+        Long recipientId = recipient.getId();
+        Long senderId = sender != null ? sender.getId() : null;
+        String safePreview = truncate(preview);
+        long unread = Math.max(unreadCount, 1L);
+
+        runAfterCommit(() -> {
+            TransactionTemplate tx = new TransactionTemplate(transactionManager);
+            tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            tx.executeWithoutResult(status -> {
+                Notification notification = notificationRepository
+                        .findFirstByUser_IdAndConversationIdAndTypeAndReadStatusFalseOrderByIdDesc(
+                                recipientId, conversationId, TYPE_CONSULTATION_MSG)
+                        .orElseGet(() -> {
+                            Notification fresh = new Notification();
+                            fresh.setUser(userRepository.getReferenceById(recipientId));
+                            fresh.setConversationId(conversationId);
+                            fresh.setType(TYPE_CONSULTATION_MSG);
+                            fresh.setIcon("forum");
+                            fresh.setReadStatus(false);
+                            return fresh;
+                        });
+
+                String title = senderName == null || senderName.isBlank()
+                        ? "New consultation message"
+                        : "New message from " + senderName;
+                String body = unread == 1
+                        ? safePreview
+                        : unread + " unread messages. Latest: " + safePreview;
+
+                notification.setTitle(title);
+                notification.setMessage(body);
+                if (senderId != null) notification.setSender(userRepository.getReferenceById(senderId));
+                notification.setPath(CONSULTATION_CHAT_PATH + "?conversationId=" + conversationId);
+                notificationRepository.save(notification);
+            });
+        }, "chat notification for user " + recipientId);
     }
 
     public List<NotificationDto> getNotificationsForUser(Long userId, Role role) {
-        List<Notification> list = notificationRepository.findByUserIdOrUserIsNullOrderByCreatedAtDesc(userId);
+        if (userId == null) return List.of();
+        List<Notification> list = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
         return list.stream()
                 .filter(n -> isVisibleTo(n, userId))
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
+    public long getUnreadCount(Long userId) {
+        if (userId == null) return 0L;
+        return notificationRepository.countByUser_IdAndReadStatusFalse(userId);
+    }
+
     /**
-     * A notification is shown to a user only when it is addressed to them (or to everyone)
+     * A notification is shown to a user only when it is addressed to them
      * and was caused by someone else - users never get notified about their own actions.
      */
     private boolean isVisibleTo(Notification n, Long userId) {
-        if (userId == null) {
-            return false;
-        }
-        if (n.getSender() != null && userId.equals(n.getSender().getId())) {
-            return false;
-        }
-        if (n.getUser() != null) {
-            return userId.equals(n.getUser().getId());
-        }
-        return n.getUser() == null;
+        if (userId == null) return false;
+        if (n.getSender() != null && userId.equals(n.getSender().getId())) return false;
+        return n.getUser() != null && userId.equals(n.getUser().getId());
     }
 
+    /**
+     * Manual notification endpoint. Server-generated consultation events never come through here:
+     * those are created by the services themselves so the recipient cannot be chosen by the caller.
+     */
+    @Transactional
     public NotificationDto sendNotification(NotificationDto dto, Long senderId) {
-        if (List.of("CONSULTATION_MSG", "CONSULTATION_CHAT", "CONSULTATION_REQUEST").contains(dto.getType())) {
+        if (List.of(TYPE_CONSULTATION_MSG, "CONSULTATION_CHAT", "CONSULTATION_REQUEST").contains(dto.getType())) {
             throw new IllegalArgumentException("Consultation messages must use the conversation messaging API");
         }
-        Notification notification = new Notification();
-        if (senderId != null) {
-            userRepository.findById(senderId).ifPresent(notification::setSender);
+
+        User sender = senderId != null ? userRepository.findById(senderId).orElse(null) : null;
+        if (sender == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "A signed-in sender is required");
+        }
+        if (sender.getRole() == Role.USER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Clients cannot send notifications");
         }
 
         Optional<User> uOpt = Optional.empty();
@@ -116,50 +168,78 @@ public class NotificationService {
         if (uOpt.isEmpty() && dto.getUserId() != null) {
             uOpt = userRepository.findById(dto.getUserId());
         }
-        
-        uOpt.ifPresent(notification::setUser);
 
+        // A nutritionist may only address clients; never another practitioner or an admin.
+        if (sender.getRole() == Role.NUTRITIONIST && uOpt.isPresent()
+                && uOpt.get().getRole() != Role.USER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Nutritionists can only notify client accounts");
+        }
+
+        if (uOpt.isPresent()) {
+            Notification saved = notificationRepository.save(buildNotification(dto, sender, uOpt.get()));
+            return mapToDto(saved);
+        }
+
+        // No specific recipient: fan out so every reader owns an independent read state.
+        // Broadcast rows (user_id IS NULL) could never be marked read by their reader.
+        List<User> audience = userRepository.findAll().stream()
+                .filter(Objects::nonNull)
+                .filter(u -> u.getRole() == Role.USER || u.getRole() == Role.NUTRITIONIST)
+                .filter(u -> !Objects.equals(u.getId(), sender.getId()))
+                .collect(Collectors.toList());
+
+        NotificationDto first = null;
+        for (User recipient : audience) {
+            Notification saved = notificationRepository.save(buildNotification(dto, sender, recipient));
+            if (first == null) first = mapToDto(saved);
+        }
+        return first;
+    }
+
+    private Notification buildNotification(NotificationDto dto, User sender, User recipient) {
+        Notification notification = new Notification();
+        notification.setSender(sender);
+        notification.setUser(recipient);
         notification.setTitle(dto.getTitle());
         notification.setMessage(dto.getMessage());
         notification.setType(dto.getType() != null ? dto.getType() : "SYSTEM");
         notification.setIcon(dto.getIcon() != null ? dto.getIcon() : "notifications");
         notification.setPath(dto.getPath());
         notification.setReadStatus(false);
-
-        Notification saved = notificationRepository.save(notification);
-        return mapToDto(saved);
+        return notification;
     }
 
     public void markAsRead(Long notificationId, Long userId) {
         Optional<Notification> nOpt = notificationRepository.findById(notificationId);
         nOpt.ifPresent(n -> {
             if (n.getUser() == null || !Objects.equals(n.getUser().getId(), userId)) {
-                throw new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.FORBIDDEN, "Notification is not owned by user");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Notification is not owned by user");
             }
             n.setReadStatus(true);
             notificationRepository.save(n);
         });
     }
 
+    @Transactional
     public void markAllAsReadForUser(Long userId) {
-        List<Notification> list = userId != null
-                ? notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                : List.of();
-        for (Notification n : list) {
-            if (!n.isReadStatus()) {
-                n.setReadStatus(true);
-                notificationRepository.save(n);
-            }
+        if (userId != null) {
+            notificationRepository.markAllRead(userId);
         }
+    }
+
+    /** Opening a conversation clears the aggregated chat notification that pointed at it. */
+    @Transactional
+    public void markConversationNotificationsRead(Long userId, Long conversationId) {
+        if (userId == null || conversationId == null) return;
+        notificationRepository.markConversationNotificationsRead(userId, conversationId);
     }
 
     public void deleteNotification(Long notificationId, Long userId) {
         Notification n = notificationRepository.findById(notificationId).orElseThrow(() ->
-                new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND));
+                new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (n.getUser() == null || !Objects.equals(n.getUser().getId(), userId)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "Notification is not owned by user");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Notification is not owned by user");
         }
         notificationRepository.delete(n);
     }
@@ -173,6 +253,32 @@ public class NotificationService {
 
     public void deleteAllNotifications() {
         // Retained for backward compatibility without dropping entire database table
+    }
+
+    private static void runAfterCommit(Runnable action, String description) {
+        Runnable wrapped = () -> {
+            try {
+                action.run();
+            } catch (Exception e) {
+                log.warn("Failed to create {}: {}", description, e.getMessage());
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    wrapped.run();
+                }
+            });
+        } else {
+            wrapped.run();
+        }
+    }
+
+    private static String truncate(String value) {
+        if (value == null) return "";
+        String trimmed = value.trim();
+        return trimmed.length() <= PREVIEW_LENGTH ? trimmed : trimmed.substring(0, PREVIEW_LENGTH) + "...";
     }
 
     private NotificationDto mapToDto(Notification entity) {
@@ -191,6 +297,7 @@ public class NotificationService {
         dto.setType(entity.getType());
         dto.setIcon(entity.getIcon());
         dto.setPath(entity.getPath());
+        dto.setConversationId(entity.getConversationId());
         dto.setReadStatus(entity.isReadStatus());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setTimeAgo(calculateTimeAgo(entity.getCreatedAt()));

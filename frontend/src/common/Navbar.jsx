@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import api, { API_BASE_URL } from '../api/axios';
+import api from '../api/axios';
 
 export const getNavItemsForRole = (user) => {
     const aiSubMenu = [
@@ -139,156 +139,92 @@ const Navbar = () => {
 
     const [notifications, setNotifications] = useState([]);
     const [toastNotification, setToastNotification] = useState(null);
-    // Server notification ids already known to this session; anything new and unread pops a toast
+    const [chatUnread, setChatUnread] = useState(0);
+    const [notificationsUnread, setNotificationsUnread] = useState(0);
+    // Server notification ids already seen in this session; anything new and unread pops a toast
     const seenServerNotifIdsRef = useRef(null);
 
     useEffect(() => {
         seenServerNotifIdsRef.current = null;
+        let cancelled = false;
+
         const loadNotifications = async () => {
-            if (!user) {
+            if (!user || !token) {
                 setNotifications([]);
+                setChatUnread(0);
+                setNotificationsUnread(0);
                 return;
             }
+            const [listResult, countResult, chatResult] = await Promise.allSettled([
+                api.get('/notifications/me'),
+                api.get('/notifications/unread-count'),
+                api.get('/conversations/unread'),
+            ]);
+            if (cancelled) return;
 
-            let readIds = new Set();
-            let deletedIds = new Set();
-            try {
-                const storedRead = JSON.parse(localStorage.getItem('nutrimunch_read_notif_ids') || '[]');
-                readIds = new Set(storedRead.map(String));
+            if (listResult.status === 'fulfilled') {
+                const items = (listResult.value.data || []).map((n) => ({
+                    id: n.id,
+                    title: n.title,
+                    message: n.message,
+                    time: n.timeAgo || 'Just now',
+                    icon: n.icon || 'notifications',
+                    path: n.path || '/progress',
+                    type: n.type,
+                    senderId: n.senderId,
+                    conversationId: n.conversationId,
+                    read: Boolean(n.readStatus),
+                }));
+                setNotifications(items);
 
-                const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
-                deletedIds = new Set(storedDeleted.map(String));
-            } catch (e) {}
-
-            let backendNotifs = [];
-            if (token) {
-                try {
-                    const response = await api.get('/notifications/me');
-                    backendNotifs = response.data
-                        .filter(n => !['CONSULTATION_MSG', 'CONSULTATION_CHAT', 'CONSULTATION_REQUEST'].includes(n.type))
-                        .map(n => ({
-                            id: n.id,
-                            title: n.title,
-                            message: n.message,
-                            time: n.timeAgo || 'Just now',
-                            icon: n.icon || 'notifications',
-                            path: n.path || '/progress',
-                            type: n.type,
-                            senderId: n.senderId,
-                            read: Boolean(n.readStatus) || readIds.has(String(n.id))
-                        }));
-                } catch (err) {
-                    console.error("Error fetching backend notifications", err);
+                const serverItems = items.filter((n) => typeof n.id === 'number');
+                if (seenServerNotifIdsRef.current === null) {
+                    seenServerNotifIdsRef.current = new Set(serverItems.map((n) => String(n.id)));
+                } else {
+                    const fresh = serverItems.find((n) => !n.read && !seenServerNotifIdsRef.current.has(String(n.id)));
+                    serverItems.forEach((n) => seenServerNotifIdsRef.current.add(String(n.id)));
+                    if (fresh) {
+                        setToastNotification(fresh);
+                        setTimeout(() => setToastNotification(null), 8000);
+                    }
                 }
             }
-
-            let localNotifs = [];
-            try {
-                const stored = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
-                if (stored && Array.isArray(stored)) {
-                    localNotifs = stored
-                        .filter(n => !['CONSULTATION_MSG', 'CONSULTATION_CHAT', 'CONSULTATION_REQUEST'].includes(n.type))
-                        .map(n => ({
-                            ...n,
-                            read: Boolean(n.read) || readIds.has(String(n.id))
-                        }));
-                }
-            } catch (e) {}
-
-            const realNotifs = [...backendNotifs, ...localNotifs];
-            const currentUserId = String(user?.id || user?.userId || '');
-            const currentUserEmail = user?.email?.toLowerCase() || '';
-            const isNutritionist = rawRole.includes('NUTRITIONIST');
-
-            const uniqueReal = Array.from(new Map(realNotifs.map(item => [item.id, item])).values())
-                .filter(item => !deletedIds.has(String(item.id)))
-                // Never notify a user about an action they performed themselves
-                .filter(item => !item.senderId || String(item.senderId) !== currentUserId)
-                .filter(item => {
-                    // Receiver filtering for targeted chat / exclusive notifications:
-                    if (item.targetUserId) {
-                        const targetId = String(item.targetUserId);
-                        const targetEmail = item.targetUserEmail?.toLowerCase();
-                        // For patients: only show if directed to me
-                        if (!isNutritionist) {
-                            return targetId === currentUserId || (targetEmail && targetEmail === currentUserEmail);
-                        }
-                        // For nutritionists: do not show their own outgoing message to patient as an incoming notification!
-                    }
-                    if (item.targetPatientId) {
-                        // Message sent by patient to nutritionists: only nutritionists should see this!
-                        if (!isNutritionist) {
-                            return false;
-                        }
-                    }
-                    return true;
-                })
-                .map(item => ({
-                    ...item,
-                    read: Boolean(item.read) || readIds.has(String(item.id))
-                }));
-
-            setNotifications(uniqueReal);
-
-            // Pop a toast for server alerts that arrived since the last poll (credits, refunds, appointment updates...)
-            const serverItems = uniqueReal.filter(item => typeof item.id === 'number');
-            if (seenServerNotifIdsRef.current === null) {
-                seenServerNotifIdsRef.current = new Set(serverItems.map(item => String(item.id)));
-            } else {
-                const fresh = serverItems.find(item => !item.read && !seenServerNotifIdsRef.current.has(String(item.id)));
-                serverItems.forEach(item => seenServerNotifIdsRef.current.add(String(item.id)));
-                if (fresh) {
-                    setToastNotification(fresh);
-                    setTimeout(() => setToastNotification(null), 8000);
-                }
+            if (countResult.status === 'fulfilled') {
+                setNotificationsUnread(Number(countResult.value.data?.total) || 0);
+            }
+            if (chatResult.status === 'fulfilled') {
+                setChatUnread(Number(chatResult.value.data?.total) || 0);
             }
         };
 
         loadNotifications();
-        const interval = setInterval(loadNotifications, 3000);
-        window.addEventListener('nutrimunch_notification_added', loadNotifications);
-        window.addEventListener('storage', loadNotifications);
-        window.addEventListener('focus', loadNotifications);
+
+        // Live updates arrive on the existing authenticated stream. The interval is only a
+        // fallback for proxies that buffer SSE and for the backend waking up from idle.
+        const interval = setInterval(loadNotifications, 60000);
+        const onLiveEvent = () => loadNotifications();
+
+        window.addEventListener('nutrimunch_notification', onLiveEvent);
+        window.addEventListener('nutrimunch_chat_message', onLiveEvent);
+        window.addEventListener('nutrimunch_conversation_status', onLiveEvent);
+        window.addEventListener('focus', onLiveEvent);
 
         let bc;
         try {
             bc = new BroadcastChannel('nutrimunch_clinical_channel');
-            bc.onmessage = (event) => {
-                loadNotifications();
-                if (event.data?.payload) {
-                    const p = event.data.payload;
-                    const isNutritionist = rawRole.includes('NUTRITIONIST');
-                    const myId = String(user?.id || user?.userId || '');
-                    const myEmail = user?.email?.toLowerCase() || '';
-
-                    // Only show floating toast if this user is the intended receiver:
-                    // Self-triggered events never produce a toast for the user who caused them
-                    let shouldShowToast = !(p.senderId && String(p.senderId) === myId);
-                    if (shouldShowToast && p.targetUserId) {
-                        if (!isNutritionist) {
-                            shouldShowToast = String(p.targetUserId) === myId || (p.targetUserEmail && p.targetUserEmail.toLowerCase() === myEmail);
-                        }
-                    }
-                    if (p.targetPatientId && !isNutritionist) {
-                        shouldShowToast = false;
-                    }
-
-                    if (shouldShowToast) {
-                        setToastNotification(p);
-                        setTimeout(() => setToastNotification(null), 8000);
-                    }
-                }
-            };
+            bc.onmessage = () => loadNotifications();
         } catch (e) {}
 
         return () => {
+            cancelled = true;
             clearInterval(interval);
-            window.removeEventListener('nutrimunch_notification_added', loadNotifications);
-            window.removeEventListener('storage', loadNotifications);
-            window.removeEventListener('focus', loadNotifications);
+            window.removeEventListener('nutrimunch_notification', onLiveEvent);
+            window.removeEventListener('nutrimunch_chat_message', onLiveEvent);
+            window.removeEventListener('nutrimunch_conversation_status', onLiveEvent);
+            window.removeEventListener('focus', onLiveEvent);
             if (bc) bc.close();
         };
-    }, [user, rawRole, token]);
+    }, [user, token]);
 
     useEffect(() => {
         setIsMenuOpen(false);
@@ -319,23 +255,16 @@ const Navbar = () => {
     const handleNotificationClick = async (item) => {
         const stringId = String(item.id);
         setNotifications(prev => prev.map(n => String(n.id) === stringId ? { ...n, read: true } : n));
-        try {
-            const storedRead = JSON.parse(localStorage.getItem('nutrimunch_read_notif_ids') || '[]');
-            if (!storedRead.includes(stringId)) {
-                localStorage.setItem('nutrimunch_read_notif_ids', JSON.stringify([...storedRead, stringId]));
-            }
-            const stored = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
-            const updated = stored.map(n => String(n.id) === stringId ? { ...n, read: true } : n);
-            localStorage.setItem('nutrimunch_user_notifications', JSON.stringify(updated));
-
-            if (token && (typeof item.id === 'number' || !isNaN(Number(item.id)))) {
-                fetch(`${API_BASE_URL}/notifications/${item.id}/read`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }).catch(() => {});
-            }
-        } catch (e) {}
+        if (token && (typeof item.id === 'number' || !isNaN(Number(item.id)))) {
+            api.put(`/notifications/${item.id}/read`).catch(() => {});
+            setNotificationsUnread(prev => Math.max(0, prev - 1));
+        }
         setIsNotificationOpen(false);
+
+        if (item.type === 'CONSULTATION_MSG' && item.conversationId) {
+            navigate(`/consultation-chat?conversationId=${encodeURIComponent(item.conversationId)}`);
+            return;
+        }
 
         if (item.type === 'DIET_PLAN' || item.type === 'EXCLUSIVE_PLAN' || item.path?.includes('diet-plan')) {
             navigate('/diet-plans');
@@ -354,70 +283,32 @@ const Navbar = () => {
     };
 
     const markAllAsRead = async () => {
-        const allIds = notifications.map(n => String(n.id));
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        try {
-            const storedRead = JSON.parse(localStorage.getItem('nutrimunch_read_notif_ids') || '[]');
-            const combinedRead = Array.from(new Set([...storedRead, ...allIds]));
-            localStorage.setItem('nutrimunch_read_notif_ids', JSON.stringify(combinedRead));
-
-            const stored = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
-            const updated = stored.map(n => ({ ...n, read: true }));
-            localStorage.setItem('nutrimunch_user_notifications', JSON.stringify(updated));
-
-            if (token) {
-                fetch(`${API_BASE_URL}/notifications/read-all`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }).catch(() => {});
-            }
-        } catch (e) {}
+        setNotificationsUnread(0);
+        if (token) {
+            api.put('/notifications/read-all').catch(() => {});
+        }
     };
 
     const handleDeleteNotification = async (id, e) => {
         if (e) e.stopPropagation();
         const stringId = String(id);
+        const removed = notifications.find(n => String(n.id) === stringId);
         setNotifications(prev => prev.filter(n => String(n.id) !== stringId));
-        try {
-            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
-            if (!storedDeleted.includes(stringId)) {
-                localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify([...storedDeleted, stringId]));
-            }
-
-            const storedNotifs = JSON.parse(localStorage.getItem('nutrimunch_user_notifications') || '[]');
-            const updatedNotifs = storedNotifs.filter(n => String(n.id) !== stringId);
-            localStorage.setItem('nutrimunch_user_notifications', JSON.stringify(updatedNotifs));
-
-            window.dispatchEvent(new Event('nutrimunch_notification_added'));
-
-            if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
-                fetch(`${API_BASE_URL}/notifications/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }).catch(() => {});
-            }
-        } catch (e) {}
+        if (removed && !removed.read) {
+            setNotificationsUnread(prev => Math.max(0, prev - 1));
+        }
+        if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
+            api.delete(`/notifications/${id}`).catch(() => {});
+        }
     };
 
     const handleClearAllNotifications = async () => {
-        const allIds = notifications.map(n => String(n.id));
         setNotifications([]);
-        try {
-            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
-            const combinedDeleted = Array.from(new Set([...storedDeleted, ...allIds]));
-            localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify(combinedDeleted));
-
-            localStorage.setItem('nutrimunch_user_notifications', '[]');
-
-            window.dispatchEvent(new Event('nutrimunch_notification_added'));
-
-            if (token) {
-                fetch(`${API_BASE_URL}/notifications/clear-all`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }).catch(() => {});
-            }
-        } catch (e) {}
+        setNotificationsUnread(0);
+        if (token) {
+            api.delete('/notifications/clear-all').catch(() => {});
+        }
     };
 
     const handleDismissToast = (e) => {
@@ -428,7 +319,7 @@ const Navbar = () => {
         setToastNotification(null);
     };
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+    const unreadCount = notificationsUnread;
     const displayName = user?.name || user?.username || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User');
     const roleLabel = rawRole === 'ADMIN' ? 'Admin' : (rawRole === 'NUTRITIONIST') ? 'Nutritionist' : 'User';
 
@@ -531,16 +422,23 @@ const Navbar = () => {
 
                     {/* Right User Actions & Controls (Notifications, Mobile Toggle, Login/Profile) */}
                     <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 shrink-0">
-                        {/* Consultation Chat Button (when user is logged in) */}
-                        {user && (
+                        {/* Consultation Chat Button (clients and nutritionists only) */}
+                        {user && rawRole !== 'ADMIN' && (
                             <button
                                 type="button"
                                 onClick={() => navigate('/consultation-chat')}
-                                aria-label="Clinical Consultation Chat"
+                                aria-label={chatUnread > 0
+                                    ? `Clinical Consultation Chat, ${chatUnread} unread message${chatUnread === 1 ? '' : 's'}`
+                                    : 'Clinical Consultation Chat'}
                                 className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 flex items-center justify-center text-white/80 hover:text-[#a5d391] transition-all cursor-pointer shadow-sm"
                                 title="Consultation Chat with Nutritionist"
                             >
                                 <span className="material-symbols-outlined text-base sm:text-lg">forum</span>
+                                {chatUnread > 0 && (
+                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white font-black text-[9px] leading-4 text-center shadow-[0_0_8px_rgba(244,63,94,0.8)]">
+                                        {chatUnread > 99 ? '99+' : chatUnread}
+                                    </span>
+                                )}
                             </button>
                         )}
 

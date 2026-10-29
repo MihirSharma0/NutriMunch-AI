@@ -849,13 +849,15 @@ const Appointments = () => {
                                         </div>
                                     ) : (
                                         <>
-                                            <button
-                                                type="button"
-                                                onClick={() => navigate(`/consultation-chat?appointmentId=${encodeURIComponent(activeDisplayedAppointment.id)}`)}
-                                                className="bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.2)] cursor-pointer"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">forum</span> Chat with Nutritionist
-                                            </button>
+                                            {isConfirmedOrApproved(activeDisplayedAppointment.status) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate(`/consultation-chat?appointmentId=${encodeURIComponent(activeDisplayedAppointment.id)}`)}
+                                                    className="bg-[#a5d391]/20 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.2)] cursor-pointer"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">forum</span> Chat with Nutritionist
+                                                </button>
+                                            )}
                                             <Link
                                                 to="/virtual-room"
                                                 className="bg-[#a5d391] text-black px-5 py-2.5 rounded-full text-xs font-bold hover:bg-white transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer"
