@@ -6,6 +6,10 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
+/**
+ * VerificationToken Entity.
+ * Represents cryptographic tokens issued via email links to verify new user registrations.
+ */
 @Entity
 @Table(name = "verification_tokens")
 public class VerificationToken {

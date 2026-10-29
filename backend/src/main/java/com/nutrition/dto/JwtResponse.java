@@ -3,6 +3,9 @@ package com.nutrition.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+/**
+ * Data Transfer Object returning an authenticated JWT token and user profile summary.
+ */
 @Data
 @AllArgsConstructor
 public class JwtResponse {

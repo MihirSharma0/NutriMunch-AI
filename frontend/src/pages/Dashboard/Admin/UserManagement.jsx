@@ -1,9 +1,18 @@
+/**
+ * Administrator User Directory & Access Management
+ * Comprehensive user directory supporting user search, role elevation/demotion,
+ * account suspension, and OTP status resets.
+ */
 import React, { useEffect, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 
+/**
+ * UserManagement Component
+ * User administration table providing search, role modification, and account status controls.
+ */
 const UserManagement = () => {
     const { user } = useContext(AuthContext);
 

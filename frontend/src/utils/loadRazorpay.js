@@ -1,5 +1,12 @@
 /**
- * Utility to asynchronously load Razorpay Checkout SDK
+ * Razorpay Integration Helper
+ * Provides lazy loading for the Razorpay Checkout JavaScript SDK.
+ */
+
+/**
+ * Asynchronously loads the Razorpay Checkout SDK script if not already present in the DOM.
+ *
+ * @returns {Promise<boolean>} Resolves to true when the SDK script is loaded, or false on error.
  */
 export const loadRazorpay = () => {
     return new Promise((resolve) => {

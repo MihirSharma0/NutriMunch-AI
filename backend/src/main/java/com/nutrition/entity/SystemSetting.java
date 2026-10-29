@@ -8,6 +8,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Data
+/**
+ * SystemSetting Entity.
+ * Persists dynamic key-value system configuration properties and platform parameters in the database.
+ */
 @Entity
 @Table(name = "system_settings")
 public class SystemSetting {

@@ -1,9 +1,18 @@
+/**
+ * Nutritionist Clinical Command Dashboard
+ * Telemetry command center for certified nutritionists displaying patient rosters,
+ * upcoming appointments, earnings balance, and rapid consultation actions.
+ */
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api from '../../../api/axios';
 
+/**
+ * NutritionistHome Component
+ * Clinical practice overview presenting consultation calendar, patient metrics, and wallet balance.
+ */
 const NutritionistHome = () => {
     const { user } = useContext(AuthContext);
     const [walletBalance, setWalletBalance] = useState(null);

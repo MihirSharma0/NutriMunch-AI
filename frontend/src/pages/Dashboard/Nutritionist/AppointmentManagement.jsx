@@ -1,9 +1,18 @@
+/**
+ * Nutritionist Appointment & Schedule Management
+ * Clinical consultation scheduling, slot availability configuration,
+ * booking acceptances/cancellations, and patient consultation history.
+ */
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import { getConsultationOutcome, isHistoryOutcome, OUTCOME_BADGES, describePayment } from '../../../utils/consultationHistory';
 
+/**
+ * AppointmentManagement Component
+ * Comprehensive consultation management calendar and historical audit log for nutritionists.
+ */
 const AppointmentManagement = () => {
     const { token } = useContext(AuthContext);
     const navigate = useNavigate();

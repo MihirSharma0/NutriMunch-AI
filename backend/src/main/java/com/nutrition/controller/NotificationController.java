@@ -10,6 +10,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Notification Management Controller.
+Handles in-app notification retrieval, unread counts, and batch mark-read operations.
+ */
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
@@ -17,6 +21,9 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+    /**
+     * Handles request to get my notifications.
+     */
     @GetMapping("/me")
     public ResponseEntity<List<NotificationDto>> getMyNotifications(@AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails != null ? userDetails.getId() : null;
@@ -24,6 +31,9 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.getNotificationsForUser(userId, role));
     }
 
+    /**
+     * Handles request to send notification.
+     */
     @PostMapping("/send")
     public ResponseEntity<NotificationDto> sendNotification(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -39,12 +49,18 @@ public class NotificationController {
         return ResponseEntity.ok(java.util.Map.of("total", notificationService.getUnreadCount(userId)));
     }
 
+    /**
+     * Handles request to mark as read.
+     */
     @PutMapping("/{id}/read")
     public ResponseEntity<Void> markAsRead(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable Long id) {
         notificationService.markAsRead(id, userDetails.getId());
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Handles request to mark all as read.
+     */
     @PutMapping("/read-all")
     public ResponseEntity<Void> markAllAsRead(@AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails != null ? userDetails.getId() : null;
@@ -52,12 +68,18 @@ public class NotificationController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Handles request to delete notification.
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotification(@AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable Long id) {
         notificationService.deleteNotification(id, userDetails.getId());
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Handles request to clear all notifications.
+     */
     @DeleteMapping("/clear-all")
     public ResponseEntity<Void> clearAllNotifications(@AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails != null ? userDetails.getId() : null;

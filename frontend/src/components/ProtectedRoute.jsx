@@ -1,10 +1,20 @@
+/**
+ * Route Protection Guard
+ * Inspects authentication status and user roles, redirecting unauthenticated visitors to login
+ * and restricting unauthorized roles from protected dashboards.
+ */
 import React, { useContext, useEffect, useRef } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { getDashboardUrl } from '../utils/roleUtils';
 
-// Guards nested routes: logged-out visitors go to /login (and come back after signing in);
-// logged-in users without an allowed role go to their own dashboard.
+/**
+ * ProtectedRoute Component
+ * Validates that the active session has the required role permissions to view child routes.
+ * 
+ * @param {Object} props - Component properties
+ * @param {Array<string>} [props.allowedRoles] - Roles permitted to access nested routes
+ */
 const ProtectedRoute = ({ allowedRoles }) => {
     const { user, token, loading } = useContext(AuthContext);
     const location = useLocation();

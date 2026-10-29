@@ -3,6 +3,10 @@ package com.nutrition.dto;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+/**
+ * Data Transfer Object for consultation appointments.
+ * Transmits scheduled consultation details, nutritionist assignment, notes, and escrow status.
+ */
 @Data
 public class AppointmentDto {
     private Long id;

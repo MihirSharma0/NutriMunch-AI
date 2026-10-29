@@ -1,3 +1,8 @@
+/**
+ * User & Professional Authentication (Login) Page
+ * Handles credential-based login, Google OAuth single sign-on,
+ * post-login redirect routing, and first-time Google role onboarding.
+ */
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
@@ -6,6 +11,10 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { getDashboardUrl } from '../../utils/roleUtils';
 import OnboardingWizard from '../../components/OnboardingWizard';
 
+/**
+ * Login Component
+ * Renders the login card with tabs for Patient, Certified Nutritionist, and Administrator accounts.
+ */
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -31,6 +40,12 @@ const Login = () => {
     const navigate = useNavigate();
 
     // Return to the page the visitor originally requested (same-site paths only)
+    /**
+     * Resolves the target redirect route following a successful login.
+     * 
+     * @param {string} role - Authenticated user role
+     * @returns {string} Target path URL
+     */
     const getPostLoginUrl = (role) => {
         const redirect = new URLSearchParams(window.location.search).get('redirect');
         if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {

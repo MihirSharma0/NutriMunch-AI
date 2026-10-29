@@ -1,11 +1,35 @@
+/**
+ * Real-time Consultation Chat Modal
+ * Telehealth chat interface supporting direct SSE streaming, historical pagination,
+ * optimistic message updates, and consultation thread management.
+ */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api, { API_BASE_URL } from '../api/axios';
 
 const PAGE_SIZE = 40;
 const MAX_MESSAGE_LENGTH = 4000;
 
+/**
+ * Normalizes a user role string by stripping ROLE_ prefix and uppercasing.
+ * 
+ * @param {Object} user - User object
+ * @returns {string} Clean role string
+ */
 const roleOf = (user) => String(user?.role || '').replace(/^ROLE_/i, '').toUpperCase();
 
+/**
+ * ConsultationChatModal Component
+ * Live chat dialog between patients and certified nutritionists with real-time SSE updates.
+ * 
+ * @param {Object} props - Component properties
+ * @param {boolean} props.isOpen - Whether modal is open
+ * @param {Function} props.onClose - Modal close callback
+ * @param {Object} props.currentUser - Authenticated user context
+ * @param {Object} [props.targetPatient] - Remote participant details
+ * @param {number} [props.appointmentId] - Associated consultation appointment ID
+ * @param {number} [props.conversationId] - Active conversation thread ID
+ * @param {boolean} [props.embedded=false] - Whether embedded inline without dialog frame
+ */
 const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, appointmentId, conversationId, embedded = false }) => {
     const [conversation, setConversation] = useState(null);
     const [messages, setMessages] = useState([]);

@@ -1,7 +1,14 @@
 package com.nutrition.dto;
+
 import lombok.Data;
 import java.time.LocalDateTime;
-@Data public class ConversationDto {
+
+/**
+ * Data Transfer Object representing an active or historical conversation thread.
+ * Encapsulates thread status, participant details, expiry date, unread counts, and messaging permissions.
+ */
+@Data
+public class ConversationDto {
     private Long id, appointmentId, patientId, nutritionistId;
     private String status, patientName, patientEmail, patientRole, nutritionistName, nutritionistEmail, nutritionistRole;
 

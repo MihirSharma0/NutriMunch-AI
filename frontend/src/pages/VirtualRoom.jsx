@@ -1,7 +1,15 @@
+/**
+ * Virtual Telehealth Consultation Room
+ * Waiting room and live consultation interface for patient-nutritionist video appointments.
+ */
 import React, { useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
+/**
+ * VirtualRoom Component
+ * Telehealth room frame handling session connection state, device checks, and schedule redirection.
+ */
 const VirtualRoom = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);

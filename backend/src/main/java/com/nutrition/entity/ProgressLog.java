@@ -6,6 +6,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * ProgressLog Entity.
+ * Records daily biometric tracking entries including body weight, water intake,
+ * calories consumed, and macronutrient breakdown for trend analytics.
+ */
 @Entity
 @Table(name = "progress_logs")
 @Data

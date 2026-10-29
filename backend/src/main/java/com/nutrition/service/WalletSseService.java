@@ -13,6 +13,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Real-time Wallet SSE Streaming Service.
+Maintains live streaming connections for real-time wallet balance and transaction ledger updates.
+ */
 @Service
 @Slf4j
 public class WalletSseService {
@@ -29,6 +33,9 @@ public class WalletSseService {
     // Subscriptions for admins (to receive live ledger updates)
     private final List<SseEmitter> adminEmitters = new CopyOnWriteArrayList<>();
 
+    /**
+     * Executes subscribe operation.
+     */
     public SseEmitter subscribe(Long userId, String email, boolean isAdmin) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
@@ -102,6 +109,9 @@ public class WalletSseService {
         }
     }
 
+    /**
+     * Executes remove from all operation.
+     */
     private void removeFromAll(SseEmitter emitter) {
         userEmitters.forEach((key, list) -> list.remove(emitter));
         userEmitters.entrySet().removeIf(entry -> entry.getValue().isEmpty());
@@ -110,6 +120,9 @@ public class WalletSseService {
         adminEmitters.remove(emitter);
     }
 
+    /**
+     * Executes remove emitter operation.
+     */
     private void removeEmitter(Long userId, String email, boolean isAdmin, SseEmitter emitter) {
         if (userId != null) {
             List<SseEmitter> list = userEmitters.get(userId);
@@ -133,6 +146,9 @@ public class WalletSseService {
         }
     }
 
+    /**
+     * Executes send wallet update operation.
+     */
     public void sendWalletUpdate(Long userId, String email, Map<String, Object> data) {
         List<SseEmitter> targetEmitters = new CopyOnWriteArrayList<>();
 
@@ -221,6 +237,9 @@ public class WalletSseService {
         }
     }
 
+    /**
+     * Executes send wallet update operation.
+     */
     public void sendWalletUpdate(Long userId, com.nutrition.entity.WalletTransaction transaction,
             java.math.BigDecimal newBalance, String eventType) {
         Map<String, Object> payload = new java.util.HashMap<>();
@@ -249,6 +268,9 @@ public class WalletSseService {
         sendWalletUpdate(userId, email, payload);
     }
 
+    /**
+     * Executes send appointment update operation.
+     */
     public void sendAppointmentUpdate(Long userId, String email, Map<String, Object> data) {
         List<SseEmitter> targetEmitters = new CopyOnWriteArrayList<>();
 
@@ -282,6 +304,9 @@ public class WalletSseService {
         }
     }
 
+    /**
+     * Executes broadcast to admins operation.
+     */
     public void broadcastToAdmins(Map<String, Object> data) {
         if (adminEmitters.isEmpty())
             return;

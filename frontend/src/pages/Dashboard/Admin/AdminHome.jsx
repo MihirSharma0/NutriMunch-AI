@@ -1,9 +1,18 @@
+/**
+ * Platform Administration System Core
+ * Master administration dashboard displaying server uptime, database records,
+ * user distribution, and high-level platform telemetry.
+ */
 import React, { useEffect, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 
+/**
+ * AdminHome Component
+ * Central system telemetry and platform oversight control hub.
+ */
 const AdminHome = () => {
     const { user } = useContext(AuthContext);
 

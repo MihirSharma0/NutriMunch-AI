@@ -9,6 +9,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
+/**
+ * Diet Plan Management Controller.
+Provides endpoints for retrieving, deploying, deleting, and inspecting personalized and general weekly meal plans.
+ */
 @RestController
 @RequestMapping("/api/diet-plans")
 @RequiredArgsConstructor
@@ -19,6 +23,9 @@ public class DietPlanController {
     // In-memory persistent registry for published diet plans to sync instantly across sessions
     private static final java.util.List<java.util.Map<String, Object>> deployedPlansStore = new java.util.concurrent.CopyOnWriteArrayList<>();
 
+    /**
+     * Handles request to purge plans by author.
+     */
     public static void purgePlansByAuthor(Long userId, String email) {
         String idStr = String.valueOf(userId);
         String emailLower = email != null ? email.toLowerCase().trim() : "";
@@ -34,11 +41,17 @@ public class DietPlanController {
         });
     }
 
+    /**
+     * Handles request to get my diet plans.
+     */
     @GetMapping("/me")
     public ResponseEntity<List<DietPlanDto>> getMyDietPlans(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(dietPlanService.getMyDietPlans(userDetails.getId()));
     }
 
+    /**
+     * Handles request to get latest diet plan.
+     */
     @GetMapping("/me/latest")
     public ResponseEntity<DietPlanDto> getLatestDietPlan(@AuthenticationPrincipal CustomUserDetails userDetails) {
         DietPlanDto dto = dietPlanService.getLatestDietPlan(userDetails.getId());
@@ -48,6 +61,9 @@ public class DietPlanController {
         return ResponseEntity.ok(dto);
     }
 
+    /**
+     * Handles request to generate mock diet plan.
+     */
     @PostMapping("/me/generate-mock")
     public ResponseEntity<DietPlanDto> generateMockDietPlan(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -55,6 +71,9 @@ public class DietPlanController {
         return ResponseEntity.ok(dietPlanService.generateMockDietPlan(userDetails.getId(), dto));
     }
 
+    /**
+     * Handles request to save ai diet plan.
+     */
     @PostMapping("/me/save-ai")
     public ResponseEntity<DietPlanDto> saveAiDietPlan(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -119,6 +138,9 @@ public class DietPlanController {
         return deleteDietPlan(id);
     }
 
+    /**
+     * Handles request to get all diet plans for admin.
+     */
     @GetMapping("/all")
     public ResponseEntity<List<DietPlanDto>> getAllDietPlansForAdmin() {
         return ResponseEntity.ok(dietPlanService.getAllDietPlans());

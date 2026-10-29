@@ -1,9 +1,17 @@
+/**
+ * One-Time Password (OTP) Verification Page
+ * Verifies 6-digit email OTPs to activate new accounts and triggers onboarding flow.
+ */
 import React, { useState, useContext } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import OnboardingWizard from '../../components/OnboardingWizard';
 
+/**
+ * VerifyOtp Component
+ * 6-digit OTP code entry form with resend timer countdown and onboarding launch.
+ */
 const VerifyOtp = () => {
     const [searchParams] = useSearchParams();
     const emailParam = searchParams.get('email') || '';

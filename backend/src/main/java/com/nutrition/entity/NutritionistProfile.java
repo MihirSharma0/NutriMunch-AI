@@ -8,6 +8,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Data
+/**
+ * NutritionistProfile Entity.
+ * Stores clinical practice information for certified nutritionists including license number,
+ * verified status, biography, consultation rates, and specialization focus.
+ */
 @Entity
 @Table(name = "nutritionist_profiles")
 public class NutritionistProfile {

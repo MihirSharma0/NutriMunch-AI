@@ -11,6 +11,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Diet Plan Management Service.
+Handles business operations for 7-day meal plans, recipe ingredient calculations, and general vs exclusive patient plan deployments.
+ */
 @Service
 @RequiredArgsConstructor
 public class DietPlanService {
@@ -18,6 +22,9 @@ public class DietPlanService {
     private final DietPlanRepository dietPlanRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Executes get my diet plans operation.
+     */
     public List<DietPlanDto> getMyDietPlans(Long userId) {
         return dietPlanRepository.findByUserIdOrderByGeneratedDateDesc(userId)
             .stream()
@@ -25,12 +32,18 @@ public class DietPlanService {
             .collect(Collectors.toList());
     }
 
+    /**
+     * Executes get latest diet plan operation.
+     */
     public DietPlanDto getLatestDietPlan(Long userId) {
         return dietPlanRepository.findFirstByUserIdOrderByGeneratedDateDesc(userId)
             .map(this::mapToDto)
             .orElse(null);
     }
 
+    /**
+     * Executes generate mock diet plan operation.
+     */
     public DietPlanDto generateMockDietPlan(Long userId, DietPlanDto request) {
         User user = userRepository.findById(userId).orElseThrow();
         DietPlan plan = new DietPlan();
@@ -46,12 +59,18 @@ public class DietPlanService {
         return mapToDto(dietPlanRepository.save(plan));
     }
 
+    /**
+     * Executes delete diet plan operation.
+     */
     public void deleteDietPlan(Long id) {
         if (id != null && dietPlanRepository.existsById(id)) {
             dietPlanRepository.deleteById(id);
         }
     }
 
+    /**
+     * Executes get all diet plans operation.
+     */
     public List<DietPlanDto> getAllDietPlans() {
         return dietPlanRepository.findAll()
             .stream()
@@ -59,6 +78,9 @@ public class DietPlanService {
             .collect(Collectors.toList());
     }
 
+    /**
+     * Executes map to dto operation.
+     */
     private DietPlanDto mapToDto(DietPlan plan) {
         DietPlanDto dto = new DietPlanDto();
         dto.setId(plan.getId());

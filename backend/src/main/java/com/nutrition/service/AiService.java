@@ -23,6 +23,10 @@ import org.springframework.http.HttpMethod;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Gemini AI Integration Service.
+Interfaces with Google Gemini Generative AI models to synthesize structured 7-day diet plans, calculate macronutrient breakdowns, and analyze food images.
+ */
 @Service
 @RequiredArgsConstructor
 public class AiService {
@@ -44,6 +48,9 @@ public class AiService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
+    /**
+     * Executes generate diet plan operation.
+     */
     public String generateDietPlan(String goals, String allergies) {
         String safeGoals = (goals != null && !goals.isBlank()) ? goals.trim() : "Balanced Nutrition";
         String safeAllergies = (allergies != null && !allergies.isBlank()) ? allergies.trim() : "None";
@@ -107,6 +114,9 @@ public class AiService {
         return generateClinicalDietPlan(safeGoals, safeAllergies);
     }
 
+    /**
+     * Executes generate clinical diet plan operation.
+     */
     public String generateClinicalDietPlan(String goals, String allergies) {
         String safeGoals = (goals != null && !goals.isBlank()) ? goals.trim() : "Balanced Nutrition";
         String safeAllergies = (allergies != null && !allergies.isBlank()) ? allergies.trim() : "None";
@@ -409,6 +419,9 @@ public class AiService {
                 "category", "INVALID");
     }
 
+    /**
+     * Executes analyze food image operation.
+     */
     public String analyzeFoodImage(String imageUrl) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             return "No image source provided for analysis.";
@@ -438,6 +451,9 @@ public class AiService {
         return "Mock AI Image Analysis: The uploaded image looks like a healthy meal containing approximately 450 calories, high in protein.";
     }
 
+    /**
+     * Executes analyze food operation.
+     */
     public FoodAnalysisResponseDto analyzeFood(FoodAnalysisRequestDto request, String userEmail) {
         // Fetch user profile allergies if user logged in
         String userAllergiesStr = "";
@@ -557,6 +573,9 @@ public class AiService {
         return null;
     }
 
+    /**
+     * Executes call gemma api for ocr operation.
+     */
     private FoodAnalysisResponseDto callGemmaApiForOCR(FoodAnalysisRequestDto request, List<String> userAllergies,
             String dietType, Map<String, Object> offProduct) throws Exception {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/" + gemmaModel + ":generateContent?key="
@@ -674,6 +693,9 @@ public class AiService {
         return objectMapper.readValue(rawText, FoodAnalysisResponseDto.class);
     }
 
+    /**
+     * Executes call gemma text operation.
+     */
     private String callGemmaText(String prompt) {
         if (gemmaApiKey == null || gemmaApiKey.isBlank() || "mock-key".equals(gemmaApiKey)) {
             return null;
@@ -728,6 +750,9 @@ public class AiService {
         return null;
     }
 
+    /**
+     * Executes perform rule based analysis operation.
+     */
     private FoodAnalysisResponseDto performRuleBasedAnalysis(FoodAnalysisRequestDto request, List<String> userAllergies,
             String dietType, Map<String, Object> offProduct) {
         String inputType = request.getInputType() != null ? request.getInputType().toUpperCase() : "FOOD_IMAGE";
@@ -1344,6 +1369,9 @@ public class AiService {
         return list;
     }
 
+    /**
+     * Executes call open ai for food analysis operation.
+     */
     private FoodAnalysisResponseDto callOpenAiForFoodAnalysis(FoodAnalysisRequestDto request,
             List<String> userAllergies, String dietType) throws Exception {
         HttpHeaders headers = new HttpHeaders();
@@ -1385,6 +1413,9 @@ public class AiService {
         return objectMapper.readValue(content, FoodAnalysisResponseDto.class);
     }
 
+    /**
+     * Executes call open ai operation.
+     */
     private String callOpenAi(String prompt) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -1407,6 +1438,9 @@ public class AiService {
         }
     }
 
+    /**
+     * Executes get double from map operation.
+     */
     private double getDoubleFromMap(Map map, String... keys) {
         if (map == null)
             return 0.0;

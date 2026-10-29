@@ -1,5 +1,13 @@
+/**
+ * How It Works Section
+ * Visual multi-step guide explaining the NutriMunch nutrition calibration and consultation lifecycle.
+ */
 import React from 'react';
 
+/**
+ * HowItWorks Component
+ * Step-by-step sequential cards illustrating biometric setup, AI diet generation, and nutritionist oversight.
+ */
 const HowItWorks = () => {
     const steps = [
         {

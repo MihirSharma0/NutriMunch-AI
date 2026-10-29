@@ -1,3 +1,8 @@
+/**
+ * User Dashboard Home
+ * Main member hub providing high-level telemetry, clinical directives from nutritionists,
+ * active diet plan overview, daily macro targets, and quick navigation shortcuts.
+ */
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
@@ -5,6 +10,10 @@ import FeatureGate from '../../../components/FeatureGate';
 import api, { API_BASE_URL } from '../../../api/axios';
 import { normalizeAndDeduplicatePlans } from '../../../utils/dietPlanSync';
 
+/**
+ * DashboardHome Component
+ * Displays personalized user metrics, clinical notification alerts, and active nutrition regimen.
+ */
 const DashboardHome = () => {
     const navigate = useNavigate();
     const { user, token } = useContext(AuthContext);

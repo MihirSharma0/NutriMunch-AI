@@ -1,3 +1,8 @@
+/**
+ * User Consultations & Bookings Portal
+ * Telehealth booking management allowing patients to browse certified nutritionists,
+ * reserve consultation slots, process payments, and launch virtual video appointments.
+ */
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
@@ -6,6 +11,10 @@ import api, { API_BASE_URL } from '../../../api/axios';
 import { subscribeWalletSse } from '../../../utils/walletSse';
 import { getConsultationOutcome, describePayment } from '../../../utils/consultationHistory';
 
+/**
+ * Appointments Component
+ * Manages upcoming consultations, appointment booking wizard, payments, and historical records.
+ */
 const Appointments = () => {
     const navigate = useNavigate();
     const { user, token } = useContext(AuthContext);

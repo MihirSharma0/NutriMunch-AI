@@ -1,8 +1,19 @@
+/**
+ * Testimonial Submission & Management Form
+ * Allows verified platform users and nutritionists to draft, edit, review,
+ * and publish their personal transformation reviews and testimonials.
+ */
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { saveTestimonial, deleteTestimonial, getLocalTestimonials } from '../../services/testimonialService';
 
+/**
+ * Resolves the verified display badge title for the current authenticated user.
+ * 
+ * @param {Object} user - User profile object
+ * @returns {string} Display title (Standard User, Certified Nutritionist, etc.)
+ */
 const getVerifiedRoleForUser = (user) => {
     if (!user || !user.role) return 'Standard User';
     const r = String(user.role).toUpperCase();
@@ -15,6 +26,10 @@ const getVerifiedRoleForUser = (user) => {
     return 'Standard User';
 };
 
+/**
+ * ShareYourStoryForm Component
+ * Interactive submission form for posting transformation stories, ratings, and outcomes.
+ */
 const ShareYourStoryForm = () => {
     const { user } = useContext(AuthContext);
 

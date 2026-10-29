@@ -1,6 +1,15 @@
+/**
+ * Administrator Appointment Refund Management
+ * Audit console for inspecting disputed consultations, reviewing escrow status,
+ * and executing authorized refunds back to user wallets.
+ */
 import React, { useCallback, useEffect, useState } from 'react';
 import api from '../../../api/axios';
 
+/**
+ * AppointmentRefundManagement Component
+ * Admin tool for reviewing consultation dispute cases and executing financial refunds.
+ */
 const AppointmentRefundManagement = () => {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);

@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Consultation Appointment Controller.
+Manages consultation bookings, slot availability, session status transitions, and escrow settlements.
+ */
 @RestController
 @RequestMapping("/api/appointments")
 @RequiredArgsConstructor
@@ -18,6 +22,9 @@ public class AppointmentController {
 
     private final AppointmentService appointmentService;
 
+    /**
+     * Handles request to get my appointments.
+     */
     @GetMapping("/me")
     public ResponseEntity<List<AppointmentDto>> getMyAppointments(@AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(appointmentService.getMyAppointments(userDetails.getId(), userDetails.getUser().getRole()));
@@ -28,6 +35,9 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getAvailableNutritionists());
     }
 
+    /**
+     * Handles request to book appointment.
+     */
     @PostMapping("/book")
     public ResponseEntity<?> bookAppointment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -45,6 +55,9 @@ public class AppointmentController {
         }
     }
 
+    /**
+     * Handles request to update status.
+     */
     @PutMapping("/{id}/status")
     public ResponseEntity<AppointmentDto> updateStatus(
             @PathVariable Long id,
@@ -58,6 +71,9 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.updateAppointmentStatus(id, status, meetingLink, notes, callerId, isAdmin));
     }
 
+    /**
+     * Handles request to request cancellation.
+     */
     @PostMapping("/{id}/request-cancel")
     public ResponseEntity<AppointmentDto> requestCancellation(
             @PathVariable Long id,
@@ -67,6 +83,9 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.requestCancellation(id, userDetails.getId(), reason));
     }
 
+    /**
+     * Handles request to delete appointment.
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAppointment(
             @PathVariable Long id,

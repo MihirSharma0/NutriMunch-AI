@@ -6,6 +6,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * NutritionRule Entity.
+ * Represents nutritional rules, dietary guidelines, and clinical constraints
+ * utilized by the rule engine and AI meal plan generator.
+ */
 @Entity
 @Table(name = "nutrition_rules")
 @Data

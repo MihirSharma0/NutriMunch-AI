@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * Certified Nutritionist Profile Controller.
+Manages clinical credentials, medical licensing data, consultation fees, and professional biographies.
+ */
 @RestController
 @RequestMapping("/api/nutritionist/profile")
 @RequiredArgsConstructor
@@ -21,6 +25,9 @@ public class NutritionistProfileController {
     private final NutritionistProfileRepository nutritionistProfileRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Handles request to get profile.
+     */
     @GetMapping
     public ResponseEntity<?> getProfile() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -69,6 +76,9 @@ public class NutritionistProfileController {
         return ResponseEntity.ok(map);
     }
 
+    /**
+     * Handles request to update profile.
+     */
     @PutMapping
     public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> body) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

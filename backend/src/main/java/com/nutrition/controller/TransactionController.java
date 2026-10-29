@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Financial Transaction Ledger Controller.
+Exposes endpoints for querying double-entry wallet transactions and consultation audit logs.
+ */
 @RestController
 @RequestMapping("/api/transactions")
 @RequiredArgsConstructor

@@ -11,6 +11,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Biometric Progress Logging Service.
+Manages user daily fluid intake logs, body weight milestones, and consumed calorie records.
+ */
 @Service
 @RequiredArgsConstructor
 public class ProgressLogService {
@@ -18,6 +22,9 @@ public class ProgressLogService {
     private final ProgressLogRepository progressLogRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Executes get my logs operation.
+     */
     public List<ProgressLogDto> getMyLogs(Long userId) {
         return progressLogRepository.findByUserIdOrderByLogDateDesc(userId)
             .stream()
@@ -25,6 +32,9 @@ public class ProgressLogService {
             .collect(Collectors.toList());
     }
 
+    /**
+     * Executes save log operation.
+     */
     public ProgressLogDto saveLog(Long userId, ProgressLogDto dto) {
         ProgressLog log = progressLogRepository.findByUserIdAndLogDate(userId, dto.getLogDate())
             .orElseGet(ProgressLog::new);
@@ -44,6 +54,9 @@ public class ProgressLogService {
         return mapToDto(progressLogRepository.save(log));
     }
 
+    /**
+     * Executes map to dto operation.
+     */
     private ProgressLogDto mapToDto(ProgressLog log) {
         ProgressLogDto dto = new ProgressLogDto();
         dto.setId(log.getId());

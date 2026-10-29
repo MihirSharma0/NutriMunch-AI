@@ -1,8 +1,17 @@
+/**
+ * Account Registration Page
+ * Collects new user details, role selection (User vs Nutritionist),
+ * credentials/specialization info for dietitians, and dispatches verification OTP.
+ */
 import React, { useState, useContext, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, ArrowRight, Sparkles, Camera, Check, User, ShieldCheck, X, Eye, EyeOff } from 'lucide-react';
 
+/**
+ * Register Component
+ * Interactive signup form with profile picture preview, role toggle, and validation.
+ */
 const Register = () => {
     const [formData, setFormData] = useState({
         firstName: '',

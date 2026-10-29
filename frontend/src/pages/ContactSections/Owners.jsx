@@ -1,7 +1,12 @@
+/**
+ * Founding Team & Executive Leadership Section
+ * Displays profiles, executive roles, and biographies of the founding leadership team.
+ */
 import React from 'react';
 
 // PLACEHOLDER DATA: names, contact details and avatars below are dummy values.
 // Replace them with the real owners' details before going live.
+/** Founding leadership profiles and executive biographies. */
 const OWNERS = [
     {
         name: 'Mihir Sharma',
@@ -49,6 +54,10 @@ const OWNERS = [
     }
 ];
 
+/**
+ * Owners Component
+ * Renders leadership team member cards with social profiles and bios.
+ */
 const Owners = () => {
     return (
         <section className="max-w-7xl mx-auto mt-20 relative z-20">

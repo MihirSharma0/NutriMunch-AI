@@ -1,7 +1,15 @@
+/**
+ * Email Verification Token Consumer
+ * Verifies email confirmation links via token query param on registration.
+ */
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import axios from '../../api/axios';
 
+/**
+ * VerifyEmail Component
+ * Processes token validation on load and presents status feedback to the user.
+ */
 const VerifyEmail = () => {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');

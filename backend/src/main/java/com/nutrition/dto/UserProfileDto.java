@@ -3,6 +3,10 @@ package com.nutrition.dto;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+/**
+ * Data Transfer Object for patient biometric profiles and health targets.
+ * Transmits age, height, weight, dietary lifestyle, allergen exclusions, and hydration goals.
+ */
 @Data
 public class UserProfileDto {
     private Long id;

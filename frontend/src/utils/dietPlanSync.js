@@ -1,6 +1,16 @@
+/**
+ * Diet Plan Synchronization & Storage Utilities
+ * Provides resilient cross-tab synchronization (BroadcastChannel + LocalStorage)
+ * and reconciliation between backend REST endpoints and local offline caches.
+ */
 // Diet Plan Synchronization & Permanent Deletion Utility
 // Provides single-source-of-truth syncing across Nutritionist, User Dashboard, and Admin Portal
 
+/**
+ * Retrieves the set of diet plan IDs marked as deleted from localStorage.
+ * 
+ * @returns {Set<string>} Set of deleted plan ID strings
+ */
 export const getDeletedPlanIds = () => {
     try {
         const stored = localStorage.getItem('nutrimunch_deleted_plan_ids');
@@ -12,6 +22,11 @@ export const getDeletedPlanIds = () => {
     }
 };
 
+/**
+ * Retrieves the set of normalized plan titles marked as deleted from localStorage.
+ * 
+ * @returns {Set<string>} Set of deleted plan title strings
+ */
 export const getDeletedPlanTitles = () => {
     try {
         const stored = localStorage.getItem('nutrimunch_deleted_plan_titles');
@@ -23,6 +38,14 @@ export const getDeletedPlanTitles = () => {
     }
 };
 
+/**
+ * Permanently purges a diet plan from backend storage, active session caches,
+ * and local storage registries, broadcasting removal across browser tabs.
+ * 
+ * @param {Object|string|number} planOrId - Plan object or identifier to remove
+ * @param {Object} [apiInstance=null] - Optional Axios instance for remote API calls
+ * @returns {Promise<boolean>} True if deletion completed
+ */
 export const permanentlyDeleteDietPlan = async (planOrId, apiInstance = null) => {
     if (!planOrId) return false;
 
@@ -176,6 +199,20 @@ export const permanentlyDeleteDietPlan = async (planOrId, apiInstance = null) =>
     return true;
 };
 
+/**
+ * Merges and normalizes diet plans from remote endpoints and local storage caches,
+ * applying scope filters (GENERAL vs EXCLUSIVE for current user) and deduplicating by ID/title.
+ * 
+ * @param {Object} params - Configuration and filter options
+ * @param {Array<Object>} params.apiPlans - Plans returned by backend API
+ * @param {Array<Object>} params.localHistory - Cached history plans
+ * @param {Object|null} params.generalPlan - Active general diet plan
+ * @param {Object|null} params.exclusivePlan - Active exclusive diet plan for user
+ * @param {string|number} params.currentUserId - Authenticated user ID
+ * @param {string} params.currentUserEmail - Authenticated user email
+ * @param {string} params.currentUserName - Authenticated user display name
+ * @returns {Array<Object>} Normalized, deduplicated, and sorted diet plan list
+ */
 export const normalizeAndDeduplicatePlans = ({
     rawList = [],
     currentUserId = '',

@@ -1,6 +1,15 @@
+/**
+ * Administrator Testimonial Moderation
+ * Review and moderation queue for approving, editing, featuring, or deleting
+ * client transformation reviews.
+ */
 import React, { useState, useEffect } from 'react';
 import { fetchAllTestimonials, deleteTestimonial, saveTestimonial } from '../../../services/testimonialService';
 
+/**
+ * TestimonialManagement Component
+ * Moderation table for approving, reviewing, and curating client testimonials.
+ */
 const TestimonialManagement = () => {
     const [testimonials, setTestimonials] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');

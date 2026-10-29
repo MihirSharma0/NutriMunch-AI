@@ -4,6 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object for successful authentication responses.
+ * Encapsulates the generated JWT token, user identity attributes, and assigned role.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

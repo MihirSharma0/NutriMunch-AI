@@ -5,6 +5,11 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * Notification Entity.
+ * Represents in-app notifications and alerts dispatched to users for appointment updates,
+ * incoming chat messages, wallet transactions, and clinical announcements.
+ */
 @Entity
 @Table(name = "notifications")
 @Data

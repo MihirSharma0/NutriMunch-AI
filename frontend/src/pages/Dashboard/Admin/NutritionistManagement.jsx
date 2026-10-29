@@ -1,9 +1,18 @@
+/**
+ * Administrator Nutritionist Verification & Management
+ * Verification queue for reviewing nutritionist license submissions, approving verified practitioners,
+ * and suspending non-compliant accounts.
+ */
 import React, { useEffect, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 
+/**
+ * NutritionistManagement Component
+ * Table and modal interface for approving, verifying, or revoking nutritionist licenses.
+ */
 const NutritionistManagement = () => {
     const { user } = useContext(AuthContext);
 

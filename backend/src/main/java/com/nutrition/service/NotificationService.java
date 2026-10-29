@@ -25,6 +25,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * In-App Notification Service.
+Manages user notification dispatch, unread notification aggregations, and mark-read transactions.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -119,6 +123,9 @@ public class NotificationService {
         }, "chat notification for user " + recipientId);
     }
 
+    /**
+     * Executes get notifications for user operation.
+     */
     public List<NotificationDto> getNotificationsForUser(Long userId, Role role) {
         if (userId == null) return List.of();
         List<Notification> list = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -128,6 +135,9 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Executes get unread count operation.
+     */
     public long getUnreadCount(Long userId) {
         if (userId == null) return 0L;
         return notificationRepository.countByUser_IdAndReadStatusFalse(userId);
@@ -197,6 +207,9 @@ public class NotificationService {
         return first;
     }
 
+    /**
+     * Executes build notification operation.
+     */
     private Notification buildNotification(NotificationDto dto, User sender, User recipient) {
         Notification notification = new Notification();
         notification.setSender(sender);
@@ -210,6 +223,9 @@ public class NotificationService {
         return notification;
     }
 
+    /**
+     * Executes mark as read operation.
+     */
     public void markAsRead(Long notificationId, Long userId) {
         Optional<Notification> nOpt = notificationRepository.findById(notificationId);
         nOpt.ifPresent(n -> {
@@ -221,6 +237,9 @@ public class NotificationService {
         });
     }
 
+    /**
+     * Executes mark all as read for user operation.
+     */
     @Transactional
     public void markAllAsReadForUser(Long userId) {
         if (userId != null) {
@@ -235,6 +254,9 @@ public class NotificationService {
         notificationRepository.markConversationNotificationsRead(userId, conversationId);
     }
 
+    /**
+     * Executes delete notification operation.
+     */
     public void deleteNotification(Long notificationId, Long userId) {
         Notification n = notificationRepository.findById(notificationId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -244,6 +266,9 @@ public class NotificationService {
         notificationRepository.delete(n);
     }
 
+    /**
+     * Executes delete all notifications for user operation.
+     */
     public void deleteAllNotificationsForUser(Long userId) {
         if (userId != null) {
             List<Notification> list = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -251,10 +276,16 @@ public class NotificationService {
         }
     }
 
+    /**
+     * Executes delete all notifications operation.
+     */
     public void deleteAllNotifications() {
         // Retained for backward compatibility without dropping entire database table
     }
 
+    /**
+     * Executes run after commit operation.
+     */
     private static void runAfterCommit(Runnable action, String description) {
         Runnable wrapped = () -> {
             try {
@@ -265,6 +296,9 @@ public class NotificationService {
         };
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+    /**
+     * Executes after commit operation.
+     */
                 @Override
                 public void afterCommit() {
                     wrapped.run();
@@ -275,12 +309,18 @@ public class NotificationService {
         }
     }
 
+    /**
+     * Executes truncate operation.
+     */
     private static String truncate(String value) {
         if (value == null) return "";
         String trimmed = value.trim();
         return trimmed.length() <= PREVIEW_LENGTH ? trimmed : trimmed.substring(0, PREVIEW_LENGTH) + "...";
     }
 
+    /**
+     * Executes map to dto operation.
+     */
     private NotificationDto mapToDto(Notification entity) {
         NotificationDto dto = new NotificationDto();
         dto.setId(entity.getId());
@@ -304,6 +344,9 @@ public class NotificationService {
         return dto;
     }
 
+    /**
+     * Executes calculate time ago operation.
+     */
     private String calculateTimeAgo(LocalDateTime createdAt) {
         if (createdAt == null) return "Just now";
         long minutes = ChronoUnit.MINUTES.between(createdAt, LocalDateTime.now());

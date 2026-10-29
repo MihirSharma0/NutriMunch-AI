@@ -1,3 +1,7 @@
+/**
+ * User Roles & Platform Architecture Page
+ * Explains access privileges, features, and workflows across Patient, Certified Nutritionist, and Admin roles.
+ */
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,6 +23,10 @@ import {
     Lock
 } from 'lucide-react';
 
+/**
+ * UserRoles Component
+ * Interactive comparison matrix detailing features available for patients, nutritionists, and administrators.
+ */
 const UserRoles = () => {
     const [activeTab, setActiveTab] = useState('user'); // 'user' | 'nutritionist'
 

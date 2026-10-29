@@ -1,3 +1,8 @@
+/**
+ * Global Application Layout
+ * Outer layout frame providing animated background starfields, ambient gradient lighting,
+ * persistent navigation header, live wallet SSE synchronization, dynamic router outlet, and footer.
+ */
 import React, { useContext, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
@@ -7,6 +12,11 @@ import Starfield from '../components/Starfield';
 import { AuthContext } from '../context/AuthContext';
 import { subscribeWalletSse } from '../utils/walletSse';
 
+/**
+ * GlobalLayout Component
+ * Renders the persistent shell around all child routes, managing wallet SSE subscriptions
+ * and adjusting header/footer visibility for specialized pages like consultation chat.
+ */
 const GlobalLayout = () => {
     const { user } = useContext(AuthContext);
     const { pathname } = useLocation();

@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 
+/**
+ * Application Bootstrap Data Initializer.
+ * Seeds or synchronizes the master administrator account on application startup.
+ */
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
@@ -24,6 +28,11 @@ public class DataInitializer implements CommandLineRunner {
     @Value("${app.admin.password:}")
     private String adminPassword;
 
+    /**
+     * Executes bootstrapping logic on startup to ensure an administrator account is provisioned.
+     *
+     * @param args incoming command-line execution arguments
+     */
     @Override
     public void run(String... args) {
         if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
@@ -33,6 +42,12 @@ public class DataInitializer implements CommandLineRunner {
         createOrUpdateAdmin(adminEmail.trim().toLowerCase(Locale.ROOT), adminPassword);
     }
 
+    /**
+     * Creates or updates the administrator account with encrypted credentials and ADMIN role.
+     *
+     * @param email administrator email address
+     * @param password raw administrator password to hash and persist
+     */
     private void createOrUpdateAdmin(String email, String password) {
         User admin = userRepository.findByEmail(email)
                 .orElseGet(() -> userRepository.findAll().stream()

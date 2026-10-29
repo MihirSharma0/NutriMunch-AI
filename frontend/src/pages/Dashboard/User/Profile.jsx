@@ -1,3 +1,8 @@
+/**
+ * User Biometric Profile & Preferences Editor
+ * Configures biometric parameters (height, weight, activity multiplier),
+ * dietary lifestyle selections, allergen exclusions, and custom hydration goals.
+ */
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
@@ -46,6 +51,10 @@ const DEFAULT_TARGETS = {
     zinc: 11
 };
 
+/**
+ * Profile Component
+ * Form allowing members to review and modify their physical metrics, dietary requirements, and health targets.
+ */
 const Profile = () => {
     const { user } = useContext(AuthContext);
 

@@ -18,6 +18,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.time.LocalDateTime;
 import java.util.*;
 
+/**
+ * Consultation Chat Service.
+Coordinates messaging business rules, participant access verification, message persistence, thread creation, and unread badges.
+ */
 @Service
 @RequiredArgsConstructor
 public class ChatService {
@@ -102,6 +106,9 @@ public class ChatService {
                 .toList();
     }
 
+    /**
+     * Executes list conversations operation.
+     */
     @Transactional
     public List<ConversationDto> listConversations(Long userId, Role role) {
         List<Conversation> conversations;
@@ -119,6 +126,9 @@ public class ChatService {
         return conversationDtos(refreshed, userId);
     }
 
+    /**
+     * Executes list nutritionist conversation page operation.
+     */
     @Transactional
     public ConversationPageDto listNutritionistConversationPage(Long userId, Role role, int requestedPage, int requestedSize) {
         if (role != Role.NUTRITIONIST) deny();
@@ -138,16 +148,25 @@ public class ChatService {
         return result;
     }
 
+    /**
+     * Executes clamp page size operation.
+     */
     private static int clampPageSize(int requestedSize) {
         return Math.max(1, Math.min(50, requestedSize));
     }
 
+    /**
+     * Executes history operation.
+     */
     @Transactional
     public ChatHistoryDto history(Long conversationId, Long userId, Long before, int requestedLimit) {
         Conversation c = lifecycleService.refreshLifecycle(authorized(conversationId, userId));
         return historyForConversation(c, before, requestedLimit);
     }
 
+    /**
+     * Executes history for conversation operation.
+     */
     private ChatHistoryDto historyForConversation(Conversation c, Long before, int requestedLimit) {
         int limit = Math.max(1, Math.min(MAX_PAGE_SIZE, requestedLimit <= 0 ? 30 : requestedLimit));
         var page = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "id"));
@@ -160,11 +179,17 @@ public class ChatService {
         return result;
     }
 
+    /**
+     * Executes get conversation operation.
+     */
     @Transactional
     public ConversationDto getConversation(Long conversationId, Long userId) {
         return conversationDto(lifecycleService.refreshLifecycle(authorized(conversationId, userId)), userId);
     }
 
+    /**
+     * Executes send operation.
+     */
     @Transactional
     public ChatMessageDto send(Long conversationId, Long userId, ChatMessageRequest request) {
         Conversation c = lifecycleService.refreshLifecycle(authorized(conversationId, userId));
@@ -224,6 +249,9 @@ public class ChatService {
         return dto;
     }
 
+    /**
+     * Executes mark read operation.
+     */
     @Transactional
     public void markRead(Long conversationId, Long userId) {
         authorized(conversationId, userId);
@@ -231,6 +259,9 @@ public class ChatService {
         notificationService.markConversationNotificationsRead(userId, conversationId);
     }
 
+    /**
+     * Executes end conversation operation.
+     */
     @Transactional
     public ConversationDto endConversation(Long conversationId, Long userId, Role role) {
         Conversation conversation = authorized(conversationId, userId);
@@ -239,6 +270,9 @@ public class ChatService {
         return conversationDto(closed, userId);
     }
 
+    /**
+     * Executes reopen conversation operation.
+     */
     @Transactional
     public ConversationDto reopenConversation(Long conversationId, Long userId, Role role) {
         Conversation conversation = authorized(conversationId, userId);
@@ -289,8 +323,14 @@ public class ChatService {
         return new UnreadSummaryDto(total, perConversation);
     }
 
+    /**
+     * Executes authorized conversation operation.
+     */
     public Conversation authorizedConversation(Long id, Long userId) { return authorized(id, userId); }
 
+    /**
+     * Executes authorized operation.
+     */
     private Conversation authorized(Long id, Long userId) {
         Conversation c = conversationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found"));
@@ -315,12 +355,18 @@ public class ChatService {
         }
     }
 
+    /**
+     * Executes after commit operation.
+     */
     private static void afterCommit(Runnable action) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             action.run();
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+    /**
+     * Executes after commit operation.
+     */
             @Override
             public void afterCommit() {
                 action.run();
@@ -328,8 +374,14 @@ public class ChatService {
         });
     }
 
+    /**
+     * Executes deny operation.
+     */
     private static void deny() { throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a conversation participant"); }
 
+    /**
+     * Executes conversation dto operation.
+     */
     private ConversationDto conversationDto(Conversation c, Long viewerId) {
         ConversationDto d = new ConversationDto();
         d.setId(c.getId());
@@ -357,6 +409,9 @@ public class ChatService {
         return d;
     }
 
+    /**
+     * Executes conversation dtos operation.
+     */
     private List<ConversationDto> conversationDtos(List<Conversation> conversations, Long viewerId) {
         if (conversations.isEmpty()) return List.of();
         List<Long> ids = conversations.stream().map(Conversation::getId).toList();
@@ -373,6 +428,9 @@ public class ChatService {
                 .toList();
     }
 
+    /**
+     * Executes display name operation.
+     */
     private static String displayName(User user) {
         if (user == null) return "";
         String name = ((user.getFirstName() == null ? "" : user.getFirstName()) + " " +
@@ -380,6 +438,9 @@ public class ChatService {
         return name.isEmpty() ? user.getEmail() : name;
     }
 
+    /**
+     * Executes message dto operation.
+     */
     private ChatMessageDto messageDto(ChatMessage m) {
         ChatMessageDto d = new ChatMessageDto();
         d.setId(m.getId());

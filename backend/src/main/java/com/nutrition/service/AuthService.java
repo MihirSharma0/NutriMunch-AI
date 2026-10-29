@@ -40,6 +40,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import com.nutrition.security.CustomUserDetails;
 
+/**
+ * Authentication and Security Service.
+Handles user credential validation, password hashing, JWT token issuance, OTP verification, and Google OAuth SSO.
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -63,6 +67,9 @@ public class AuthService {
     @Value("${google.client.id}")
     private String googleClientId;
 
+    /**
+     * Executes authenticate user operation.
+     */
     public String authenticateUser(LoginRequest loginRequest) {
         String cleanEmail = loginRequest.getEmail() != null
                 ? loginRequest.getEmail().trim().toLowerCase(Locale.ROOT)
@@ -91,6 +98,9 @@ public class AuthService {
         return jwtUtils.generateJwtToken(authentication);
     }
 
+    /**
+     * Executes authenticate with google operation.
+     */
     public String authenticateWithGoogle(GoogleLoginRequest request) {
         String accessToken = request.getCredential();
         String roleStr = request.getRole();
@@ -178,6 +188,9 @@ public class AuthService {
         }
     }
 
+    /**
+     * Executes register user operation.
+     */
     public void registerUser(RegisterRequest signUpRequest) {
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             User existingUser = userRepository.findByEmail(signUpRequest.getEmail()).orElse(null);
@@ -250,6 +263,9 @@ public class AuthService {
         }
     }
 
+    /**
+     * Executes verify email operation.
+     */
     public boolean verifyEmail(String token) {
         VerificationToken verificationToken = verificationTokenRepository.findByToken(token).orElse(null);
         if (verificationToken == null || verificationToken.getExpiryDate().isBefore(LocalDateTime.now())) {
@@ -263,6 +279,9 @@ public class AuthService {
         return true;
     }
 
+    /**
+     * Executes verify otp operation.
+     */
     public AuthResponse verifyOtp(String email, String otp) {
         if (email == null) {
             return null;
@@ -315,6 +334,9 @@ public class AuthService {
                 user.getRole().name());
     }
 
+    /**
+     * Executes resend otp operation.
+     */
     public void resendOtp(String email) {
         if (email != null) {
             OTP_ATTEMPTS.remove(email.toLowerCase().trim());
@@ -334,6 +356,9 @@ public class AuthService {
         }
     }
 
+    /**
+     * Executes change password operation.
+     */
     public boolean changePassword(Long userId, String currentPassword, String newPassword) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
@@ -344,6 +369,9 @@ public class AuthService {
         return true;
     }
 
+    /**
+     * Executes request password reset operation.
+     */
     public void requestPasswordReset(String email) {
         String normalizedEmail = email.toLowerCase().trim();
         User user = userRepository.findByEmail(normalizedEmail)
@@ -362,6 +390,9 @@ public class AuthService {
         mailService.sendPasswordResetEmail(user.getEmail(), token);
     }
 
+    /**
+     * Executes reset password operation.
+     */
     public boolean resetPassword(String token, String newPassword) {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token).orElse(null);
         if (resetToken == null || resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {

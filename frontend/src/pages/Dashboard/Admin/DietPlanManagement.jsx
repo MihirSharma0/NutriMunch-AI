@@ -1,3 +1,8 @@
+/**
+ * Administrator Diet Plan Management
+ * System registry manager for auditing, verifying, promoting, or purging diet plans
+ * created across the platform by AI and certified nutritionists.
+ */
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
@@ -5,6 +10,10 @@ import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import { permanentlyDeleteDietPlan, normalizeAndDeduplicatePlans } from '../../../utils/dietPlanSync';
 
+/**
+ * DietPlanManagement Component
+ * Master diet plans table providing search, inspection modal, and deletion controls.
+ */
 const DietPlanManagement = () => {
     const { user } = useContext(AuthContext);
     const [plans, setPlans] = useState([]);

@@ -1,5 +1,14 @@
+/**
+ * Interactive Background Starfield
+ * Canvas animation component rendering an interactive starfield with physics-driven particles
+ * responsive to window dimensions and mouse cursor movement.
+ */
 import React, { useEffect, useRef } from 'react';
 
+/**
+ * Starfield Component
+ * Renders an animated particle field simulating a starry cosmic space environment.
+ */
 const Starfield = () => {
     const canvasRef = useRef(null);
 

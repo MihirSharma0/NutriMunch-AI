@@ -18,6 +18,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Authentication and Identity Controller.
+Handles user login, Google OAuth SSO, registration, email verification, OTP confirmation, and password recovery.
+ */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -26,6 +30,9 @@ public class AuthController {
     private final AuthService authService;
     private final UserRepository userRepository;
 
+    /**
+     * Handles request to authenticate user.
+     */
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
@@ -51,6 +58,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Handles request to authenticate with google.
+     */
     @PostMapping("/google")
     public ResponseEntity<?> authenticateWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
         try {
@@ -74,6 +84,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Handles request to register user.
+     */
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest signUpRequest) {
         try {
@@ -84,6 +97,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Handles request to verify email.
+     */
     @GetMapping("/verify")
     public ResponseEntity<?> verifyEmail(@RequestParam("token") String token) {
         boolean isVerified = authService.verifyEmail(token);
@@ -94,6 +110,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Handles request to forgot password.
+     */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         try {
@@ -104,6 +123,9 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("A password reset link has been sent to your registered email."));
     }
 
+    /**
+     * Handles request to reset password.
+     */
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         boolean isReset = authService.resetPassword(request.getToken(), request.getNewPassword());
@@ -114,6 +136,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Handles request to verify otp.
+     */
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@Valid @RequestBody com.nutrition.dto.OtpVerificationRequest request) {
         com.nutrition.dto.AuthResponse response = authService.verifyOtp(request.getEmail(), request.getOtp());
@@ -124,6 +149,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Handles request to resend otp.
+     */
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestParam("email") String email) {
         try {
@@ -134,6 +162,9 @@ public class AuthController {
         }
     }
 
+    /**
+     * Handles request to change password.
+     */
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@Valid @RequestBody com.nutrition.dto.ChangePasswordRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

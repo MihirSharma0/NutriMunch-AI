@@ -1,6 +1,19 @@
+/**
+ * Client Testimonials Carousel/Grid Section
+ * Fetches and displays approved client reviews with star ratings and transformation results.
+ */
 import React, { useState, useEffect } from 'react';
 import { fetchAllTestimonials } from '../../services/testimonialService';
 
+/**
+ * ClientTestimonials Component
+ * Renders verified testimonial cards with avatar, rating, and transformation quote.
+ * 
+ * @param {Object} props - Component properties
+ * @param {boolean} [props.showHeader=true] - Whether to display section header
+ * @param {boolean} [props.showAll=true] - Whether to render all items or limit
+ * @param {number} [props.limit=6] - Max items to render when showAll is false
+ */
 const ClientTestimonials = ({ showHeader = true, showAll = true, limit = 6 }) => {
     const [testimonials, setTestimonials] = useState([]);
 

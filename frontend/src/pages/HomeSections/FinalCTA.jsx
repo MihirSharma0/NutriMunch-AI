@@ -1,7 +1,15 @@
+/**
+ * Final Call To Action (CTA) Section
+ * Dynamic closing banner rendering context-aware prompts depending on authenticated role.
+ */
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 
+/**
+ * FinalCTA Component
+ * Renders role-tailored callout cards guiding users to sign up, manage clients, or review telemetry.
+ */
 const FinalCTA = () => {
     const { user } = useContext(AuthContext);
     const role = String(user?.role || '').toUpperCase().replace('ROLE_', '');

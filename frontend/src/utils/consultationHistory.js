@@ -1,14 +1,30 @@
-// Shared consultation-history rules for the patient (Appointments) and nutritionist (Schedule) pages.
-// The backend never marks sessions "Completed", so the outcome is derived from status + date.
+/**
+ * Consultation History Utility
+ * Shared consultation-history rules for the patient (Appointments) and nutritionist (Schedule) pages.
+ * Derives completed/expired outcomes based on appointment timestamps and status transitions.
+ */
 
+/** List of appointment statuses representing confirmed/active appointments. */
 const CONFIRMED_STATES = ['CONFIRMED', 'ACCEPTED', 'SCHEDULED', 'APPROVED', 'ONGOING', 'DECLINE_CANCELLATION', 'REJECT_CANCELLATION'];
 
+/**
+ * Evaluates whether an appointment is scheduled in the past.
+ * 
+ * @param {Object} apt - Appointment record containing appointmentTime
+ * @returns {boolean} True if appointment time has passed
+ */
 const isPastAppointment = (apt) => {
     const t = new Date(apt?.appointmentTime || '').getTime();
     return !isNaN(t) && t <= Date.now();
 };
 
-// UPCOMING | PENDING | CANCEL_REQUESTED | COMPLETED | CANCELLED | NUTRITIONIST_CANCELLED | DECLINED | EXPIRED
+/**
+ * Resolves the display outcome status for an appointment based on its current status and time.
+ * Outcomes: UPCOMING | PENDING | CANCEL_REQUESTED | COMPLETED | CANCELLED | NUTRITIONIST_CANCELLED | DECLINED | EXPIRED
+ * 
+ * @param {Object} apt - Appointment object
+ * @returns {string} Normalized outcome category
+ */
 export const getConsultationOutcome = (apt) => {
     const status = String(apt?.status || '').toUpperCase();
     const past = isPastAppointment(apt);
@@ -23,9 +39,15 @@ export const getConsultationOutcome = (apt) => {
     return past ? 'COMPLETED' : 'UPCOMING';
 };
 
-// Finished consultations: anything that can no longer change
+/**
+ * Determines whether a consultation outcome belongs in terminal history.
+ * 
+ * @param {string} outcome - Outcome state string
+ * @returns {boolean} True if consultation is finalized and cannot change
+ */
 export const isHistoryOutcome = (outcome) => ['COMPLETED', 'CANCELLED', 'NUTRITIONIST_CANCELLED', 'DECLINED', 'EXPIRED'].includes(outcome);
 
+/** UI badge configuration mappings (label, icon, CSS classes) for consultation outcomes. */
 export const OUTCOME_BADGES = {
     COMPLETED: { label: 'Completed', icon: 'task_alt', style: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
     CANCELLED: { label: 'Cancelled', icon: 'cancel', style: 'bg-red-500/20 text-red-400 border-red-500/30' },
@@ -37,7 +59,12 @@ export const OUTCOME_BADGES = {
     CANCEL_REQUESTED: { label: 'Cancel Pending', icon: 'hourglass_top', style: 'bg-amber-500/20 text-amber-300 border-amber-500/40' }
 };
 
-// Paid amount and what happened to it, for history rows
+/**
+ * Extracts and formats the paid amount and escrow state for an appointment history row.
+ * 
+ * @param {Object} apt - Appointment record with escrow/fee fields
+ * @returns {Object|null} Object containing amount and state description, or null if no fee
+ */
 export const describePayment = (apt) => {
     const amount = Number(apt?.escrowAmount ?? apt?.sessionFee ?? 0);
     if (!amount) return null;

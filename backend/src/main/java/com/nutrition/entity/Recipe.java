@@ -8,6 +8,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Data
+/**
+ * Recipe Entity.
+ * Stores nutritional recipes with calorie counts, macronutrient ratios, preparation instructions,
+ * and allergen classifications.
+ */
 @Entity
 @Table(name = "recipes")
 public class Recipe {

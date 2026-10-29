@@ -1,3 +1,8 @@
+/**
+ * Root Application Component
+ * Defines the React Router routing architecture, providers (OAuth, React Query, Auth Context),
+ * scroll reset behaviors, and protected route boundaries for the application.
+ */
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
@@ -51,6 +56,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
+/**
+ * ScrollToTop
+ * Utility component that listens to router location changes and resets
+ * the browser window scroll position to the top-left on navigation.
+ */
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -67,6 +77,11 @@ function ScrollToTop() {
 
 const queryClient = new QueryClient();
 
+/**
+ * App
+ * Main application component configuring query clients, authentication context,
+ * OAuth providers, and application route mappings across guest, user, nutritionist, and admin portals.
+ */
 function App() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 

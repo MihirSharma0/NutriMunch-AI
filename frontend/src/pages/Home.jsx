@@ -1,3 +1,8 @@
+/**
+ * Home Landing Page
+ * Displays the primary landing experience, including hero headline,
+ * 3D interactive flip feature cards, services overview, client testimonials, and final CTA.
+ */
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useContext } from 'react';
@@ -6,6 +11,14 @@ import { AuthContext } from '../context/AuthContext';
 import HowItWorks from './HomeSections/HowItWorks';
 import FinalCTA from './HomeSections/FinalCTA';
 
+/**
+ * FlipFeatureCard Component
+ * Interactive 3D flip card responding to left/right mouse clicks to reveal technical details.
+ * 
+ * @param {Object} props - Component properties
+ * @param {React.ReactNode} props.children - Front face content
+ * @param {React.ReactNode} props.backContent - Back face content
+ */
 const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, backClass }) => {
     const [rotation, setRotation] = useState(0);
 
@@ -80,6 +93,10 @@ const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, back
     );
 };
 
+/**
+ * Home Component
+ * Root landing page presenting hero callouts, platform capabilities, and conversion pathways.
+ */
 const Home = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);

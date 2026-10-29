@@ -1,8 +1,22 @@
+/**
+ * Authentication Context & State Management
+ * Provides centralized authentication state (user profile, JWT token, role credentials),
+ * login, registration, OTP validation, and logout handlers across the application.
+ */
 import React, { createContext, useState, useEffect } from 'react';
 import api from '../api/axios';
 
+/** React Context exposing authentication state and session methods. */
 export const AuthContext = createContext();
 
+/**
+ * AuthProvider Component
+ * Wraps application components to supply authentication tokens, user state,
+ * and session lifecycle methods.
+ * 
+ * @param {Object} props - Component properties
+ * @param {React.ReactNode} props.children - Child elements
+ */
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token') || null);
@@ -18,6 +32,13 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, [token]);
 
+    /**
+     * Authenticates a user with email and password credentials.
+     * 
+     * @param {string} email - Registered user email address
+     * @param {string} password - User account password
+     * @returns {Promise<Object>} Success flag and user role or error message
+     */
     const login = async (email, password) => {
         try {
             const response = await api.post('/auth/login', { email, password });
@@ -48,6 +69,14 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    /**
+     * Authenticates or registers a user via Google OAuth identity tokens.
+     * 
+     * @param {string} credential - Google OAuth credential token
+     * @param {string|null} [role=null] - Desired user role if first-time account setup
+     * @param {Object} [profileData={}] - Additional profile onboarding payload
+     * @returns {Promise<Object>} Login outcome status
+     */
     const googleLogin = async (credential, role = null, profileData = {}) => {
         try {
             const payload = { credential, ...profileData };
@@ -74,6 +103,12 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    /**
+     * Submits a user registration payload to create an account pending OTP verification.
+     * 
+     * @param {Object} userData - Registration form fields (name, email, password, role)
+     * @returns {Promise<Object>} Registration success status
+     */
     const register = async (userData) => {
         try {
             await api.post('/auth/register', userData);
@@ -86,6 +121,10 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    /**
+     * Clears authentication credentials, tokens, and cached user details from localStorage
+     * and dispatches a system-wide logout event.
+     */
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -96,6 +135,13 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    /**
+     * Validates a 6-digit one-time password (OTP) for account verification or password recovery.
+     * 
+     * @param {string} email - Target account email
+     * @param {string} otp - 6-digit verification code
+     * @returns {Promise<Object>} Verification outcome with user object on success
+     */
     const verifyOtp = async (email, otp) => {
         try {
             const response = await api.post('/auth/verify-otp', { email, otp });
@@ -116,6 +162,12 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    /**
+     * Requests a new verification OTP code to be dispatched to the provided email.
+     * 
+     * @param {string} email - User email address
+     * @returns {Promise<Object>} Dispatch success status
+     */
     const resendOtp = async (email) => {
         try {
             await api.post(`/auth/resend-otp?email=${encodeURIComponent(email)}`);
