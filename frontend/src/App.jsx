@@ -3,7 +3,7 @@
  * Defines the React Router routing architecture, providers (OAuth, React Query, Auth Context),
  * scroll reset behaviors, and protected route boundaries for the application.
  */
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -111,6 +111,7 @@ function App() {
               <Route element={<ProtectedRoute />}>
                 {/* User Platform Feature Routes & Dashboard Aliases */}
                 <Route path="profile" element={<Profile />} />
+                <Route path="dashboard" element={<Navigate to="/dashboard/user" replace />} />
                 <Route path="ai-diet" element={<AiDietGenerator />} />
                 <Route path="ai-image" element={<AiImageAnalyzer />} />
                 <Route path="progress" element={<ProgressTracking />} />

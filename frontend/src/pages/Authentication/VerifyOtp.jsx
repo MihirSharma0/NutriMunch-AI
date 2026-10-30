@@ -3,7 +3,7 @@
  * Verifies 6-digit email OTPs to activate new accounts and triggers onboarding flow.
  */
 import React, { useState, useContext } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import OnboardingWizard from '../../components/OnboardingWizard';
@@ -14,7 +14,21 @@ import OnboardingWizard from '../../components/OnboardingWizard';
  */
 const VerifyOtp = () => {
     const [searchParams] = useSearchParams();
-    const emailParam = searchParams.get('email') || '';
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { verifyOtp, resendOtp, user } = useContext(AuthContext);
+
+    // Retrieve pending registration details from router state or sessionStorage
+    const pendingData = (() => {
+        try {
+            const raw = sessionStorage.getItem('nutrimunch_pending_registration');
+            return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+            return {};
+        }
+    })();
+
+    const emailParam = searchParams.get('email') || location.state?.email || pendingData.email || '';
     
     const [email, setEmail] = useState(emailParam);
     const [otp, setOtp] = useState('');
@@ -23,9 +37,7 @@ const VerifyOtp = () => {
     const [resendDisabled, setResendDisabled] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
     const [showOnboarding, setShowOnboarding] = useState(false);
-    
-    const { verifyOtp, resendOtp } = useContext(AuthContext);
-    const navigate = useNavigate();
+    const [verifiedUser, setVerifiedUser] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,7 +51,17 @@ const VerifyOtp = () => {
         
         const result = await verifyOtp(email, otp);
         if (result.success) {
-            setShowOnboarding(true);
+            const activeUser = result.user || user || {};
+            const role = String(activeUser.role || location.state?.role || pendingData.role || 'USER').toUpperCase().replace('ROLE_', '');
+
+            if (role === 'NUTRITIONIST') {
+                navigate('/dashboard/nutritionist');
+            } else if (role === 'ADMIN') {
+                navigate('/dashboard/admin');
+            } else {
+                setVerifiedUser(activeUser);
+                setShowOnboarding(true);
+            }
         } else {
             setError(result.message);
         }
@@ -90,7 +112,12 @@ const VerifyOtp = () => {
             </button>
 
             {showOnboarding ? (
-                <OnboardingWizard initialEmail={email} onComplete={() => navigate('/profile')} />
+                <OnboardingWizard 
+                    initialEmail={email} 
+                    initialFirstName={verifiedUser?.firstName || location.state?.firstName || pendingData.firstName || ''} 
+                    initialLastName={verifiedUser?.lastName || location.state?.lastName || pendingData.lastName || ''} 
+                    onComplete={() => navigate('/dashboard/user')} 
+                />
             ) : (
                 <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl p-6 sm:p-10 relative z-10">
                     <div className="flex flex-col items-center mb-8">

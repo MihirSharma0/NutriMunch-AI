@@ -82,8 +82,25 @@ const Register = () => {
             });
 
             if (result.success) {
+                // Save pending registration details so OTP verification and Onboarding can prefill them
+                try {
+                    sessionStorage.setItem('nutrimunch_pending_registration', JSON.stringify({
+                        firstName: formData.firstName,
+                        lastName: formData.lastName,
+                        email: formData.email,
+                        role: formData.role
+                    }));
+                } catch (e) {}
+
                 setSuccess('Registration successful! Redirecting to email verification...');
-                setTimeout(() => navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}`), 1500);
+                setTimeout(() => navigate(`/verify-otp?email=${encodeURIComponent(formData.email)}`, {
+                    state: {
+                        firstName: formData.firstName,
+                        lastName: formData.lastName,
+                        email: formData.email,
+                        role: formData.role
+                    }
+                }), 1500);
             } else {
                 setError(result.message);
                 setIsLoading(false);

@@ -30,11 +30,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
         accessDeniedHandled.current = true;
         window.alert('This feature is not available for your account.');
 
-        if (typeof window.history.state?.idx === 'number' && window.history.state.idx > 0) {
-            navigate(-1);
-        } else {
-            navigate(getDashboardUrl(user.role), { replace: true });
-        }
+        navigate(getDashboardUrl(user?.role), { replace: true });
     }, [accessDenied, navigate, user?.role]);
 
     if (loading) return null;
