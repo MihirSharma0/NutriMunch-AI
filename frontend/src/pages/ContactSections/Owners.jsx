@@ -14,10 +14,10 @@ const OWNERS = [
         image: '/owners/founder-ceo.svg',
         accent: '#a5d391',
         bio: 'Leads product vision and partnerships, building NutriMunch to make personalised nutrition simple for everyone.',
-        email: 'aarav.mehta@example.com',
+        email: 'sharmamihir012@gmail.com',
         phone: '+91 90000 00001',
-        location: 'Bengaluru, India',
-        linkedin: 'https://www.linkedin.com/in/example-aarav'
+        location: 'Kolkata, India',
+        linkedin: 'https://www.linkedin.com/in/mihir-sharma0/'
     },
     {
         name: 'Md Irfan',
