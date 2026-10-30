@@ -8,7 +8,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, ArrowRight, Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { getDashboardUrl } from '../../utils/roleUtils';
+import { getDashboardUrl, isRouteAllowedForRole } from '../../utils/roleUtils';
 import OnboardingWizard from '../../components/OnboardingWizard';
 
 /**
@@ -36,7 +36,7 @@ const Login = () => {
     const [credentials, setCredentials] = useState('');
     const [specialization, setSpecialization] = useState('');
 
-    const { login, googleLogin } = useContext(AuthContext);
+    const { login, googleLogin, user } = useContext(AuthContext);
     const navigate = useNavigate();
 
     // Return to the page the visitor originally requested (same-site paths only)
@@ -48,7 +48,7 @@ const Login = () => {
      */
     const getPostLoginUrl = (role) => {
         const redirect = new URLSearchParams(window.location.search).get('redirect');
-        if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+        if (redirect && redirect.startsWith('/') && !redirect.startsWith('//') && isRouteAllowedForRole(redirect, role)) {
             return redirect;
         }
         return getDashboardUrl(role);
@@ -118,6 +118,15 @@ const Login = () => {
         setError('');
         const result = await login(email, password);
         if (result.success) {
+            const actualRole = String(result.role || '').toUpperCase().replace('ROLE_', '');
+            if (activeTab === 'ADMIN' && actualRole !== 'ADMIN') {
+                setError('This account does not have Administrator privileges. Please sign in under the User tab.');
+                return;
+            }
+            if (activeTab === 'NUTRITIONIST' && actualRole !== 'NUTRITIONIST') {
+                setError('This account is not registered as a Certified Nutritionist. Please sign in under the User tab.');
+                return;
+            }
             navigate(getPostLoginUrl(result.role));
         } else {
             setError(result.message);
@@ -155,7 +164,12 @@ const Login = () => {
             {requiresRoleSelection && (
                 <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-[#080b12]/90 backdrop-blur-xl overflow-y-auto animate-fadeIn">
                     {onboardingStep === 3 ? (
-                        <OnboardingWizard onComplete={() => navigate('/profile')} />
+                        <OnboardingWizard
+                            initialEmail={user?.email || ''}
+                            initialFirstName={user?.firstName || ''}
+                            initialLastName={user?.lastName || ''}
+                            onComplete={() => navigate(getPostLoginUrl(user?.role || 'USER'))}
+                        />
                     ) : (
                         <div className="w-full max-w-md bg-[#0d121c] border border-[#a5d391]/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_40px_rgba(165,211,145,0.15)] flex flex-col items-center">
                             <div className="w-12 h-12 bg-gradient-to-tr from-[#a5d391] to-emerald-400 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-[#a5d391]/20">

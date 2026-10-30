@@ -3,8 +3,9 @@
  * Multi-step onboarding dialog collecting biometrics, dietary preferences,
  * allergens, and health targets upon initial account creation.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import api from '../api/axios';
 
 /** Predefined selectable allergen list for onboarding setup. */
@@ -43,15 +44,47 @@ const STEPS = [
  * 
  * @param {Object} props - Component properties
  * @param {string} [props.initialEmail=''] - Pre-populated email address
+ * @param {string} [props.initialFirstName=''] - Pre-populated user first name
+ * @param {string} [props.initialLastName=''] - Pre-populated user last name
  * @param {Function} props.onComplete - Callback invoked upon wizard completion
  */
-const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
+const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLastName = '', onComplete }) => {
     const navigate = useNavigate();
+    const { user, setUser } = useContext(AuthContext) || {};
     const [currentStep, setCurrentStep] = useState(1);
 
-    // Form Data State
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
+    // Resolve initial names from props, user context, sessionStorage, or localStorage
+    const getInitialNames = () => {
+        let fn = initialFirstName;
+        let ln = initialLastName;
+        if (!fn || !ln) {
+            try {
+                const storedPending = sessionStorage.getItem('nutrimunch_pending_registration');
+                if (storedPending) {
+                    const parsed = JSON.parse(storedPending);
+                    if (!fn && parsed.firstName) fn = parsed.firstName;
+                    if (!ln && parsed.lastName) ln = parsed.lastName;
+                }
+            } catch (e) {}
+        }
+        if (!fn && user?.firstName) fn = user.firstName;
+        if (!ln && user?.lastName) ln = user.lastName;
+        if (!fn || !ln) {
+            try {
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                    const parsed = JSON.parse(storedUser);
+                    if (!fn && parsed.firstName) fn = parsed.firstName;
+                    if (!ln && parsed.lastName) ln = parsed.lastName;
+                }
+            } catch (e) {}
+        }
+        return { firstName: fn || '', lastName: ln || '' };
+    };
+
+    const names = getInitialNames();
+    const [firstName, setFirstName] = useState(names.firstName);
+    const [lastName, setLastName] = useState(names.lastName);
     const [age, setAge] = useState('');
     const [gender, setGender] = useState('Male');
 
@@ -68,6 +101,39 @@ const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
 
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        // Sync names if props or user context resolve after initial render
+        if (!firstName) {
+            if (initialFirstName) setFirstName(initialFirstName);
+            else if (user?.firstName) setFirstName(user.firstName);
+        }
+        if (!lastName) {
+            if (initialLastName) setLastName(initialLastName);
+            else if (user?.lastName) setLastName(user.lastName);
+        }
+
+        // Fetch existing profile if available to prefill remaining fields
+        const fetchExistingProfile = async () => {
+            try {
+                const res = await api.get('/profiles/me');
+                if (res.data) {
+                    if (res.data.firstName && !firstName) setFirstName(res.data.firstName);
+                    if (res.data.lastName && !lastName) setLastName(res.data.lastName);
+                    if (res.data.age) setAge(String(res.data.age));
+                    if (res.data.gender) setGender(res.data.gender);
+                    if (res.data.heightCm) setHeightCm(String(res.data.heightCm));
+                    if (res.data.weightKg) setWeightKg(String(res.data.weightKg));
+                    if (res.data.activityLevel) setActivityLevel(res.data.activityLevel);
+                    if (res.data.goal) setGoal(res.data.goal);
+                    if (res.data.dietType) setDietType(res.data.dietType);
+                }
+            } catch (err) {
+                // Ignore profile lookups for brand-new accounts
+            }
+        };
+        fetchExistingProfile();
+    }, [initialFirstName, initialLastName, user]);
 
     // Toggle Allergen
     const toggleAllergen = (id) => {
@@ -120,18 +186,38 @@ const OnboardingWizard = ({ initialEmail = '', onComplete }) => {
 
         try {
             await api.put('/profiles/me', payload);
+
+            // Update AuthContext user and localStorage so the app reflects updated names
+            try {
+                const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+                const updatedUser = {
+                    ...currentUser,
+                    firstName: payload.firstName,
+                    lastName: payload.lastName
+                };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                if (setUser) setUser(updatedUser);
+            } catch (e) {}
+
+            try {
+                sessionStorage.removeItem('nutrimunch_pending_registration');
+            } catch (e) {}
+
             if (onComplete) {
                 onComplete();
             } else {
-                navigate('/profile');
+                navigate('/dashboard/user');
             }
         } catch (err) {
             console.error("Onboarding profile save error", err);
+            try {
+                sessionStorage.removeItem('nutrimunch_pending_registration');
+            } catch (e) {}
             // Even if API save has an issue, proceed safely
             if (onComplete) {
                 onComplete();
             } else {
-                navigate('/profile');
+                navigate('/dashboard/user');
             }
         } finally {
             setSaving(false);

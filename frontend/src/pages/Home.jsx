@@ -3,7 +3,7 @@
  * Displays the primary landing experience, including hero headline,
  * 3D interactive flip feature cards, services overview, client testimonials, and final CTA.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useContext } from 'react';
 import ServicesOverview from './HomeSections/ServicesOverview';
@@ -97,6 +97,340 @@ const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, back
  * Home Component
  * Root landing page presenting hero callouts, platform capabilities, and conversion pathways.
  */
+/**
+ * HeroCarousel Component
+ * Animated feature showcase carousel with left/right navigation, dot indicators, and auto-play.
+ * Each slide visually represents a core NutriMunch AI feature with styled mock-UI panels.
+ */
+const HeroCarousel = () => {
+    const navigate = useNavigate();
+    const [activeIdx, setActiveIdx] = useState(0);
+    const [animDir, setAnimDir] = useState('right');
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
+    const intervalRef = useRef(null);
+    const TOTAL = 5;
+
+    const goTo = useCallback((idx, dir) => {
+        if (isAnimating || idx === activeIdx) return;
+        setAnimDir(dir ?? (idx > activeIdx ? 'right' : 'left'));
+        setIsAnimating(true);
+        setTimeout(() => { setActiveIdx(idx); setIsAnimating(false); }, 420);
+    }, [isAnimating, activeIdx]);
+
+    const goNext = useCallback(() => {
+        if (isAnimating) return;
+        const next = (activeIdx + 1) % TOTAL;
+        setAnimDir('right'); setIsAnimating(true);
+        setTimeout(() => { setActiveIdx(next); setIsAnimating(false); }, 420);
+    }, [isAnimating, activeIdx]);
+
+    const goPrev = useCallback(() => {
+        if (isAnimating) return;
+        const prev = (activeIdx - 1 + TOTAL) % TOTAL;
+        setAnimDir('left'); setIsAnimating(true);
+        setTimeout(() => { setActiveIdx(prev); setIsAnimating(false); }, 420);
+    }, [isAnimating, activeIdx]);
+
+    useEffect(() => {
+        if (isPaused) { clearInterval(intervalRef.current); return; }
+        intervalRef.current = setInterval(goNext, 4500);
+        return () => clearInterval(intervalRef.current);
+    }, [goNext, isPaused]);
+
+    const animClass = isAnimating
+        ? animDir === 'right' ? 'opacity-0 translate-x-10' : 'opacity-0 -translate-x-10'
+        : 'opacity-100 translate-x-0';
+
+    /** Dot nav colours per slide */
+    const accents = ['#a5d391', '#38bdf8', '#f472b6', '#fbbf24', '#a78bfa'];
+    const accent = accents[activeIdx];
+
+    /** Dot nav */
+    const Dots = () => (
+        <div className="flex items-center gap-2">
+            {Array.from({ length: TOTAL }).map((_, i) => (
+                <button
+                    key={i}
+                    aria-label={`Slide ${i + 1}`}
+                    onClick={() => goTo(i)}
+                    className="rounded-full transition-all duration-300"
+                    style={{
+                        width: i === activeIdx ? 22 : 8, height: 8,
+                        background: i === activeIdx ? accent : 'rgba(255,255,255,0.3)',
+                        boxShadow: i === activeIdx ? `0 0 10px ${accent}90` : 'none'
+                    }}
+                />
+            ))}
+        </div>
+    );
+
+    /** Arrow buttons */
+    const Arrows = () => (
+        <div className="flex items-center gap-2">
+            <button
+                aria-label="Previous" onClick={goPrev}
+                className="w-11 h-11 sm:w-13 sm:h-13 bg-black/50 backdrop-blur-xl border border-white/15 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all duration-300 hover:scale-110 shadow-lg"
+            >
+                <span className="material-symbols-outlined text-xl">arrow_back</span>
+            </button>
+            <button
+                aria-label="Next" onClick={goNext}
+                className="w-11 h-11 sm:w-13 sm:h-13 rounded-full flex items-center justify-center text-black transition-all duration-300 hover:scale-110 hover:bg-white shadow-xl"
+                style={{ background: accent, boxShadow: `0 0 20px ${accent}60` }}
+            >
+                <span className="material-symbols-outlined text-xl">arrow_forward</span>
+            </button>
+        </div>
+    );
+
+    return (
+        <section
+            className="max-w-7xl mx-auto px-4 sm:px-8 -mt-24 md:-mt-36 relative z-20"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+        >
+            <div className="relative rounded-2xl overflow-hidden shadow-[0_80px_120px_-20px_rgba(15,23,42,0.5)] border border-white/10" style={{ aspectRatio: '21/9' }}>
+
+                {/* ──────────── SLIDE 1: Hero food plate image ──────────── */}
+                {activeIdx === 0 && (
+                    <div className={`absolute inset-0 transition-all duration-420 ease-out ${animClass}`}>
+                        <img
+                            className="w-full h-full object-cover scale-105"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQW1ayK2QptnJC4qRpFZJQfK25SrdzXBlBBKDdfgFsY3fbK5Q9MBP4F2v2a6cli_nEXhYxZdynfefZ9y6wd9ardu7fb6hI4n4NzwrwE4B--Y4wqSMdeuOKZZfTXGlE55PD6O95ZslKGxZFe9jEyC5O4jQKnL_jnYppX1ixe10PJAE_5uvWDiX9c_vA5cz5JtDILmRAtwTwIPmdRfsDOx7e2W8rsEiFw4gzv8YSmBzQ-2grz1UCn8l"
+                            alt="Healthy colourful meal plate"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        <div className="absolute top-5 left-5 sm:top-8 sm:left-8">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full border backdrop-blur-md bg-[#a5d391]/15 border-[#a5d391]/50 text-[#a5d391]">AI Meal Planning</span>
+                        </div>
+                        <div className="absolute bottom-6 sm:bottom-10 left-6 sm:left-10 right-6 sm:right-10 flex justify-end sm:justify-between items-end">
+                            <div className="bg-black/45 backdrop-blur-3xl border border-white/10 p-5 sm:p-7 rounded-2xl sm:rounded-3xl flex gap-8 sm:gap-14 hidden sm:flex">
+                                <div><p className="text-[9px] uppercase tracking-widest text-white/60 font-bold mb-1">Daily Target</p><p className="text-2xl sm:text-3xl font-black text-[#a5d391]">2,250 kcal</p></div>
+                                <div className="w-px bg-white/10" />
+                                <div><p className="text-[9px] uppercase tracking-widest text-white/60 font-bold mb-1">Macro Split</p><p className="text-2xl sm:text-3xl font-black text-white">35P / 45C / 20F</p></div>
+                            </div>
+                            <div className="flex flex-col items-end gap-3 ml-auto sm:ml-0">
+                                <Arrows /><Dots />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ──────────── SLIDE 2: Consultation Chat Feature ──────────── */}
+                {activeIdx === 1 && (
+                    <div className={`absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#071120] to-[#0d1f36] transition-all duration-420 ease-out ${animClass} flex`}>
+                        {/* Left: Feature Info */}
+                        <div className="flex flex-col justify-center px-8 sm:px-14 w-1/2 gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full w-fit border backdrop-blur-md bg-[#38bdf8]/10 border-[#38bdf8]/40 text-[#38bdf8]">Live Chat</span>
+                            <h3 className="text-white font-bold text-xl sm:text-3xl md:text-4xl leading-tight font-hero-display">
+                                Chat directly with your <span className="text-[#38bdf8]">Nutritionist</span>
+                            </h3>
+                            <p className="text-white/50 text-xs sm:text-sm leading-relaxed max-w-xs">Real-time secure messaging, file sharing, diet plan updates and appointment scheduling — all in one conversation thread.</p>
+                            <button onClick={() => navigate('/consultation-chat')} className="mt-2 inline-flex items-center gap-2 bg-[#38bdf8] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all w-fit shadow-[0_0_20px_rgba(56,189,248,0.4)]">
+                                <span>Start Consulting</span>
+                                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            </button>
+                        </div>
+                        {/* Right: Mock Chat UI */}
+                        <div className="hidden sm:flex flex-col justify-center w-1/2 pr-8 sm:pr-14 gap-3">
+                            {/* Chat window mock */}
+                            <div className="bg-[#0d1b2e]/80 border border-[#38bdf8]/20 rounded-2xl p-4 backdrop-blur-xl shadow-2xl flex flex-col gap-3">
+                                {/* Chat header */}
+                                <div className="flex items-center gap-3 pb-2 border-b border-white/10">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#38bdf8] to-cyan-400 flex items-center justify-center text-black text-xs font-black">N</div>
+                                    <div>
+                                        <p className="text-white text-xs font-bold">Dr. Priya Sharma</p>
+                                        <p className="text-[#38bdf8] text-[9px] flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span> Online</p>
+                                    </div>
+                                </div>
+                                {/* Messages */}
+                                <div className="flex flex-col gap-2 text-xs">
+                                    <div className="self-start bg-[#38bdf8]/10 border border-[#38bdf8]/20 rounded-2xl rounded-tl-sm px-3 py-2 max-w-[80%] text-white/80">
+                                        Hi! I've reviewed your progress. Your protein intake is excellent 💪
+                                    </div>
+                                    <div className="self-end bg-[#38bdf8]/25 border border-[#38bdf8]/30 rounded-2xl rounded-tr-sm px-3 py-2 max-w-[80%] text-white">
+                                        Thanks! Should I adjust my carbs on rest days?
+                                    </div>
+                                    <div className="self-start bg-[#38bdf8]/10 border border-[#38bdf8]/20 rounded-2xl rounded-tl-sm px-3 py-2 max-w-[80%] text-white/80">
+                                        Yes — reduce by 20%. I'll update your plan now ✅
+                                    </div>
+                                </div>
+                                {/* Input bar mock */}
+                                <div className="flex items-center gap-2 mt-1 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
+                                    <span className="text-white/30 text-[10px] flex-1">Type a message...</span>
+                                    <span className="material-symbols-outlined text-[#38bdf8] text-base">send</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="absolute bottom-6 right-6 sm:right-10 flex flex-col items-end gap-3">
+                            <Arrows /><Dots />
+                        </div>
+                    </div>
+                )}
+
+                {/* ──────────── SLIDE 3: AI Food Image Analyzer ──────────── */}
+                {activeIdx === 2 && (
+                    <div className={`absolute inset-0 bg-gradient-to-br from-[#0d0a1e] via-[#120d26] to-[#1a0d2e] transition-all duration-420 ease-out ${animClass} flex`}>
+                        {/* Left: Mock Scanner UI */}
+                        <div className="hidden sm:flex flex-col justify-center pl-8 sm:pl-14 w-1/2 gap-4">
+                            <div className="relative w-48 h-48 mx-auto">
+                                {/* Camera viewfinder */}
+                                <div className="absolute inset-0 rounded-2xl border-2 border-[#f472b6]/40 bg-black/40 backdrop-blur-sm flex items-center justify-center overflow-hidden">
+                                    <div className="w-28 h-28 rounded-xl overflow-hidden opacity-80">
+                                        <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300&q=80&fit=crop" alt="food" className="w-full h-full object-cover" />
+                                    </div>
+                                    {/* scan line */}
+                                    <div className="absolute left-0 right-0 h-px bg-[#f472b6]/70 top-[40%] animate-bounce shadow-[0_0_10px_rgba(244,114,182,0.8)]" />
+                                </div>
+                                {/* Corner accents */}
+                                <div className="absolute top-1 left-1 w-5 h-5 border-t-2 border-l-2 border-[#f472b6] rounded-tl-lg" />
+                                <div className="absolute top-1 right-1 w-5 h-5 border-t-2 border-r-2 border-[#f472b6] rounded-tr-lg" />
+                                <div className="absolute bottom-1 left-1 w-5 h-5 border-b-2 border-l-2 border-[#f472b6] rounded-bl-lg" />
+                                <div className="absolute bottom-1 right-1 w-5 h-5 border-b-2 border-r-2 border-[#f472b6] rounded-br-lg" />
+                            </div>
+                            {/* Macro result card */}
+                            <div className="bg-[#1a0d2e]/80 border border-[#f472b6]/20 rounded-xl p-3 mx-4 backdrop-blur-xl">
+                                <p className="text-[#f472b6] text-[9px] font-black uppercase tracking-widest mb-2">🍱 Detected: Veggie Grain Bowl</p>
+                                <div className="grid grid-cols-4 gap-1 text-center">
+                                    {[['320','kcal'],['18g','Protein'],['42g','Carbs'],['9g','Fat']].map(([v,l]) => (
+                                        <div key={l} className="bg-black/30 rounded-lg p-1.5">
+                                            <p className="text-white text-sm font-black">{v}</p>
+                                            <p className="text-white/40 text-[8px]">{l}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        {/* Right: Feature Info */}
+                        <div className="flex flex-col justify-center px-8 sm:px-14 w-full sm:w-1/2 gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full w-fit border backdrop-blur-md bg-[#f472b6]/10 border-[#f472b6]/40 text-[#f472b6]">AI Vision Scanner</span>
+                            <h3 className="text-white font-bold text-xl sm:text-3xl md:text-4xl leading-tight font-hero-display">
+                                Snap a photo for <span className="text-[#f472b6]">instant macro</span> detection
+                            </h3>
+                            <p className="text-white/50 text-xs sm:text-sm leading-relaxed max-w-xs">Upload any food photo or scan a barcode — our AI instantly estimates calories, protein, carbs, fats and flags allergen conflicts.</p>
+                            <button onClick={() => navigate('/ai-image')} className="mt-2 inline-flex items-center gap-2 bg-[#f472b6] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all w-fit shadow-[0_0_20px_rgba(244,114,182,0.4)]">
+                                <span>Try Food Scanner</span>
+                                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            </button>
+                        </div>
+                        <div className="absolute bottom-6 right-6 sm:right-10 flex flex-col items-end gap-3">
+                            <Arrows /><Dots />
+                        </div>
+                    </div>
+                )}
+
+                {/* ──────────── SLIDE 4: Progress Tracking ──────────── */}
+                {activeIdx === 3 && (
+                    <div className={`absolute inset-0 bg-gradient-to-br from-[#0b1a12] via-[#081510] to-[#0f2418] transition-all duration-420 ease-out ${animClass} flex`}>
+                        {/* Left: Feature info */}
+                        <div className="flex flex-col justify-center px-8 sm:px-14 w-full sm:w-1/2 gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full w-fit border backdrop-blur-md bg-[#fbbf24]/10 border-[#fbbf24]/40 text-[#fbbf24]">Progress Tracker</span>
+                            <h3 className="text-white font-bold text-xl sm:text-3xl md:text-4xl leading-tight font-hero-display">
+                                Track calories, water <br/>&amp; <span className="text-[#fbbf24]">biometrics daily</span>
+                            </h3>
+                            <p className="text-white/50 text-xs sm:text-sm leading-relaxed max-w-xs">Log meals, monitor hydration with live water gauges, track weight trends and review weekly nutrition reports — all in one dashboard.</p>
+                            <button onClick={() => navigate('/progress')} className="mt-2 inline-flex items-center gap-2 bg-[#fbbf24] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all w-fit shadow-[0_0_20px_rgba(251,191,36,0.4)]">
+                                <span>View Progress</span>
+                                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            </button>
+                        </div>
+                        {/* Right: Mock dashboard */}
+                        <div className="hidden sm:flex flex-col justify-center pr-8 sm:pr-14 w-1/2 gap-3">
+                            <div className="bg-[#0f2418]/80 border border-[#fbbf24]/20 rounded-2xl p-4 backdrop-blur-xl shadow-2xl flex flex-col gap-3">
+                                <p className="text-[#fbbf24] text-[9px] font-black uppercase tracking-widest">Today's Overview</p>
+                                {/* Calorie bar */}
+                                {[
+                                    { label: 'Calories', val: '1,820', max: '2,250', pct: 81, col: '#fbbf24' },
+                                    { label: 'Protein', val: '89g', max: '140g', pct: 64, col: '#a5d391' },
+                                    { label: 'Carbs', val: '180g', max: '220g', pct: 82, col: '#38bdf8' },
+                                    { label: 'Water', val: '1.8L', max: '2.5L', pct: 72, col: '#60a5fa' },
+                                ].map(({label, val, max, pct, col}) => (
+                                    <div key={label}>
+                                        <div className="flex justify-between text-[9px] mb-1">
+                                            <span className="text-white/60 font-bold">{label}</span>
+                                            <span className="text-white/80">{val} / {max}</span>
+                                        </div>
+                                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: col, boxShadow: `0 0 6px ${col}80` }} />
+                                        </div>
+                                    </div>
+                                ))}
+                                {/* Weight badge */}
+                                <div className="flex gap-2 mt-1">
+                                    <div className="flex-1 bg-black/30 rounded-xl p-2 text-center">
+                                        <p className="text-[#fbbf24] text-base font-black">72.4<span className="text-xs font-medium">kg</span></p>
+                                        <p className="text-white/40 text-[8px]">Current Weight</p>
+                                    </div>
+                                    <div className="flex-1 bg-black/30 rounded-xl p-2 text-center">
+                                        <p className="text-green-400 text-base font-black">-1.2<span className="text-xs font-medium">kg</span></p>
+                                        <p className="text-white/40 text-[8px]">This Week</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="absolute bottom-6 right-6 sm:right-10 flex flex-col items-end gap-3">
+                            <Arrows /><Dots />
+                        </div>
+                    </div>
+                )}
+
+                {/* ──────────── SLIDE 5: Appointment Booking / Nutritionist ──────────── */}
+                {activeIdx === 4 && (
+                    <div className={`absolute inset-0 bg-gradient-to-br from-[#130d1e] via-[#1a0e2e] to-[#0d0820] transition-all duration-420 ease-out ${animClass} flex`}>
+                        {/* Left: Mock booking UI */}
+                        <div className="hidden sm:flex flex-col justify-center pl-8 sm:pl-14 w-1/2 gap-3">
+                            <div className="bg-[#1a0d2e]/80 border border-[#a78bfa]/20 rounded-2xl p-4 backdrop-blur-xl shadow-2xl flex flex-col gap-3">
+                                <p className="text-[#a78bfa] text-[9px] font-black uppercase tracking-widest">Book a Session</p>
+                                {/* Nutritionist cards */}
+                                {[
+                                    { name: 'Dr. Priya Sharma', spec: 'Sports Nutrition', rating: '4.9', avail: 'Available Today', init: 'P' },
+                                    { name: 'Dr. Arun Mehta', spec: 'Weight Management', rating: '4.8', avail: 'Next: 3 PM', init: 'A' },
+                                ].map(n => (
+                                    <div key={n.name} className="flex items-center gap-3 bg-black/30 rounded-xl p-2.5 border border-[#a78bfa]/10">
+                                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#a78bfa] to-purple-400 flex items-center justify-center text-black text-xs font-black shrink-0">{n.init}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white text-xs font-bold truncate">{n.name}</p>
+                                            <p className="text-white/40 text-[9px]">{n.spec}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-[#fbbf24] text-[9px] font-black">⭐ {n.rating}</p>
+                                            <p className="text-green-400 text-[8px]">{n.avail}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {/* Time slots */}
+                                <p className="text-white/40 text-[9px] font-bold mt-1">Select a time slot:</p>
+                                <div className="grid grid-cols-4 gap-1.5">
+                                    {['9:00 AM','10:30 AM','2:00 PM','4:30 PM'].map((t, i) => (
+                                        <div key={t} className={`rounded-lg py-1.5 text-center text-[9px] font-bold border ${i === 1 ? 'bg-[#a78bfa]/25 border-[#a78bfa] text-[#a78bfa]' : 'bg-black/20 border-white/10 text-white/50'}`}>{t}</div>
+                                    ))}
+                                </div>
+                                <button className="w-full bg-[#a78bfa] hover:bg-white text-black text-[10px] font-black rounded-xl py-2 transition-all mt-1">Confirm Booking →</button>
+                            </div>
+                        </div>
+                        {/* Right: Feature info */}
+                        <div className="flex flex-col justify-center px-8 sm:px-14 w-full sm:w-1/2 gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full w-fit border backdrop-blur-md bg-[#a78bfa]/10 border-[#a78bfa]/40 text-[#a78bfa]">Nutritionist Network</span>
+                            <h3 className="text-white font-bold text-xl sm:text-3xl md:text-4xl leading-tight font-hero-display">
+                                Book sessions with <span className="text-[#a78bfa]">certified</span> nutritionists
+                            </h3>
+                            <p className="text-white/50 text-xs sm:text-sm leading-relaxed max-w-xs">Browse verified dietitians, view specializations and ratings, book video or chat consultations, and join a live virtual room — all from one place.</p>
+                            <button onClick={() => navigate('/appointments')} className="mt-2 inline-flex items-center gap-2 bg-[#a78bfa] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all w-fit shadow-[0_0_20px_rgba(167,139,250,0.4)]">
+                                <span>Book Appointment</span>
+                                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            </button>
+                        </div>
+                        <div className="absolute bottom-6 right-6 sm:right-10 flex flex-col items-end gap-3">
+                            <Arrows /><Dots />
+                        </div>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+};
+
 const Home = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);
@@ -230,31 +564,8 @@ const Home = () => {
                     </section>
                 ) : (
                 <>
-                {/* Hero Image Pivot Section */}
-                <section className="max-w-7xl mx-auto px-4 sm:px-8 -mt-24 md:-mt-36 relative z-20">
-                    <div className="relative rounded-xl overflow-hidden shadow-[0_80px_120px_-20px_rgba(15,23,42,0.3)] aspect-[21/9] border border-white/10">
-                        <img className="w-full h-full object-cover scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQW1ayK2QptnJC4qRpFZJQfK25SrdzXBlBBKDdfgFsY3fbK5Q9MBP4F2v2a6cli_nEXhYxZdynfefZ9y6wd9ardu7fb6hI4n4NzwrwE4B--Y4wqSMdeuOKZZfTXGlE55PD6O95ZslKGxZFe9jEyC5O4jQKnL_jnYppX1ixe10PJAE_5uvWDiX9c_vA5cz5JtDILmRAtwTwIPmdRfsDOx7e2W8rsEiFw4gzv8YSmBzQ-2grz1UCn8l" alt="Dashboard"/>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-
-                        {/* Floating Biometric UI */}
-                        <div className="absolute bottom-4 right-4 sm:bottom-10 sm:left-10 sm:right-10 flex justify-end sm:justify-between items-end">
-                            <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-8 rounded-3xl flex gap-16 inner-glow hidden sm:flex">
-                                <div className="flex flex-col">
-                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">DAILY TARGET CALORIES</span>
-                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter">2,250 kcal</span>
-                                </div>
-                                <div className="w-px h-12 bg-white/10 self-center"></div>
-                                <div className="flex flex-col">
-                                    <span className="font-label-caps text-label-caps text-primary-fixed mb-2 opacity-80">OPTIMAL MACRO SPLIT</span>
-                                    <span className="font-headline-lg text-4xl text-white font-black tracking-tighter mint-glow">35% P / 45% C / 20% F</span>
-                                </div>
-                            </div>
-                            <button className="bg-primary-container text-on-primary-container w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(165,211,145,0.3)] hover:scale-105 hover:bg-white transition-all group shrink-0 ml-auto sm:ml-0">
-                                <span className="material-symbols-outlined text-4xl fill-1 group-hover:scale-110 transition-transform">play_arrow</span>
-                            </button>
-                        </div>
-                    </div>
-                </section>
+                {/* Hero Image Carousel Section */}
+                <HeroCarousel />
 
                 {/* Bento Grid Insights */}
                 <section className="pt-12 sm:pt-16 pb-6 sm:pb-8 max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
