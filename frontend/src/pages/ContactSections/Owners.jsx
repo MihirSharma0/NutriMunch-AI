@@ -36,7 +36,7 @@ const OWNERS = [
         image: '/owners/cto.svg',
         accent: '#fbbf24',
         bio: 'Heads engineering and the AI platform behind the diet generator, food analyser, payments and secure data.',
-        email: 'rohan.verma@example.com',
+        email: 'himanshu.kumar@gmail.com',
         phone: '+91 90000 00003',
         location: 'Hyderabad, India',
         linkedin: 'https://www.linkedin.com/in/example-rohan'
@@ -47,7 +47,7 @@ const OWNERS = [
         image: '/owners/coo.svg',
         accent: '#c084fc',
         bio: 'Runs day-to-day operations, customer support and the nutritionist network so every consultation runs smoothly.',
-        email: 'ananya.iyer@example.com',
+        email: 'raj.kumar@gmail.com',
         phone: '+91 90000 00004',
         location: 'Chennai, India',
         linkedin: 'https://www.linkedin.com/in/example-ananya'
