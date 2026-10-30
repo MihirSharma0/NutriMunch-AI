@@ -36,7 +36,7 @@ const OWNERS = [
         image: '/owners/cto.svg',
         accent: '#fbbf24',
         bio: 'Heads engineering and the AI platform behind the diet generator, food analyser, payments and secure data.',
-        email: 'himanshu.kumar@gmail.com',
+        email: 'himanshu@gmail.com',
         phone: '+91 90000 00003',
         location: 'Hyderabad, India',
         linkedin: 'https://www.linkedin.com/in/example-rohan'
