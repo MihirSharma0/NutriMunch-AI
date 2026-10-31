@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../api/axios';
 import { Shield, Key, Mail, CheckCircle } from 'lucide-react';
+import { getEmailError } from '../../../utils/emailValidation';
 
 /**
  * AdminProfile Component
@@ -19,7 +20,8 @@ const AdminProfile = () => {
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    
+    const emailError = getEmailError(email);
+
     const [message, setMessage] = useState({ text: '', type: '' });
 
     useEffect(() => {
@@ -44,6 +46,7 @@ const AdminProfile = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
+        if (emailError) return;
         setSaving(true);
         setMessage({ text: '', type: '' });
         
@@ -134,9 +137,12 @@ const AdminProfile = () => {
                             type="email" 
                             value={email} 
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-[#0d121c] border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:border-[#a5d391]/60 focus:ring-1 focus:ring-[#a5d391]/20 focus:outline-none transition-all"
+                            aria-invalid={!!emailError}
+                            aria-describedby={emailError ? 'admin-email-error' : undefined}
+                            className={`w-full bg-[#0d121c] border rounded-xl py-3 px-4 text-sm text-white focus:ring-1 focus:outline-none transition-all ${emailError ? 'border-red-500/60 focus:border-red-500/60 focus:ring-red-500/20' : 'border-white/10 focus:border-[#a5d391]/60 focus:ring-[#a5d391]/20'}`}
                             required
                         />
+                        {emailError && <p id="admin-email-error" className="text-xs text-red-400">{emailError}</p>}
                         <p className="text-[10px] text-slate-500 mt-1">This email acts as your root login identifier.</p>
                     </div>
 

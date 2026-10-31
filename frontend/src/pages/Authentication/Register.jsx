@@ -7,6 +7,7 @@ import React, { useState, useContext, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, ArrowRight, Sparkles, Camera, Check, User, ShieldCheck, X, Eye, EyeOff } from 'lucide-react';
+import { getEmailError } from '../../utils/emailValidation';
 
 /**
  * Register Component
@@ -27,6 +28,7 @@ const Register = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState(null);
     const [error, setError] = useState('');
+    const emailError = getEmailError(formData.email);
     const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef(null);
@@ -59,6 +61,7 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (isLoading) return;
+        if (emailError) return;
 
         if (formData.password !== formData.confirmPassword) {
             setError('Passwords do not match.');
@@ -303,8 +306,11 @@ const Register = () => {
                                 placeholder="jane@example.com"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className="w-full rounded-xl bg-[#090d16]/90 border border-white/10 text-slate-100 placeholder-slate-500 text-sm px-3.5 py-2.5 focus:outline-none focus:border-[#a5d391]/60 focus:ring-1 focus:ring-[#a5d391]/20 transition-all"
+                                aria-invalid={!!emailError}
+                                aria-describedby={emailError ? 'email-error' : undefined}
+                                className={`w-full rounded-xl bg-[#090d16]/90 border text-slate-100 placeholder-slate-500 text-sm px-3.5 py-2.5 focus:outline-none focus:ring-1 transition-all ${emailError ? 'border-red-500/60 focus:border-red-500/60 focus:ring-red-500/20' : 'border-white/10 focus:border-[#a5d391]/60 focus:ring-[#a5d391]/20'}`}
                             />
+                            {emailError && <p id="email-error" className="mt-1.5 text-xs text-red-400">{emailError}</p>}
                         </div>
 
                         {/* Additional Fields for Nutritionist */}

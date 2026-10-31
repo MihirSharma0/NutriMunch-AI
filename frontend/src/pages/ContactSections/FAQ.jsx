@@ -249,6 +249,17 @@ const FAQ = () => {
     const [activeCategory, setActiveCategory] = useState('ALL');
     const [search, setSearch] = useState('');
     const [openKey, setOpenKey] = useState(null);
+    // Category sections start collapsed; ids in this set are expanded.
+    const [expandedCategories, setExpandedCategories] = useState(() => new Set());
+
+    const toggleCategory = (id) => {
+        setExpandedCategories(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
 
     const query = search.trim().toLowerCase();
     const visibleCategories = FAQ_CATEGORIES
@@ -279,7 +290,11 @@ const FAQ = () => {
                     <button
                         key={cat.id}
                         type="button"
-                        onClick={() => setActiveCategory(cat.id)}
+                        onClick={() => {
+                            setActiveCategory(cat.id);
+                            // Selecting a single topic opens it straight away.
+                            if (cat.id !== 'ALL') setExpandedCategories(prev => new Set(prev).add(cat.id));
+                        }}
                         className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                             activeCategory === cat.id
                                 ? 'bg-[#a5d391] text-black border-[#a5d391]'
@@ -298,14 +313,28 @@ const FAQ = () => {
                 </div>
             )}
 
-            <div className="space-y-10">
-                {visibleCategories.map(cat => (
+            <div className="space-y-6">
+                {visibleCategories.map(cat => {
+                    // While searching, show matching questions without requiring a manual expand.
+                    const isExpanded = !!query || expandedCategories.has(cat.id);
+                    return (
                     <div key={cat.id}>
-                        <h3 className="flex items-center gap-2 text-[#a5d391] font-bold uppercase tracking-widest text-xs mb-4">
-                            <span className="material-symbols-outlined text-base">{cat.icon}</span>
-                            {cat.label}
+                        <h3>
+                            <button
+                                type="button"
+                                aria-expanded={isExpanded}
+                                onClick={() => toggleCategory(cat.id)}
+                                className="w-full flex items-center gap-2 text-[#a5d391] font-bold uppercase tracking-widest text-xs py-2 cursor-pointer hover:text-[#bfe6ad] transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-base">{cat.icon}</span>
+                                {cat.label}
+                                <span className={`material-symbols-outlined text-lg transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                    expand_more
+                                </span>
+                            </button>
                         </h3>
-                        <div className="space-y-3">
+                        {isExpanded && (
+                        <div className="space-y-3 mt-3">
                             {cat.items.map(item => {
                                 const key = `${cat.id}-${item.q}`;
                                 const isOpen = openKey === key;
@@ -331,8 +360,10 @@ const FAQ = () => {
                                 );
                             })}
                         </div>
+                        )}
                     </div>
-                ))}
+                    );
+                })}
             </div>
         </section>
     );

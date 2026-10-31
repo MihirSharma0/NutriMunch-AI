@@ -7,6 +7,7 @@ import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import OnboardingWizard from '../../components/OnboardingWizard';
+import { getEmailError } from '../../utils/emailValidation';
 
 /**
  * VerifyOtp Component
@@ -33,6 +34,7 @@ const VerifyOtp = () => {
     const [email, setEmail] = useState(emailParam);
     const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
+    const emailError = getEmailError(email);
     const [success, setSuccess] = useState('');
     const [resendDisabled, setResendDisabled] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
@@ -48,6 +50,7 @@ const VerifyOtp = () => {
             setError('Please provide both email and OTP code.');
             return;
         }
+        if (emailError) return;
         
         const result = await verifyOtp(email, otp);
         if (result.success) {
@@ -72,6 +75,7 @@ const VerifyOtp = () => {
             setError('Please provide your email address first.');
             return;
         }
+        if (emailError) return;
         
         setError('');
         setSuccess('');
@@ -146,13 +150,16 @@ const VerifyOtp = () => {
                         <div>
                             <label className="block text-sm font-semibold text-gray-300 mb-2">Email</label>
                             <input 
-                                type="email" 
-                                className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-400/50 transition-colors placeholder-gray-600"
+                                type="email"
+                                className={`w-full px-4 py-3 bg-black/30 border rounded-xl text-white focus:outline-none transition-colors placeholder-gray-600 ${emailError ? 'border-red-500/60 focus:border-red-500/60' : 'border-white/10 focus:border-green-400/50'}`}
                                 placeholder="john@example.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                aria-invalid={!!emailError}
+                                aria-describedby={emailError ? 'email-error' : undefined}
                                 required
                             />
+                            {emailError && <p id="email-error" className="mt-1.5 text-xs text-red-400">{emailError}</p>}
                         </div>
                         
                         <div>

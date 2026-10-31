@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide
 import { useGoogleLogin } from '@react-oauth/google';
 import { getDashboardUrl, isRouteAllowedForRole } from '../../utils/roleUtils';
 import OnboardingWizard from '../../components/OnboardingWizard';
+import { getEmailError } from '../../utils/emailValidation';
 
 /**
  * Login Component
@@ -22,6 +23,7 @@ const Login = () => {
     const [rememberMe, setRememberMe] = useState(false);
     const [activeTab, setActiveTab] = useState('USER');
     const [error, setError] = useState('');
+    const emailError = getEmailError(email);
     const [requiresRoleSelection, setRequiresRoleSelection] = useState(false);
     const [onboardingStep, setOnboardingStep] = useState(1);
     const [selectedRole, setSelectedRole] = useState(null);
@@ -115,6 +117,7 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (getEmailError(email)) return;
         setError('');
         const result = await login(email, password);
         if (result.success) {
@@ -319,21 +322,24 @@ const Login = () => {
                                 <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-300" htmlFor="email">
                                     Email Address
                                 </label>
-                                <div className="relative flex items-center bg-[#090d16]/90 border border-white/10 rounded-xl overflow-hidden focus-within:border-[#a5d391]/60 focus-within:ring-2 focus-within:ring-[#a5d391]/20 transition-all">
+                                <div className={`relative flex items-center bg-[#090d16]/90 border rounded-xl overflow-hidden focus-within:ring-2 transition-all ${emailError ? 'border-red-500/60 focus-within:border-red-500/60 focus-within:ring-red-500/20' : 'border-white/10 focus-within:border-[#a5d391]/60 focus-within:ring-[#a5d391]/20'}`}>
                                     <span className="pl-3.5 pointer-events-none text-slate-400 flex items-center">
                                         <Mail className="w-4 h-4" />
                                     </span>
-                                    <input 
-                                        id="email" 
-                                        name="email" 
-                                        type="email" 
-                                        required 
+                                    <input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
+                                        aria-invalid={!!emailError}
+                                        aria-describedby={emailError ? 'email-error' : undefined}
                                         placeholder={activeTab === 'USER' ? 'user@example.com' : activeTab === 'NUTRITIONIST' ? 'nutritionist@nutrimunch.com' : 'admin@nutrimunch.com'}
                                         className="w-full bg-transparent border-0 py-2.5 pl-3 pr-4 text-sm text-white placeholder-slate-500 focus:ring-0 focus:outline-none"
                                     />
                                 </div>
+                                {emailError && <p id="email-error" className="text-xs text-red-400">{emailError}</p>}
                             </div>
 
                             {/* Password Field Group */}

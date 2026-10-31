@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../../api/axios';
+import { getEmailError } from '../../utils/emailValidation';
 
 /**
  * ForgotPassword Component
@@ -14,9 +15,11 @@ const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState('idle'); // idle, loading, success, error
     const [message, setMessage] = useState('');
+    const emailError = getEmailError(email);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (emailError) return;
         setStatus('loading');
         setMessage('');
 
@@ -70,9 +73,12 @@ const ForgotPassword = () => {
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="appearance-none rounded-xl relative block w-full px-4 py-3 bg-white/5 border border-white/10 placeholder-white/30 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all sm:text-sm"
+                                aria-invalid={!!emailError}
+                                aria-describedby={emailError ? 'email-error' : undefined}
+                                className={`appearance-none rounded-xl relative block w-full px-4 py-3 bg-white/5 border placeholder-white/30 text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all sm:text-sm ${emailError ? 'border-red-500/60 focus:ring-red-500/60' : 'border-white/10 focus:ring-primary'}`}
                                 placeholder="Email address"
                             />
+                            {emailError && <p id="email-error" className="mt-1.5 text-xs text-red-400">{emailError}</p>}
                         </div>
 
                         <div>
