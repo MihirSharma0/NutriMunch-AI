@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
+import { getEmailError } from '../../../utils/emailValidation';
 
 /**
  * AdminHome Component
@@ -28,6 +29,7 @@ const AdminHome = () => {
     // Edit Modal state
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editEmail, setEditEmail] = useState('');
+    const editEmailError = getEmailError(editEmail);
     const [editPassword, setEditPassword] = useState('');
     const [updateLoading, setUpdateLoading] = useState(false);
     const [updateMessage, setUpdateMessage] = useState(null);
@@ -71,6 +73,7 @@ const AdminHome = () => {
 
     const handleSaveCredentials = async (e) => {
         e.preventDefault();
+        if (editEmailError) return;
         setUpdateLoading(true);
         setUpdateMessage(null);
         setUpdateError(null);
@@ -277,8 +280,11 @@ const AdminHome = () => {
                                     required
                                     value={editEmail}
                                     onChange={(e) => setEditEmail(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/15 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-[#a5d391]"
+                                    aria-invalid={!!editEmailError}
+                                    aria-describedby={editEmailError ? 'edit-email-error' : undefined}
+                                    className={`w-full bg-black/40 border rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none ${editEmailError ? 'border-red-500/60 focus:border-red-500/60' : 'border-white/15 focus:border-[#a5d391]'}`}
                                 />
+                                {editEmailError && <p id="edit-email-error" className="mt-1.5 text-xs text-red-400">{editEmailError}</p>}
                             </div>
 
                             <div>
