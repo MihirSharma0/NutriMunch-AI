@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# ----------------------------------------------------------------------
+# CodeRabbit Configuration File
+# Documentation: https://docs.coderabbit.ai/
+# ----------------------------------------------------------------------
+
+# Language Settings:
+# Set the language for review comments (e.g., en-US, en-GB, es, fr, de, ja, zh-CN)
+language: "en-US"
+
+# Tone Instructions:
+# Guidance on how CodeRabbit conveys feedback
+tone_instructions: "Provide clear, constructive, and actionable feedback. Highlight security concerns, edge cases, and best practices with concise code examples where appropriate."
+
+# Early Access to experimental features
+early_access: false
+
+# ----------------------------------------------------------------------
+# Reviews Configuration (Review Depth & Behavior)
+# ----------------------------------------------------------------------
+reviews:
+  # Review Depth / Profile:
+  # - "quiet": Minimal noise; reports only critical issues and bugs.
+  # - "chill": Balanced depth; flags real bugs, edge cases, and actionable improvements (default).
+  # - "assertive": Deep & strict review; covers thorough code styling, naming, performance, and best practices.
+  profile: "chill"
+
+  # Workflow configuration
+  request_changes_workflow: false
+  high_level_summary: true
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  poem: false
+
+  # Automatic Review Triggers
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 5
+
+  # File Path Filtering:
+  # Exclude generated directories, build artifacts, lockfiles, and binaries
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/target/**"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/.DS_Store"
+
+  # Path-Specific Review Instructions
+  path_instructions:
+    # Frontend (React + Vite + Tailwind CSS)
+    - path: "frontend/**"
+      instructions: |
+        - Review React components for state management, unnecessary re-renders, and correct hook dependencies.
+        - Ensure responsive UI designs with Tailwind CSS and accessible interactive elements (a11y).
+        - Verify API handling with Axios (error boundaries, loading states, token expiration handling).
+        - Avoid hardcoding sensitive information or environment-specific API endpoints.
+
+    # Backend (Java + Spring Boot + JPA)
+    - path: "backend/**"
+      instructions: |
+        - Check for Spring Boot and Java best practices, including REST API design conventions and DTO validations.
+        - Review Spring Security configurations, JWT handling, authentication, and authorization checks.
+        - Ensure database operations and JPA queries are optimized to avoid N+1 query problems.
+        - Verify transactional boundaries (@Transactional) and proper error/exception handling with ControllerAdvice.
+
+  # Integrated Security and Static Analysis Tools
+  tools:
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    shellcheck:
+      enabled: true
+    markdownlint:
+      enabled: true
+
+# ----------------------------------------------------------------------
+# Chat Configuration
+# ----------------------------------------------------------------------
+chat:
+  auto_reply: true
+
