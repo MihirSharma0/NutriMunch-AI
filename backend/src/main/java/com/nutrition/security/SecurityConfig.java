@@ -1,6 +1,8 @@
 package com.nutrition.security;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,8 +19,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.List;
 
 /**
  * Spring Security Architecture Configuration.
@@ -28,9 +31,19 @@ import java.util.Collections;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+
+    /**
+     * Comma separated list of browser origins allowed to call this API, taken from the
+     * existing {@code app.frontend.origin} property (env var {@code FRONTEND_ORIGIN}).
+     * The default is the deployed Vercel frontend plus the usual local dev ports, so
+     * behaviour is unchanged for the live site and for local development.
+     */
+    @Value("${app.frontend.origin:https://nutrimunch-ai.vercel.app,http://localhost:5173,http://localhost:5174}")
+    private String frontendOrigin;
 
     /**
      * Configures HTTP security filter chain, endpoint access permissions, and session policy.
@@ -92,7 +105,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
+        configuration.setAllowedOriginPatterns(resolveAllowedOriginPatterns());
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "Authorization"));
@@ -100,5 +113,33 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    /**
+     * Builds the list of origin patterns permitted to call this API.
+     *
+     * <p>Previously every origin was accepted, which let any website drive the API from a
+     * visitor's browser. The configured origins replace that wildcard. Local development is
+     * always allowed on any port so a locally served frontend can reach the deployed backend
+     * (and vice versa) without editing production configuration. Spring treats the port
+     * wildcard {@code [*]} and host wildcard {@code *} as patterns, so these are matched
+     * rather than compared literally.
+     *
+     * @return origin patterns accepted for cross-origin requests
+     */
+    private List<String> resolveAllowedOriginPatterns() {
+        List<String> patterns = new ArrayList<>();
+        if (frontendOrigin != null) {
+            for (String origin : frontendOrigin.split(",")) {
+                String trimmed = origin.trim();
+                if (!trimmed.isEmpty()) {
+                    patterns.add(trimmed);
+                }
+            }
+        }
+        patterns.add("http://localhost:[*]");
+        patterns.add("http://127.0.0.1:[*]");
+        log.info("CORS allowed origin patterns: {}", patterns);
+        return patterns;
     }
 }
