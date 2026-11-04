@@ -44,7 +44,7 @@ public class AiService {
     private final UserProfileRepository userProfileRepository;
     private final RecipeRepository recipeRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 

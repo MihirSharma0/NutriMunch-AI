@@ -63,6 +63,7 @@ public class AuthService {
     private final MailService mailService;
     private final EmailService emailService;
     private final SystemSettingService systemSettingService;
+    private final RestTemplate restTemplate;
 
     @Value("${google.client.id}")
     private String googleClientId;
@@ -105,7 +106,6 @@ public class AuthService {
         String accessToken = request.getCredential();
         String roleStr = request.getRole();
         try {
-            RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(accessToken);
             HttpEntity<String> entity = new HttpEntity<>("", headers);
@@ -130,12 +130,7 @@ public class AuthService {
                                 "Role selection required for new Google login");
                     }
 
-                    Role selectedRole;
-                    try {
-                        selectedRole = Role.valueOf(roleStr.toUpperCase());
-                    } catch (IllegalArgumentException e) {
-                        selectedRole = Role.USER;
-                    }
+                    Role selectedRole = selfServiceRole(roleStr);
 
                     user = new User();
                     user.setEmail(email);
@@ -213,14 +208,7 @@ public class AuthService {
         user.setEmail(signUpRequest.getEmail());
         user.setPasswordHash(passwordEncoder.encode(signUpRequest.getPassword()));
 
-        Role userRole = Role.USER;
-        if (signUpRequest.getRole() != null) {
-            try {
-                userRole = Role.valueOf(signUpRequest.getRole().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                userRole = Role.USER;
-            }
-        }
+        Role userRole = selfServiceRole(signUpRequest.getRole());
         user.setRole(userRole);
         user.setVerified(false);
 
@@ -407,5 +395,34 @@ public class AuthService {
         userRepository.save(user);
         passwordResetTokenRepository.delete(resetToken);
         return true;
+    }
+
+    /**
+     * Resolves the role a caller may assign to themselves during open sign-up.
+     *
+     * <p>Both the registration endpoint and the Google sign-in endpoint accept a role from
+     * the client, so without this guard a crafted request could create an administrator
+     * account. Self-service sign-up is therefore limited to {@link Role#USER} and
+     * {@link Role#NUTRITIONIST}; an ADMIN request is downgraded to USER and logged.
+     * Administrator and role changes continue to be performed by an authenticated
+     * administrator through the existing admin endpoints.
+     *
+     * @param requestedRole raw role value supplied by the client, possibly null or invalid
+     * @return a safe role for self-service sign-up
+     */
+    private static Role selfServiceRole(String requestedRole) {
+        if (requestedRole == null || requestedRole.isBlank()) {
+            return Role.USER;
+        }
+        try {
+            Role parsed = Role.valueOf(requestedRole.trim().toUpperCase());
+            if (parsed == Role.ADMIN) {
+                System.err.println("Rejected self-service ADMIN sign-up; assigning USER instead.");
+                return Role.USER;
+            }
+            return parsed;
+        } catch (IllegalArgumentException e) {
+            return Role.USER;
+        }
     }
 }
