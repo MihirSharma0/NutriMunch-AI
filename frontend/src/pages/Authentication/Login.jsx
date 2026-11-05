@@ -30,6 +30,7 @@ const Login = () => {
     const [selectedRole, setSelectedRole] = useState(null);
     const [pendingGoogleCredential, setPendingGoogleCredential] = useState(null);
     const [googleProfile, setGoogleProfile] = useState({ firstName: '', lastName: '' });
+    const [isSigningIn, setIsSigningIn] = useState(false);
 
     const { login, googleLogin, user } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -59,11 +60,14 @@ const Login = () => {
                 setPendingGoogleCredential(credential);
                 setGoogleProfile(result.googleProfile);
                 setRequiresRoleSelection(true);
+                setIsSigningIn(false);
             } else {
                 setError(result.message);
+                setIsSigningIn(false);
             }
         } catch (err) {
             setError('Google login failed. Please try again.');
+            setIsSigningIn(false);
         }
     };
 
@@ -76,6 +80,7 @@ const Login = () => {
 
     const createGoogleAccount = async (profileData) => {
         if (!pendingGoogleCredential) return false;
+        setIsSigningIn(true);
         try {
             const result = await googleLogin(pendingGoogleCredential, selectedRole, profileData);
             if (result.success) {
@@ -89,32 +94,42 @@ const Login = () => {
         } catch (err) {
             setError('Google login failed. Please try again.');
             return false;
+        } finally {
+            setIsSigningIn(false);
         }
     };
 
     const loginWithGoogle = useGoogleLogin({
         onSuccess: handleGoogleLoginSuccess,
-        onError: () => setError('Google login failed. Please try again.'),
+        onError: () => {
+            setError('Google login failed. Please try again.');
+            setIsSigningIn(false);
+        },
     });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (getEmailError(email)) return;
         setError('');
-        const result = await login(email, password);
-        if (result.success) {
-            const actualRole = String(result.role || '').toUpperCase().replace('ROLE_', '');
-            if (activeTab === 'ADMIN' && actualRole !== 'ADMIN') {
-                setError('This account does not have Administrator privileges. Please sign in under the User tab.');
-                return;
+        setIsSigningIn(true);
+        try {
+            const result = await login(email, password);
+            if (result.success) {
+                const actualRole = String(result.role || '').toUpperCase().replace('ROLE_', '');
+                if (activeTab === 'ADMIN' && actualRole !== 'ADMIN') {
+                    setError('This account does not have Administrator privileges. Please sign in under the User tab.');
+                    return;
+                }
+                if (activeTab === 'NUTRITIONIST' && actualRole !== 'NUTRITIONIST') {
+                    setError('This account is not registered as a Certified Nutritionist. Please sign in under the User tab.');
+                    return;
+                }
+                navigate(getPostLoginUrl(result.role));
+            } else {
+                setError(result.message);
             }
-            if (activeTab === 'NUTRITIONIST' && actualRole !== 'NUTRITIONIST') {
-                setError('This account is not registered as a Certified Nutritionist. Please sign in under the User tab.');
-                return;
-            }
-            navigate(getPostLoginUrl(result.role));
-        } else {
-            setError(result.message);
+        } finally {
+            setIsSigningIn(false);
         }
     };
 
@@ -356,10 +371,20 @@ const Login = () => {
                             <div className="pt-1">
                                 <button 
                                     type="submit" 
-                                    className="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)] transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer"
+                                    disabled={isSigningIn}
+                                    className="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)] transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-wait disabled:opacity-70"
                                 >
-                                    <span>Sign In as {activeTab === 'USER' ? 'User' : activeTab === 'NUTRITIONIST' ? 'Nutritionist' : 'Admin'}</span>
-                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                                    {isSigningIn ? (
+                                        <>
+                                            <span className="h-4 w-4 rounded-full border-2 border-black/25 border-t-black animate-spin" />
+                                            <span>Signing in…</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Sign In as {activeTab === 'USER' ? 'User' : activeTab === 'NUTRITIONIST' ? 'Nutritionist' : 'Admin'}</span>
+                                            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                                        </>
+                                    )}
                                 </button>
                             </div>
 
@@ -367,8 +392,13 @@ const Login = () => {
                             <div className="pt-1">
                                 <button 
                                     type="button"
-                                    onClick={() => loginWithGoogle()}
-                                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white font-medium text-xs uppercase tracking-wider cursor-pointer"
+                                    disabled={isSigningIn}
+                                    onClick={() => {
+                                        setError('');
+                                        setIsSigningIn(true);
+                                        loginWithGoogle();
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white font-medium text-xs uppercase tracking-wider cursor-pointer disabled:cursor-wait disabled:opacity-60"
                                 >
                                     <svg className="w-4 h-4" viewBox="0 0 24 24">
                                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -394,6 +424,24 @@ const Login = () => {
                 </div>
             </main>
             {/* END: MainContent */}
+
+            {isSigningIn && (
+                <div
+                    className="fixed inset-0 z-[100000] flex items-center justify-center bg-[#080b12]/80 px-4 backdrop-blur-md"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <div className="w-full max-w-sm rounded-3xl border border-[#a5d391]/25 bg-[#0d121c] p-7 text-center shadow-[0_0_50px_rgba(165,211,145,0.12)]">
+                        <div className="mx-auto mb-5 h-12 w-12 rounded-full border-4 border-white/10 border-t-[#a5d391] animate-spin" />
+                        <h2 className="text-lg font-bold text-white">Signing you in</h2>
+                        <p className="mt-2 text-sm text-slate-400">Preparing your NutriMunch dashboard…</p>
+                        <div className="mt-6 space-y-2.5 animate-pulse" aria-hidden="true">
+                            <div className="mx-auto h-2 w-3/4 rounded-full bg-white/10" />
+                            <div className="mx-auto h-2 w-1/2 rounded-full bg-white/5" />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* BEGIN: Footer */}
             <footer className="w-full py-6 text-center text-xs text-slate-500 tracking-wide z-10">
