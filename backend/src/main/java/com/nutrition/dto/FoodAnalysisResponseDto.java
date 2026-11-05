@@ -17,6 +17,32 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FoodAnalysisResponseDto {
+    /**
+     * False when a barcode could not be resolved into an analysis. Analysis is not
+     * attempted in that case.
+     */
+    @Builder.Default
+    private Boolean productFound = true;
+
+    /**
+     * Machine-readable result of the request, so the UI can phrase each failure
+     * accurately instead of showing one generic error.
+     *
+     * <p>One of: {@code OK}, {@code INVALID_BARCODE}, {@code NOT_FOUND},
+     * {@code INCOMPLETE_DATA}, {@code SOURCE_UNAVAILABLE}, {@code ANALYSIS_FAILED}.
+     * Any response without this field is a successful analysis ({@code OK}).
+     */
+    @Builder.Default
+    private String outcome = "OK";
+
+    /**
+     * Human-readable, specific explanation of the outcome. Present whenever the
+     * outcome is not {@code OK}, and also when a successful analysis carries a
+     * limitation the user should know about (for example, the AI service being
+     * unavailable so the verdict came from the product record directly).
+     */
+    private String message;
+
     private String productName;
     private String category;
     private String servingSize;

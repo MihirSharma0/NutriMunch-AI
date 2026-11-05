@@ -7,6 +7,47 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../../../api/axios';
 import { Html5Qrcode } from 'html5-qrcode';
 
+/** Barcode formats accepted by the backend: EAN-8, UPC-A, EAN-13, GTIN-14. */
+const validateBarcode = (raw) => {
+    const clean = (raw || '').replace(/[\s-]/g, '');
+    if (!clean) return 'No barcode was provided. Enter the 8 to 14 digits printed beneath the barcode on the package.';
+    if (!/^\d+$/.test(clean))
+        return `'${(raw || '').trim()}' is not a valid barcode: it contains letters or symbols. Barcodes contain digits only.`;
+    if (clean.length < 8 || clean.length > 14)
+        return `'${clean}' has ${clean.length} digits. A valid barcode has 8 to 14 digits (EAN-8, UPC-A, EAN-13 or GTIN-14). Check that the whole number was entered or scanned.`;
+    return null;
+};
+
+/** Turns a transport/server failure into a specific, accurate statement. */
+const describeRequestError = (error) => {
+    const server = error.response && error.response.data;
+    if (server && server.message) {
+        return { outcome: server.outcome || 'ANALYSIS_FAILED', message: server.message };
+    }
+    const status = error.response && error.response.status;
+    if (!error.response)
+        return { outcome: 'ANALYSIS_FAILED', message: "Couldn't reach the server. Check your connection and that the backend is running, then try again." };
+    if (status === 401) return { outcome: 'ANALYSIS_FAILED', message: 'Your session has expired. Please log in again and retry the analysis.' };
+    if (status === 403) return { outcome: 'ANALYSIS_FAILED', message: 'This account does not have permission to run food analysis.' };
+    if (status === 404) return { outcome: 'ANALYSIS_FAILED', message: 'The food analysis endpoint was not found on the server. Please contact support.' };
+    if (status === 429) return { outcome: 'SOURCE_UNAVAILABLE', message: 'Too many requests reached the server. Wait a moment and try again.' };
+    if (status >= 500) return { outcome: 'ANALYSIS_FAILED', message: `The server could not complete the analysis (HTTP ${status}). Please try again shortly.` };
+    return { outcome: 'ANALYSIS_FAILED', message: `The analysis request failed (HTTP ${status}). Please try again.` };
+};
+
+/** Each validated issue gets its own accurate heading, icon and colour. */
+const ISSUE_VIEWS = {
+    INVALID_BARCODE:     { title: 'Invalid barcode',              icon: 'barcode_reader', tone: 'amber' },
+    NOT_FOUND:           { title: 'Product not found',            icon: 'scan_delete',    tone: 'amber' },
+    INCOMPLETE_DATA:     { title: 'Product record incomplete',    icon: 'data_alert',     tone: 'amber' },
+    SOURCE_UNAVAILABLE:  { title: 'Product database unavailable', icon: 'cloud_off',      tone: 'red'   },
+    ANALYSIS_FAILED:     { title: 'Analysis failed',              icon: 'error',          tone: 'red'   },
+};
+
+/** Missing numbers render as a dash, never as a fabricated zero or "null". */
+const fmt = (value, unit = '') =>
+    (value === null || value === undefined || value === '' ? '—' : `${value}${unit}`);
+
 /**
  * AiImageAnalyzer Component
  * Interactive scanner providing image upload, real-time camera barcode reading, and AI macronutrient analysis.
@@ -21,6 +62,7 @@ const AiImageAnalyzer = () => {
     const [userProfileAllergies, setUserProfileAllergies] = useState('');
     
     const [analysis, setAnalysis] = useState(null);
+    const [issue, setIssue] = useState(null);
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
@@ -122,31 +164,51 @@ const AiImageAnalyzer = () => {
 
     const analyzeFood = async (e) => {
         if (e) e.preventDefault();
-        setLoading(true);
         setErrorMsg('');
+        setIssue(null);
         setAnalysis(null);
 
+        const cleanBarcode = (barcode || '').replace(/[\s-]/g, '');
+
+        // Validate before any network call, so a bad barcode is never reported as a
+        // missing product or a server failure.
+        if (inputType === 'BARCODE') {
+            const validationMessage = validateBarcode(cleanBarcode);
+            if (validationMessage) {
+                setIssue({ outcome: 'INVALID_BARCODE', message: validationMessage });
+                return;
+            }
+        }
+
+        setLoading(true);
         try {
             const payload = {
                 inputType,
                 imageUrl: previewImage || imageUrl,
-                barcode: barcode,
+                barcode: cleanBarcode,
                 customAllergies: allergyTags.join(', ')
             };
             const response = await api.post('/ai/analyze-food', payload);
-            setAnalysis(response.data);
+            const data = response.data;
+            if (data && data.productFound === false) {
+                // A typed outcome from the server: no analysis was run.
+                setIssue({ outcome: data.outcome || 'NOT_FOUND', message: data.message || 'The barcode could not be analysed.' });
+            } else {
+                setAnalysis(data);
+            }
         } catch (error) {
             console.error("Error analyzing food input", error);
-            setErrorMsg("Failed to analyze food. Please ensure input data or image is valid and try again.");
+            setIssue(describeRequestError(error));
         } finally {
             setLoading(false);
         }
     };
 
-    // Helper presets for testing barcode & image quickly
+    // Real product examples for demonstrating a barcode analysis
     const applyPresetBarcode = (code) => {
         setInputType('BARCODE');
         setBarcode(code);
+        setIssue(null);
     };
 
     const applySamplePhoto = (url) => {
@@ -302,22 +364,23 @@ const AiImageAnalyzer = () => {
                                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/40">barcode_scanner</span>
                                     <input
                                         type="text"
+                                        inputMode="numeric"
                                         value={barcode}
                                         onChange={(e) => setBarcode(e.target.value)}
-                                        placeholder="e.g. 8901030700012 or 012000800001"
+                                        placeholder="e.g. 8901063093522 or 8901719134845"
                                         className="w-full bg-[#080b12]/80 border border-white/10 rounded-2xl p-4 pl-12 text-white text-sm placeholder:text-white/40 outline-none focus:border-[#a5d391]/50 transition-colors font-mono"
                                     />
                                 </div>
                             </div>
 
-                            {/* Sample Barcode Buttons */}
+                            {/* Verified real-product barcodes */}
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs text-white/50 font-bold">Try Sample Barcodes:</span>
-                                <button type="button" onClick={() => applyPresetBarcode('8901030700012')} className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-white/70 transition-all cursor-pointer font-mono">
-                                    8901030700012 (Oat & Honey Bar)
+                                <span className="text-xs text-white/50 font-bold">Verified example barcodes (real products):</span>
+                                <button type="button" onClick={() => applyPresetBarcode('8901063093522')} className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-white/70 transition-all cursor-pointer font-mono">
+                                    8901063093522 (Cashew Cookies)
                                 </button>
-                                <button type="button" onClick={() => applyPresetBarcode('012000800001')} className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-amber-500/20 hover:text-amber-300 border border-white/10 text-white/70 transition-all cursor-pointer font-mono">
-                                    012000800001 (Diet Citrus Soda)
+                                <button type="button" onClick={() => applyPresetBarcode('8901719134845')} className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-amber-500/20 hover:text-amber-300 border border-white/10 text-white/70 transition-all cursor-pointer font-mono">
+                                    8901719134845 (Parle-G Biscuits)
                                 </button>
                             </div>
                         </div>
@@ -385,6 +448,57 @@ const AiImageAnalyzer = () => {
                 </div>
             )}
 
+            {/* Validated issue / exception card — one heading and action per outcome */}
+            {issue && !loading && (() => {
+                const view = ISSUE_VIEWS[issue.outcome] || ISSUE_VIEWS.ANALYSIS_FAILED;
+                const isRed = view.tone === 'red';
+                return (
+                    <div className={`p-5 rounded-2xl border text-sm space-y-3 ${isRed ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                        <div className="flex items-start gap-3">
+                            <span className={`material-symbols-outlined text-xl ${isRed ? 'text-red-400' : 'text-amber-400'}`}>{view.icon}</span>
+                            <div className="space-y-1">
+                                <p className={`font-bold ${isRed ? 'text-red-300' : 'text-amber-300'}`}>{view.title}</p>
+                                <p className={isRed ? 'text-red-200/80' : 'text-amber-200/80'}>{issue.message}</p>
+                            </div>
+                        </div>
+                        <div className="ml-9 flex flex-wrap gap-2">
+                            {(issue.outcome === 'NOT_FOUND' || issue.outcome === 'INCOMPLETE_DATA') && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setInputType('FOOD_IMAGE');
+                                        setIssue(null);
+                                        setIsCameraScanning(false);
+                                    }}
+                                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-white/80 text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-base">photo_camera</span>
+                                    <span>Analyze the product label with an image instead</span>
+                                </button>
+                            )}
+                            {(issue.outcome === 'SOURCE_UNAVAILABLE' || issue.outcome === 'ANALYSIS_FAILED') && (
+                                <button
+                                    type="button"
+                                    onClick={() => analyzeFood()}
+                                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-white/80 text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-base">refresh</span>
+                                    <span>Try again</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* Limitation notice on an otherwise successful analysis */}
+            {analysis && analysis.message && (
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-white/70 flex items-start gap-3">
+                    <span className="material-symbols-outlined text-base text-[#a5d391]">info</span>
+                    <span>{analysis.message}</span>
+                </div>
+            )}
+
             {/* Analysis Output Section */}
             {analysis && (
                 <div className="space-y-8 animate-fadeIn">
@@ -399,7 +513,7 @@ const AiImageAnalyzer = () => {
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b border-white/10">
                             <div>
                                 <div className="text-xs uppercase tracking-widest font-black text-white/50 mb-1">
-                                    {analysis.category || 'Product Analysis'} • {analysis.servingSize || 'Per Serving'}
+                                    {analysis.category || 'Product Analysis'}{analysis.servingSize ? ` • ${analysis.servingSize}` : ''}
                                 </div>
                                 <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-white">
                                     {analysis.productName}
@@ -475,16 +589,18 @@ const AiImageAnalyzer = () => {
                                                 <p className="text-xs text-white/60 mt-1">{add.description}</p>
                                             </div>
                                             <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg ${
-                                                add.riskLevel === 'HIGH' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                add.riskLevel === 'HIGH' ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                                                : add.riskLevel ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                : 'bg-white/10 text-white/50 border border-white/10'
                                             }`}>
-                                                {add.riskLevel} Risk
+                                                {add.riskLevel ? `${add.riskLevel} Risk` : 'Not assessed'}
                                             </span>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
                                 <p className="text-sm text-white/50 italic p-4 rounded-xl bg-[#080b12]/60 border border-white/5">
-                                    No synthetic preservatives, artificial sweeteners, or high-risk colors detected.
+                                    No additives were reported in the data supplied for this analysis.
                                 </p>
                             )}
                         </div>
@@ -525,32 +641,32 @@ const AiImageAnalyzer = () => {
                             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
                                 <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
                                     <div className="text-[10px] font-black uppercase text-white/50">Calories</div>
-                                    <div className="text-2xl font-bold text-[#a5d391] font-hero-display mt-1">{analysis.nutrition.calories}</div>
+                                    <div className="text-2xl font-bold text-[#a5d391] font-hero-display mt-1">{fmt(analysis.nutrition.calories)}</div>
                                     <div className="text-[10px] text-white/40">kcal</div>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
                                     <div className="text-[10px] font-black uppercase text-white/50">Protein</div>
-                                    <div className="text-xl font-bold text-sky-400 font-hero-display mt-1">{analysis.nutrition.proteinG}g</div>
+                                    <div className="text-xl font-bold text-sky-400 font-hero-display mt-1">{fmt(analysis.nutrition.proteinG, 'g')}</div>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
                                     <div className="text-[10px] font-black uppercase text-white/50">Carbs</div>
-                                    <div className="text-xl font-bold text-amber-400 font-hero-display mt-1">{analysis.nutrition.carbsG}g</div>
+                                    <div className="text-xl font-bold text-amber-400 font-hero-display mt-1">{fmt(analysis.nutrition.carbsG, 'g')}</div>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
                                     <div className="text-[10px] font-black uppercase text-white/50">Fat</div>
-                                    <div className="text-xl font-bold text-rose-400 font-hero-display mt-1">{analysis.nutrition.fatG}g</div>
+                                    <div className="text-xl font-bold text-rose-400 font-hero-display mt-1">{fmt(analysis.nutrition.fatG, 'g')}</div>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
                                     <div className="text-[10px] font-black uppercase text-white/50">Fiber</div>
-                                    <div className="text-xl font-bold text-emerald-400 font-hero-display mt-1">{analysis.nutrition.fiberG || 0}g</div>
+                                    <div className="text-xl font-bold text-emerald-400 font-hero-display mt-1">{fmt(analysis.nutrition.fiberG, 'g')}</div>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
                                     <div className="text-[10px] font-black uppercase text-white/50">Sugar</div>
-                                    <div className={`text-xl font-bold font-hero-display mt-1 ${analysis.nutrition.sugarG > 15 ? 'text-red-400' : 'text-white'}`}>{analysis.nutrition.sugarG || 0}g</div>
+                                    <div className={`text-xl font-bold font-hero-display mt-1 ${analysis.nutrition.sugarG > 15 ? 'text-red-400' : 'text-white'}`}>{fmt(analysis.nutrition.sugarG, 'g')}</div>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
                                     <div className="text-[10px] font-black uppercase text-white/50">Sodium</div>
-                                    <div className={`text-xl font-bold font-hero-display mt-1 ${analysis.nutrition.sodiumMg > 500 ? 'text-red-400' : 'text-white'}`}>{analysis.nutrition.sodiumMg || 0}mg</div>
+                                    <div className={`text-xl font-bold font-hero-display mt-1 ${analysis.nutrition.sodiumMg > 500 ? 'text-red-400' : 'text-white'}`}>{fmt(analysis.nutrition.sodiumMg, 'mg')}</div>
                                 </div>
                             </div>
 
@@ -599,8 +715,8 @@ const AiImageAnalyzer = () => {
 
                                         <div className="space-y-3 pt-3 border-t border-white/10">
                                             <div className="flex items-center justify-between text-xs text-white/60 font-bold">
-                                                <span>Calories: <strong className="text-white">{alt.calories} kcal</strong></span>
-                                                <span>Protein: <strong className="text-[#a5d391]">{alt.proteinG}g</strong></span>
+                                                <span>Calories: <strong className="text-white">{fmt(alt.calories)} kcal</strong></span>
+                                                <span>Protein: <strong className="text-[#a5d391]">{fmt(alt.proteinG, 'g')}</strong></span>
                                             </div>
                                             <div className="p-3 rounded-xl bg-[#a5d391]/10 border border-[#a5d391]/20 text-xs text-[#a5d391] leading-relaxed">
                                                 <strong>Why it's better:</strong> {alt.whyBetter}
