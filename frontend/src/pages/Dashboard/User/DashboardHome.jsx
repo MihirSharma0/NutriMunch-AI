@@ -754,8 +754,8 @@ const DashboardHome = () => {
                 </Link>
             </div>
 
-            {/* AI Insights & Biometric Sync Status */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* AI Insights */}
+            <div className="mb-8">
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 shadow-xl relative overflow-hidden">
                     <div className="flex items-center gap-3 mb-4">
                         <span className="material-symbols-outlined text-[#a5d391] text-2xl animate-pulse">memory</span>
@@ -778,29 +778,6 @@ const DashboardHome = () => {
                     </div>
                 </div>
 
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 shadow-xl">
-                    <h3 className="font-bold text-lg mb-6 font-hero-display text-white">Biometric Sync Status</h3>
-                    <ul className="space-y-4">
-                        <li className="flex justify-between items-center pb-4 border-b border-white/10">
-                            <div className="flex items-center gap-3 text-sm">
-                                <span className="material-symbols-outlined text-xs text-[#a5d391]">watch</span> Oura Ring
-                            </div>
-                            <span className="text-xs text-[#a5d391] font-bold bg-[#a5d391]/10 px-3 py-1 rounded-full border border-[#a5d391]/20">Synced 2m ago</span>
-                        </li>
-                        <li className="flex justify-between items-center pb-4 border-b border-white/10">
-                            <div className="flex items-center gap-3 text-sm">
-                                <span className="material-symbols-outlined text-xs text-[#a5d391]">monitor_heart</span> Apple Health
-                            </div>
-                            <span className="text-xs text-[#a5d391] font-bold bg-[#a5d391]/10 px-3 py-1 rounded-full border border-[#a5d391]/20">Synced 10m ago</span>
-                        </li>
-                        <li className="flex justify-between items-center">
-                            <div className="flex items-center gap-3 text-sm">
-                                <span className="material-symbols-outlined text-xs text-emerald-400">restaurant</span> Prescribed Diet Sync
-                            </div>
-                            <span className="text-xs text-[#a5d391] font-bold bg-[#a5d391]/15 px-3 py-1 rounded-full border border-[#a5d391]/30">Active Protocol</span>
-                        </li>
-                    </ul>
-                </div>
             </div>
 
         </div>
