@@ -81,3 +81,37 @@
     background: #8ca49b !important;
   }
 }
+
+@keyframes hero-carousel-enter {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.hero-carousel-slide {
+  animation: hero-carousel-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+
+.hero-carousel-slide-previous {
+  animation-name: hero-carousel-enter-from-left;
+}
+
+@keyframes hero-carousel-enter-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-carousel-slide {
+    animation: none;
+    will-change: auto;
+  }
+}

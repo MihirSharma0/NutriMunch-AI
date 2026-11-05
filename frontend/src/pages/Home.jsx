@@ -105,32 +105,26 @@ const FlipFeatureCard = ({ children, backContent, wrapperClass, frontClass, back
 const HeroCarousel = () => {
     const navigate = useNavigate();
     const [activeIdx, setActiveIdx] = useState(0);
-    const [animDir, setAnimDir] = useState('right');
-    const [isAnimating, setIsAnimating] = useState(false);
+    const [slideDirection, setSlideDirection] = useState('next');
     const [isPaused, setIsPaused] = useState(false);
     const intervalRef = useRef(null);
     const TOTAL = 5;
 
-    const goTo = useCallback((idx, dir) => {
-        if (isAnimating || idx === activeIdx) return;
-        setAnimDir(dir ?? (idx > activeIdx ? 'right' : 'left'));
-        setIsAnimating(true);
-        setTimeout(() => { setActiveIdx(idx); setIsAnimating(false); }, 420);
-    }, [isAnimating, activeIdx]);
+    const goTo = useCallback((idx) => {
+        if (idx === activeIdx) return;
+        setSlideDirection(idx > activeIdx ? 'next' : 'previous');
+        setActiveIdx(idx);
+    }, [activeIdx]);
 
     const goNext = useCallback(() => {
-        if (isAnimating) return;
-        const next = (activeIdx + 1) % TOTAL;
-        setAnimDir('right'); setIsAnimating(true);
-        setTimeout(() => { setActiveIdx(next); setIsAnimating(false); }, 420);
-    }, [isAnimating, activeIdx]);
+        setSlideDirection('next');
+        setActiveIdx((current) => (current + 1) % TOTAL);
+    }, []);
 
     const goPrev = useCallback(() => {
-        if (isAnimating) return;
-        const prev = (activeIdx - 1 + TOTAL) % TOTAL;
-        setAnimDir('left'); setIsAnimating(true);
-        setTimeout(() => { setActiveIdx(prev); setIsAnimating(false); }, 420);
-    }, [isAnimating, activeIdx]);
+        setSlideDirection('previous');
+        setActiveIdx((current) => (current - 1 + TOTAL) % TOTAL);
+    }, []);
 
     useEffect(() => {
         if (isPaused) { clearInterval(intervalRef.current); return; }
@@ -138,13 +132,10 @@ const HeroCarousel = () => {
         return () => clearInterval(intervalRef.current);
     }, [goNext, isPaused]);
 
-    const animClass = isAnimating
-        ? animDir === 'right' ? 'opacity-0 translate-x-10' : 'opacity-0 -translate-x-10'
-        : 'opacity-100 translate-x-0';
-
     /** Dot nav colours per slide */
     const accents = ['#a5d391', '#38bdf8', '#f472b6', '#fbbf24', '#a78bfa'];
     const accent = accents[activeIdx];
+    const slideClass = `hero-carousel-slide hero-carousel-slide-${slideDirection}`;
 
     /** Dot nav */
     const Dots = () => (
@@ -190,11 +181,11 @@ const HeroCarousel = () => {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            <div className="relative rounded-2xl overflow-hidden shadow-[0_80px_120px_-20px_rgba(15,23,42,0.5)] border border-white/10" style={{ aspectRatio: '21/9' }}>
+            <div className="relative rounded-2xl overflow-hidden bg-[#080b12] shadow-[0_80px_120px_-20px_rgba(15,23,42,0.5)] border border-white/10" style={{ aspectRatio: '21/9' }}>
 
                 {/* ──────────── SLIDE 1: Hero food plate image ──────────── */}
                 {activeIdx === 0 && (
-                    <div className={`absolute inset-0 transition-all duration-420 ease-out ${animClass}`}>
+                    <div key={activeIdx} className={`${slideClass} absolute inset-0`}>
                         <img
                             className="w-full h-full object-cover scale-105"
                             src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQW1ayK2QptnJC4qRpFZJQfK25SrdzXBlBBKDdfgFsY3fbK5Q9MBP4F2v2a6cli_nEXhYxZdynfefZ9y6wd9ardu7fb6hI4n4NzwrwE4B--Y4wqSMdeuOKZZfTXGlE55PD6O95ZslKGxZFe9jEyC5O4jQKnL_jnYppX1ixe10PJAE_5uvWDiX9c_vA5cz5JtDILmRAtwTwIPmdRfsDOx7e2W8rsEiFw4gzv8YSmBzQ-2grz1UCn8l"
@@ -219,7 +210,7 @@ const HeroCarousel = () => {
 
                 {/* ──────────── SLIDE 2: Consultation Chat Feature ──────────── */}
                 {activeIdx === 1 && (
-                    <div className={`absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#071120] to-[#0d1f36] transition-all duration-420 ease-out ${animClass} flex`}>
+                    <div key={activeIdx} className={`${slideClass} absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#071120] to-[#0d1f36] flex`}>
                         {/* Left: Feature Info */}
                         <div className="flex flex-col justify-center px-8 sm:px-14 w-1/2 gap-4">
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full w-fit border backdrop-blur-md bg-[#38bdf8]/10 border-[#38bdf8]/40 text-[#38bdf8]">Live Chat</span>
@@ -271,7 +262,7 @@ const HeroCarousel = () => {
 
                 {/* ──────────── SLIDE 3: AI Food Image Analyzer ──────────── */}
                 {activeIdx === 2 && (
-                    <div className={`absolute inset-0 bg-gradient-to-br from-[#0d0a1e] via-[#120d26] to-[#1a0d2e] transition-all duration-420 ease-out ${animClass} flex`}>
+                    <div key={activeIdx} className={`${slideClass} absolute inset-0 bg-gradient-to-br from-[#0d0a1e] via-[#120d26] to-[#1a0d2e] flex`}>
                         {/* Left: Mock Scanner UI */}
                         <div className="hidden sm:flex flex-col justify-center pl-8 sm:pl-14 w-1/2 gap-4">
                             <div className="relative w-48 h-48 mx-auto">
@@ -322,7 +313,7 @@ const HeroCarousel = () => {
 
                 {/* ──────────── SLIDE 4: Progress Tracking ──────────── */}
                 {activeIdx === 3 && (
-                    <div className={`absolute inset-0 bg-gradient-to-br from-[#0b1a12] via-[#081510] to-[#0f2418] transition-all duration-420 ease-out ${animClass} flex`}>
+                    <div key={activeIdx} className={`${slideClass} absolute inset-0 bg-gradient-to-br from-[#0b1a12] via-[#081510] to-[#0f2418] flex`}>
                         {/* Left: Feature info */}
                         <div className="flex flex-col justify-center px-8 sm:px-14 w-full sm:w-1/2 gap-4">
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full w-fit border backdrop-blur-md bg-[#fbbf24]/10 border-[#fbbf24]/40 text-[#fbbf24]">Progress Tracker</span>
@@ -377,7 +368,7 @@ const HeroCarousel = () => {
 
                 {/* ──────────── SLIDE 5: Appointment Booking / Nutritionist ──────────── */}
                 {activeIdx === 4 && (
-                    <div className={`absolute inset-0 bg-gradient-to-br from-[#130d1e] via-[#1a0e2e] to-[#0d0820] transition-all duration-420 ease-out ${animClass} flex`}>
+                    <div key={activeIdx} className={`${slideClass} absolute inset-0 bg-gradient-to-br from-[#130d1e] via-[#1a0e2e] to-[#0d0820] flex`}>
                         {/* Left: Mock booking UI */}
                         <div className="hidden sm:flex flex-col justify-center pl-8 sm:pl-14 w-1/2 gap-3">
                             <div className="bg-[#1a0d2e]/80 border border-[#a78bfa]/20 rounded-2xl p-4 backdrop-blur-xl shadow-2xl flex flex-col gap-3">
