@@ -53,8 +53,27 @@ public class AiController {
             @RequestBody com.nutrition.dto.FoodAnalysisRequestDto request,
             @org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails userDetails) {
         String email = userDetails != null ? userDetails.getUsername() : null;
-        com.nutrition.dto.FoodAnalysisResponseDto response = aiService.analyzeFood(request, email);
-        return ResponseEntity.ok(response);
+        try {
+            com.nutrition.dto.FoodAnalysisResponseDto response = aiService.analyzeFood(request, email);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            // Expected problems are returned by the service as typed outcomes. Anything
+            // reaching here is an unexpected failure: state it plainly rather than letting
+            // the framework return an opaque 500 with no usable explanation.
+            System.err.println("Food analysis failed unexpectedly: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(org.springframework.http.HttpStatus.BAD_GATEWAY)
+                    .body(com.nutrition.dto.FoodAnalysisResponseDto.builder()
+                            .productFound(false)
+                            .outcome("ANALYSIS_FAILED")
+                            .message("The analysis could not be completed because of an internal error. "
+                                    + "No product data was invented. Please try again; if it keeps failing, "
+                                    + "contact support with the barcode or image you used.")
+                            .ingredientsList(List.of())
+                            .matchedAllergens(List.of())
+                            .additives(List.of())
+                            .build());
+        }
     }
 
     /**
