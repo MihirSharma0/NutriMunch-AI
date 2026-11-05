@@ -547,6 +547,7 @@ const DietPlans = () => {
                         .map((plan) => {
                             const isSelected = plan.id === selectedPlanId;
                             const isExcl = plan.scope === 'EXCLUSIVE';
+                            const isAiGenerated = String(plan.id).startsWith('saved-ai-');
                             const planName = plan.title || plan.planTitle || 'Custom Protocol';
 
                         return (
@@ -591,8 +592,8 @@ const DietPlans = () => {
                                         <div>{plan.dietType || 'Clinical Protocol'}</div>
                                         <div className="flex items-center gap-1 text-white/70">
                                             <span className="material-symbols-outlined text-[12px] text-[#a5d391]">badge</span>
-                                            <span>By <strong className="text-white font-medium">{plan.nutritionistName || 'Nutritionist'}</strong></span>
-                                            {plan.nutritionistEmail && (
+                                            <span>By <strong className="text-white font-medium">{isAiGenerated ? 'AI Nutritionist' : plan.nutritionistName || 'Nutritionist'}</strong></span>
+                                            {!isAiGenerated && plan.nutritionistEmail && (
                                                 <span className="text-[#a5d391] font-mono text-[10px] truncate max-w-[170px]" title={plan.nutritionistEmail}>
                                                     ({plan.nutritionistEmail})
                                                 </span>
