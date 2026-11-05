@@ -164,75 +164,96 @@ const DietPlanBuilder = () => {
     const fetchRealUsers = async () => {
         try {
             setLoadingClients(true);
-            const response = await api.get('/client-profiles');
-            if (response.data && Array.isArray(response.data)) {
-                const fetched = response.data.map(p => {
-                    const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'User');
-                    const heightCm = p.heightCm || null;
-                    const weightKg = p.weightKg || null;
-                    const totalIn = heightCm ? heightCm / 2.54 : null;
-                    const ft = Math.floor(totalIn / 12);
-                    const inch = Math.round(totalIn % 12);
-                    const lbs = weightKg ? Math.round(weightKg * 2.20462) : null;
-                    const bmi = weightKg && heightCm ? (weightKg / ((heightCm / 100) * (heightCm / 100))).toFixed(1) : 'Not set';
-
-                    return {
-                        id: String(p.userId || p.id),
-                        userId: String(p.userId || p.id),
-                        name: name,
-                        email: p.email || '',
-                        role: 'USER',
-                        age: p.age ?? 'Not set',
-                        gender: p.gender || 'Not specified',
-                        goal: p.goal || 'No goal set',
-                        adherence: p.adherence ?? null,
-                        status: p.status || 'Not assessed',
-                        heightCm: heightCm,
-                        heightFtIn: heightCm ? `${ft}' ${inch}"` : 'Not set',
-                        weightKg: weightKg,
-                        weightLbs: lbs,
-                        weight: weightKg ? `${weightKg} kg` : 'Not set',
-                        targetWeightKg: p.targetWeightKg ?? null,
-                        bmi: bmi,
-                        activityLevel: p.activityLevel || 'Not set',
-                        dietType: p.dietType || 'Not set',
-                        allergies: p.allergies || 'Not set',
-                        cuisinePreferences: p.cuisinePreferences || 'Not set',
-                        favoriteFoods: p.favoriteFoods || 'Not set',
-                        dislikedFoods: p.dislikedFoods || 'Not set',
-                        lifestyleClass: p.lifestyleClass || 'Not set',
-                        mealBudget: p.mealBudget || 'Not set',
-                        bmr: p.bmr ?? null,
-                        tdee: p.tdee ?? null,
-                        calories: p.dailyCaloriesTarget ? `${p.dailyCaloriesTarget} kcal` : 'Not set',
-                        caloriesNum: p.dailyCaloriesTarget ?? null,
-                        protein: p.proteinTarget ? `${p.proteinTarget}g` : 'Not set',
-                        proteinNum: p.proteinTarget ?? null,
-                        carbs: p.carbsTarget ? `${p.carbsTarget}g` : 'Not set',
-                        carbsNum: p.carbsTarget ?? null,
-                        fats: p.fatsTarget ? `${p.fatsTarget}g` : 'Not set',
-                        fatsNum: p.fatsTarget ?? null,
-                        waterLiters: p.dailyWaterTargetLiters ?? null,
-                        fiberG: p.dailyFiberTargetG ?? null,
-                        ironMg: p.ironTargetMg ?? null,
-                        calciumMg: p.calciumTargetMg ?? null,
-                        vitDMcg: p.vitDTargetMcg ?? null,
-                        vitCMg: p.vitCTargetMg ?? null,
-                        notes: p.dietType ? `Preferred Diet: ${p.dietType}` : 'No dietary information recorded.'
-                    };
+            const [profilesResponse, appointmentsResponse] = await Promise.all([
+                api.get('/client-profiles'),
+                api.get('/appointments/me'),
+            ]);
+            if (Array.isArray(profilesResponse.data) && Array.isArray(appointmentsResponse.data)) {
+                const acceptedStatuses = new Set(['CONFIRMED', 'ACCEPTED', 'APPROVED', 'SCHEDULED']);
+                const acceptedAppointments = appointmentsResponse.data.filter(appointment =>
+                    acceptedStatuses.has(String(appointment.status || '').trim().toUpperCase())
+                    && appointment.userId != null
+                    && appointment.id != null,
+                );
+                const appointmentByPatient = new Map();
+                acceptedAppointments.forEach(appointment => {
+                    const patientId = String(appointment.userId);
+                    if (!appointmentByPatient.has(patientId)) {
+                        appointmentByPatient.set(patientId, appointment);
+                    }
                 });
+                const fetched = profilesResponse.data
+                    .filter(profile => appointmentByPatient.has(String(profile.userId || profile.id)))
+                    .map(p => {
+                        const name = p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.email ? p.email.split('@')[0] : 'User');
+                        const heightCm = p.heightCm || null;
+                        const weightKg = p.weightKg || null;
+                        const totalIn = heightCm ? heightCm / 2.54 : null;
+                        const ft = Math.floor(totalIn / 12);
+                        const inch = Math.round(totalIn % 12);
+                        const lbs = weightKg ? Math.round(weightKg * 2.20462) : null;
+                        const bmi = weightKg && heightCm ? (weightKg / ((heightCm / 100) * (heightCm / 100))).toFixed(1) : 'Not set';
+
+                        return {
+                            id: String(p.userId || p.id),
+                            userId: String(p.userId || p.id),
+                            appointmentId: appointmentByPatient.get(String(p.userId || p.id)).id,
+                            name: name,
+                            email: p.email || '',
+                            role: 'USER',
+                            age: p.age ?? 'Not set',
+                            gender: p.gender || 'Not specified',
+                            goal: p.goal || 'No goal set',
+                            adherence: p.adherence ?? null,
+                            status: p.status || 'Not assessed',
+                            heightCm: heightCm,
+                            heightFtIn: heightCm ? `${ft}' ${inch}"` : 'Not set',
+                            weightKg: weightKg,
+                            weightLbs: lbs,
+                            weight: weightKg ? `${weightKg} kg` : 'Not set',
+                            targetWeightKg: p.targetWeightKg ?? null,
+                            bmi: bmi,
+                            activityLevel: p.activityLevel || 'Not set',
+                            dietType: p.dietType || 'Not set',
+                            allergies: p.allergies || 'Not set',
+                            cuisinePreferences: p.cuisinePreferences || 'Not set',
+                            favoriteFoods: p.favoriteFoods || 'Not set',
+                            dislikedFoods: p.dislikedFoods || 'Not set',
+                            lifestyleClass: p.lifestyleClass || 'Not set',
+                            mealBudget: p.mealBudget || 'Not set',
+                            bmr: p.bmr ?? null,
+                            tdee: p.tdee ?? null,
+                            calories: p.dailyCaloriesTarget ? `${p.dailyCaloriesTarget} kcal` : 'Not set',
+                            caloriesNum: p.dailyCaloriesTarget ?? null,
+                            protein: p.proteinTarget ? `${p.proteinTarget}g` : 'Not set',
+                            proteinNum: p.proteinTarget ?? null,
+                            carbs: p.carbsTarget ? `${p.carbsTarget}g` : 'Not set',
+                            carbsNum: p.carbsTarget ?? null,
+                            fats: p.fatsTarget ? `${p.fatsTarget}g` : 'Not set',
+                            fatsNum: p.fatsTarget ?? null,
+                            waterLiters: p.dailyWaterTargetLiters ?? null,
+                            fiberG: p.dailyFiberTargetG ?? null,
+                            ironMg: p.ironTargetMg ?? null,
+                            calciumMg: p.calciumTargetMg ?? null,
+                            vitDMcg: p.vitDTargetMcg ?? null,
+                            vitCMg: p.vitCTargetMg ?? null,
+                            notes: p.dietType ? `Preferred Diet: ${p.dietType}` : 'No dietary information recorded.'
+                        };
+                    });
                 const patients = fetched.filter(client => client.id);
                 setClientsList(patients);
                 setRosterError('');
                 if (patients.length === 0) {
                     setSelectedClient(null);
-                } else if (!selectedClient) {
-                    setSelectedClient(patients[0]);
+                } else {
+                    setSelectedClient(current =>
+                        patients.find(patient => patient.id === current?.id) || patients[0],
+                    );
                 }
             } else {
                 setClientsList([]);
                 setSelectedClient(null);
-                setRosterError('Patient service returned an invalid response.');
+                setRosterError('Could not load accepted consultations and patient profiles. Please retry.');
             }
         } catch (error) {
             console.error('Failed loading patient roster', error);
@@ -282,9 +303,8 @@ const DietPlanBuilder = () => {
 
     // Open Consultation Chat with selected patient
     const handleOpenChat = (patient) => {
-        const participantId = patient?.userId || patient?.id;
-        if (participantId) {
-            navigate(`/consultation-chat?participantId=${encodeURIComponent(participantId)}`);
+        if (patient?.appointmentId) {
+            navigate(`/consultation-chat?appointmentId=${encodeURIComponent(patient.appointmentId)}`);
         }
     };
 
@@ -858,7 +878,9 @@ const DietPlanBuilder = () => {
                                     </div>
                                 ) : filteredClients.length === 0 ? (
                                     <div className="col-span-full py-8 text-center text-white/40 text-xs">
-                                        {clientsList.length === 0 ? 'No patient profiles are available yet.' : 'No patients match your search.'}
+                                        {clientsList.length === 0
+                                            ? 'No patients with an accepted consultation are available.'
+                                            : 'No patients match your search.'}
                                     </div>
                                 ) : (
                                     filteredClients.map(client => {
@@ -892,7 +914,7 @@ const DietPlanBuilder = () => {
                                                 </div>
 
                                                 {/* Patient Actions */}
-                                                <div className="mt-3 pt-2 border-t border-white/10">
+                                                <div className="mt-3 pt-2 border-t border-white/10 flex items-center gap-2">
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
@@ -900,11 +922,23 @@ const DietPlanBuilder = () => {
                                                             setDossierPatient(client);
                                                             setIsDossierOpen(true);
                                                         }}
-                                                        className="w-full bg-white/5 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 rounded-xl py-1 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                                        className="flex-1 bg-white/5 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 rounded-xl py-1 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
                                                         title="View full patient profile and preferences"
                                                     >
                                                         <span className="material-symbols-outlined text-xs text-[#a5d391]">account_circle</span>
                                                         <span>Dossier</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenChat(client);
+                                                        }}
+                                                        className="flex-1 bg-[#a5d391]/15 hover:bg-[#a5d391] text-[#a5d391] hover:text-black border border-[#a5d391]/30 rounded-xl py-1 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                                        title="Open chat for this accepted consultation"
+                                                    >
+                                                        <span className="material-symbols-outlined text-xs">forum</span>
+                                                        <span>Chat</span>
                                                     </button>
                                                 </div>
                                             </div>

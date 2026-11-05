@@ -261,12 +261,24 @@ const DashboardHome = () => {
         fetchUserTargets();
         loadDietPlans();
 
-        // Non-blocking background sync
-        api.get('/diet-plans/published').then(res => {
-            if (res.data && Array.isArray(res.data)) {
-                loadDietPlans(null, res.data);
-            }
-        }).catch(() => {});
+        const syncServerPlans = async () => {
+            const [publishedResult, generalResult] = await Promise.allSettled([
+                api.get('/diet-plans/published'),
+                api.get('/diet-plans/general'),
+            ]);
+            const publishedPlans = publishedResult.status === 'fulfilled'
+                && Array.isArray(publishedResult.value.data)
+                ? publishedResult.value.data
+                : serverPlansRef.current;
+            const generalPlan = generalResult.status === 'fulfilled'
+                && generalResult.value.data
+                && typeof generalResult.value.data === 'object'
+                ? [generalResult.value.data]
+                : [];
+            loadDietPlans(null, [...publishedPlans, ...generalPlan]);
+        };
+
+        syncServerPlans();
 
         let bc;
         try {
@@ -303,11 +315,7 @@ const DashboardHome = () => {
         // Fast responsive polling (1200ms) to ensure instant sync without page refresh
         const pollInterval = setInterval(() => {
             loadDietPlans();
-            api.get('/diet-plans/published').then(res => {
-                if (res.data && Array.isArray(res.data)) {
-                    loadDietPlans(null, res.data);
-                }
-            }).catch(() => {});
+            syncServerPlans();
         }, 1200);
 
         return () => {

@@ -2,6 +2,7 @@ package com.nutrition.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import java.util.Date;
  * Handles token generation, signature validation, claims extraction, and cryptographic signing.
  */
 @Component
+@Slf4j
 public class JwtUtils {
 
     @Value("${app.jwt.secret:defaultSecretKeyWithAtLeast256BitsForHS256Algorithm1234567890}")
@@ -90,7 +92,7 @@ public class JwtUtils {
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(authToken);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            // log error
+            log.warn("JWT validation failed ({})", e.getClass().getSimpleName());
         }
         return false;
     }

@@ -159,12 +159,24 @@ const DietPlans = () => {
     useEffect(() => {
         loadPlans();
 
-        // Background server fetch (non-blocking)
-        api.get('/diet-plans/published').then(res => {
-            if (res.data && Array.isArray(res.data)) {
-                loadPlans(null, res.data);
-            }
-        }).catch(() => {});
+        const syncServerPlans = async () => {
+            const [publishedResult, generalResult] = await Promise.allSettled([
+                api.get('/diet-plans/published'),
+                api.get('/diet-plans/general'),
+            ]);
+            const publishedPlans = publishedResult.status === 'fulfilled'
+                && Array.isArray(publishedResult.value.data)
+                ? publishedResult.value.data
+                : serverPlansRef.current;
+            const generalPlan = generalResult.status === 'fulfilled'
+                && generalResult.value.data
+                && typeof generalResult.value.data === 'object'
+                ? [generalResult.value.data]
+                : [];
+            loadPlans(null, [...publishedPlans, ...generalPlan]);
+        };
+
+        syncServerPlans();
 
         api.get('/diet-plans/me').then(res => {
             if (res.data && Array.isArray(res.data)) {
@@ -238,12 +250,7 @@ const DietPlans = () => {
 
         const pollInterval = setInterval(() => {
             loadPlans();
-            // Periodically refresh server published registry
-            api.get('/diet-plans/published').then(res => {
-                if (res.data && Array.isArray(res.data)) {
-                    loadPlans(null, res.data);
-                }
-            }).catch(() => {});
+            syncServerPlans();
         }, 1200);
 
         return () => {
