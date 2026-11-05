@@ -754,19 +754,19 @@ const DashboardHome = () => {
                 </Link>
             </div>
 
-            {/* AI Insights */}
+            {/* Nutrition and hydration progress */}
             <div className="mb-8">
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 sm:p-8 shadow-xl relative overflow-hidden">
                     <div className="flex items-center gap-3 mb-4">
-                        <span className="material-symbols-outlined text-[#a5d391] text-2xl animate-pulse">memory</span>
-                        <h3 className="font-bold text-lg font-hero-display text-white">AI Generative Insights</h3>
+                        <span className="material-symbols-outlined text-[#a5d391] text-2xl">monitoring</span>
+                        <h3 className="font-bold text-lg font-hero-display text-white">Nutrition &amp; Hydration Progress</h3>
                     </div>
                     <p className="text-white/70 text-sm leading-relaxed">
-                        Personalized insights will appear here when progress data is available.
+                        Log meals and water, and track your daily nutrition targets in Progress Tracking.
                     </p>
                     <div className="mt-5 flex items-center gap-3">
                         <Link to="/progress" className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-xl hover:bg-white transition-all shadow-md">
-                            Open Progress Tracking
+                            View Progress Tracking
                         </Link>
                         <button
                             type="button"
