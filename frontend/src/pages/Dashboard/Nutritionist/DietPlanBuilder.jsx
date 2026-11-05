@@ -892,7 +892,7 @@ const DietPlanBuilder = () => {
                                                 </div>
 
                                                 {/* Patient Actions */}
-                                                <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+                                                <div className="mt-3 pt-2 border-t border-white/10">
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
@@ -900,24 +900,11 @@ const DietPlanBuilder = () => {
                                                             setDossierPatient(client);
                                                             setIsDossierOpen(true);
                                                         }}
-                                                        className="flex-1 bg-white/5 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 rounded-xl py-1 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                                        className="w-full bg-white/5 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 rounded-xl py-1 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
                                                         title="View full patient profile and preferences"
                                                     >
                                                         <span className="material-symbols-outlined text-xs text-[#a5d391]">account_circle</span>
                                                         <span>Dossier</span>
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleOpenChat(client);
-                                                        }}
-                                                        className="bg-[#a5d391]/15 hover:bg-[#a5d391] text-[#a5d391] hover:text-black border border-[#a5d391]/30 rounded-xl py-1 px-2.5 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
-                                                        title="Initiate clinical consultation chat"
-                                                    >
-                                                        <span className="material-symbols-outlined text-xs">forum</span>
-                                                        <span>Chat</span>
                                                     </button>
                                                 </div>
                                             </div>
