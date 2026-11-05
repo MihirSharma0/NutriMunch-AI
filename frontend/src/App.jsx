@@ -37,7 +37,6 @@ import ConsultationChatPage from './pages/ConsultationChatPage';
 import NutritionistHome from './pages/Dashboard/Nutritionist/NutritionistHome';
 import DietPlanBuilder from './pages/Dashboard/Nutritionist/DietPlanBuilder';
 import AppointmentManagement from './pages/Dashboard/Nutritionist/AppointmentManagement';
-import NutritionistReports from './pages/Dashboard/Nutritionist/NutritionistReports';
 import NutritionistProfile from './pages/Dashboard/Nutritionist/NutritionistProfile';
 
 // Admin Dashboard Layout & Pages
@@ -151,7 +150,6 @@ function App() {
                 <Route path="dashboard/nutritionist/profile" element={<NutritionistProfile />} />
                 <Route path="dashboard/nutritionist/builder" element={<DietPlanBuilder />} />
                 <Route path="dashboard/nutritionist/schedule" element={<AppointmentManagement />} />
-                <Route path="dashboard/nutritionist/reports" element={<NutritionistReports />} />
               </Route>
 
               {/* Admin Platform Routes */}

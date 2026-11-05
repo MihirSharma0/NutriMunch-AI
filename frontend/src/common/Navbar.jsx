@@ -52,11 +52,6 @@ export const getNavItemsForRole = (user) => {
         { label: 'Consultation History', path: '/dashboard/nutritionist/schedule#consultation-history', icon: 'history', desc: 'Completed, cancelled & declined sessions with patients' }
     ];
 
-    const clinicalToolsSubMenu = [
-        { label: 'Diet Builder', path: '/dashboard/nutritionist/builder', icon: 'restaurant_menu', desc: 'Build dynamic weekly meal plans & macro protocols' },
-        { label: 'Clinical Reports', path: '/dashboard/nutritionist/reports', icon: 'lab_profile', desc: 'Export patient progress reports & biometrics' }
-    ];
-
     const dietProgressSubMenu = [
         { label: 'Progress Tracking', path: '/progress', icon: 'monitoring', desc: 'Real-time hydration, logs & weight targets' },
         { label: 'Diet Plans', path: '/diet-plans', icon: 'restaurant_menu', desc: 'Active meal routines & nutritional regimens' },
@@ -98,7 +93,7 @@ export const getNavItemsForRole = (user) => {
             { label: 'Home', path: '/' },
             { label: 'Platform Features', subMenu: nutritionistPlatformSubMenu, headerTitle: 'Platform Features' },
             { label: 'Consultations', subMenu: nutritionistScheduleSubMenu, headerTitle: 'Consultations' },
-            { label: 'Diet & Reports', subMenu: clinicalToolsSubMenu, headerTitle: 'Clinical Protocols' },
+            { label: 'Diet Builder', path: '/dashboard/nutritionist/builder', icon: 'restaurant_menu' },
             { label: 'Testimonials', path: '/testimonials' },
             { label: 'Contact', path: '/contact' }
         ];

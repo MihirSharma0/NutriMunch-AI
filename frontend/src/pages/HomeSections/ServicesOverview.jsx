@@ -99,12 +99,6 @@ const getModalServicesForRole = (user) => {
                     path: '/dashboard/nutritionist/schedule'
                 },
                 {
-                    title: 'Clinical Reports',
-                    desc: 'Generate, export, and review patient health reports and nutritional adherence.',
-                    icon: 'assessment',
-                    path: '/dashboard/nutritionist/reports'
-                },
-                {
                     title: 'Nutritionist Profile',
                     desc: 'Manage your clinical bio, consultation fee, specializations, and schedule.',
                     icon: 'badge',
