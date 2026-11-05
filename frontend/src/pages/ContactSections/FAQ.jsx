@@ -58,7 +58,7 @@ const FAQ_CATEGORIES = [
             },
             {
                 q: 'Which daily targets can I set on my profile?',
-                a: 'Your Profile shows four daily targets: Calories (kcal), Protein (g), Fat (g) and a Sugar limit (g). Click "Edit Requirements" to change them, or "Default Baseline" to reset to 2000 kcal, 140 g protein, 65 g fat and 50 g sugar. The Progress page additionally lets you track water and other nutrients.'
+                a: 'Your Profile shows five daily targets: Calories (kcal), Protein (g), Carbohydrates (g), Fats (g) and Water (L). Click "Edit Requirements" to change them or apply the default baseline. Progress Tracking lets you review and update these targets.'
             },
             {
                 q: 'How are my calorie and macro targets calculated?',

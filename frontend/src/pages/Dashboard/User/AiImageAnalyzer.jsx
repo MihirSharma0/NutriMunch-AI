@@ -513,7 +513,7 @@ const AiImageAnalyzer = () => {
                         </div>
                     </div>
 
-                    {/* Nutrition Macro & Micronutrient Breakdown */}
+                    {/* Nutrition macro breakdown */}
                     {analysis.nutrition && (
                         <div className="bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[2rem] border border-white/10 space-y-6">
                             <h3 className="text-xl font-bold text-white font-hero-display flex items-center gap-2">
@@ -522,7 +522,7 @@ const AiImageAnalyzer = () => {
                             </h3>
 
                             {/* Macro Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
                                     <div className="text-[10px] font-black uppercase text-white/50">Calories</div>
                                     <div className="text-2xl font-bold text-[#a5d391] font-hero-display mt-1">{analysis.nutrition.calories}</div>
@@ -540,33 +540,8 @@ const AiImageAnalyzer = () => {
                                     <div className="text-[10px] font-black uppercase text-white/50">Fat</div>
                                     <div className="text-xl font-bold text-rose-400 font-hero-display mt-1">{analysis.nutrition.fatG}g</div>
                                 </div>
-                                <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
-                                    <div className="text-[10px] font-black uppercase text-white/50">Fiber</div>
-                                    <div className="text-xl font-bold text-emerald-400 font-hero-display mt-1">{analysis.nutrition.fiberG || 0}g</div>
-                                </div>
-                                <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
-                                    <div className="text-[10px] font-black uppercase text-white/50">Sugar</div>
-                                    <div className={`text-xl font-bold font-hero-display mt-1 ${analysis.nutrition.sugarG > 15 ? 'text-red-400' : 'text-white'}`}>{analysis.nutrition.sugarG || 0}g</div>
-                                </div>
-                                <div className="p-4 rounded-2xl bg-[#080b12]/80 border border-white/10 text-center">
-                                    <div className="text-[10px] font-black uppercase text-white/50">Sodium</div>
-                                    <div className={`text-xl font-bold font-hero-display mt-1 ${analysis.nutrition.sodiumMg > 500 ? 'text-red-400' : 'text-white'}`}>{analysis.nutrition.sodiumMg || 0}mg</div>
-                                </div>
                             </div>
 
-                            {/* Micronutrients */}
-                            {analysis.nutrition.micronutrients && Object.keys(analysis.nutrition.micronutrients).length > 0 && (
-                                <div className="p-4 rounded-2xl bg-[#080b12]/60 border border-white/5 space-y-2">
-                                    <div className="text-xs font-bold text-white/60 uppercase tracking-wider">Extracted Micronutrients</div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {Object.entries(analysis.nutrition.micronutrients).map(([micro, val], idx) => (
-                                            <span key={idx} className="px-3 py-1 rounded-full text-xs font-bold bg-[#a5d391]/10 text-[#a5d391] border border-[#a5d391]/20">
-                                                {micro}: {val}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     )}
 

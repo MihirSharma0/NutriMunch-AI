@@ -169,8 +169,6 @@ const PlanDisplay = ({ plan, planData }) => {
             <span><b>{planData.targets.carbs}g</b> carbs</span>
             <span><b>{planData.targets.fats}g</b> fats</span>
             <span><b>{planData.targets.waterLiters}L</b> water</span>
-            <span><b>{planData.targets.fiber}g</b> fiber</span>
-            <span><b>{planData.targets.iron}mg</b> iron</span>
           </div>
         </div>
         <div className="aidg-plan-section">
@@ -240,8 +238,10 @@ const PlanDisplay = ({ plan, planData }) => {
  */
 const AiDietGenerator = () => {
   const [selectedGoals, setSelectedGoals] = useState([]);
-
   const [selectedRestrictions, setSelectedRestrictions] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
+  const [profileLoadError, setProfileLoadError] = useState('');
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const [planHeading, setPlanHeading] = useState('');
   const [plan, setPlan] = useState('');
@@ -253,6 +253,36 @@ const AiDietGenerator = () => {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    api.get('/profiles/me')
+      .then(({ data }) => {
+        if (!active) return;
+        const profile = data || {};
+        setUserProfile(profile);
+        const splitProfileValues = values => values
+          .filter(value => typeof value === 'string' && value.trim())
+          .flatMap(value => value.split(/[,;]+/).map(item => item.trim()).filter(item =>
+            item && !['none', 'n/a', 'no allergies', 'not specified'].includes(item.toLowerCase())
+          ));
+        const profileGoals = splitProfileValues([profile.goal, profile.lifestyleClass]);
+        const profileRestrictions = splitProfileValues([
+          profile.allergies,
+          profile.dietaryPreferences,
+          profile.dietType,
+        ]);
+        setSelectedGoals(current => [...new Set([...profileGoals, ...current])]);
+        setSelectedRestrictions(current => [...new Set([...profileRestrictions, ...current])]);
+      })
+      .catch(() => {
+        if (active) setProfileLoadError('Could not load your profile. The plan will use only the goals and restrictions selected below.');
+      })
+      .finally(() => {
+        if (active) setProfileLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const addTag = (list, setList, tag) => {
     if (tag && !list.includes(tag)) setList(prev => [...prev, tag]);
@@ -274,10 +304,21 @@ const AiDietGenerator = () => {
   });
 
   const parsePlanResponse = (text) => {
-    try {
-      const cleaned = text.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
-      const parsed = JSON.parse(cleaned);
-      if (parsed?.targets && Array.isArray(parsed.meals)) {
+    const trimmed = text.trim();
+    const withoutFence = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const jsonStart = withoutFence.indexOf('{');
+    const jsonEnd = withoutFence.lastIndexOf('}');
+    const candidates = [withoutFence];
+    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+      candidates.push(withoutFence.slice(jsonStart, jsonEnd + 1));
+    }
+
+    for (const candidate of candidates) {
+      try {
+        let parsed = JSON.parse(candidate);
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+        if (!parsed?.targets || !Array.isArray(parsed.meals)) continue;
+
         return {
           ...parsed,
           targets: {
@@ -285,12 +326,7 @@ const AiDietGenerator = () => {
             protein: Number(parsed.targets.protein || 120),
             carbs: Number(parsed.targets.carbs || 200),
             fats: Number(parsed.targets.fats || 65),
-            waterLiters: Number(parsed.targets.waterLiters || 2.5),
-            fiber: Number(parsed.targets.fiber || 28),
-            iron: Number(parsed.targets.iron || 18),
-            calcium: Number(parsed.targets.calcium || 1000),
-            vitD: Number(parsed.targets.vitD || 15),
-            vitC: Number(parsed.targets.vitC || 90)
+            waterLiters: Number(parsed.targets.waterLiters || 2.5)
           },
           meals: parsed.meals.map((meal, index) => ({
             id: index + 1,
@@ -301,15 +337,20 @@ const AiDietGenerator = () => {
             fats: Number(meal.fats || 0)
           }))
         };
+      } catch {
+        // Try the next candidate, including JSON embedded in surrounding text.
       }
-    } catch (e) {
-      // Deterministic fallback plans are markdown and are normalized below.
     }
+
+    if (/^\s*[{[]/.test(withoutFence)) {
+      throw new Error('The AI returned an invalid plan format. Please generate the plan again.');
+    }
+
     const targets = getPlanTargets(text);
     return {
       title: `AI ${selectedGoals.join(' & ')} Protocol`,
       dietType: 'AI Personalized Nutrition Protocol',
-      targets: { ...targets, waterLiters: targets.water, fiber: 28, iron: 18, calcium: 1000, vitD: 15, vitC: 90 },
+      targets: { ...targets, waterLiters: targets.water },
       nutritionistNotes: 'Follow the scheduled meal timings and maintain the recommended hydration intake.',
       meals: createNutritionistFormatMeals(text, targets),
       planText: text
@@ -354,12 +395,17 @@ const AiDietGenerator = () => {
     setPlan('');
     try {
       const { data } = await api.post('/ai/diet-plan', {
+        planHeading,
         goals: selectedGoals,
         allergies: selectedRestrictions,
+        profile: userProfile,
       });
       const generatedPlan = data.plan || '';
-      setPlan(generatedPlan || 'No plan returned. Please try again.');
+      if (!generatedPlan.trim()) {
+        throw new Error('The AI returned an empty diet plan. Please try again.');
+      }
       const structuredPlan = parsePlanResponse(generatedPlan);
+      setPlan(generatedPlan);
       setPlanData(structuredPlan);
       setPlanTargets({
         calories: structuredPlan.targets.calories,
@@ -375,8 +421,13 @@ const AiDietGenerator = () => {
       });
       setSaved(false);
     } catch (requestError) {
-      const backendMessage = requestError?.response?.data?.message;
-      setError(backendMessage || 'Failed to generate the diet plan. Please try again later.');
+      const backendMessage = requestError?.response?.data?.message
+        || requestError?.response?.data?.detail
+        || requestError?.message;
+      const errorMessage = requestError?.response?.status === 503
+        ? backendMessage || 'The AI service may be experiencing high load. Please try again shortly.'
+        : backendMessage || 'Failed to generate the diet plan. The AI service may be experiencing high load; please try again later.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -405,6 +456,7 @@ const AiDietGenerator = () => {
           dietType: planData.dietType,
           goals: selectedGoals,
           allergies: selectedRestrictions,
+          profile: userProfile,
           nutritionistNotes: planData.nutritionistNotes,
           targets: planData.targets,
           meals: planData.meals,
@@ -491,6 +543,35 @@ const AiDietGenerator = () => {
         </div>
 
         <form onSubmit={generatePlan} className="aidg-form">
+          {profileLoading ? (
+            <div className="aidg-profile-notice">Loading your saved profile details…</div>
+          ) : profileLoadError ? (
+            <div className="aidg-profile-notice warning" role="status">{profileLoadError}</div>
+          ) : (
+            <div className="aidg-profile-notice" role="status">
+              <strong>Profile data prefilled</strong>
+              <span>
+                {[
+                  userProfile?.age != null && `Age ${userProfile.age}`,
+                  userProfile?.gender && `Gender ${userProfile.gender}`,
+                  userProfile?.heightCm != null && `Height ${userProfile.heightCm} cm`,
+                  userProfile?.weightKg != null && `Weight ${userProfile.weightKg} kg`,
+                  userProfile?.activityLevel && `Activity ${userProfile.activityLevel}`,
+                  userProfile?.dietType && `Diet ${userProfile.dietType}`,
+                  userProfile?.goal && `Goal ${userProfile.goal}`,
+                  userProfile?.dietaryPreferences && `Dietary preferences ${userProfile.dietaryPreferences}`,
+                  userProfile?.allergies && `Allergies ${userProfile.allergies}`,
+                  userProfile?.mealBudget && `Meal budget ${userProfile.mealBudget}`,
+                  userProfile?.dailyCaloriesTarget != null && `${userProfile.dailyCaloriesTarget} kcal target`,
+                  userProfile?.favoriteFoods && `Favorite foods ${userProfile.favoriteFoods}`,
+                  userProfile?.dislikedFoods && `Avoid ${userProfile.dislikedFoods}`,
+                  userProfile?.cuisinePreferences && `Cuisines ${userProfile.cuisinePreferences}`,
+                ].filter(Boolean).join(' · ') || 'No saved health details found yet.'}
+              </span>
+              <span>These details are combined with the goals and restrictions selected in this planner.</span>
+            </div>
+          )}
+
           <div className="aidg-field">
             <label className="aidg-label" style={{ color: '#a5d391' }}>
               <Icon name="receipt_long" size={18} />
@@ -546,9 +627,11 @@ const AiDietGenerator = () => {
                 <span> · <strong style={{ color: '#ffb764' }}>{selectedRestrictions.length}</strong> restriction{selectedRestrictions.length > 1 ? 's' : ''}</span>
               )}
             </div>
-            <button type="submit" className="aidg-generate-btn" disabled={loading}>
+            <button type="submit" className="aidg-generate-btn" disabled={loading || profileLoading}>
               {loading ? (
                 <><span className="aidg-spin"><Icon name="autorenew" size={18} /></span> Generating…</>
+              ) : profileLoading ? (
+                <>Loading profile…</>
               ) : (
                 <><Icon name="auto_awesome" size={18} /> Generate My Diet Plan</>
               )}
@@ -558,6 +641,17 @@ const AiDietGenerator = () => {
 
         {plan && (
           <div className="aidg-result">
+            <div className="aidg-profile-disclaimer" role="note">
+              <strong>Personalization &amp; health disclaimer</strong>
+              <span>
+                {profileLoadError
+                  ? 'Your profile could not be loaded, so this plan uses only the health goals and dietary restrictions selected in the planner.'
+                  : 'This plan was generated using the profile details shown above, together with the plan heading, health goals, and dietary restrictions selected in the planner.'}
+              </span>
+              <span>
+                Review those details for accuracy. AI-generated nutrition guidance is informational and is not a substitute for advice from your healthcare professional.
+              </span>
+            </div>
             <div className="aidg-result-header">
               <Icon name="receipt_long" size={22} style={{ color: '#a5d391' }} />
               <h2 className="aidg-result-title">Your Personalized Diet Plan</h2>
@@ -863,6 +957,37 @@ const CSS = `
   border-radius: 11px;
   padding: 11px 14px;
   font-size: 13.5px;
+}
+.aidg-profile-notice,
+.aidg-profile-disclaimer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid rgba(165,211,145,0.2);
+  border-radius: 12px;
+  background: rgba(165,211,145,0.06);
+  color: rgba(255,255,255,0.68);
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.aidg-profile-notice strong,
+.aidg-profile-disclaimer strong {
+  color: #a5d391;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.aidg-profile-notice.warning {
+  border-color: rgba(255,183,100,0.24);
+  background: rgba(255,183,100,0.06);
+  color: #ffcf9c;
+}
+.aidg-profile-disclaimer {
+  margin-bottom: 18px;
+}
+.aidg-profile-disclaimer span {
+  color: rgba(255,255,255,0.65);
 }
 
 /* Form footer */

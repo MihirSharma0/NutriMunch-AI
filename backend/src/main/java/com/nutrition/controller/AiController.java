@@ -24,7 +24,9 @@ public class AiController {
         // Accept both legacy plain-string and new tag-list payloads
         String goals = resolveStringOrList(request.get("goals"));
         String allergies = resolveStringOrList(request.get("allergies"));
-        String plan = aiService.generateDietPlan(goals, allergies);
+        Map<String, Object> profile = resolveProfile(request.get("profile"));
+        String planHeading = request.get("planHeading") instanceof String heading ? heading : "";
+        String plan = aiService.generateDietPlan(goals, allergies, profile, planHeading);
         return ResponseEntity.ok(Map.of("plan", plan));
     }
 
@@ -67,5 +69,18 @@ public class AiController {
         if (value instanceof List)
             return String.join(", ", (List<String>) value);
         return value.toString();
+    }
+
+    private Map<String, Object> resolveProfile(Object value) {
+        if (!(value instanceof Map<?, ?> profileData)) {
+            return Map.of();
+        }
+        Map<String, Object> profile = new java.util.LinkedHashMap<>();
+        profileData.forEach((key, fieldValue) -> {
+            if (key instanceof String fieldName) {
+                profile.put(fieldName, fieldValue);
+            }
+        });
+        return profile;
     }
 }

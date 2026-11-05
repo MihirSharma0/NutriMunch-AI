@@ -781,7 +781,7 @@ const DietPlans = () => {
                     </div>
                 </div>
 
-                {/* Right Column: 5-7 Daily Requirement Parameters & Actions */}
+                {/* Right Column: Daily Requirements & Actions */}
                 <div className="space-y-6">
                     <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl space-y-6">
                         <div className="border-b border-white/10 pb-4">
@@ -816,26 +816,6 @@ const DietPlans = () => {
                             <div className="flex justify-between items-center">
                                 <span>2. Daily Water Target:</span>
                                 <strong className="text-cyan-300">{currentWater} Liters</strong>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span>3. Fiber Requirement:</span>
-                                <strong className="text-emerald-400">{currentFiber} g</strong>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span>4. Iron Target:</span>
-                                <strong className="text-rose-300">{currentIron} mg</strong>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span>5. Calcium Target:</span>
-                                <strong className="text-white">{currentCalcium} mg</strong>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span>6. Vitamin D:</span>
-                                <strong className="text-amber-300">{currentVitD} mcg</strong>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span>7. Vitamin C:</span>
-                                <strong className="text-orange-300">{currentVitC} mg</strong>
                             </div>
                         </div>
 
@@ -990,27 +970,15 @@ const DietPlans = () => {
                                 </div>
                             </div>
 
-                            {/* Additional Parameters: Water, Fiber, Micronutrients */}
+                            {/* Water target */}
                             <div>
                                 <span className="text-[10px] font-bold text-[#a5d391] uppercase tracking-widest block mb-2">
-                                    2. Hydration & Micronutrient Allotments
+                                    2. Water Target
                                 </span>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
                                         <span className="text-[9px] text-white/40 block">Daily Water</span>
                                         <strong className="text-sm text-cyan-300">{planToImport.waterLiters || 3.0} Liters</strong>
-                                    </div>
-                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
-                                        <span className="text-[9px] text-white/40 block">Dietary Fiber</span>
-                                        <strong className="text-sm text-emerald-400">{planToImport.fiber || 28} grams</strong>
-                                    </div>
-                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
-                                        <span className="text-[9px] text-white/40 block">Iron</span>
-                                        <strong className="text-sm text-rose-300">{planToImport.iron || 18} mg</strong>
-                                    </div>
-                                    <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
-                                        <span className="text-[9px] text-white/40 block">Calcium</span>
-                                        <strong className="text-sm text-white">{planToImport.calcium || 1000} mg</strong>
                                     </div>
                                 </div>
                             </div>
