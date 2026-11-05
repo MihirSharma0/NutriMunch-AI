@@ -515,18 +515,11 @@ const AppointmentManagement = () => {
             )}
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
                 <div>
                     <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white mb-1">Clinical Schedule & Bookings</h1>
                     <p className="text-white/50 text-xs sm:text-sm">Manage consultation slots, client bookings, and clinical calendar hours across all months.</p>
                 </div>
-                <button 
-                    onClick={() => setIsAvailabilityModalOpen(true)}
-                    className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-white transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer shrink-0 flex items-center gap-2"
-                >
-                    <span className="material-symbols-outlined text-base">add_circle</span>
-                    Add Booking Slot
-                </button>
             </div>
 
             {/* Pending Requests Alert Banner */}
