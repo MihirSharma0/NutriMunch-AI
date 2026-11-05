@@ -45,6 +45,9 @@ public class User {
     @Column(name = "otp_expiry_date")
     private LocalDateTime otpExpiryDate;
 
+    @Column(name = "password_reset_send_count", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 0")
+    private int passwordResetSendCount = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

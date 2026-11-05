@@ -16,6 +16,8 @@ import java.util.Optional;
 Manages active consultation chat sessions, lifecycle windows, participant queries, and dead-session closures.
  */
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
+    void deleteByPatient_IdOrNutritionist_Id(Long patientId, Long nutritionistId);
+
     /**
      * Executes query to find by appointment id.
      */

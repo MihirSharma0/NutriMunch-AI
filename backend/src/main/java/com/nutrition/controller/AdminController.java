@@ -41,6 +41,7 @@ public class AdminController {
     private final com.nutrition.service.WalletService walletService;
     private final com.nutrition.service.NotificationService notificationService;
     private final com.nutrition.repository.AppointmentRepository appointmentRepository;
+    private final com.nutrition.repository.ConversationRepository conversationRepository;
     private final com.nutrition.repository.ProgressLogRepository progressLogRepository;
     private final com.nutrition.repository.NotificationRepository notificationRepository;
     private final com.nutrition.repository.WalletRepository walletRepository;
@@ -277,6 +278,7 @@ public class AdminController {
         String userEmail = user != null ? user.getEmail() : null;
 
         // Remove all records owned by or directly linked to the account first.
+        conversationRepository.deleteByPatient_IdOrNutritionist_Id(id, id);
         dietPlanRepository.deleteByUserId(id);
         appointmentRepository.deleteByUserId(id);
         appointmentRepository.deleteByNutritionistId(id);
