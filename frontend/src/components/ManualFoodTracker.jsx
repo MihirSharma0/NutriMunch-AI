@@ -271,7 +271,6 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
     const targetProtein = parseInt(customTargets.protein, 10) || 140;
     const targetCarbs = parseInt(customTargets.carbs, 10) || 200;
     const targetFats = parseInt(customTargets.fats, 10) || 65;
-    const targetFiber = parseInt(customTargets.fiber, 10) || 28;
 
     // Macro progress percentages
     const calPercent = targetCalories > 0 ? Math.min(Math.round((dailyTotals.calories / targetCalories) * 100), 100) : 0;

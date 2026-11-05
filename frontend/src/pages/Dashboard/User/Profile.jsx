@@ -278,7 +278,6 @@ const Profile = () => {
         const fetchProfile = async () => {
             if (!user) {
                 setLoading(false);
-                setTargets(DEFAULT_TARGETS);
                 setCustomTargets(DEFAULT_TARGETS);
                 return;
             }
@@ -339,7 +338,6 @@ const Profile = () => {
                             vitC: res.data.vitCTargetMg || DEFAULT_TARGETS.vitC,
                             zinc: res.data.zincTargetMg || DEFAULT_TARGETS.zinc
                         };
-                        setTargets(loadedTargets);
                         setCustomTargets(loadedTargets);
                         if (loadedTargets.water) {
                             localStorage.setItem('nutrimunch_water_target_liters', loadedTargets.water.toString());
@@ -534,7 +532,6 @@ const Profile = () => {
         setMessage({ type: '', text: '' });
 
         if (!user) {
-            setTargets(customTargets);
             setIsEditingRequirements(false);
             setSaving(false);
             setMessage({ type: 'success', text: 'Daily requirements updated in Guest Mode! Login or Register to save targets to your account.' });
@@ -599,7 +596,6 @@ const Profile = () => {
                     vitC: res.data.vitCTargetMg,
                     zinc: res.data.zincTargetMg
                 };
-                setTargets(updatedT);
                 setCustomTargets(updatedT);
                 if (updatedT.water) {
                     localStorage.setItem('nutrimunch_water_target_liters', updatedT.water.toString());
@@ -1381,7 +1377,7 @@ const Profile = () => {
                 {/* VISUAL STATE A: LOCKED IN SAVED TARGET PROTOCOL CARD VIEW */}
                 {!isEditingRequirements ? (
                     <div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
                             <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
                                 <div className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-1">Daily Calories</div>
                                 <div className="text-2xl font-bold text-white">{customTargets.calories || 2000} <span className="text-xs font-normal text-white/50">kcal</span></div>
@@ -1393,13 +1389,18 @@ const Profile = () => {
                             </div>
 
                             <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
-                                <div className="text-pink-400/70 text-[10px] font-bold uppercase tracking-wider mb-1">Sugar Limit</div>
-                                <div className="text-2xl font-bold text-pink-400">{customTargets.sugar || 50} <span className="text-xs font-normal text-pink-400/70">g</span></div>
+                                <div className="text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider mb-1">Carbohydrates Target</div>
+                                <div className="text-2xl font-bold text-[#38bdf8]">{customTargets.carbs || 200} <span className="text-xs font-normal text-[#38bdf8]/70">g</span></div>
                             </div>
 
                             <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
                                 <div className="text-yellow-400/70 text-[10px] font-bold uppercase tracking-wider mb-1">Fats Target</div>
                                 <div className="text-2xl font-bold text-yellow-400">{customTargets.fats || 65} <span className="text-xs font-normal text-yellow-400/70">g</span></div>
+                            </div>
+
+                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
+                                <div className="text-cyan-400/70 text-[10px] font-bold uppercase tracking-wider mb-1">Water Intake</div>
+                                <div className="text-2xl font-bold text-cyan-300">{customTargets.water || DEFAULT_TARGETS.water} <span className="text-xs font-normal text-cyan-300/70">L/day</span></div>
                             </div>
                         </div>
                     </div>
@@ -1407,7 +1408,7 @@ const Profile = () => {
                     /* VISUAL STATE B: FORM INPUT EDITING MODE */
                     <div>
                         {/* Main Macro Inputs Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
                             {/* Calories */}
                             <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10">
                                 <div className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-2">Daily Calories (kcal)</div>
@@ -1434,16 +1435,16 @@ const Profile = () => {
                                 />
                             </div>
 
-                            {/* Sugar */}
+                            {/* Carbohydrates */}
                             <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10">
-                                <div className="text-pink-400/70 text-[10px] font-bold uppercase tracking-wider mb-2">Sugar Limit (g)</div>
+                                <div className="text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider mb-2">Carbohydrates Target (g)</div>
                                 <input
                                     type="number"
-                                    name="sugar"
-                                    value={customTargets.sugar}
+                                    name="carbs"
+                                    value={customTargets.carbs}
                                     onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-pink-400/40 px-3 py-2 rounded-xl text-xl font-bold text-pink-400 outline-none focus:border-pink-400"
-                                    placeholder="e.g. 50"
+                                    className="w-full bg-white/5 border border-[#38bdf8]/40 px-3 py-2 rounded-xl text-xl font-bold text-[#38bdf8] outline-none focus:border-[#38bdf8]"
+                                    placeholder="e.g. 200"
                                 />
                             </div>
 
@@ -1457,6 +1458,21 @@ const Profile = () => {
                                     onChange={handleCustomTargetChange}
                                     className="w-full bg-white/5 border border-yellow-400/40 px-3 py-2 rounded-xl text-xl font-bold text-yellow-400 outline-none focus:border-yellow-400"
                                     placeholder="e.g. 65"
+                                />
+                            </div>
+
+                            {/* Water */}
+                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10">
+                                <div className="text-cyan-400/70 text-[10px] font-bold uppercase tracking-wider mb-2">Daily Water Intake (L)</div>
+                                <input
+                                    type="number"
+                                    name="water"
+                                    value={customTargets.water}
+                                    onChange={handleCustomTargetChange}
+                                    min="0"
+                                    step="0.1"
+                                    className="w-full bg-white/5 border border-cyan-400/40 px-3 py-2 rounded-xl text-xl font-bold text-cyan-300 outline-none focus:border-cyan-400"
+                                    placeholder="e.g. 2.5"
                                 />
                             </div>
                         </div>

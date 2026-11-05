@@ -981,7 +981,7 @@ const DietPlanBuilder = () => {
                     <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl space-y-6">
                         <div className="flex flex-wrap justify-between items-center gap-2 border-b border-white/10 pb-4">
                             <div>
-                                <h3 className="text-lg font-bold font-hero-display text-white">Daily Macro & Nutritional Targets (5-7 Parameters)</h3>
+                                <h3 className="text-lg font-bold font-hero-display text-white">Daily Nutrition Targets (5)</h3>
                                 <p className="text-white/50 text-xs">Primary clinical parameters linked directly to user profile daily requirements</p>
                             </div>
                             <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30">
@@ -1032,8 +1032,8 @@ const DietPlanBuilder = () => {
                             </div>
                         </div>
 
-                        {/* Additional Clinical Parameters: Water, Fiber, Iron, Calcium, Vit D, Vit C */}
-                        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 pt-2 border-t border-white/5">
+                        {/* Water target */}
+                        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2 border-t border-white/5">
                             <div className="bg-[#080b12]/60 border border-white/10 rounded-xl p-3">
                                 <span className="text-[9px] font-bold text-white/40 uppercase block mb-1">5. Water (L)</span>
                                 <input
@@ -1045,55 +1045,6 @@ const DietPlanBuilder = () => {
                                 />
                             </div>
 
-                            <div className="bg-[#080b12]/60 border border-white/10 rounded-xl p-3">
-                                <span className="text-[9px] font-bold text-white/40 uppercase block mb-1">6. Fiber (g)</span>
-                                <input
-                                    type="number"
-                                    value={planForm.fiber}
-                                    onChange={(e) => setPlanForm({ ...planForm, fiber: e.target.value })}
-                                    className="w-full bg-transparent font-bold text-lg text-emerald-400 outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-[#080b12]/60 border border-white/10 rounded-xl p-3">
-                                <span className="text-[9px] font-bold text-white/40 uppercase block mb-1">7. Iron (mg)</span>
-                                <input
-                                    type="number"
-                                    value={planForm.iron}
-                                    onChange={(e) => setPlanForm({ ...planForm, iron: e.target.value })}
-                                    className="w-full bg-transparent font-bold text-lg text-rose-300 outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-[#080b12]/60 border border-white/10 rounded-xl p-3">
-                                <span className="text-[9px] font-bold text-white/40 uppercase block mb-1">Calcium (mg)</span>
-                                <input
-                                    type="number"
-                                    value={planForm.calcium}
-                                    onChange={(e) => setPlanForm({ ...planForm, calcium: e.target.value })}
-                                    className="w-full bg-transparent font-bold text-lg text-white outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-[#080b12]/60 border border-white/10 rounded-xl p-3">
-                                <span className="text-[9px] font-bold text-white/40 uppercase block mb-1">Vit D (mcg)</span>
-                                <input
-                                    type="number"
-                                    value={planForm.vitD}
-                                    onChange={(e) => setPlanForm({ ...planForm, vitD: e.target.value })}
-                                    className="w-full bg-transparent font-bold text-lg text-amber-300 outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-[#080b12]/60 border border-white/10 rounded-xl p-3">
-                                <span className="text-[9px] font-bold text-white/40 uppercase block mb-1">Vit C (mg)</span>
-                                <input
-                                    type="number"
-                                    value={planForm.vitC}
-                                    onChange={(e) => setPlanForm({ ...planForm, vitC: e.target.value })}
-                                    className="w-full bg-transparent font-bold text-lg text-orange-300 outline-none"
-                                />
-                            </div>
                         </div>
 
                         {/* Title & Category */}
@@ -1262,10 +1213,6 @@ const DietPlanBuilder = () => {
                             <div className="flex justify-between text-white/60">
                                 <span>Hydration Target:</span>
                                 <strong className="text-cyan-300">{planForm.waterLiters} L / day</strong>
-                            </div>
-                            <div className="flex justify-between text-white/60">
-                                <span>Dietary Fiber:</span>
-                                <strong className="text-emerald-400">{planForm.fiber} g / day</strong>
                             </div>
                             <div className="flex justify-between text-white/60">
                                 <span>Meal Count:</span>
@@ -1504,7 +1451,6 @@ const DietPlanBuilder = () => {
 
                                                 <div className="flex items-center justify-between text-[11px] text-white/60 bg-white/5 px-3 py-2 rounded-xl border border-white/5">
                                                     <span>Hydration: <strong className="text-cyan-300">{plan.waterLiters || 3.0}L</strong></span>
-                                                    <span>Fiber: <strong className="text-emerald-400">{plan.fiber || 28}g</strong></span>
                                                     <span>Meals: <strong className="text-white">{plan.meals?.length || 0} slots</strong></span>
                                                 </div>
 
@@ -1616,12 +1562,9 @@ const DietPlanBuilder = () => {
                                 </div>
                             </div>
 
-                            {/* Micronutrients & Hydration */}
-                            <div className="p-4 bg-black/50 border border-white/10 rounded-2xl grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {/* Water target */}
+                            <div className="p-4 bg-black/50 border border-white/10 rounded-2xl">
                                 <div><span className="text-[10px] text-white/40 block">Water</span><strong className="text-white">{selectedHistoryPlan.waterLiters || 3.0} L</strong></div>
-                                <div><span className="text-[10px] text-white/40 block">Fiber</span><strong className="text-white">{selectedHistoryPlan.fiber || 28} g</strong></div>
-                                <div><span className="text-[10px] text-white/40 block">Iron</span><strong className="text-white">{selectedHistoryPlan.iron || 18} mg</strong></div>
-                                <div><span className="text-[10px] text-white/40 block">Calcium</span><strong className="text-white">{selectedHistoryPlan.calcium || 1000} mg</strong></div>
                             </div>
 
                             {/* Clinical Notes */}
@@ -1818,8 +1761,6 @@ const DietPlanBuilder = () => {
                                         <strong className="text-cyan-400">{dossierPatient.waterLiters}L</strong>
                                     </div>
                                     <div className="p-2.5 bg-black/60 rounded-xl border border-white/10 text-center">
-                                        <span className="text-[9px] text-white/40 block">Fiber</span>
-                                        <strong className="text-emerald-400">{dossierPatient.fiberG}g</strong>
                                     </div>
                                 </div>
                             </div>

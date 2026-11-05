@@ -596,12 +596,12 @@ const DashboardHome = () => {
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-xs font-black uppercase tracking-widest text-[#a5d391] flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-sm">tune</span>
-                            <span>Daily Requirements Formulated by Nutritionist (5–7 Parameters)</span>
+                            <span>Daily Requirements Formulated by Nutritionist (5 Targets)</span>
                         </h3>
                         <span className="text-[11px] text-white/40">Directly synchronized with your daily goals</span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                         <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#a5d391]/40 transition-all">
                             <div className="text-[10px] uppercase font-bold text-white/40">Daily Calories</div>
                             <div className="text-xl font-black text-white font-hero-display mt-0.5">{activeDietPlan?.calories || 2100} <span className="text-[10px] text-[#a5d391] font-normal">kcal</span></div>
@@ -632,20 +632,6 @@ const DashboardHome = () => {
                             <div className="text-[9px] text-white/50 mt-1">Fluid Requirement</div>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#a5d391]/40 transition-all">
-                            <div className="text-[10px] uppercase font-bold text-white/40">Dietary Fiber</div>
-                            <div className="text-xl font-black text-emerald-300 font-hero-display mt-0.5">{activeDietPlan?.fiber || 28} <span className="text-[10px] text-emerald-400 font-normal">g</span></div>
-                            <div className="text-[9px] text-white/50 mt-1">Microbiome Adherence</div>
-                        </div>
-                    </div>
-
-                    {/* Micronutrient strip */}
-                    <div className="mt-3 px-4 py-2.5 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between text-[11px] text-white/60 flex-wrap gap-2">
-                        <span className="font-bold uppercase tracking-wider text-white/40">Micronutrient Partition:</span>
-                        <span>Iron: <strong className="text-white">{activeDietPlan?.iron || 18} mg</strong></span>
-                        <span>Calcium: <strong className="text-white">{activeDietPlan?.calcium || 1000} mg</strong></span>
-                        <span>Vitamin D: <strong className="text-white">{activeDietPlan?.vitD || 15} mcg</strong></span>
-                        <span>Vitamin C: <strong className="text-white">{activeDietPlan?.vitC || 90} mg</strong></span>
                     </div>
                 </div>
 

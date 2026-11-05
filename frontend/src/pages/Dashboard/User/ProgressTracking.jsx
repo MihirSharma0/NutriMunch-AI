@@ -686,18 +686,10 @@ const ProgressTracking = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs">
+                        <div className="grid grid-cols-1 gap-3 pt-4 border-t border-white/10 text-xs">
                             <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
                                 <span className="material-symbols-outlined text-[#38bdf8] text-sm">water_drop</span>
                                 <span>Water: <strong>{customTargets.water || 2.5} L</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-[#a5d391] text-sm">grass</span>
-                                <span>Fiber: <strong>{customTargets.fiber || 28} g</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-amber-400 text-sm">shield</span>
-                                <span>Iron: <strong>{customTargets.iron || 18} mg</strong></span>
                             </div>
                         </div>
                     </div>
@@ -754,7 +746,7 @@ const ProgressTracking = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs">
+                        <div className="grid grid-cols-1 gap-3 pt-4 border-t border-white/10 text-xs">
                             <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
                                 <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
                                     <span className="material-symbols-outlined text-[#38bdf8] text-xs">water_drop</span>
@@ -770,33 +762,6 @@ const ProgressTracking = () => {
                                 />
                             </div>
 
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[#a5d391] text-xs">grass</span>
-                                    <span>Fiber (g)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="fiber"
-                                    value={customTargets.fiber}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
-
-                            <div className="bg-[#080b12]/90 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-amber-400 text-xs">shield</span>
-                                    <span>Iron (mg)</span>
-                                </div>
-                                <input
-                                    type="number"
-                                    name="iron"
-                                    value={customTargets.iron}
-                                    onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
-                                />
-                            </div>
                         </div>
                     </div>
                 )}
@@ -806,4 +771,3 @@ const ProgressTracking = () => {
 };
 
 export default ProgressTracking;
-

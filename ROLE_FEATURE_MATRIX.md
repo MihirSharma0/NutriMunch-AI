@@ -120,10 +120,9 @@ feature role.
 
 - Schedule — `/dashboard/nutritionist/schedule`
 
-#### Diet & Reports
+#### Diet Builder
 
 - Diet Builder — `/dashboard/nutritionist/builder`
-- Clinical Reports — `/dashboard/nutritionist/reports`
 
 ### Nutritionist features and routes
 
@@ -132,7 +131,6 @@ feature role.
 | Clinical command dashboard | `/dashboard/nutritionist` |
 | Structured diet plan builder | `/dashboard/nutritionist/builder` |
 | Appointment schedule and management | `/dashboard/nutritionist/schedule` |
-| Clinical reports and adherence reporting | `/dashboard/nutritionist/reports` |
 | Nutritionist profile | `/dashboard/nutritionist/profile` |
 | AI diet generation | `/ai-diet` |
 | AI food analysis | `/ai-image` |

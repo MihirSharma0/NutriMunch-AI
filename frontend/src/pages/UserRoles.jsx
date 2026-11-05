@@ -80,11 +80,6 @@ const UserRoles = () => {
             desc: 'Organize your availability, accept incoming appointment requests, host video sessions, and manage client follow-up reminders.'
         },
         {
-            icon: FileText,
-            title: 'White-Labeled Clinical Reports',
-            desc: 'Generate comprehensive, branded PDF health reports detailing client adherence, nutritional milestones, and clinical recommendations.'
-        },
-        {
             icon: Bot,
             title: 'AI Clinical Research Companion',
             desc: 'Leverage built-in AI tools for fast ingredient nutrient density reference, drug-nutrient interaction verification, and meal formulation.'

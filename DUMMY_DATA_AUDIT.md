@@ -6,29 +6,17 @@ This audit lists frontend and backend blocks that display hardcoded sample
 names, fabricated metrics, seeded records, static chart data, or deterministic
 fallback content instead of live database/API data.
 
+## Removed after audit
+
+### Nutritionist cohort analytics
+
+The static cohort dashboard, fabricated adherence and anomaly insights, report
+controls, nutritionist route, navigation entry, and promotional references have
+been removed. No live cohort analytics endpoint existed.
+
 ## Confirmed dummy or non-live data blocks
 
-### 1. Nutritionist Reports chart
-
-File: [NutritionistReports.jsx](./frontend/src/pages/Dashboard/Nutritionist/NutritionistReports.jsx)
-
-The six-week adherence chart uses hardcoded values:
-
-```js
-data: [72, 78, 85, 84, 88, 88]
-```
-
-The following content is also static:
-
-- “Aggregate protocol compliance across your 42 active users”
-- Cohort options such as “Diabetes Management Cohort”
-- “CGM Spikes” and “HRV Trends” report options
-- System insight text claiming “92%” AI efficiency
-
-The chart and claims are not loaded from a backend adherence or analytics
-endpoint.
-
-### 2. Nutritionist Plan Builder seeded history — removed
+### Nutritionist Plan Builder seeded history — removed
 
 File: [DietPlanBuilder.jsx](./frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx)
 
@@ -166,9 +154,8 @@ The following areas currently use real backend data or valid empty states:
 1. [DietPlanBuilder.jsx](./frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx) — fallback patient roster
 2. [ConsultationChatModal.jsx](./frontend/src/components/ConsultationChatModal.jsx) — default chat patients
 3. [DietPlanBuilder.jsx](./frontend/src/pages/Dashboard/Nutritionist/DietPlanBuilder.jsx) — seeded diet-plan history
-4. [NutritionistReports.jsx](./frontend/src/pages/Dashboard/Nutritionist/NutritionistReports.jsx) — static adherence chart
-5. [Home.jsx](./frontend/src/pages/Home.jsx) — static calorie and macro values
-6. [AdminHome.jsx](./frontend/src/pages/Dashboard/Admin/AdminHome.jsx) — fallback admin credentials
+4. [Home.jsx](./frontend/src/pages/Home.jsx) — static calorie and macro values
+5. [AdminHome.jsx](./frontend/src/pages/Dashboard/Admin/AdminHome.jsx) — fallback admin credentials
 
 ## Recommended replacement behavior
 

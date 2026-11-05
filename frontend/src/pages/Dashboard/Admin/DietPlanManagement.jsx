@@ -465,7 +465,7 @@ const DietPlanManagement = () => {
 
                                     {/* Metadata Footer */}
                                     <div className="flex items-center justify-between text-[10px] text-white/40 pt-1">
-                                        <span>Hydration: {plan.waterLiters || 3}L • Fiber: {plan.fiber || 28}g</span>
+                                        <span>Water: {plan.waterLiters || 3}L</span>
                                         <span>Meals: {plan.meals?.length || 4} slots</span>
                                     </div>
                                 </div>
@@ -549,16 +549,12 @@ const DietPlanManagement = () => {
                                 <span className="text-[10px] text-white/50 block font-bold">HYDRATION</span>
                                 <span className="text-xs font-bold text-sky-400 mt-0.5 block">{selectedPlan.waterLiters || 3} Liters/day</span>
                             </div>
-                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
-                                <span className="text-[10px] text-white/50 block font-bold">FIBER TARGET</span>
-                                <span className="text-xs font-bold text-emerald-400 mt-0.5 block">{selectedPlan.fiber || 28} Grams/day</span>
-                            </div>
                         </div>
 
-                        {/* Full Macro & Micronutrient Grid */}
+                        {/* Nutrition targets */}
                         <div className="p-4 bg-black/40 rounded-2xl border border-white/10 space-y-3">
-                            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Calibrated Macro & Micronutrient Splits</h4>
-                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
+                            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Calibrated Nutrition Targets</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
                                 <div className="p-2 bg-white/5 rounded-xl">
                                     <span className="text-[9px] text-white/40 block">Calories</span>
                                     <span className="text-xs font-black text-white">{selectedPlan.calories} kcal</span>
@@ -576,12 +572,8 @@ const DietPlanManagement = () => {
                                     <span className="text-xs font-black text-amber-400">{selectedPlan.fats}g</span>
                                 </div>
                                 <div className="p-2 bg-white/5 rounded-xl">
-                                    <span className="text-[9px] text-purple-400 block">Calcium</span>
-                                    <span className="text-xs font-black text-purple-400">{selectedPlan.calcium || 1000}mg</span>
-                                </div>
-                                <div className="p-2 bg-white/5 rounded-xl">
-                                    <span className="text-[9px] text-rose-400 block">Iron</span>
-                                    <span className="text-xs font-black text-rose-400">{selectedPlan.iron || 18}mg</span>
+                                    <span className="text-[9px] text-cyan-400 block">Water</span>
+                                    <span className="text-xs font-black text-cyan-400">{selectedPlan.waterLiters || 3}L</span>
                                 </div>
                             </div>
                         </div>
