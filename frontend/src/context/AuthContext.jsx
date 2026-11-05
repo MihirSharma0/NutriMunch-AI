@@ -94,7 +94,14 @@ export const AuthProvider = ({ children }) => {
             return { success: true, role: userData.role };
         } catch (error) {
             if (error.response?.status === 428 || error.response?.data?.message === 'requires_role') {
-                return { success: false, requiresRole: true };
+                return {
+                    success: false,
+                    requiresRole: true,
+                    googleProfile: {
+                        firstName: error.response?.data?.firstName || '',
+                        lastName: error.response?.data?.lastName || '',
+                    },
+                };
             }
             return { 
                 success: false, 

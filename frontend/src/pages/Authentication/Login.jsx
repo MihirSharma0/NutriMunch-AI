@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide
 import { useGoogleLogin } from '@react-oauth/google';
 import { getDashboardUrl, isRouteAllowedForRole } from '../../utils/roleUtils';
 import OnboardingWizard from '../../components/OnboardingWizard';
+import NutritionistGoogleOnboarding from '../../components/NutritionistGoogleOnboarding';
 import { getEmailError } from '../../utils/emailValidation';
 
 /**
@@ -28,15 +29,7 @@ const Login = () => {
     const [onboardingStep, setOnboardingStep] = useState(1);
     const [selectedRole, setSelectedRole] = useState(null);
     const [pendingGoogleCredential, setPendingGoogleCredential] = useState(null);
-    
-    // Profile Fields
-    const [age, setAge] = useState('');
-    const [gender, setGender] = useState('Not Specified');
-    const [heightCm, setHeightCm] = useState('');
-    const [weightKg, setWeightKg] = useState('');
-    const [goal, setGoal] = useState('Maintenance');
-    const [credentials, setCredentials] = useState('');
-    const [specialization, setSpecialization] = useState('');
+    const [googleProfile, setGoogleProfile] = useState({ firstName: '', lastName: '' });
 
     const { login, googleLogin, user } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -64,6 +57,7 @@ const Login = () => {
                 navigate(getPostLoginUrl(result.role));
             } else if (result.requiresRole) {
                 setPendingGoogleCredential(credential);
+                setGoogleProfile(result.googleProfile);
                 setRequiresRoleSelection(true);
             } else {
                 setError(result.message);
@@ -80,33 +74,21 @@ const Login = () => {
         }
     };
 
-    const handleOnboardingSubmit = async (e) => {
-        if (e) e.preventDefault();
-        setRequiresRoleSelection(false);
-        if (!pendingGoogleCredential) return;
-        
-        let profileData = {};
-        if (selectedRole === 'USER') {
-            profileData = {
-                age: age ? parseInt(age) : null,
-                gender,
-                heightCm: heightCm ? parseFloat(heightCm) : null,
-                weightKg: weightKg ? parseFloat(weightKg) : null,
-                goal
-            };
-        } else if (selectedRole === 'NUTRITIONIST') {
-            profileData = { credentials, specialization };
-        }
-
+    const createGoogleAccount = async (profileData) => {
+        if (!pendingGoogleCredential) return false;
         try {
             const result = await googleLogin(pendingGoogleCredential, selectedRole, profileData);
             if (result.success) {
+                setRequiresRoleSelection(false);
                 navigate(getPostLoginUrl(result.role));
+                return true;
             } else {
                 setError(result.message);
+                return false;
             }
         } catch (err) {
             setError('Google login failed. Please try again.');
+            return false;
         }
     };
 
@@ -166,7 +148,20 @@ const Login = () => {
             {/* BEGIN: Google Role Selection & Onboarding Modal */}
             {requiresRoleSelection && (
                 <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-[#080b12]/90 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-                    {onboardingStep === 3 ? (
+                    {selectedRole === 'NUTRITIONIST' ? (
+                        <NutritionistGoogleOnboarding
+                            initialFirstName={googleProfile.firstName}
+                            initialLastName={googleProfile.lastName}
+                            error={error}
+                            onCreate={createGoogleAccount}
+                            onCancel={() => {
+                                setRequiresRoleSelection(false);
+                                setPendingGoogleCredential(null);
+                                setSelectedRole(null);
+                                setOnboardingStep(1);
+                            }}
+                        />
+                    ) : onboardingStep === 3 ? (
                         <OnboardingWizard
                             initialEmail={user?.email || ''}
                             initialFirstName={user?.firstName || ''}
@@ -200,40 +195,6 @@ const Login = () => {
                                         </button>
                                     </div>
                                 </>
-                            )}
-
-                            {onboardingStep === 2 && selectedRole === 'NUTRITIONIST' && (
-                                <form onSubmit={handleOnboardingSubmit} className="w-full flex flex-col gap-4">
-                                    <h2 className="text-xl font-bold text-white mb-1 text-center">
-                                        Professional Details
-                                    </h2>
-                                    <p className="text-xs text-slate-400 text-center mb-4">
-                                        Share your professional background.
-                                    </p>
-                                    
-                                    <div>
-                                        <label className="block text-[10px] font-semibold tracking-wider uppercase text-slate-400 mb-1">Specialization</label>
-                                        <input type="text" required value={specialization} onChange={e => setSpecialization(e.target.value)} placeholder="e.g. Sports Nutrition" className="w-full bg-[#090d16] border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:border-[#a5d391]/60 focus:outline-none" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-semibold tracking-wider uppercase text-slate-400 mb-1">Credentials (Optional)</label>
-                                        <input type="text" value={credentials} onChange={e => setCredentials(e.target.value)} placeholder="e.g. RD, CNS" className="w-full bg-[#090d16] border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:border-[#a5d391]/60 focus:outline-none" />
-                                    </div>
-                                    
-                                    <button 
-                                        type="submit"
-                                        className="w-full py-3 mt-4 rounded-xl font-bold text-sm uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 transition duration-200 cursor-pointer"
-                                    >
-                                        Complete Setup
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setOnboardingStep(1)}
-                                        className="text-xs text-slate-500 hover:text-slate-300 transition-colors uppercase tracking-wider font-semibold cursor-pointer"
-                                    >
-                                        Back
-                                    </button>
-                                </form>
                             )}
 
                             <button 

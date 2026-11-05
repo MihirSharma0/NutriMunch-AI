@@ -121,21 +121,40 @@ public class AuthService {
                 String email = (String) payload.get("email");
                 String firstName = (String) payload.get("given_name");
                 String lastName = (String) payload.get("family_name");
+                String fullName = (String) payload.get("name");
+                String[] nameParts = fullName == null || fullName.isBlank()
+                        ? new String[0]
+                        : fullName.trim().split("\\s+", 2);
+                if ((firstName == null || firstName.isBlank()) && nameParts.length > 0) {
+                    firstName = nameParts[0];
+                }
+                if ((lastName == null || lastName.isBlank()) && nameParts.length > 1) {
+                    lastName = nameParts[1];
+                }
 
                 User user = userRepository.findByEmail(email).orElse(null);
 
                 if (user == null) {
                     if (roleStr == null || roleStr.isBlank()) {
                         throw new com.nutrition.exception.RoleRequiredException(
-                                "Role selection required for new Google login");
+                                "Role selection required for new Google login",
+                                firstName != null ? firstName : "User",
+                                lastName != null ? lastName : "");
                     }
 
                     Role selectedRole = selfServiceRole(roleStr);
+                    if (selectedRole == Role.NUTRITIONIST) {
+                        validateNutritionistGoogleOnboarding(request);
+                    }
 
                     user = new User();
                     user.setEmail(email);
-                    user.setFirstName(firstName != null ? firstName : "User");
-                    user.setLastName(lastName != null ? lastName : "");
+                    user.setFirstName(!isBlank(request.getFirstName())
+                            ? request.getFirstName().trim()
+                            : (firstName != null ? firstName : "User"));
+                    user.setLastName(!isBlank(request.getLastName())
+                            ? request.getLastName().trim()
+                            : (lastName != null ? lastName : ""));
                     user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
                     user.setRole(selectedRole);
                     user.setVerified(true);
@@ -151,6 +170,12 @@ public class AuthService {
                                 request.getSpecialization() != null && !request.getSpecialization().isBlank()
                                         ? request.getSpecialization()
                                         : "General");
+                        profile.setLicenseNumber(request.getLicenseNumber());
+                        profile.setYearsOfExperience(request.getYearsOfExperience());
+                        profile.setConsultationFee(request.getConsultationFee());
+                        profile.setLanguages(request.getLanguages());
+                        profile.setAge(request.getAge());
+                        profile.setGender(request.getGender());
                         nutritionistProfileRepository.save(profile);
                     } else if (selectedRole == Role.USER) {
                         UserProfile profile = new UserProfile();
@@ -181,6 +206,18 @@ public class AuthService {
             throw new RuntimeException(
                     "Google authentication failed: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
         }
+    }
+
+    private void validateNutritionistGoogleOnboarding(GoogleLoginRequest request) {
+        if (isBlank(request.getFirstName()) || isBlank(request.getLastName())
+                || request.getAge() == null || request.getAge() < 18 || request.getAge() > 120
+                || isBlank(request.getGender())) {
+            throw new IllegalArgumentException("Complete the required name, age, and gender fields.");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**

@@ -33,9 +33,9 @@ const CUISINES = [
 /** Onboarding workflow step definitions. */
 const STEPS = [
     { id: 1, title: 'Basic Info', desc: 'Mandatory Account Profile' },
-    { id: 2, title: 'Body Data', desc: 'Height, Weight & Activity' },
-    { id: 3, title: 'Goals & Diets', desc: 'Health Target & Budget' },
-    { id: 4, title: 'Preferences', desc: 'Allergens & Cuisines' }
+    { id: 2, title: 'Body Data', desc: 'Optional: Height, Weight & Activity' },
+    { id: 3, title: 'Goals & Diets', desc: 'Optional: Health Target & Budget' },
+    { id: 4, title: 'Preferences', desc: 'Optional: Allergens & Cuisines' }
 ];
 
 /**
@@ -86,15 +86,15 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
     const [firstName, setFirstName] = useState(names.firstName);
     const [lastName, setLastName] = useState(names.lastName);
     const [age, setAge] = useState('');
-    const [gender, setGender] = useState('Male');
+    const [gender, setGender] = useState('');
 
-    const [heightCm, setHeightCm] = useState('170');
-    const [weightKg, setWeightKg] = useState('70');
-    const [activityLevel, setActivityLevel] = useState('Sedentary');
+    const [heightCm, setHeightCm] = useState('');
+    const [weightKg, setWeightKg] = useState('');
+    const [activityLevel, setActivityLevel] = useState('');
 
-    const [goal, setGoal] = useState('General Nutrition');
-    const [dietType, setDietType] = useState('Non-Vegetarian');
-    const [mealBudget, setMealBudget] = useState('Budget/Affordable');
+    const [goal, setGoal] = useState('');
+    const [dietType, setDietType] = useState('');
+    const [mealBudget, setMealBudget] = useState('');
 
     const [allergies, setAllergies] = useState([]);
     const [cuisinePreferences, setCuisinePreferences] = useState([]);
@@ -161,6 +161,10 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
             setError('Please enter a valid age.');
             return;
         }
+        if (!gender) {
+            setError('Please select your gender.');
+            return;
+        }
         setCurrentStep(2);
     };
 
@@ -173,15 +177,15 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             age: parseInt(age, 10) || 25,
-            gender: gender,
-            heightCm: parseFloat(heightCm) || 170,
-            weightKg: parseFloat(weightKg) || 70,
-            activityLevel: activityLevel,
-            goal: goal,
-            dietType: dietType,
+            gender: gender || null,
+            heightCm: parseFloat(heightCm) || null,
+            weightKg: parseFloat(weightKg) || null,
+            activityLevel: activityLevel || null,
+            goal: goal || null,
+            dietType: dietType || null,
             allergies: allergies.join(', '),
-            cuisinePreferences: cuisinePreferences.join(', '),
-            mealBudget: mealBudget
+            cuisinePreferences: cuisinePreferences.join(', ') || null,
+            mealBudget: mealBudget || null
         };
 
         try {
@@ -292,7 +296,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                             Milestone 1 of 4: Mandatory Profile Details
                         </div>
                         <p className="text-[11px] text-white/50">
-                            Please provide your basic name and age details to personalize your account.
+                            This is the only required page. Your name is prefilled from Google; the remaining setup pages are optional.
                         </p>
                     </div>
 
@@ -336,12 +340,14 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-white/70 mb-1">Gender</label>
+                            <label className="block text-xs font-bold text-white/70 mb-1">Gender *</label>
                             <select
                                 value={gender}
                                 onChange={e => setGender(e.target.value)}
                                 className="w-full bg-[#080b12] border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-[#a5d391]"
+                                required
                             >
+                                <option value="">Select gender</option>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                                 <option value="Other">Other</option>
@@ -367,7 +373,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                 <div className="space-y-5">
                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5 mb-2">
                         <div className="text-xs font-bold text-[#38bdf8] uppercase tracking-wider mb-1">
-                            Milestone 2 of 4: Physical Parameters
+                            Milestone 2 of 4 (Optional): Physical Parameters
                         </div>
                         <p className="text-[11px] text-white/50">
                             Enter your weight and height to calculate live Mifflin-St Jeor BMR and TDEE calorie requirements.
@@ -404,7 +410,8 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                             onChange={e => setActivityLevel(e.target.value)}
                             className="w-full bg-[#080b12] border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-[#38bdf8]"
                         >
-                            <option value="Sedentary">Sedentary (Little or no exercise)</option>
+                        <option value="">Select (optional)</option>
+                        <option value="Sedentary">Sedentary (Little or no exercise)</option>
                             <option value="Lightly Active">Lightly Active (1-3 days/week)</option>
                             <option value="Moderately Active">Moderately Active (3-5 days/week)</option>
                             <option value="Very Active">Very Active (6-7 days/week)</option>
@@ -446,7 +453,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                 <div className="space-y-5">
                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5 mb-2">
                         <div className="text-xs font-bold text-yellow-400 uppercase tracking-wider mb-1">
-                            Milestone 3 of 4: Health Targets & Preferences
+                            Milestone 3 of 4 (Optional): Health Targets & Preferences
                         </div>
                         <p className="text-[11px] text-white/50">
                             Specify your target health goals and preferred diet regimen.
@@ -461,6 +468,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                                 onChange={e => setGoal(e.target.value)}
                                 className="w-full bg-[#080b12] border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-yellow-400"
                             >
+                                <option value="">Select (optional)</option>
                                 <option value="Weight Loss">Weight Loss</option>
                                 <option value="Muscle Gain">Muscle Gain</option>
                                 <option value="General Nutrition">General Nutrition</option>
@@ -475,6 +483,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                                 onChange={e => setDietType(e.target.value)}
                                 className="w-full bg-[#080b12] border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-yellow-400"
                             >
+                                <option value="">Select (optional)</option>
                                 <option value="Non-Vegetarian">Non-Vegetarian</option>
                                 <option value="Vegetarian">Vegetarian</option>
                                 <option value="Vegan">Vegan</option>
@@ -491,6 +500,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                             onChange={e => setMealBudget(e.target.value)}
                             className="w-full bg-[#080b12] border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-yellow-400"
                         >
+                            <option value="">Select (optional)</option>
                             <option value="Budget/Affordable">Budget / Affordable ($)</option>
                             <option value="Moderate">Moderate ($$)</option>
                             <option value="High/Premium">High / Premium ($$$)</option>
@@ -532,7 +542,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
                 <div className="space-y-5">
                     <div className="bg-white/5 p-4 rounded-2xl border border-white/5 mb-2">
                         <div className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-1">
-                            Milestone 4 of 4: Allergies & Cuisine Tastes
+                            Milestone 4 of 4 (Optional): Allergies & Cuisine Tastes
                         </div>
                         <p className="text-[11px] text-white/50">
                             Select any known food allergies and favorite cuisines to filter AI meal plans.

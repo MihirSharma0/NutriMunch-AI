@@ -18,6 +18,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * Authentication and Identity Controller.
 Handles user login, Google OAuth SSO, registration, email verification, OTP confirmation, and password recovery.
@@ -78,7 +80,10 @@ public class AuthController {
                     user.getLastName(),
                     userDetails.getAuthorities().iterator().next().getAuthority()));
         } catch (com.nutrition.exception.RoleRequiredException e) {
-            return ResponseEntity.status(428).body(new MessageResponse("requires_role"));
+            return ResponseEntity.status(428).body(Map.of(
+                    "message", "requires_role",
+                    "firstName", e.getFirstName(),
+                    "lastName", e.getLastName()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
