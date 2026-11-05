@@ -33,26 +33,12 @@ api.interceptors.request.use(
 
 /**
  * Response Interceptor
- * Intercepts incoming responses and handles 401 Unauthorized status codes.
- * Clears expired credentials from localStorage and triggers a logout event.
+ * Leaves authentication failures to the requesting page so it can show the error
+ * without discarding the current route or session state.
  */
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response && error.response.status === 401) {
-            const currentPath = window.location.pathname;
-            const isAuthRoute = currentPath.startsWith('/login') || currentPath.startsWith('/register') || currentPath.startsWith('/verify');
-            if (!isAuthRoute && localStorage.getItem('token')) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                // Release the live streams before navigating away so an expired session can
-                // never leave a socket open behind it.
-                window.dispatchEvent(new Event('nutrimunch_logout'));
-                window.location.href = '/login?expired=true';
-            }
-        }
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 export default api;
