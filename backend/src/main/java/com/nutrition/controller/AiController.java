@@ -42,12 +42,6 @@ public class AiController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/analyze-image")
-    public ResponseEntity<Map<String, String>> analyzeImage(@RequestBody Map<String, String> request) {
-        String analysis = aiService.analyzeFoodImage(request.get("imageUrl"));
-        return ResponseEntity.ok(Map.of("analysis", analysis));
-    }
-
     @PostMapping("/analyze-food")
     public ResponseEntity<com.nutrition.dto.FoodAnalysisResponseDto> analyzeFood(
             @RequestBody com.nutrition.dto.FoodAnalysisRequestDto request,

@@ -18,6 +18,74 @@ const validateBarcode = (raw) => {
     return null;
 };
 
+/** Formats the vision model can read, and the largest photo accepted (8 MiB). */
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/** Validates a chosen file before it is even read into memory. */
+const validateImageFile = (file) => {
+    if (!file) return 'No image was selected. Choose a photo and try again.';
+    const type = (file.type || '').toLowerCase();
+    if (!ALLOWED_IMAGE_TYPES.includes(type))
+        return `Unsupported image format${type ? ` (${type})` : ''}. Upload a JPEG, PNG, WebP, GIF or HEIC photo.`;
+    if (file.size > MAX_IMAGE_BYTES)
+        return `This image is ${(file.size / 1048576).toFixed(1)} MB, over the 8 MB limit. Compress the photo or take a smaller one.`;
+    return null;
+};
+
+/** Validates the exact payload that will be sent to the vision model. */
+const validateImageSource = (raw) => {
+    const source = (raw || '').trim();
+    if (!source) return 'No image was provided. Choose a photo of the food or its label and try again.';
+    if (!source.startsWith('data:image/')) {
+        if (/^https?:\/\//i.test(source))
+            return "Image links can't be analysed: the photo itself has to be uploaded so the vision model can read it. Use the image upload instead of pasting a URL.";
+        return "This isn't a supported image. Upload a JPEG, PNG, WebP, GIF or HEIC photo of the food or its label.";
+    }
+    const comma = source.indexOf(',');
+    const header = (comma < 0 ? source : source.slice(0, comma)).toLowerCase();
+    const semicolon = header.indexOf(';');
+    if (semicolon < 0 || !header.includes(';base64'))
+        return "The uploaded image is not base64-encoded, so its contents can't be read. Choose the photo again.";
+    const mime = header.slice('data:'.length, semicolon).trim();
+    if (!ALLOWED_IMAGE_TYPES.includes(mime))
+        return `Unsupported image format (${mime}). Upload a JPEG, PNG, WebP, GIF or HEIC photo.`;
+    const payload = comma < 0 ? '' : source.slice(comma + 1).replace(/\s/g, '');
+    if (!payload || !/^[A-Za-z0-9+/=]+$/.test(payload))
+        return 'The uploaded image data is empty or malformed. Choose the photo again.';
+    const approxBytes = Math.floor(payload.length * 3 / 4);
+    if (approxBytes > MAX_IMAGE_BYTES)
+        return `This image is about ${(approxBytes / 1048576).toFixed(1)} MB, over the 8 MB limit. Compress the photo or take a smaller one and try again.`;
+    return null;
+};
+
+/**
+ * A link is not an image. Fetch it and turn it into real image bytes so the vision
+ * model receives the photo itself rather than a URL it cannot see.
+ */
+const resolveImageUrl = async (url) => {
+    let response;
+    try {
+        response = await fetch(url, { mode: 'cors' });
+    } catch (e) {
+        throw new Error("Couldn't load the image from that link. The site may block external requests, or the link may be broken. Upload the photo file instead.");
+    }
+    if (!response.ok)
+        throw new Error(`The image link returned HTTP ${response.status}. Check the URL or upload the photo file instead.`);
+    const blob = await response.blob();
+    const type = (blob.type || '').toLowerCase();
+    if (!ALLOWED_IMAGE_TYPES.includes(type))
+        throw new Error(`The link returned an unsupported format${type ? ` (${type})` : ''}. Upload a JPEG, PNG, WebP, GIF or HEIC photo instead.`);
+    if (blob.size > MAX_IMAGE_BYTES)
+        throw new Error(`The linked image is ${(blob.size / 1048576).toFixed(1)} MB, over the 8 MB limit. Use a smaller photo.`);
+    return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("The linked image couldn't be read. Upload the photo file instead."));
+        reader.readAsDataURL(blob);
+    });
+};
+
 /** Turns a transport/server failure into a specific, accurate statement. */
 const describeRequestError = (error) => {
     const server = error.response && error.response.data;
@@ -30,6 +98,8 @@ const describeRequestError = (error) => {
     if (status === 401) return { outcome: 'ANALYSIS_FAILED', message: 'Your session has expired. Please log in again and retry the analysis.' };
     if (status === 403) return { outcome: 'ANALYSIS_FAILED', message: 'This account does not have permission to run food analysis.' };
     if (status === 404) return { outcome: 'ANALYSIS_FAILED', message: 'The food analysis endpoint was not found on the server. Please contact support.' };
+    if (status === 413) return { outcome: 'INVALID_IMAGE', message: 'The server rejected the image because it is too large (HTTP 413). Use a photo under 8 MB.' };
+    if (status === 415) return { outcome: 'INVALID_IMAGE', message: 'The server rejected the image format (HTTP 415). Use a JPEG, PNG, WebP, GIF or HEIC photo.' };
     if (status === 429) return { outcome: 'SOURCE_UNAVAILABLE', message: 'Too many requests reached the server. Wait a moment and try again.' };
     if (status >= 500) return { outcome: 'ANALYSIS_FAILED', message: `The server could not complete the analysis (HTTP ${status}). Please try again shortly.` };
     return { outcome: 'ANALYSIS_FAILED', message: `The analysis request failed (HTTP ${status}). Please try again.` };
@@ -41,6 +111,8 @@ const ISSUE_VIEWS = {
     NOT_FOUND:           { title: 'Product not found',            icon: 'scan_delete',    tone: 'amber' },
     INCOMPLETE_DATA:     { title: 'Product record incomplete',    icon: 'data_alert',     tone: 'amber' },
     SOURCE_UNAVAILABLE:  { title: 'Product database unavailable', icon: 'cloud_off',      tone: 'red'   },
+    INVALID_IMAGE:       { title: 'Image needs attention',        icon: 'image_not_supported', tone: 'amber' },
+    AI_UNAVAILABLE:      { title: 'Photo could not be analysed',  icon: 'no_photography',  tone: 'red'   },
     ANALYSIS_FAILED:     { title: 'Analysis failed',              icon: 'error',          tone: 'red'   },
 };
 
@@ -151,15 +223,31 @@ const AiImageAnalyzer = () => {
     };
 
     const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviewImage(reader.result);
-                setImageUrl(reader.result);
-            };
-            reader.readAsDataURL(file);
+        const input = e.target;
+        const file = input.files[0];
+        if (!file) return;
+        const problem = validateImageFile(file);
+        if (problem) {
+            setIssue({ outcome: 'INVALID_IMAGE', message: problem });
+            setPreviewImage(null);
+            setImageUrl('');
+            input.value = '';
+            return;
         }
+        setIssue(null);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPreviewImage(reader.result);
+            setImageUrl(reader.result);
+            input.value = '';
+        };
+        reader.onerror = () => {
+            setIssue({ outcome: 'INVALID_IMAGE', message: "The image file couldn't be read. Choose the photo again or try a different file." });
+            setPreviewImage(null);
+            setImageUrl('');
+            input.value = '';
+        };
+        reader.readAsDataURL(file);
     };
 
     const analyzeFood = async (e) => {
@@ -180,11 +268,33 @@ const AiImageAnalyzer = () => {
             }
         }
 
+        let imageSource = previewImage || imageUrl;
+        if (inputType !== 'BARCODE') {
+            // A link is not an image: fetch the bytes before the request so the vision
+            // model receives the photo, not a URL it cannot see.
+            if (/^https?:\/\//i.test((imageSource || '').trim())) {
+                setLoading(true);
+                try {
+                    imageSource = await resolveImageUrl(imageSource.trim());
+                } catch (err) {
+                    setIssue({ outcome: 'INVALID_IMAGE', message: err.message });
+                    setLoading(false);
+                    return;
+                }
+                setLoading(false);
+            }
+            const imageProblem = validateImageSource(imageSource);
+            if (imageProblem) {
+                setIssue({ outcome: 'INVALID_IMAGE', message: imageProblem });
+                return;
+            }
+        }
+
         setLoading(true);
         try {
             const payload = {
                 inputType,
-                imageUrl: previewImage || imageUrl,
+                imageUrl: imageSource,
                 barcode: cleanBarcode,
                 customAllergies: allergyTags.join(', ')
             };
@@ -250,7 +360,7 @@ const AiImageAnalyzer = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1.5 bg-[#080b12]/80 rounded-2xl border border-white/10">
                     <button
                         type="button"
-                        onClick={() => { setInputType('FOOD_IMAGE'); setErrorMsg(''); setIsCameraScanning(false); }}
+                        onClick={() => { setInputType('FOOD_IMAGE'); setErrorMsg(''); setIssue(null); setIsCameraScanning(false); }}
                         className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${inputType === 'FOOD_IMAGE' ? 'bg-[#a5d391] text-black shadow-lg shadow-[#a5d391]/20' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                     >
                         <span className="material-symbols-outlined text-lg">photo_camera</span>
@@ -258,7 +368,7 @@ const AiImageAnalyzer = () => {
                     </button>
                     <button
                         type="button"
-                        onClick={() => { setInputType('BARCODE'); setErrorMsg(''); }}
+                        onClick={() => { setInputType('BARCODE'); setErrorMsg(''); setIssue(null); }}
                         className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${inputType === 'BARCODE' ? 'bg-[#a5d391] text-black shadow-lg shadow-[#a5d391]/20' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                     >
                         <span className="material-symbols-outlined text-lg">barcode_scanner</span>
@@ -274,8 +384,8 @@ const AiImageAnalyzer = () => {
                                 <label className="flex-grow w-full cursor-pointer flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 hover:border-[#a5d391]/60 bg-[#080b12]/60 rounded-2xl transition-all group">
                                     <span className="material-symbols-outlined text-4xl text-[#a5d391] group-hover:scale-110 transition-transform mb-2">cloud_upload</span>
                                     <span className="text-sm font-bold text-white mb-1">Click or drag image file here</span>
-                                    <span className="text-xs text-white/40">Gemma AI analyzes food photo</span>
-                                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                                    <span className="text-xs text-white/40">JPEG, PNG, WebP, GIF or HEIC · up to 8 MB</span>
+                                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif" onChange={handleFileUpload} className="hidden" />
                                 </label>
 
                                 <div className="text-white/40 text-xs font-bold uppercase tracking-widest hidden sm:block">OR</div>
@@ -292,12 +402,13 @@ const AiImageAnalyzer = () => {
                                         placeholder="https://example.com/salad.jpg"
                                         className="w-full bg-[#080b12]/80 border border-white/10 rounded-2xl p-4 text-white text-sm placeholder:text-white/40 outline-none focus:border-[#a5d391]/50 transition-colors"
                                     />
+                                    <p className="text-[11px] text-white/40 leading-relaxed">The image is fetched and sent as real image bytes. If a site blocks that, upload the file instead.</p>
                                 </div>
                             </div>
 
                             {/* Sample presets */}
                             <div className="flex flex-wrap items-center gap-2 pt-2">
-                                <span className="text-xs text-white/50 font-bold">Quick Presets:</span>
+                                <span className="text-xs text-white/50 font-bold">Example photo links:</span>
                                 <button type="button" onClick={() => applySamplePhoto('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80')} className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-white/70 transition-all cursor-pointer">
                                     🥗 Fresh Salad Bowl
                                 </button>
@@ -462,6 +573,26 @@ const AiImageAnalyzer = () => {
                             </div>
                         </div>
                         <div className="ml-9 flex flex-wrap gap-2">
+                            {issue.outcome === 'INVALID_IMAGE' && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setIssue(null); setPreviewImage(null); setImageUrl(''); }}
+                                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-white/80 text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-base">add_photo_alternate</span>
+                                    <span>Choose another image</span>
+                                </button>
+                            )}
+                            {issue.outcome === 'AI_UNAVAILABLE' && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setInputType('BARCODE'); setIssue(null); }}
+                                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-white/80 text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-base">barcode_scanner</span>
+                                    <span>Use the barcode scanner instead</span>
+                                </button>
+                            )}
                             {(issue.outcome === 'NOT_FOUND' || issue.outcome === 'INCOMPLETE_DATA') && (
                                 <button
                                     type="button"
@@ -476,7 +607,7 @@ const AiImageAnalyzer = () => {
                                     <span>Analyze the product label with an image instead</span>
                                 </button>
                             )}
-                            {(issue.outcome === 'SOURCE_UNAVAILABLE' || issue.outcome === 'ANALYSIS_FAILED') && (
+                            {(issue.outcome === 'SOURCE_UNAVAILABLE' || issue.outcome === 'ANALYSIS_FAILED' || issue.outcome === 'AI_UNAVAILABLE') && (
                                 <button
                                     type="button"
                                     onClick={() => analyzeFood()}
