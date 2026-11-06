@@ -39,6 +39,7 @@ public class UserProfile {
     private String mealBudget;
     private String favoriteFoods;
     private String dislikedFoods;
+    @Column(name = "cuisine_preferences", length = 500)
     private String cuisinePreferences;
     
     @Column(name = "is_custom_targets")

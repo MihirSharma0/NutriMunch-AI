@@ -12,7 +12,13 @@ import java.time.LocalDateTime;
  * enforcing 5-day consultation windows, close states, and nutritionist reopening extensions.
  */
 @Entity
-@Table(name = "conversations")
+@Table(name = "conversations", indexes = {
+        @Index(name = "ix_conversations_patient", columnList = "patient_id"),
+        @Index(name = "ix_conversations_nutritionist", columnList = "nutritionist_id"),
+        @Index(name = "ix_conversations_updated", columnList = "updated_at"),
+        @Index(name = "ix_conversations_expiry", columnList = "status, expires_at"),
+        @Index(name = "ix_conversations_nutritionist_updated_id", columnList = "nutritionist_id, updated_at, id")
+})
 @Data
 public class Conversation {
 

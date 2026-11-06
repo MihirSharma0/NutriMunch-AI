@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
  * including target scope (GENERAL vs EXCLUSIVE for a patient), calories, and macronutrient targets.
  */
 @Entity
-@Table(name = "diet_plans")
+@Table(name = "diet_plans", indexes = {
+        @Index(name = "idx_diet_plans_user_date", columnList = "user_id, generated_date")
+})
 @Data
 public class DietPlan {
     @Id
@@ -23,7 +25,7 @@ public class DietPlan {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
+    @Column(nullable = false, name = "generated_date")
     private LocalDate generatedDate;
 
     private Integer totalCalories;
@@ -37,7 +39,7 @@ public class DietPlan {
     @Column(name = "water_target_liters")
     private Double waterTargetLiters;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "meals_json", columnDefinition = "LONGTEXT")
     private String mealsJson; 
 
     @CreationTimestamp

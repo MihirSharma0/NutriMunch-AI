@@ -11,8 +11,14 @@ import java.time.LocalDateTime;
  * including sender metadata, message body, and read receipts.
  */
 @Entity
-@Table(name = "chat_messages", uniqueConstraints = @UniqueConstraint(
-        name = "uk_chat_message_idempotency", columnNames = {"conversation_id", "sender_id", "client_message_id"}))
+@Table(name = "chat_messages",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_chat_message_idempotency",
+                columnNames = {"conversation_id", "sender_id", "client_message_id"}),
+        indexes = {
+                @Index(name = "ix_chat_messages_cursor", columnList = "conversation_id, id"),
+                @Index(name = "ix_chat_messages_unread", columnList = "conversation_id, sender_id, read_at")
+        })
 @Data
 public class ChatMessage {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

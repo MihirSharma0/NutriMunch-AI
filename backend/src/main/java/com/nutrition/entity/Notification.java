@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
  * incoming chat messages, wallet transactions, and clinical announcements.
  */
 @Entity
-@Table(name = "notifications")
+@Table(name = "notifications", indexes = {
+        @Index(name = "ix_notifications_conversation", columnList = "conversation_id, read_status"),
+        @Index(name = "ix_notifications_user_created", columnList = "user_id, created_at")
+})
 @Data
 public class Notification {
 
