@@ -1,6 +1,5 @@
 package com.nutrition.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nutrition.dto.FoodAnalysisRequestDto;
 import com.nutrition.dto.FoodAnalysisResponseDto;
 import com.nutrition.entity.Recipe;
@@ -23,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.client.RestTemplate;
 
 import org.springframework.http.HttpMethod;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -49,7 +49,7 @@ public class AiService {
     private final RecipeRepository recipeRepository;
 
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     private final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
     /**
@@ -131,19 +131,19 @@ public class AiService {
         }
 
         try {
-            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(candidate);
-            com.fasterxml.jackson.databind.JsonNode targets = root.path("targets");
+            tools.jackson.databind.JsonNode root = objectMapper.readTree(candidate);
+            tools.jackson.databind.JsonNode targets = root.path("targets");
             if (!root.isObject() || !targets.isObject()) {
                 throw new IllegalArgumentException("Gemini returned a diet plan without a targets object.");
             }
 
-            com.fasterxml.jackson.databind.node.ObjectNode filteredTargets = objectMapper.createObjectNode();
+            tools.jackson.databind.node.ObjectNode filteredTargets = objectMapper.createObjectNode();
             for (String key : List.of("calories", "protein", "carbs", "fats", "waterLiters")) {
                 if (targets.has(key)) {
                     filteredTargets.set(key, targets.get(key));
                 }
             }
-            ((com.fasterxml.jackson.databind.node.ObjectNode) root).set("targets", filteredTargets);
+            ((tools.jackson.databind.node.ObjectNode) root).set("targets", filteredTargets);
             return objectMapper.writeValueAsString(root);
         } catch (Exception e) {
             throw new IllegalArgumentException("Gemini returned an invalid diet plan JSON response.", e);
