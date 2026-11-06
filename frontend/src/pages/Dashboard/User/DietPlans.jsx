@@ -251,7 +251,7 @@ const DietPlans = () => {
         const pollInterval = setInterval(() => {
             loadPlans();
             syncServerPlans();
-        }, 1200);
+        }, 5000);
 
         return () => {
             if (bc) bc.close();

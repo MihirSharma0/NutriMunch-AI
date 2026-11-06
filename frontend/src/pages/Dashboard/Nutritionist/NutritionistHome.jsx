@@ -19,6 +19,47 @@ const NutritionistHome = () => {
     const [upcomingConsultations, setUpcomingConsultations] = useState([]);
     const [consultationRecords, setConsultationRecords] = useState([]);
     const [consultationsLoading, setConsultationsLoading] = useState(true);
+    const [protocolHistory, setProtocolHistory] = useState([]);
+    const myId = String(user?.id || user?.userId || '');
+    const myEmail = String(user?.email || '').toLowerCase().trim();
+
+    // Own created plans come from the server so this dashboard works after any
+    // login, on any device, and never shows another nutritionist's plans.
+    useEffect(() => {
+        let cancelled = false;
+        const loadProtocols = async () => {
+            let serverList = [];
+            let localList = [];
+            try {
+                const res = await api.get('/diet-plans/published');
+                if (Array.isArray(res.data)) serverList = res.data;
+            } catch { /* fall back to the local draft cache below */ }
+            try {
+                const raw = localStorage.getItem('nutrimunch_diet_plans_history');
+                const parsed = raw ? JSON.parse(raw) : [];
+                localList = (Array.isArray(parsed) ? parsed : []).filter(plan =>
+                    (myId && String(plan.nutritionistId ?? '') === myId) ||
+                    (myEmail && String(plan.authorEmail || plan.nutritionistEmail || '').toLowerCase().trim() === myEmail));
+            } catch { localList = []; }
+
+            const merged = [...serverList];
+            localList.forEach(plan => {
+                if (!merged.some(existing => String(existing.id) === String(plan.id))) merged.push(plan);
+            });
+            merged.sort((a, b) =>
+                (new Date(b.deployedAt || b.createdAt || 0).getTime()) -
+                (new Date(a.deployedAt || a.createdAt || 0).getTime()));
+            if (!cancelled) setProtocolHistory(merged);
+        };
+        loadProtocols();
+        window.addEventListener('nutrimunch_diet_history_updated', loadProtocols);
+        window.addEventListener('storage', loadProtocols);
+        return () => {
+            cancelled = true;
+            window.removeEventListener('nutrimunch_diet_history_updated', loadProtocols);
+            window.removeEventListener('storage', loadProtocols);
+        };
+    }, [myId, myEmail]);
 
     useEffect(() => {
         const userKeyId = user?.id || user?.userId;
@@ -390,23 +431,13 @@ const NutritionistHome = () => {
                     </a>
                 </div>
 
-                {/* History Items Grid */}
-                {(() => {
-                    let history = [];
-                    try {
-                        const raw = localStorage.getItem('nutrimunch_diet_plans_history');
-                        if (raw) history = JSON.parse(raw);
-                    } catch (e) {}
-
-                    if (!Array.isArray(history)) history = [];
-
-                    return (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {history.length === 0 ? (
+                {/* History Items Grid — own plans, loaded from the server */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {protocolHistory.length === 0 ? (
                                 <div className="md:col-span-3 py-8 text-center text-xs text-white/50">
                                     No saved diet protocols available.
                                 </div>
-                            ) : history.slice(0, 3).map((item) => (
+                            ) : protocolHistory.slice(0, 3).map((item) => (
                                 <div
                                     key={item.id}
                                     className="p-5 rounded-2xl bg-[#080b12]/80 border border-white/10 hover:border-[#a5d391]/40 transition-all flex flex-col justify-between space-y-4 group"
@@ -446,9 +477,7 @@ const NutritionistHome = () => {
                                     </a>
                                 </div>
                             ))}
-                        </div>
-                    );
-                })()}
+                </div>
             </div>
         </div>
     );

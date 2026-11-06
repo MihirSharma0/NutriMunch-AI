@@ -312,11 +312,11 @@ const DashboardHome = () => {
             fetchUserTargets();
         });
 
-        // Fast responsive polling (1200ms) to ensure instant sync without page refresh
+        // Plan lists are now database-backed; a lighter poll avoids saturating the free-tier DB
         const pollInterval = setInterval(() => {
             loadDietPlans();
             syncServerPlans();
-        }, 1200);
+        }, 5000);
 
         return () => {
             if (bc) bc.close();
