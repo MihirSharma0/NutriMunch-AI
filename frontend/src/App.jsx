@@ -108,6 +108,12 @@ function App() {
 
               {/* Logged-in only: everything below requires an authenticated session */}
               <Route element={<ProtectedRoute />}>
+                {/* Diet plan browsing/import is for client accounts only */}
+                <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
+                    <Route path="diet-plans" element={<DietPlans />} />
+                    <Route path="dashboard/diet-plans" element={<DietPlans />} />
+                    <Route path="dashboard/user/diet-plans" element={<DietPlans />} />
+                </Route>
                 {/* User Platform Feature Routes & Dashboard Aliases */}
                 <Route path="profile" element={<Profile />} />
                 <Route path="dashboard" element={<Navigate to="/dashboard/user" replace />} />
@@ -116,7 +122,6 @@ function App() {
                 <Route path="progress" element={<ProgressTracking />} />
                 <Route path="appointments" element={<Appointments />} />
                 <Route path="reports" element={<Reports />} />
-                <Route path="diet-plans" element={<DietPlans />} />
                 <Route path="virtual-room" element={<VirtualRoom />} />
                 <Route path="room" element={<VirtualRoom />} />
                 <Route path="dashboard/user" element={<DashboardHome />} />
@@ -125,12 +130,10 @@ function App() {
                 <Route path="dashboard/user/ai-image" element={<AiImageAnalyzer />} />
                 <Route path="dashboard/user/progress" element={<ProgressTracking />} />
                 <Route path="dashboard/progress" element={<ProgressTracking />} />
-                <Route path="dashboard/diet-plans" element={<DietPlans />} />
                 <Route path="dashboard/appointments" element={<Appointments />} />
                 <Route path="dashboard/reports" element={<Reports />} />
                 <Route path="dashboard/user/appointments" element={<Appointments />} />
                 <Route path="dashboard/user/reports" element={<Reports />} />
-                <Route path="dashboard/user/diet-plans" element={<DietPlans />} />
 
                 {/* Shared wallet & transactions */}
                 <Route path="transactions" element={<TransactionHistory />} />

@@ -68,9 +68,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/v1/health").permitAll()
                         .requestMatchers("/api/testimonials/**").permitAll()
-                        .requestMatchers("/api/diet-plans/general").permitAll()
-                        .requestMatchers("/api/diet-plans/active").permitAll()
-                        .requestMatchers("/api/diet-plans/catalog/**").permitAll()
+                        // Nutritionist plans are private to signed-in accounts: role checks live in
+                        // DietPlanController / NutritionistDietPlanService. Dead public matchers removed.
+                        .requestMatchers("/api/diet-plans/all").hasRole("ADMIN")
                         .requestMatchers("/api/recipes/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

@@ -1,17 +1,27 @@
 package com.nutrition.controller;
 
 import com.nutrition.dto.DietPlanDto;
+import com.nutrition.entity.Role;
 import com.nutrition.security.CustomUserDetails;
 import com.nutrition.service.DietPlanService;
+import com.nutrition.service.NutritionistDietPlanService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Diet Plan Management Controller.
-Provides endpoints for retrieving, deploying, deleting, and inspecting personalized and general weekly meal plans.
+ *
+ * Two distinct stores: the user's own personal/AI plans (DietPlanService, keyed by
+ * the signed-in user) and nutritionist-published plans (NutritionistDietPlanService),
+ * whose visibility, ownership and deletion are enforced on the server.
  */
 @RestController
 @RequestMapping("/api/diet-plans")
@@ -19,26 +29,15 @@ Provides endpoints for retrieving, deploying, deleting, and inspecting personali
 public class DietPlanController {
 
     private final DietPlanService dietPlanService;
-
-    // In-memory persistent registry for published diet plans to sync instantly across sessions
-    private static final java.util.List<java.util.Map<String, Object>> deployedPlansStore = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final NutritionistDietPlanService nutritionistDietPlanService;
 
     /**
-     * Handles request to purge plans by author.
+     * Retained for the admin user-deletion flow. Published plans now live in the
+     * database with an ON DELETE CASCADE author foreign key, so there is no
+     * in-memory registry left to purge.
      */
     public static void purgePlansByAuthor(Long userId, String email) {
-        String idStr = String.valueOf(userId);
-        String emailLower = email != null ? email.toLowerCase().trim() : "";
-        deployedPlansStore.removeIf(p -> {
-            String targetId = String.valueOf(p.get("targetUserId"));
-            String dId = String.valueOf(p.get("nutritionistId"));
-            String uId = String.valueOf(p.get("userId"));
-            String dEmail = String.valueOf(p.get("nutritionistEmail")).toLowerCase().trim();
-            String author = String.valueOf(p.get("author")).toLowerCase().trim();
-            String aEmail = String.valueOf(p.get("authorEmail")).toLowerCase().trim();
-            return idStr.equals(targetId) || idStr.equals(dId) || idStr.equals(uId) ||
-                   (!emailLower.isEmpty() && (emailLower.equals(dEmail) || emailLower.equals(author) || emailLower.equals(aEmail)));
-        });
+        // No-op: ownership is enforced by fk_ndp_nutritionist.
     }
 
     /**
@@ -84,65 +83,108 @@ public class DietPlanController {
         return ResponseEntity.ok(dietPlanService.generateMockDietPlan(userDetails.getId(), dto));
     }
 
+    /**
+     * Publish or replace a nutritionist-created plan. Author, scope and target are
+     * validated server-side; the request body cannot choose the author.
+     */
     @PostMapping("/deploy")
-    public ResponseEntity<java.util.Map<String, Object>> deployPlan(@RequestBody java.util.Map<String, Object> planData) {
-        if (planData != null && planData.get("id") != null) {
-            String planId = String.valueOf(planData.get("id"));
-            deployedPlansStore.removeIf(p -> planId.equals(String.valueOf(p.get("id"))));
-            deployedPlansStore.add(0, planData);
+    public ResponseEntity<Map<String, Object>> deployPlan(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody Map<String, Object> planData) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
         }
-        return ResponseEntity.ok(planData);
+        return ResponseEntity.ok(nutritionistDietPlanService.deploy(
+                userDetails.getId(), userDetails.getRole(), planData));
     }
 
+    /**
+     * Role-aware published list: clients see general plans + their own exclusive
+     * plans, nutritionists see only plans they created, admins see everything.
+     */
     @GetMapping("/published")
-    public ResponseEntity<java.util.List<java.util.Map<String, Object>>> getPublishedPlans() {
-        return ResponseEntity.ok(deployedPlansStore);
+    public ResponseEntity<List<Map<String, Object>>> getPublishedPlans(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(nutritionistDietPlanService.visiblePlans(
+                userDetails.getId(), userDetails.getRole()));
     }
 
+    /** First general plan for a client. No longer public and never served to nutritionists. */
     @GetMapping("/general")
-    public ResponseEntity<java.util.Map<String, Object>> getLatestGeneralPlan() {
-        for (java.util.Map<String, Object> p : deployedPlansStore) {
-            String scope = String.valueOf(p.getOrDefault("scope", p.get("targetMode")));
-            if ("GENERAL".equalsIgnoreCase(scope)) {
-                return ResponseEntity.ok(p);
+    public ResponseEntity<Map<String, Object>> getLatestGeneralPlan(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+        if (userDetails.getRole() != Role.USER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only client accounts can browse general diet plans");
+        }
+        Map<String, Object> plan = nutritionistDietPlanService.latestGeneral(
+                userDetails.getId(), userDetails.getRole());
+        return plan == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(plan);
+    }
+
+    /**
+     * Delete a published plan (author/admin only) or one of the caller's own
+     * personal/AI plans. Imported targets and progress history are never touched.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> deleteDietPlan(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable String id) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+        String cleanId = id == null ? "" : id.trim();
+
+        boolean removedPublished = nutritionistDietPlanService.deletePublished(
+                cleanId, userDetails.getId(), userDetails.getRole());
+
+        if (!removedPublished) {
+            // Legacy personal/AI plan: numeric id, caller must own it.
+            // Only personal/AI-plan identifiers carry a numeric DB id; published
+            // plan keys (plan_<timestamp>) must never be mined for digits.
+            boolean legacyId = cleanId.matches("\\d+") || cleanId.startsWith("saved-ai-");
+            String numericStr = legacyId ? cleanId.replaceAll("[^0-9]", "") : "";
+            if (!numericStr.isEmpty()) {
+                try {
+                    dietPlanService.deleteOwnedDietPlan(Long.parseLong(numericStr), userDetails.getId());
+                } catch (NumberFormatException ignored) {
+                    // Non-numeric plan identifiers simply have no legacy row to remove.
+                }
             }
         }
-        return ResponseEntity.noContent().build();
-    }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<java.util.Map<String, Object>> deleteDietPlan(@PathVariable String id) {
-        if (id != null) {
-            String cleanId = id.trim();
-            deployedPlansStore.removeIf(p -> {
-                String pId = String.valueOf(p.get("id"));
-                String pTitle = String.valueOf(p.getOrDefault("title", p.get("planTitle")));
-                return cleanId.equalsIgnoreCase(pId) || cleanId.equalsIgnoreCase(pTitle);
-            });
-            try {
-                String numericStr = cleanId.replaceAll("[^0-9]", "");
-                if (!numericStr.isEmpty()) {
-                    dietPlanService.deleteDietPlan(Long.parseLong(numericStr));
-                }
-            } catch (Exception ignored) {}
-        }
-        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("deletedId", id);
-        response.put("message", "Diet plan permanently deleted from database and active registries.");
+        response.put("message", "Diet plan removed from the published registry.");
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/deploy/{id}")
-    public ResponseEntity<java.util.Map<String, Object>> deleteDeployedPlan(@PathVariable String id) {
-        return deleteDietPlan(id);
+    public ResponseEntity<Map<String, Object>> deleteDeployedPlan(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable String id) {
+        return deleteDietPlan(userDetails, id);
     }
 
     /**
      * Handles request to get all diet plans for admin.
      */
     @GetMapping("/all")
-    public ResponseEntity<List<DietPlanDto>> getAllDietPlansForAdmin() {
+    public ResponseEntity<List<DietPlanDto>> getAllDietPlansForAdmin(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+        if (userDetails.getRole() != Role.ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
+        }
         return ResponseEntity.ok(dietPlanService.getAllDietPlans());
     }
 }

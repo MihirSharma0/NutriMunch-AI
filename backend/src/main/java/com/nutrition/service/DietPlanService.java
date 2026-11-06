@@ -60,12 +60,19 @@ public class DietPlanService {
     }
 
     /**
-     * Executes delete diet plan operation.
+     * Deletes one of the caller's own personal/AI plans. Published nutritionist
+     * plans are handled separately by NutritionistDietPlanService, so this can
+     * never be used to remove somebody else's plan.
      */
-    public void deleteDietPlan(Long id) {
-        if (id != null && dietPlanRepository.existsById(id)) {
-            dietPlanRepository.deleteById(id);
-        }
+    public void deleteOwnedDietPlan(Long id, Long ownerId) {
+        if (id == null || ownerId == null) return;
+        dietPlanRepository.findById(id).ifPresent(plan -> {
+            if (plan.getUser() == null || !java.util.Objects.equals(plan.getUser().getId(), ownerId)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "Diet plan is not owned by user");
+            }
+            dietPlanRepository.delete(plan);
+        });
     }
 
     /**
