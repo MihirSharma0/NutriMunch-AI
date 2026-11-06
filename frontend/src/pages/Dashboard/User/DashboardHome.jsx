@@ -57,7 +57,8 @@ const DashboardHome = () => {
                             title: n.title,
                             message: n.message,
                             time: n.timeAgo || 'Active Protocol',
-                            icon: n.icon || 'health_and_safety'
+                            icon: n.icon || 'health_and_safety',
+                            targetUrl: n.targetUrl || n.path || '/progress'
                         }));
                     }
                 } catch (e) {}
@@ -442,7 +443,7 @@ const DashboardHome = () => {
                                     <p className="text-xs text-white/80 leading-relaxed italic">"{dir.message}"</p>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    <Link to="/progress" className="px-4 py-2 rounded-xl bg-[#a5d391] text-[#080b12] font-bold text-xs hover:bg-white transition-all shrink-0">
+                                    <Link to={dir.targetUrl || dir.path || "/progress"} className="px-4 py-2 rounded-xl bg-[#a5d391] text-[#080b12] font-bold text-xs hover:bg-white transition-all shrink-0">
                                         View Progress Tracker →
                                     </Link>
                                     <button

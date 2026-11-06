@@ -269,15 +269,22 @@ public class AppointmentService {
         walletSseService.sendWalletUpdate(user.getId(), user.getEmail(), holdPayload);
 
         // 2. Appointment update to nutritionist & user
-        Map<String, Object> aptEvent = Map.of(
+        if (nutritionist != null) {
+            walletSseService.sendAppointmentUpdate(nutritionist.getId(), nutritionist.getEmail(), Map.of(
+                    "type", "APPOINTMENT_UPDATED",
+                    "action", "REQUESTED",
+                    "appointmentId", resultDto.getId(),
+                    "targetUrl", NUTRITIONIST_SCHEDULE_PATH,
+                    "appointment", resultDto
+            ));
+        }
+        walletSseService.sendAppointmentUpdate(user.getId(), user.getEmail(), Map.of(
                 "type", "APPOINTMENT_UPDATED",
                 "action", "REQUESTED",
+                "appointmentId", resultDto.getId(),
+                "targetUrl", USER_APPOINTMENTS_PATH,
                 "appointment", resultDto
-        );
-        if (nutritionist != null) {
-            walletSseService.sendAppointmentUpdate(nutritionist.getId(), nutritionist.getEmail(), aptEvent);
-        }
-        walletSseService.sendAppointmentUpdate(user.getId(), user.getEmail(), aptEvent);
+        ));
 
         // 3. Admin Ledger stream
         walletSseService.broadcastToAdmins(Map.of(
@@ -661,16 +668,23 @@ public class AppointmentService {
         notifyAppointmentChange(updated, prevStatus, prevEscrow, escrowAmount, callerId);
 
         // Push real-time SSE appointment update to both parties
-        Map<String, Object> sseEvent = Map.of(
-                "type", "APPOINTMENT_UPDATED",
-                "action", "STATUS_CHANGED",
-                "appointment", dtoResult
-        );
         if (updated.getUser() != null) {
-            walletSseService.sendAppointmentUpdate(updated.getUser().getId(), updated.getUser().getEmail(), sseEvent);
+            walletSseService.sendAppointmentUpdate(updated.getUser().getId(), updated.getUser().getEmail(), Map.of(
+                    "type", "APPOINTMENT_UPDATED",
+                    "action", "STATUS_CHANGED",
+                    "appointmentId", dtoResult.getId(),
+                    "targetUrl", USER_APPOINTMENTS_PATH,
+                    "appointment", dtoResult
+            ));
         }
         if (updated.getNutritionist() != null) {
-            walletSseService.sendAppointmentUpdate(updated.getNutritionist().getId(), updated.getNutritionist().getEmail(), sseEvent);
+            walletSseService.sendAppointmentUpdate(updated.getNutritionist().getId(), updated.getNutritionist().getEmail(), Map.of(
+                    "type", "APPOINTMENT_UPDATED",
+                    "action", "STATUS_CHANGED",
+                    "appointmentId", dtoResult.getId(),
+                    "targetUrl", NUTRITIONIST_SCHEDULE_PATH,
+                    "appointment", dtoResult
+            ));
         }
 
         return dtoResult;
@@ -712,16 +726,23 @@ public class AppointmentService {
         AppointmentDto dtoResult = mapToDto(updated);
         notifyAppointmentChange(updated, prevStatusBeforeRequest, updated.getEscrowStatus(), updated.getEscrowAmount(), userId);
 
-        Map<String, Object> sseEvent = Map.of(
-                "type", "APPOINTMENT_UPDATED",
-                "action", "CANCELLATION_REQUESTED",
-                "appointment", dtoResult
-        );
         if (updated.getUser() != null) {
-            walletSseService.sendAppointmentUpdate(updated.getUser().getId(), updated.getUser().getEmail(), sseEvent);
+            walletSseService.sendAppointmentUpdate(updated.getUser().getId(), updated.getUser().getEmail(), Map.of(
+                    "type", "APPOINTMENT_UPDATED",
+                    "action", "CANCELLATION_REQUESTED",
+                    "appointmentId", dtoResult.getId(),
+                    "targetUrl", USER_APPOINTMENTS_PATH,
+                    "appointment", dtoResult
+            ));
         }
         if (updated.getNutritionist() != null) {
-            walletSseService.sendAppointmentUpdate(updated.getNutritionist().getId(), updated.getNutritionist().getEmail(), sseEvent);
+            walletSseService.sendAppointmentUpdate(updated.getNutritionist().getId(), updated.getNutritionist().getEmail(), Map.of(
+                    "type", "APPOINTMENT_UPDATED",
+                    "action", "CANCELLATION_REQUESTED",
+                    "appointmentId", dtoResult.getId(),
+                    "targetUrl", NUTRITIONIST_SCHEDULE_PATH,
+                    "appointment", dtoResult
+            ));
         }
 
         log.info("Client [{}] submitted cancellation request for confirmed appointment #{}", apt.getUser().getEmail(), apt.getId());
@@ -1139,6 +1160,7 @@ public class AppointmentService {
         dto.setEscrowAmount(apt.getEscrowAmount());
         dto.setEscrowStatus(apt.getEscrowStatus());
         dto.setEscrowTransactionRef(apt.getEscrowTransactionRef());
+        dto.setTargetUrl(USER_APPOINTMENTS_PATH);
         return dto;
     }
 }

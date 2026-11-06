@@ -46,6 +46,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final PlatformTransactionManager transactionManager;
+    private final WalletSseService walletSseService;
 
     /**
      * Server-generated alert for a system event (wallet credit, refund, appointment change...).
@@ -71,7 +72,23 @@ public class NotificationService {
                 n.setIcon(icon != null ? icon : "notifications");
                 n.setPath(path);
                 n.setReadStatus(false);
-                notificationRepository.save(n);
+                Notification saved = notificationRepository.save(n);
+
+                String userEmail = recipient.getEmail();
+                if (userEmail == null || userEmail.isBlank()) {
+                    userEmail = userRepository.findById(recipientId).map(User::getEmail).orElse(null);
+                }
+                walletSseService.sendUserEvent(recipientId, userEmail, "notification", java.util.Map.of(
+                        "id", saved.getId(),
+                        "title", saved.getTitle(),
+                        "message", saved.getMessage(),
+                        "type", saved.getType(),
+                        "icon", saved.getIcon(),
+                        "path", saved.getPath() != null ? saved.getPath() : "",
+                        "targetUrl", saved.getPath() != null ? saved.getPath() : "",
+                        "conversationId", saved.getConversationId() != null ? saved.getConversationId() : 0L,
+                        "createdAt", String.valueOf(LocalDateTime.now())
+                ));
             });
         }, "notification '" + type + "' for user " + recipientId);
     }
@@ -117,8 +134,25 @@ public class NotificationService {
                 notification.setTitle(title);
                 notification.setMessage(body);
                 if (senderId != null) notification.setSender(userRepository.getReferenceById(senderId));
-                notification.setPath(CONSULTATION_CHAT_PATH + "?conversationId=" + conversationId);
-                notificationRepository.save(notification);
+                String targetPath = CONSULTATION_CHAT_PATH + "?conversationId=" + conversationId;
+                notification.setPath(targetPath);
+                Notification saved = notificationRepository.save(notification);
+
+                String userEmail = recipient.getEmail();
+                if (userEmail == null || userEmail.isBlank()) {
+                    userEmail = userRepository.findById(recipientId).map(User::getEmail).orElse(null);
+                }
+                walletSseService.sendUserEvent(recipientId, userEmail, "notification", java.util.Map.of(
+                        "id", saved.getId(),
+                        "title", saved.getTitle(),
+                        "message", saved.getMessage(),
+                        "type", TYPE_CONSULTATION_MSG,
+                        "icon", "forum",
+                        "path", targetPath,
+                        "targetUrl", targetPath,
+                        "conversationId", conversationId,
+                        "createdAt", String.valueOf(LocalDateTime.now())
+                ));
             });
         }, "chat notification for user " + recipientId);
     }
@@ -218,7 +252,13 @@ public class NotificationService {
         notification.setMessage(dto.getMessage());
         notification.setType(dto.getType() != null ? dto.getType() : "SYSTEM");
         notification.setIcon(dto.getIcon() != null ? dto.getIcon() : "notifications");
-        notification.setPath(dto.getPath());
+        String resolvedPath = dto.getTargetUrl() != null && !dto.getTargetUrl().isBlank()
+                ? dto.getTargetUrl()
+                : dto.getPath();
+        notification.setPath(resolvedPath);
+        if (dto.getConversationId() != null) {
+            notification.setConversationId(dto.getConversationId());
+        }
         notification.setReadStatus(false);
         return notification;
     }
@@ -337,7 +377,14 @@ public class NotificationService {
         dto.setType(entity.getType());
         dto.setIcon(entity.getIcon());
         dto.setPath(entity.getPath());
+        dto.setTargetUrl(entity.getPath());
         dto.setConversationId(entity.getConversationId());
+        if (dto.getConversationId() == null && entity.getPath() != null && entity.getPath().contains("conversationId=")) {
+            try {
+                String cid = entity.getPath().split("conversationId=")[1].split("&")[0];
+                dto.setConversationId(Long.parseLong(cid));
+            } catch (Exception ignored) {}
+        }
         dto.setReadStatus(entity.isReadStatus());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setTimeAgo(calculateTimeAgo(entity.getCreatedAt()));

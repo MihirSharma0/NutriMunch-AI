@@ -234,16 +234,20 @@ public class ChatService {
                 recipient, sender, conversationId, displayName(sender), request.getContent().trim(), unreadForRecipient);
 
         afterCommit(() -> {
+            String chatUrl = "/consultation-chat?conversationId=" + conversationId;
             walletSseService.sendUserEvent(recipient.getId(), recipient.getEmail(), "chat_message", Map.of(
                     "conversationId", conversationId,
                     "senderId", sender.getId(),
                     "recipientId", recipient.getId(),
                     "preview", dto.getContent() == null ? "" :
                             dto.getContent().substring(0, Math.min(dto.getContent().length(), 120)),
-                    "createdAt", String.valueOf(dto.getCreatedAt())));
+                    "createdAt", String.valueOf(dto.getCreatedAt()),
+                    "targetUrl", chatUrl));
             walletSseService.sendUserEvent(recipient.getId(), recipient.getEmail(), "notification", Map.of(
                     "type", NotificationService.TYPE_CONSULTATION_MSG,
-                    "conversationId", conversationId));
+                    "conversationId", conversationId,
+                    "targetUrl", chatUrl,
+                    "path", chatUrl));
         });
 
         return dto;

@@ -28,4 +28,6 @@ public class AppointmentDto {
     private java.math.BigDecimal escrowAmount;
     private String escrowStatus;
     private String escrowTransactionRef;
+    /** Direct navigation target URL for the appointment. */
+    private String targetUrl;
 }

@@ -187,10 +187,13 @@ const Navbar = () => {
                     message: n.message,
                     time: n.timeAgo || 'Just now',
                     icon: n.icon || 'notifications',
-                    path: n.path || '/progress',
+                    path: n.targetUrl || n.path || (n.conversationId ? `/consultation-chat?conversationId=${encodeURIComponent(n.conversationId)}` : '/progress'),
+                    targetUrl: n.targetUrl || n.path || (n.conversationId ? `/consultation-chat?conversationId=${encodeURIComponent(n.conversationId)}` : '/progress'),
                     type: n.type,
                     senderId: n.senderId,
                     conversationId: n.conversationId,
+                    appointmentId: n.appointmentId,
+                    transactionId: n.transactionId,
                     read: Boolean(n.readStatus),
                 }));
                 setNotifications(items);
@@ -220,12 +223,38 @@ const Navbar = () => {
         // Live updates arrive on the existing authenticated stream. The interval is only a
         // fallback for proxies that buffer SSE and for the backend waking up from idle.
         const interval = setInterval(loadNotifications, 60000);
-        const onLiveEvent = () => loadNotifications();
+        const onLiveEvent = (event) => {
+            loadNotifications();
+            const detail = event?.detail;
+            if (detail && (detail.title || detail.message || detail.preview || detail.description)) {
+                const eventTitle = detail.title || (detail.preview ? 'New Consultation Message' : (detail.eventType === 'ADMIN_CREDIT' ? 'Wallet Credited' : 'Live Notification'));
+                const eventMsg = detail.message || detail.preview || detail.description || '';
+                const eventTarget = detail.targetUrl || detail.path || (detail.conversationId ? `/consultation-chat?conversationId=${encodeURIComponent(detail.conversationId)}` : (detail.transactionId ? '/transactions' : '/progress'));
+                const liveToast = {
+                    id: detail.id || `live_${Date.now()}`,
+                    title: eventTitle,
+                    message: eventMsg,
+                    icon: detail.icon || (detail.conversationId ? 'forum' : (detail.eventType?.includes('CREDIT') ? 'account_balance_wallet' : 'notifications')),
+                    path: eventTarget,
+                    targetUrl: eventTarget,
+                    type: detail.type || 'SYSTEM',
+                    conversationId: detail.conversationId,
+                    appointmentId: detail.appointmentId,
+                    transactionId: detail.transactionId,
+                    read: false
+                };
+                setToastNotification(liveToast);
+                setTimeout(() => setToastNotification(null), 8000);
+            }
+        };
 
         window.addEventListener('nutrimunch_notification', onLiveEvent);
         window.addEventListener('nutrimunch_chat_message', onLiveEvent);
         window.addEventListener('nutrimunch_conversation_status', onLiveEvent);
-        window.addEventListener('focus', onLiveEvent);
+        window.addEventListener('wallet_update', onLiveEvent);
+        window.addEventListener('wallet_updated', onLiveEvent);
+        window.addEventListener('appointment_updated', onLiveEvent);
+        window.addEventListener('focus', loadNotifications);
 
         let bc;
         try {
@@ -239,7 +268,10 @@ const Navbar = () => {
             window.removeEventListener('nutrimunch_notification', onLiveEvent);
             window.removeEventListener('nutrimunch_chat_message', onLiveEvent);
             window.removeEventListener('nutrimunch_conversation_status', onLiveEvent);
-            window.removeEventListener('focus', onLiveEvent);
+            window.removeEventListener('wallet_update', onLiveEvent);
+            window.removeEventListener('wallet_updated', onLiveEvent);
+            window.removeEventListener('appointment_updated', onLiveEvent);
+            window.removeEventListener('focus', loadNotifications);
             if (bc) bc.close();
         };
     }, [user, token]);
@@ -271,6 +303,7 @@ const Navbar = () => {
     };
 
     const handleNotificationClick = async (item) => {
+        if (!item) return;
         const stringId = String(item.id);
         setNotifications(prev => prev.map(n => String(n.id) === stringId ? { ...n, read: true } : n));
         if (token && (typeof item.id === 'number' || !isNaN(Number(item.id)))) {
@@ -278,26 +311,52 @@ const Navbar = () => {
             setNotificationsUnread(prev => Math.max(0, prev - 1));
         }
         setIsNotificationOpen(false);
+        setToastNotification(null);
 
-        if (item.type === 'CONSULTATION_MSG' && item.conversationId) {
-            navigate(`/consultation-chat?conversationId=${encodeURIComponent(item.conversationId)}`);
+        // Explicit routing metadata: targetUrl or path
+        const destination = item.targetUrl || item.path;
+
+        // 1. Consultation chat deep-linking
+        if (item.conversationId || item.type === 'CONSULTATION_MSG' || destination?.includes('consultation-chat')) {
+            const convId = item.conversationId || (destination?.includes('conversationId=') ? destination.split('conversationId=')[1].split('&')[0] : null);
+            if (convId) {
+                navigate(`/consultation-chat?conversationId=${encodeURIComponent(convId)}`);
+                return;
+            }
+            navigate('/consultation-chat');
             return;
         }
 
-        if (item.type === 'DIET_PLAN' || item.type === 'EXCLUSIVE_PLAN' || item.path?.includes('diet-plan')) {
+        // 2. Diet plans
+        if (item.type === 'DIET_PLAN' || item.type === 'EXCLUSIVE_PLAN' || destination?.includes('diet-plan')) {
             navigate('/diet-plans');
             return;
         }
 
-        if (item.type === 'APPOINTMENT' || item.path?.includes('appointment')) {
+        // 3. Appointments & Schedule
+        if (item.type === 'APPOINTMENT' || destination?.includes('appointment') || destination?.includes('schedule')) {
+            if (destination && destination !== '/appointments' && destination !== '/dashboard/nutritionist/schedule') {
+                navigate(destination);
+                return;
+            }
             const isNutritionist = rawRole.includes('NUTRITIONIST');
             navigate(isNutritionist ? '/dashboard/nutritionist/schedule' : '/appointments');
             return;
         }
 
-        if (item.path) {
-            navigate(item.path);
+        // 4. Wallet & Transactions
+        if (item.type === 'WALLET' || item.transactionId || destination?.includes('transaction') || destination?.includes('wallet')) {
+            navigate(destination || '/transactions');
+            return;
         }
+
+        // 5. Direct path fallback
+        if (destination) {
+            navigate(destination);
+            return;
+        }
+
+        navigate('/progress');
     };
 
     const markAllAsRead = async () => {
@@ -710,16 +769,19 @@ const Navbar = () => {
             {/* Real-Time Push Notification Toast Banner */}
             {toastNotification && (
                 <div className="fixed bottom-6 right-6 z-[99999] max-w-md w-full animate-bounce-in shadow-2xl pointer-events-auto">
-                    <div className="bg-[#121f18] border border-[#a5d391]/40 rounded-2xl p-4 shadow-2xl shadow-emerald-950/90 backdrop-blur-xl flex items-start gap-4 pointer-events-auto">
-                        <div className="w-10 h-10 rounded-xl bg-[#a5d391]/20 flex items-center justify-center shrink-0 border border-[#a5d391]/30">
+                    <div
+                        onClick={() => handleNotificationClick(toastNotification)}
+                        className="bg-[#121f18] border border-[#a5d391]/40 rounded-2xl p-4 shadow-2xl shadow-emerald-950/90 backdrop-blur-xl flex items-start gap-4 pointer-events-auto cursor-pointer hover:border-[#a5d391] transition-all group"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-[#a5d391]/20 flex items-center justify-center shrink-0 border border-[#a5d391]/30 group-hover:scale-105 transition-transform">
                             <span className="material-symbols-outlined text-[#a5d391] animate-pulse text-xl">
-                                notifications_active
+                                {toastNotification.icon || 'notifications_active'}
                             </span>
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1">
                                 <span className="text-[10px] font-black uppercase tracking-wider text-[#a5d391] bg-[#a5d391]/10 px-2 py-0.5 rounded-full border border-[#a5d391]/20">
-                                    Notification
+                                    {toastNotification.type || 'Notification'}
                                 </span>
                                 <button
                                     type="button"
@@ -730,17 +792,22 @@ const Navbar = () => {
                                     <span className="material-symbols-outlined text-sm">close</span>
                                 </button>
                             </div>
-                            <h4 className="text-sm font-bold text-white truncate">{toastNotification.title || 'Live Update Received'}</h4>
+                            <h4 className="text-sm font-bold text-white group-hover:text-[#a5d391] transition-colors truncate">
+                                {toastNotification.title || 'Live Update Received'}
+                            </h4>
                             <p className="text-xs text-white/70 line-clamp-2 mt-0.5">{toastNotification.message}</p>
                             <div className="mt-3 flex items-center gap-3">
-                                <Link
-                                        to={toastNotification.path || (toastNotification.type === 'DIET_PLAN' || toastNotification.type === 'EXCLUSIVE_PLAN' ? "/diet-plans" : "/progress")}
-                                        onClick={handleDismissToast}
-                                        className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
-                                    >
-                                        <span>View Details</span>
-                                        <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                    </Link>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleNotificationClick(toastNotification);
+                                    }}
+                                    className="text-xs font-semibold text-black bg-[#a5d391] hover:bg-[#8cc476] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-[#a5d391]/20 cursor-pointer"
+                                >
+                                    <span>View Details</span>
+                                    <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
                                 <button
                                     type="button"
                                     onClick={handleDismissToast}

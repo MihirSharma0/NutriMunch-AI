@@ -324,6 +324,7 @@ public class WalletService {
         ssePayload.put("description", notes != null && !notes.isBlank() ? notes : "Admin credit allocation via Razorpay test mode");
         ssePayload.put("timestamp", java.time.Instant.now().toString());
         ssePayload.put("status", "SUCCESS");
+        ssePayload.put("targetUrl", "/transactions");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
         notifyWallet(recipient, admin != null ? admin.getId() : null, "Wallet Credited", String.format("₹%.2f was added to your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), receiverBalanceAfter));
@@ -471,6 +472,7 @@ public class WalletService {
         ssePayload.put("description", tx.getNotes());
         ssePayload.put("timestamp", java.time.Instant.now().toString());
         ssePayload.put("status", "SUCCESS");
+        ssePayload.put("targetUrl", "/transactions");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
         notifyWallet(recipient, admin != null ? admin.getId() : null, "Wallet Credited", String.format("₹%.2f was added to your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), after));
@@ -541,6 +543,7 @@ public class WalletService {
         ssePayload.put("message", String.format("Admin allocated ₹%.2f to your wallet", amount));
         ssePayload.put("timestamp", java.time.Instant.now().toString());
         ssePayload.put("status", "completed");
+        ssePayload.put("targetUrl", "/transactions");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
         notifyWallet(recipient, admin != null ? admin.getId() : null, "Wallet Credited", String.format("₹%.2f was added to your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), after));
@@ -607,6 +610,7 @@ public class WalletService {
         ssePayload.put("description", tx.getNotes());
         ssePayload.put("timestamp", java.time.Instant.now().toString());
         ssePayload.put("status", "SUCCESS");
+        ssePayload.put("targetUrl", "/transactions");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
         notifyWallet(recipient, admin != null ? admin.getId() : null, "Bonus Credit Received", String.format("₹%.2f bonus credit was added to your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), after));
@@ -676,6 +680,7 @@ public class WalletService {
         ssePayload.put("description", tx.getNotes());
         ssePayload.put("timestamp", java.time.Instant.now().toString());
         ssePayload.put("status", "SUCCESS");
+        ssePayload.put("targetUrl", "/transactions");
         ssePayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(recipient.getId(), recipient.getEmail(), ssePayload);
         notifyWallet(recipient, admin != null ? admin.getId() : null, "Wallet Deduction", String.format("₹%.2f was deducted from your wallet by the NutriMunch team%s. New balance: ₹%.2f", amount, noteSuffix(notes), after));
@@ -864,6 +869,7 @@ public class WalletService {
         senderPayload.put("description", successTx.getNotes());
         senderPayload.put("timestamp", java.time.Instant.now().toString());
         senderPayload.put("status", "SUCCESS");
+        senderPayload.put("targetUrl", "/transactions");
         senderPayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(sender.getId(), sender.getEmail(), senderPayload);
 
@@ -881,6 +887,7 @@ public class WalletService {
         nutriPayload.put("description", successTx.getNotes());
         nutriPayload.put("timestamp", java.time.Instant.now().toString());
         nutriPayload.put("status", "SUCCESS");
+        nutriPayload.put("targetUrl", "/transactions");
         nutriPayload.put("transaction", txMap);
         walletSseService.sendWalletUpdate(nutritionist.getId(), nutritionist.getEmail(), nutriPayload);
         notifyWallet(nutritionist, sender.getId(), "Payment Received", String.format("You received ₹%.2f from %s for \"%s\". New balance: ₹%.2f", servicePrice, displayName(sender), serviceName, receiverBalanceAfter));
@@ -931,6 +938,7 @@ public class WalletService {
         map.put("createdAt", tx.getCreatedAt());
         map.put("created_at", tx.getCreatedAt());
         map.put("type", tx.getTransactionType());
+        map.put("targetUrl", "/transactions");
         map.put("related_booking_id", tx.getAppointmentId());
         map.put("relatedBookingId", tx.getAppointmentId());
         map.put("sender_id", tx.getInitiator() != null ? tx.getInitiator().getId() : null);
