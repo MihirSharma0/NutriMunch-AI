@@ -17,7 +17,7 @@ const DietPlanBuilder = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);
     const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Nutritionist');
-    const nutritionistEmail = user?.email || (user?.username && user.username.includes('@') ? user.username : 'sharmamihir012@gmail.com');
+    const nutritionistEmail = user?.email || (user?.username && user.username.includes('@') ? user.username : '');
 
     // Navigation Tab: 'STUDIO' (Diet Builder Studio) or 'HISTORY' (Formulated Diet Plans History Vault)
     const [activeTab, setActiveTab] = useState('STUDIO');

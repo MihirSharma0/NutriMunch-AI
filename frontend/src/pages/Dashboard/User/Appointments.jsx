@@ -299,10 +299,7 @@ const Appointments = () => {
     };
 
     const primaryNutritionist = nutritionists.length > 0 ? nutritionists[0] : {
-        name: 'Dr. Elena Rostova',
-        email: 'elena.rostova@nutrimunch.ai',
-        credentials: 'Certified Clinical Nutritionist',
-        specialization: 'Algorithmic Biology & Metabolism'
+        name: 'Not assigned'
     };
 
     const fetchAppointments = async () => {
@@ -811,7 +808,7 @@ const Appointments = () => {
 
                                 <h3 className="font-bold text-xl mb-1 font-hero-display text-white">{activeDisplayedAppointment.title || 'Metabolic Baseline Review'}</h3>
                                 <p className="text-white/60 text-sm mb-2">
-                                    Nutritionist: <span className="text-white font-semibold">{activeDisplayedAppointment.nutritionistName || primaryNutritionist.name}</span>
+                                    Nutritionist: <span className="text-white font-semibold">{activeDisplayedAppointment.nutritionistName || primaryNutritionist?.name || 'Not assigned'}</span>
                                     {activeDisplayedAppointment.notes ? ` — "${activeDisplayedAppointment.notes}"` : ''}
                                 </p>
 
@@ -1028,7 +1025,7 @@ const Appointments = () => {
                                                     <div className="text-xs text-white/50 truncate flex items-center gap-1.5 flex-wrap">
                                                         <span>{dt.fullDate} at {dt.time}</span>
                                                         <span>•</span>
-                                                        <span className="text-white/70">{item.nutritionistName || primaryNutritionist.name}</span>
+                                                        <span className="text-white/70">{item.nutritionistName || primaryNutritionist?.name || 'Not assigned'}</span>
                                                         <span>•</span>
                                                         <span className="text-white/40">{item.sessionType || 'Consultation'}</span>
                                                         {payment && (
@@ -1574,7 +1571,7 @@ const Appointments = () => {
 
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1">
                                 <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Assigned Specialist</div>
-                                <div className="text-sm font-bold text-white">{selectedAppointment.nutritionistName || primaryNutritionist.name}</div>
+                                <div className="text-sm font-bold text-white">{selectedAppointment.nutritionistName || primaryNutritionist?.name || 'Not assigned'}</div>
                             </div>
 
                             {selectedAppointment.notes && (
