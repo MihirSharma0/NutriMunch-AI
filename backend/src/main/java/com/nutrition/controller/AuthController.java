@@ -51,12 +51,18 @@ public class AuthController {
                     user.getFirstName(),
                     user.getLastName(),
                     userDetails.getAuthorities().iterator().next().getAuthority()));
+        } catch (AuthService.CredentialException e) {
+            // Expected credential outcomes keep their original, actionable text.
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         } catch (Exception e) {
-            String msg = e.getMessage();
-            if (msg == null || msg.isBlank() || msg.equalsIgnoreCase("Bad credentials")) {
-                msg = "Incorrect Password";
-            }
-            return ResponseEntity.badRequest().body(new MessageResponse(msg));
+            // Unexpected failure: the technical detail goes to the browser console
+            // (Inspect -> Console) via the `debug` field; the user sees a generic message.
+            String detail = e.getMessage() == null || e.getMessage().isBlank()
+                    ? e.getClass().getSimpleName()
+                    : e.getMessage();
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", AuthService.INVALID_CREDENTIALS_MESSAGE,
+                    "debug", detail));
         }
     }
 

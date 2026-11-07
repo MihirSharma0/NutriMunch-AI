@@ -12,6 +12,10 @@ import { getDashboardUrl, isRouteAllowedForRole } from '../../utils/roleUtils';
 import OnboardingWizard from '../../components/OnboardingWizard';
 import NutritionistGoogleOnboarding from '../../components/NutritionistGoogleOnboarding';
 import { getEmailError } from '../../utils/emailValidation';
+import {
+    LOGIN_MESSAGES, validateLoginFields, areLoginFieldsFilled,
+    MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH
+} from '../../utils/loginValidation';
 
 /**
  * Login Component
@@ -24,6 +28,7 @@ const Login = () => {
     const [rememberMe, setRememberMe] = useState(false);
     const [activeTab, setActiveTab] = useState('USER');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const emailError = getEmailError(email);
     const [requiresRoleSelection, setRequiresRoleSelection] = useState(false);
     const [onboardingStep, setOnboardingStep] = useState(1);
@@ -109,11 +114,18 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (getEmailError(email)) return;
+        // TC1 / TC5: reject empty or malformed input locally, before any request.
+        const validationMessage = validateLoginFields(email, password);
+        if (validationMessage) {
+            setError(validationMessage);
+            setSuccess('');
+            return;
+        }
         setError('');
+        setSuccess('');
         setIsSigningIn(true);
         try {
-            const result = await login(email, password);
+            const result = await login(email.trim(), password);
             if (result.success) {
                 const actualRole = String(result.role || '').toUpperCase().replace('ROLE_', '');
                 if (activeTab === 'ADMIN' && actualRole !== 'ADMIN') {
@@ -124,7 +136,9 @@ const Login = () => {
                     setError('This account is not registered as a Certified Nutritionist. Please sign in under the User tab.');
                     return;
                 }
-                navigate(getPostLoginUrl(result.role));
+                // TC2: show the exact success message before routing away.
+                setSuccess(LOGIN_MESSAGES.SUCCESS);
+                window.setTimeout(() => navigate(getPostLoginUrl(result.role)), 700);
             } else {
                 setError(result.message);
             }
@@ -291,6 +305,13 @@ const Login = () => {
                             </div>
                         )}
 
+                        {success && (
+                            <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-200 px-4 py-3 rounded-xl mb-5 text-xs font-semibold flex items-center gap-2.5">
+                                <span className="material-symbols-outlined text-emerald-400 text-lg shrink-0">check_circle</span>
+                                <span>{success}</span>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="space-y-5">
                             
                             {/* Email Field Group */}
@@ -307,6 +328,7 @@ const Login = () => {
                                         name="email"
                                         type="email"
                                         required
+                                        maxLength={MAX_EMAIL_LENGTH}
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         aria-invalid={!!emailError}
@@ -315,7 +337,7 @@ const Login = () => {
                                         className="w-full bg-transparent border-0 py-2.5 pl-3 pr-4 text-sm text-white placeholder-slate-500 focus:ring-0 focus:outline-none"
                                     />
                                 </div>
-                                {emailError && <p id="email-error" className="text-xs text-red-400">{emailError}</p>}
+                                {emailError && <p id="email-error" className="text-xs text-amber-300/80">Check the email format before signing in.</p>}
                             </div>
 
                             {/* Password Field Group */}
@@ -332,11 +354,12 @@ const Login = () => {
                                     <span className="pl-3.5 pointer-events-none text-slate-400 flex items-center">
                                         <Lock className="w-4 h-4" />
                                     </span>
-                                    <input 
-                                        id="password" 
-                                        name="password" 
-                                        type={showPassword ? "text" : "password"} 
-                                        required 
+                                    <input
+                                        id="password"
+                                        name="password"
+                                        type={showPassword ? "text" : "password"}
+                                        required
+                                        maxLength={MAX_PASSWORD_LENGTH}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••••••"
@@ -371,8 +394,8 @@ const Login = () => {
                             <div className="pt-1">
                                 <button 
                                     type="submit" 
-                                    disabled={isSigningIn}
-                                    className="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)] transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-wait disabled:opacity-70"
+                                    disabled={isSigningIn || !areLoginFieldsFilled(email, password)}
+                                    className="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)] transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
                                 >
                                     {isSigningIn ? (
                                         <>

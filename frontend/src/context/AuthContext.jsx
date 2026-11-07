@@ -5,6 +5,7 @@
  */
 import React, { createContext, useState, useEffect } from 'react';
 import api from '../api/axios';
+import { describeLoginError } from '../utils/loginValidation';
 
 /** React Context exposing authentication state and session methods. */
 export const AuthContext = createContext();
@@ -51,20 +52,11 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
             return { success: true, role: userData.role };
         } catch (error) {
-            let serverMsg = error.response?.data?.message || error.response?.data?.error || (typeof error.response?.data === 'string' ? error.response.data : '');
-
-            let finalMessage = 'Incorrect Password';
-            if (serverMsg && (serverMsg.toLowerCase().includes('profile') || serverMsg.toLowerCase().includes('email') || serverMsg.toLowerCase().includes('exist') || serverMsg.toLowerCase().includes('create'))) {
-                finalMessage = "Profile/E-Mail Id Doesn't Exist. Please Create One";
-            } else if (serverMsg && (serverMsg.toLowerCase().includes('password') || serverMsg.toLowerCase().includes('credentials') || serverMsg.toLowerCase().includes('bad') || serverMsg.toLowerCase().includes('incorrect'))) {
-                finalMessage = 'Incorrect Password';
-            } else if (serverMsg) {
-                finalMessage = serverMsg;
-            }
-
-            return { 
-                success: false, 
-                message: finalMessage 
+            // Every credential failure maps to one generic message; a network
+            // failure and the email-verification hint stay distinct.
+            return {
+                success: false,
+                message: describeLoginError(error)
             };
         }
     };
