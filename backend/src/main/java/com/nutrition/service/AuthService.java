@@ -48,6 +48,21 @@ Handles user credential validation, password hashing, JWT token issuance, OTP ve
 @RequiredArgsConstructor
 public class AuthService {
 
+    /** Expected, actionable credential outcomes (kept as they were before C1). */
+    public static final String PROFILE_NOT_FOUND_MESSAGE = "Profile/E-Mail Id Doesn't Exist. Please Create One";
+    public static final String INCORRECT_PASSWORD_MESSAGE = "Incorrect Password";
+    public static final String UNVERIFIED_MESSAGE = "Please verify your email before logging in.";
+
+    /** Generic message shown only for unexpected backend failures. */
+    public static final String INVALID_CREDENTIALS_MESSAGE = "Invalid Username/Password";
+
+    /** Marks an expected credential outcome; anything else is an unexpected error. */
+    public static class CredentialException extends RuntimeException {
+        public CredentialException(String message) {
+            super(message);
+        }
+    }
+
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final java.util.Map<String, Integer> OTP_ATTEMPTS = new java.util.concurrent.ConcurrentHashMap<>();
     private static final int MAX_OTP_ATTEMPTS = 5;
@@ -81,15 +96,14 @@ public class AuthService {
                         .findFirst().orElse(null));
 
         if (user == null) {
-            throw new RuntimeException("Profile/E-Mail Id Doesn't Exist. Please Create One");
+            throw new CredentialException(PROFILE_NOT_FOUND_MESSAGE);
         }
 
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Incorrect Password");
+            throw new CredentialException(INCORRECT_PASSWORD_MESSAGE);
         }
         if (!user.isVerified()) {
-            throw new RuntimeException(
-                    "Please verify your email before logging in.");
+            throw new CredentialException(UNVERIFIED_MESSAGE);
         }
 
         Authentication authentication = authenticationManager.authenticate(
