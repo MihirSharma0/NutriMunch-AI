@@ -134,7 +134,7 @@ const ShareYourStoryForm = () => {
             authorRole: verifiedRole, // Enforce authentic role in payload
             userId: user?.id || null,
             rating: rating,
-            programResult: programResult || 'General Wellness & AI Diet Protocol',
+            programResult: programResult.trim() || '',
             content: content,
             avatarUrl: avatarUrl,
             status: 'APPROVED'
@@ -251,7 +251,7 @@ const ShareYourStoryForm = () => {
                                 value={programResult}
                                 onChange={(e) => setProgramResult(e.target.value)}
                                 className="w-full h-[50px] bg-black/50 border border-white/10 rounded-2xl px-5 text-white focus:outline-none focus:border-primary transition-colors text-sm"
-                                placeholder="e.g. -25 lbs, +35% Deep Sleep"
+                                placeholder="e.g. your own result"
                             />
                         </div>
                     </div>

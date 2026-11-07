@@ -406,9 +406,9 @@ const AiImageAnalyzer = () => {
                                 </div>
                             </div>
 
-                            {/* Sample presets */}
+                            {/* Example photos for demonstrating the analyser — not analysis results */}
                             <div className="flex flex-wrap items-center gap-2 pt-2">
-                                <span className="text-xs text-white/50 font-bold">Example photo links:</span>
+                                <span className="text-xs text-white/50 font-bold">Example photos (demonstration only):</span>
                                 <button type="button" onClick={() => applySamplePhoto('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80')} className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-[#a5d391]/20 hover:text-[#a5d391] border border-white/10 text-white/70 transition-all cursor-pointer">
                                     🥗 Fresh Salad Bowl
                                 </button>

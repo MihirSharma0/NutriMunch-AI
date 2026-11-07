@@ -4,16 +4,15 @@
  */
 import React from 'react';
 
-// PLACEHOLDER DATA: names, contact details and avatars below are dummy values.
-// Replace them with the real owners' details before going live.
 /** Founding leadership profiles and executive biographies. */
 const OWNERS = [
+
     {
         name: 'Mihir Sharma',
         role: 'Founder & CEO',
         image: '/owners/founder-ceo.svg',
         accent: '#a5d391',
-        bio: 'Leads product vision and partnerships, building NutriMunch to make personalised nutrition simple for everyone.',
+        bio: `The visionary behind NutriMunch AI, driving its mission, product direction, and overall growth. Focuses on transforming an innovative idea into a meaningful platform through strategic thinking, collaboration, and a passion for making personalized nutrition accessible to everyone.`,
         email: 'sharmamihir012@gmail.com',
         phone: '+91 90000 00001',
         location: 'Kolkata, India',
@@ -21,37 +20,38 @@ const OWNERS = [
     },
     {
         name: 'Md Irfan',
-        role: 'Co-Founder & Chief Nutrition Officer',
+        role: 'Co-Founder',
         image: '/owners/irfan.png',
         accent: '#38bdf8',
-        bio: 'Registered dietitian overseeing clinical guidelines, nutritionist verification and the quality of every diet plan.',
+        bio: `A driving force behind NutriMunch AI, contributing to its vision, business strategy, and growth. Passionate about innovation and problem-solving, helping shape ideas into practical solutions that make smarter and healthier eating more accessible.`,
         email: 'mdi720408@gmail.com',
         phone: '+91 90000 00002',
-        location: 'Pune, India',
-        linkedin: 'https://www.linkedin.com/in/example-priya'
+        location: 'Bihar, India',
+        linkedin: 'https://www.linkedin.com/in/md-irfan-6979303a6/'
     },
     {
         name: 'Himanshu Kumar',
         role: 'Co-Founder & CTO',
         image: '/owners/cto.svg',
         accent: '#fbbf24',
-        bio: 'Heads engineering and the AI platform behind the diet generator, food analyser, payments and secure data.',
+        bio: `The technology mind behind NutriMunch AI, leading its technical vision, development, and AI-driven innovation. Focuses on building intelligent nutrition tools, seamless user experiences, and reliable technology that brings the platform's vision to life.`,
         email: 'himanshu@gmail.com',
         phone: '+91 90000 00003',
         location: 'Hyderabad, India',
-        linkedin: 'https://www.linkedin.com/in/example-rohan'
+        linkedin: 'https://www.linkedin.com/in/example-himanshu'
     },
     {
         name: 'Raj Kumar Prasad',
         role: 'Co-Founder & COO',
         image: '/owners/coo.svg',
         accent: '#c084fc',
-        bio: 'Runs day-to-day operations, customer support and the nutritionist network so every consultation runs smoothly.',
+        bio: `Focused on turning NutriMunch AI's vision into action through operational planning, team coordination, and execution. Works towards creating a smooth user journey, strengthening collaboration, and ensuring every part of the platform delivers value.`,
         email: 'raj.kumar@gmail.com',
         phone: '+91 90000 00004',
         location: 'Chennai, India',
-        linkedin: 'https://www.linkedin.com/in/example-ananya'
+        linkedin: 'https://www.linkedin.com/in/example-raj'
     }
+
 ];
 
 /**
@@ -99,10 +99,7 @@ const Owners = () => {
                                 <span className="material-symbols-outlined text-lg shrink-0" style={{ color: owner.accent }}>mail</span>
                                 {owner.email}
                             </a>
-                            <a href={`tel:${owner.phone.replace(/\s+/g, '')}`} className="flex items-center gap-3 text-white/70 hover:text-white transition-colors">
-                                <span className="material-symbols-outlined text-lg shrink-0" style={{ color: owner.accent }}>call</span>
-                                {owner.phone}
-                            </a>
+                            
                             <div className="flex items-center gap-3 text-white/70">
                                 <span className="material-symbols-outlined text-lg shrink-0" style={{ color: owner.accent }}>location_on</span>
                                 {owner.location}
