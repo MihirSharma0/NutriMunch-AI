@@ -10,7 +10,7 @@ const OWNERS = [
     {
         name: 'Mihir Sharma',
         role: 'Founder & CEO',
-        image: '/owners/founder-ceo.svg',
+        image: '/pending_avatar.png',
         accent: '#a5d391',
         bio: `The visionary behind NutriMunch AI, driving its mission, product direction, and overall growth. Focuses on transforming an innovative idea into a meaningful platform through strategic thinking, collaboration, and a passion for making personalized nutrition accessible to everyone.`,
         email: 'sharmamihir012@gmail.com',
@@ -32,7 +32,7 @@ const OWNERS = [
     {
         name: 'Himanshu Kumar',
         role: 'Co-Founder & CTO',
-        image: '/owners/cto.svg',
+        image: '/pending_avatar.png',
         accent: '#fbbf24',
         bio: `The technology mind behind NutriMunch AI, leading its technical vision, development, and AI-driven innovation. Focuses on building intelligent nutrition tools, seamless user experiences, and reliable technology that brings the platform's vision to life.`,
         email: 'himanshu@gmail.com',
@@ -43,7 +43,7 @@ const OWNERS = [
     {
         name: 'Raj Kumar Prasad',
         role: 'Co-Founder & COO',
-        image: '/owners/coo.svg',
+        image: '/pending_avatar.png',
         accent: '#c084fc',
         bio: `Focused on turning NutriMunch AI's vision into action through operational planning, team coordination, and execution. Works towards creating a smooth user journey, strengthening collaboration, and ensuring every part of the platform delivers value.`,
         email: 'raj.kumar@gmail.com',

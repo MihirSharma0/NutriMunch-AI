@@ -485,13 +485,13 @@ const Home = () => {
                     <div className="col-span-12 md:col-span-3 space-y-4">
                         <div className="flex -space-x-4">
                             <div className="w-12 h-12 rounded-full border-2 border-[#080b12] overflow-hidden shadow-lg relative z-30">
-                                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCP3nQl8b8LU4xjhNKoFcksaAJAjAhTnIGG2n1OFkuoOSwfz2dP7FAXSAOYxRMQnk-7DuXqJnLBChFdrlYZYn7QRk44BaFOFR2McC9ByzI_n03ycyhSZau2fg6iJK1GAFUkV4y7UukilqbSfJNx3Q8s0FvRM0-MajLqixc-NBO9J64ponXllcmORWHcgIeBm5dZrQfkN2U7pz_JafhB_yLLV-RpZx1y4M7u03vzO6MnM8K3Da2D98Hb" alt="User" className="w-full h-full object-cover"/>
+                                <img src="/miniAvatar-1.png" alt="User" className="w-full h-full object-cover" onError={(e) => { if (!e.currentTarget.src.endsWith('/pending_avatar.png')) e.currentTarget.src = '/pending_avatar.png'; }} />
                             </div>
                             <div className="w-12 h-12 rounded-full border-2 border-[#080b12] overflow-hidden shadow-lg relative z-20">
-                                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW563tK2alaIdKa-cuEfnJW_382lfBQKNmuA-kMrz16M4r0j_X2E-NwzxGnDRl0tocPS3FptCrFu8YlmyZVNj3JFmfqOmLXYrG0ZwVT8uy224ZUKl3NEzQCmKUTO2msjUepTc_nVcKorAi6FUfm_iG51_uMfIOsUZ6jT5AARtHZZqyjyDau5TLry4qgYRmogxwX3RY3MnDdtrqs7kp4S-dvhaj0IMgdKyGytNOKy-15cE-Ml0DX-bU" alt="User" className="w-full h-full object-cover"/>
+                                <img src="/miniAvatar-2.png" alt="User" className="w-full h-full object-cover" onError={(e) => { if (!e.currentTarget.src.endsWith('/pending_avatar.png')) e.currentTarget.src = '/pending_avatar.png'; }} />
                             </div>
                             <div className="w-12 h-12 rounded-full border-2 border-[#080b12] overflow-hidden shadow-lg relative z-10">
-                                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZLrZKLb7jzMmFQ5c6qGbPfOriSTc2BC_huR3PJJqupenaW5lWxSI7_t5rEsctSs00W6MwL6qe-qHTKrEjUZAEjRruf0uHFev2ubNwTi4kWIBFgSVq9eO-2GXDO-gHwKpeCq41OZyuAkBa0fNoruRCpaRGqXAPY7wcb-m01KQ-q4hj5mEWx3oKu0Jdv0Iv-jfmt0C8yuj48YFkyamuApv5yVIztLtfvuR9f3xAvA3JU1uCRp1uckTy" alt="User" className="w-full h-full object-cover"/>
+                                <img src="/miniAvatar-3.png" alt="User" className="w-full h-full object-cover" onError={(e) => { if (!e.currentTarget.src.endsWith('/pending_avatar.png')) e.currentTarget.src = '/pending_avatar.png'; }} />
                             </div>
                         </div>
                         <div>
@@ -517,7 +517,7 @@ const Home = () => {
                         className="col-span-12 md:col-span-4 flex items-center gap-6 justify-start md:justify-end cursor-pointer group hover:opacity-90 transition-all"
                     >
                         <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-2xl overflow-hidden relative shadow-2xl shrink-0 backdrop-blur-xl group-hover:border-[#a5d391]/50 group-hover:shadow-[0_0_20px_rgba(165,211,145,0.2)] transition-all">
-                            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1AIb88EtGsaDT67Bs1oUgkS5rK8JusRcj0qe2qk4ydl65aRa-fgFIe3Og0O7KdSDssEDKTJoxmMm1tWF05oLw0d_Q044JejnNFQSuu6bI8mQme42twS2bMhcvoSzdUdIPPDne4DKXqUt--BL5RwjSbHfbWCr7xhlYzmWUf-19GgHO0ADNucL9oSeYguAwFlSRACjRCOHRG2q-2E_ojPRhNBa2VHN64pxEyvVjQZAmwG58EgpQLlKp" alt="UI" className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-700"/>
+                            <img src="/role-card.png" alt="UI" className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-700"/>
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <span className="material-symbols-outlined text-white text-2xl drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] group-hover:text-[#a5d391] group-hover:drop-shadow-[0_0_18px_rgba(165,211,145,1)] transition-all">{roleContent.icon}</span>
                             </div>
@@ -658,7 +658,7 @@ const Home = () => {
                                 <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[#0b121f]/20 to-[#0b121f] z-10 pointer-events-none"></div>
                                 <img
                                     className="w-full h-full object-cover object-center opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQW1ayK2QptnJC4qRpFZJQfK25SrdzXBlBBKDdfgFsY3fbK5Q9MBP4F2v2a6cli_nEXhYxZdynfefZ9y6wd9ardu7fb6hI4n4NzwrwE4B--Y4wqSMdeuOKZZfTXGlE55PD6O95ZslKGxZFe9jEyC5O4jQKnL_jnYppX1ixe10PJAE_5uvWDiX9c_vA5cz5JtDILmRAtwTwIPmdRfsDOx7e2W8rsEiFw4gzv8YSmBzQ-2grz1UCn8l"
+                                    src="/meal-plate.png"
                                     alt="Healthy meal plan plate"
                                 />
                             </div>
