@@ -4,7 +4,7 @@
  * client transformation reviews.
  */
 import React, { useState, useEffect } from 'react';
-import { fetchAllTestimonials, deleteTestimonial, saveTestimonial } from '../../../services/testimonialService';
+import { fetchAllForAdmin, deleteTestimonial, saveTestimonial } from '../../../services/testimonialService';
 
 /**
  * TestimonialManagement Component
@@ -17,7 +17,7 @@ const TestimonialManagement = () => {
     const [notification, setNotification] = useState(null);
 
     const loadData = async () => {
-        const data = await fetchAllTestimonials();
+        const data = await fetchAllForAdmin();
         setTestimonials(data);
     };
 

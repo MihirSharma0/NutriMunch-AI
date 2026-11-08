@@ -167,6 +167,8 @@ public class WalletController {
     // ADMIN ENDPOINTS: Credit Allocation & Audit Ledger
     // -------------------------------------------------------------
 
+    // DEMO SIMULATION — the /admin/** credit flow below showcases the payment
+    // logic with no real money involved. Access is ADMIN-only (SecurityConfig).
     @GetMapping("/admin/recipients")
     public ResponseEntity<List<Map<String, Object>>> getEligibleRecipients(
             @AuthenticationPrincipal CustomUserDetails userDetails) {

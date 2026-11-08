@@ -136,8 +136,7 @@ const ShareYourStoryForm = () => {
             rating: rating,
             programResult: programResult.trim() || '',
             content: content,
-            avatarUrl: avatarUrl,
-            status: 'APPROVED'
+            avatarUrl: avatarUrl
         };
 
         await saveTestimonial(payload);
