@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { searchFoodDatabase, FOOD_DATABASE } from '../data/foodDatabase';
-import api from '../api/axios';
+import { EMPTY_DAY, fetchProgressDays, saveDayMetrics, readOfflineDay } from '../utils/progressLog';
 import DarkCalendarPicker from './DarkCalendarPicker';
 
 /** Meal categorization configuration options. */
@@ -41,8 +41,6 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
         }
     }, [initialDate]);
 
-    const storageKey = `nutrimunch_logged_foods_${selectedLogDate}`;
-
     // Entry Mode: 'search' (Food Database item) or 'direct' (Quick Daily Macro Count)
     const [entryMode, setEntryMode] = useState('search');
     const [directCalories, setDirectCalories] = useState('');
@@ -60,37 +58,60 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
     const [selectedMeal, setSelectedMeal] = useState('Breakfast');
     const [feedbackMessage, setFeedbackMessage] = useState(null);
 
-    // Selected Date's Logged Foods List
-    const [loggedFoods, setLoggedFoods] = useState(() => {
+    // The five daily criteria live in the backend progress_logs table. The
+    // browser only displays them; it never owns or derives them from its cache.
+    const [serverDay, setServerDay] = useState({ ...EMPTY_DAY });
+
+    useEffect(() => {
+        let active = true;
+        fetchProgressDays()
+            .then(days => {
+                if (!active) return;
+                setServerDay(days[selectedLogDate] || { ...EMPTY_DAY });
+            })
+            .catch(err => {
+                console.error('Failed to load persisted nutrition:', err);
+                if (active) setServerDay(readOfflineDay(selectedLogDate));
+            });
+        // Re-read whenever another component writes a day.
+        const onProgressUpdated = () => {
+            fetchProgressDays()
+                .then(days => {
+                    if (active) setServerDay(days[selectedLogDate] || { ...EMPTY_DAY });
+                })
+                .catch(err => console.error('Failed to refresh nutrition:', err));
+        };
+        window.addEventListener('nutrimunch_progress_updated', onProgressUpdated);
+        return () => {
+            active = false;
+            window.removeEventListener('nutrimunch_progress_updated', onProgressUpdated);
+        };
+    }, [selectedLogDate]);
+
+    /** Persist only the five numeric values; never food item names. */
+    const persistMetrics = async (partial, errorText) => {
         try {
-            const saved = localStorage.getItem(`nutrimunch_logged_foods_${todayStr}`);
-            return saved ? JSON.parse(saved) : [];
-        } catch (e) {
-            return [];
+            const saved = await saveDayMetrics(selectedLogDate, partial);
+            setServerDay(saved);
+            window.dispatchEvent(new Event('nutrimunch_progress_updated'));
+        } catch (err) {
+            console.error('Failed to persist nutrition metrics:', err);
+            setFeedbackMessage({ type: 'error', text: errorText });
+            setTimeout(() => setFeedbackMessage(null), 4500);
         }
-    });
+    };
+
+    // Food names are a session-only display convenience. Only the five numeric
+    // criteria are persisted, and they live in the backend progress_logs table.
+    const [loggedFoods, setLoggedFoods] = useState([]);
 
     const searchContainerRef = useRef(null);
 
-    // Reload foods when selectedLogDate changes
+    // Reset the display list when the selected date changes. Pre-C6 browser
+    // history is never written to again; it is only read as an offline fallback.
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem(storageKey);
-            setLoggedFoods(saved ? JSON.parse(saved) : []);
-        } catch (e) {
-            setLoggedFoods([]);
-        }
-    }, [selectedLogDate, storageKey]);
-
-    // Save to localStorage whenever loggedFoods changes and broadcast to other components
-    useEffect(() => {
-        try {
-            localStorage.setItem(storageKey, JSON.stringify(loggedFoods));
-            window.dispatchEvent(new Event('storage'));
-        } catch (e) {
-            console.error('Failed to save logged foods:', e);
-        }
-    }, [loggedFoods, storageKey]);
+        setLoggedFoods([]);
+    }, [selectedLogDate]);
 
     // Handle outside clicks to close autocomplete dropdown
     useEffect(() => {
@@ -158,15 +179,13 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
         });
         setTimeout(() => setFeedbackMessage(null), 3500);
 
-        // Sync with backend progress logs if available
-        const totalCals = updatedList.reduce((acc, curr) => acc + curr.calories, 0);
-        api.post('/progress/me', {
-            logDate: selectedLogDate,
-            caloriesConsumed: totalCals,
-            notes: `Logged ${newEntry.name} (${newEntry.calories} kcal) for ${selectedMeal}. Total daily: ${totalCals} kcal`
-        }).catch(() => {
-            // Offline fallback
-        });
+        // Persist the five typed criteria to the database (values, not item names).
+        persistMetrics({
+            calories: serverDay.calories + newEntry.calories,
+            protein: serverDay.protein + newEntry.protein,
+            carbs: serverDay.carbs + newEntry.carbs,
+            fats: serverDay.fats + newEntry.fats
+        }, 'Could not save nutrition data. Please try again.');
 
         // Reset search & selection
         setSelectedFood(null);
@@ -208,12 +227,12 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
         });
         setTimeout(() => setFeedbackMessage(null), 3500);
 
-        const totalCals = updatedList.reduce((acc, curr) => acc + curr.calories, 0);
-        api.post('/progress/me', {
-            logDate: selectedLogDate,
-            caloriesConsumed: totalCals,
-            notes: `Logged direct count (${cal} kcal) for ${selectedLogDate}.`
-        }).catch(() => {});
+        persistMetrics({
+            calories: serverDay.calories + cal,
+            protein: serverDay.protein + (parseFloat(directProtein) || 0),
+            carbs: serverDay.carbs + (parseFloat(directCarbs) || 0),
+            fats: serverDay.fats + (parseFloat(directFats) || 0)
+        }, 'Could not save nutrition data. Please try again.');
 
         setDirectCalories('');
         setDirectProtein('');
@@ -233,13 +252,15 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
         });
         setTimeout(() => setFeedbackMessage(null), 3000);
 
-        // Recalculate and update backend
-        const totalCals = updatedList.reduce((acc, curr) => acc + curr.calories, 0);
-        api.post('/progress/me', {
-            logDate: selectedLogDate,
-            caloriesConsumed: totalCals,
-            notes: `Removed item. Total daily calories: ${totalCals} kcal`
-        }).catch(() => {});
+        // Subtract this item's values from the persisted day.
+        if (itemToRemove) {
+            persistMetrics({
+                calories: Math.max(0, serverDay.calories - (itemToRemove.calories || 0)),
+                protein: Math.max(0, serverDay.protein - (itemToRemove.protein || 0)),
+                carbs: Math.max(0, serverDay.carbs - (itemToRemove.carbs || 0)),
+                fats: Math.max(0, serverDay.fats - (itemToRemove.fats || 0))
+            }, 'Could not remove the entry. Please try again.');
+        }
     };
 
     // Clear all logged foods for selected day
@@ -249,22 +270,20 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
             setLoggedFoods([]);
             setFeedbackMessage({ type: 'info', text: `${isToday ? "Today's" : selectedLogDate} logged intake has been reset.` });
             setTimeout(() => setFeedbackMessage(null), 3000);
-            api.post('/progress/me', {
-                logDate: selectedLogDate,
-                caloriesConsumed: 0,
-                notes: `Daily food intake reset for ${selectedLogDate}.`
-            }).catch(() => {});
+            persistMetrics({ calories: 0, protein: 0, carbs: 0, fats: 0 },
+                'Could not reset the day. Please try again.');
         }
     };
 
-    // Auto Daily Nutrition Totals Calculation
-    const dailyTotals = loggedFoods.reduce((acc, item) => ({
-        calories: acc.calories + (item.calories || 0),
-        protein: acc.protein + (item.protein || 0),
-        carbs: acc.carbs + (item.carbs || 0),
-        fats: acc.fats + (item.fats || 0),
-        fiber: acc.fiber + (item.fiber || 0)
-    }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
+    // Displayed totals come from the persisted backend row, never from the
+    // browser's cached food-item list (which is display-only convenience).
+    const dailyTotals = {
+        calories: serverDay.calories,
+        protein: serverDay.protein,
+        carbs: serverDay.carbs,
+        fats: serverDay.fats,
+        fiber: 0
+    };
 
     // Target fallbacks
     const targetCalories = parseInt(customTargets.calories, 10) || 2000;

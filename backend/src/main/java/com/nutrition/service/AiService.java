@@ -161,9 +161,7 @@ public class AiService {
                 "dietType", "lifestyleClass", "mealBudget", "favoriteFoods",
                 "dislikedFoods", "cuisinePreferences", "dailyCaloriesTarget",
                 "proteinTarget", "carbsTarget", "fatsTarget", "dailyWaterTargetLiters",
-                "dailyFiberTargetG", "ironTargetMg", "calciumTargetMg", "vitDTargetMcg",
-                "vitB12TargetMcg", "vitCTargetMg", "magnesiumTargetMg",
-                "potassiumTargetMg", "zincTargetMg", "tdee");
+                "tdee");
         Map<String, Object> safeProfile = new LinkedHashMap<>();
         profile.forEach((key, value) -> {
             if (allowedFields.contains(key) && value != null && !(value instanceof String text && text.isBlank())) {

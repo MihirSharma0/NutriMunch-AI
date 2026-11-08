@@ -3,6 +3,7 @@ package com.nutrition.controller;
 import com.nutrition.dto.ProgressLogDto;
 import com.nutrition.security.CustomUserDetails;
 import com.nutrition.service.ProgressLogService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,7 +35,7 @@ public class ProgressLogController {
     @PostMapping("/me")
     public ResponseEntity<ProgressLogDto> saveLog(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody ProgressLogDto dto) {
+            @Valid @RequestBody ProgressLogDto dto) {
         return ResponseEntity.ok(progressLogService.saveLog(userDetails.getId(), dto));
     }
 }

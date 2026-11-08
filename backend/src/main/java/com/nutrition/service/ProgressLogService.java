@@ -6,7 +6,10 @@ import com.nutrition.entity.User;
 import com.nutrition.repository.ProgressLogRepository;
 import com.nutrition.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,23 +36,45 @@ public class ProgressLogService {
     }
 
     /**
-     * Executes save log operation.
+     * Upserts one day's progress with MERGE semantics: only fields actually
+     * supplied are written, so a water-only post cannot wipe the day's calories
+     * or macros (and vice versa). A value of 0 is an explicit reset.
      */
+    @Transactional
     public ProgressLogDto saveLog(Long userId, ProgressLogDto dto) {
-        ProgressLog log = progressLogRepository.findByUserIdAndLogDate(userId, dto.getLogDate())
+        LocalDate date = dto.getLogDate();
+        if (date == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "logDate is required");
+        }
+        if (date.isAfter(LocalDate.now().plusDays(1))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "logDate cannot be in the future");
+        }
+
+        ProgressLog log = progressLogRepository.findByUserIdAndLogDate(userId, date)
             .orElseGet(ProgressLog::new);
 
         if (log.getId() == null) {
-            User user = userRepository.findById(userId).orElseThrow();
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
             log.setUser(user);
-            log.setLogDate(dto.getLogDate());
+            log.setLogDate(date);
+            // Never return nulls for the five criteria on a fresh row.
+            log.setCaloriesConsumed(0);
+            log.setWaterConsumedMl(0);
+            log.setProteinG(0.0);
+            log.setCarbsG(0.0);
+            log.setFatsG(0.0);
         }
 
-        log.setWeightKg(dto.getWeightKg());
-        log.setSleepScore(dto.getSleepScore());
-        log.setHrvScore(dto.getHrvScore());
-        log.setCaloriesConsumed(dto.getCaloriesConsumed());
-        log.setNotes(dto.getNotes());
+        if (dto.getWeightKg() != null) log.setWeightKg(dto.getWeightKg());
+        if (dto.getSleepScore() != null) log.setSleepScore(dto.getSleepScore());
+        if (dto.getHrvScore() != null) log.setHrvScore(dto.getHrvScore());
+        if (dto.getCaloriesConsumed() != null) log.setCaloriesConsumed(dto.getCaloriesConsumed());
+        if (dto.getWaterConsumedMl() != null) log.setWaterConsumedMl(dto.getWaterConsumedMl());
+        if (dto.getProteinG() != null) log.setProteinG(dto.getProteinG());
+        if (dto.getCarbsG() != null) log.setCarbsG(dto.getCarbsG());
+        if (dto.getFatsG() != null) log.setFatsG(dto.getFatsG());
+        if (dto.getNotes() != null) log.setNotes(dto.getNotes());
 
         return mapToDto(progressLogRepository.save(log));
     }
@@ -60,12 +85,15 @@ public class ProgressLogService {
     private ProgressLogDto mapToDto(ProgressLog log) {
         ProgressLogDto dto = new ProgressLogDto();
         dto.setId(log.getId());
-        dto.setUserId(log.getUser().getId());
         dto.setLogDate(log.getLogDate());
         dto.setWeightKg(log.getWeightKg());
         dto.setSleepScore(log.getSleepScore());
         dto.setHrvScore(log.getHrvScore());
         dto.setCaloriesConsumed(log.getCaloriesConsumed());
+        dto.setWaterConsumedMl(log.getWaterConsumedMl());
+        dto.setProteinG(log.getProteinG());
+        dto.setCarbsG(log.getCarbsG());
+        dto.setFatsG(log.getFatsG());
         dto.setNotes(log.getNotes());
         return dto;
     }

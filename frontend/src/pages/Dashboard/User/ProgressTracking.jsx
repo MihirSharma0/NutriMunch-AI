@@ -11,6 +11,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import ManualFoodTracker from '../../../components/ManualFoodTracker';
 import DarkCalendarPicker from '../../../components/DarkCalendarPicker';
+import { fetchProgressDays, saveDayMetrics, readOfflineDay } from '../../../utils/progressLog';
 
 const DEFAULT_TARGETS = {
     calories: 2000,
@@ -18,13 +19,6 @@ const DEFAULT_TARGETS = {
     carbs: 200,
     fats: 65,
     water: 2.5,
-    fiber: 28,
-    iron: 18,
-    calcium: 1000,
-    vitD: 15,
-    vitB12: 2.4,
-    vitC: 90,
-    zinc: 11
 };
 
 /**
@@ -79,14 +73,8 @@ const ProgressTracking = () => {
         }
     }, [targetDateFromUrl, targetSectionFromUrl, location.hash]);
 
-    const [waterConsumed, setWaterConsumed] = useState(() => {
-        try {
-            const saved = localStorage.getItem(`nutrimunch_water_consumed_${new Date().toISOString().split('T')[0]}`) || localStorage.getItem('nutrimunch_water_consumed');
-            return saved ? parseInt(saved, 10) : 0;
-        } catch (e) {
-            return 0;
-        }
-    });
+    // Water is persisted in the backend progress_logs row for this date.
+    const [waterConsumed, setWaterConsumed] = useState(0);
     const [customAmount, setCustomAmount] = useState('');
     const [logSuccessMessage, setLogSuccessMessage] = useState('');
 
@@ -112,13 +100,6 @@ const ProgressTracking = () => {
                     carbs: res.data.carbsTarget || DEFAULT_TARGETS.carbs,
                     fats: res.data.fatsTarget || DEFAULT_TARGETS.fats,
                     water: res.data.dailyWaterTargetLiters || DEFAULT_TARGETS.water,
-                    fiber: res.data.dailyFiberTargetG || DEFAULT_TARGETS.fiber,
-                    iron: res.data.ironTargetMg || DEFAULT_TARGETS.iron,
-                    calcium: res.data.calciumTargetMg || DEFAULT_TARGETS.calcium,
-                    vitD: res.data.vitDTargetMcg || DEFAULT_TARGETS.vitD,
-                    vitB12: res.data.vitB12TargetMcg || DEFAULT_TARGETS.vitB12,
-                    vitC: res.data.vitCTargetMg || DEFAULT_TARGETS.vitC,
-                    zinc: res.data.zincTargetMg || DEFAULT_TARGETS.zinc
                 };
                 setCustomTargets(loadedTargets);
 
@@ -159,13 +140,6 @@ const ProgressTracking = () => {
             carbsTarget: parseInt(customTargets.carbs, 10) || DEFAULT_TARGETS.carbs,
             fatsTarget: parseInt(customTargets.fats, 10) || DEFAULT_TARGETS.fats,
             dailyWaterTargetLiters: parseFloat(customTargets.water) || DEFAULT_TARGETS.water,
-            dailyFiberTargetG: parseInt(customTargets.fiber, 10) || DEFAULT_TARGETS.fiber,
-            ironTargetMg: parseFloat(customTargets.iron) || DEFAULT_TARGETS.iron,
-            calciumTargetMg: parseFloat(customTargets.calcium) || DEFAULT_TARGETS.calcium,
-            vitDTargetMcg: parseFloat(customTargets.vitD) || DEFAULT_TARGETS.vitD,
-            vitB12TargetMcg: parseFloat(customTargets.vitB12) || DEFAULT_TARGETS.vitB12,
-            vitCTargetMg: parseFloat(customTargets.vitC) || DEFAULT_TARGETS.vitC,
-            zincTargetMg: parseFloat(customTargets.zinc) || DEFAULT_TARGETS.zinc
         };
 
         try {
@@ -177,13 +151,6 @@ const ProgressTracking = () => {
                     carbs: res.data.carbsTarget || customTargets.carbs,
                     fats: res.data.fatsTarget || customTargets.fats,
                     water: res.data.dailyWaterTargetLiters || customTargets.water,
-                    fiber: res.data.dailyFiberTargetG || customTargets.fiber,
-                    iron: res.data.ironTargetMg || customTargets.iron,
-                    calcium: res.data.calciumTargetMg || customTargets.calcium,
-                    vitD: res.data.vitDTargetMcg || customTargets.vitD,
-                    vitB12: res.data.vitB12TargetMcg || customTargets.vitB12,
-                    vitC: res.data.vitCTargetMg || customTargets.vitC,
-                    zinc: res.data.zincTargetMg || customTargets.zinc
                 };
                 setCustomTargets(updatedT);
                 if (updatedT.water) {
@@ -219,31 +186,27 @@ const ProgressTracking = () => {
         };
     }, []);
 
-    // Reload water consumption whenever selectedWaterDate changes
+    // Load the authoritative water value for the selected date from the DB.
+    // The old browser keys survive only as a read-only offline fallback.
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem(`nutrimunch_water_consumed_${selectedWaterDate}`);
-            if (saved !== null) {
-                setWaterConsumed(parseInt(saved, 10));
-            } else if (selectedWaterDate === todayStr) {
-                const todaySaved = localStorage.getItem('nutrimunch_water_consumed');
-                setWaterConsumed(todaySaved ? parseInt(todaySaved, 10) : 0);
-            } else {
-                setWaterConsumed(0);
-            }
-        } catch (e) {
-            setWaterConsumed(0);
-        }
-    }, [selectedWaterDate, todayStr]);
-
-    // Save water consumed to partitioned localStorage and sync global event
-    useEffect(() => {
-        localStorage.setItem(`nutrimunch_water_consumed_${selectedWaterDate}`, waterConsumed.toString());
-        if (selectedWaterDate === todayStr) {
-            localStorage.setItem('nutrimunch_water_consumed', waterConsumed.toString());
-        }
-        window.dispatchEvent(new Event('storage'));
-    }, [waterConsumed, selectedWaterDate, todayStr]);
+        let active = true;
+        const load = () => fetchProgressDays()
+            .then(days => {
+                if (!active) return;
+                const day = days[selectedWaterDate];
+                setWaterConsumed(day ? day.waterMl : readOfflineDay(selectedWaterDate).waterMl);
+            })
+            .catch(err => {
+                console.error('Failed to load persisted water intake:', err);
+                if (active) setWaterConsumed(readOfflineDay(selectedWaterDate).waterMl);
+            });
+        load();
+        window.addEventListener('nutrimunch_progress_updated', load);
+        return () => {
+            active = false;
+            window.removeEventListener('nutrimunch_progress_updated', load);
+        };
+    }, [selectedWaterDate]);
 
     if (!user) {
         return <FeatureGate />;
@@ -276,29 +239,29 @@ const ProgressTracking = () => {
         }
     };
 
-    const handleAddWater = (amount) => {
-        const newTotal = waterConsumed + amount;
-        setWaterConsumed(newTotal);
-        setLogSuccessMessage(`Added +${amount} ml fluid for ${selectedWaterDate === todayStr ? 'today' : selectedWaterDate}!`);
-        setTimeout(() => setLogSuccessMessage(''), 3000);
+    const persistWater = async (next, successText) => {
+        const previous = waterConsumed;
+        setWaterConsumed(next);
+        try {
+            const saved = await saveDayMetrics(selectedWaterDate, { waterMl: next });
+            setWaterConsumed(saved.waterMl);
+            setLogSuccessMessage(successText);
+            window.dispatchEvent(new Event('nutrimunch_progress_updated'));
+        } catch (err) {
+            console.error('Failed to persist water intake:', err);
+            setWaterConsumed(previous);
+            setLogSuccessMessage('Could not save water intake. Please try again.');
+        }
+        setTimeout(() => setLogSuccessMessage(''), 4000);
+    };
 
-        // API call to sync with backend progress log endpoint
-        api.post('/progress/me', {
-            logDate: selectedWaterDate,
-            notes: `Water intake logged: +${amount} ml (Total: ${newTotal} ml)`
-        }).catch(() => {
-            // Silently handle offline mode
-        });
+    const handleAddWater = (amount) => {
+        persistWater(waterConsumed + amount,
+            `Added +${amount} ml fluid for ${selectedWaterDate === todayStr ? 'today' : selectedWaterDate}!`);
     };
 
     const handleResetWater = () => {
-        setWaterConsumed(0);
-        setLogSuccessMessage(`Hydration tracker reset for ${selectedWaterDate === todayStr ? 'today' : selectedWaterDate}.`);
-        setTimeout(() => setLogSuccessMessage(''), 3000);
-        api.post('/progress/me', {
-            logDate: selectedWaterDate,
-            notes: `Water intake reset for ${selectedWaterDate}.`
-        }).catch(() => {});
+        persistWater(0, `Hydration tracker reset for ${selectedWaterDate === todayStr ? 'today' : selectedWaterDate}.`);
     };
 
     const handleCustomSubmit = (e) => {

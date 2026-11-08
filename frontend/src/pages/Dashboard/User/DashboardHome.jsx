@@ -33,7 +33,6 @@ const DashboardHome = () => {
         carbs: 180,
         fats: 65,
         water: 2.5,
-        fiber: 25
     });
 
     useEffect(() => {
@@ -175,7 +174,6 @@ const DashboardHome = () => {
                     carbs: res.data.carbsTarget || 180,
                     fats: res.data.fatsTarget || 65,
                     water: res.data.dailyWaterTargetLiters || 2.5,
-                    fiber: res.data.dailyFiberTargetG || 25
                 });
             }
         }).catch(() => {
@@ -342,11 +340,6 @@ const DashboardHome = () => {
                 carbsTarget: Number(targetPlan.carbs || 180),
                 fatsTarget: Number(targetPlan.fats || 65),
                 dailyWaterTargetLiters: Number(targetPlan.waterLiters || 3.0),
-                dailyFiberTargetG: Number(targetPlan.fiber || 28),
-                ironTargetMg: Number(targetPlan.iron || 18),
-                calciumTargetMg: Number(targetPlan.calcium || 1000),
-                vitDTargetMcg: Number(targetPlan.vitD || 15),
-                vitCTargetMg: Number(targetPlan.vitC || 90)
             };
 
             if (token) {
@@ -359,7 +352,6 @@ const DashboardHome = () => {
                 carbs: payload.carbsTarget,
                 fats: payload.fatsTarget,
                 water: payload.dailyWaterTargetLiters,
-                fiber: payload.dailyFiberTargetG
             };
             setCurrentUserTargets(localTargets);
             localStorage.setItem('nutrimunch_user_targets', JSON.stringify(localTargets));

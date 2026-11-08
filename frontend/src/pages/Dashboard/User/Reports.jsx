@@ -12,6 +12,7 @@ import FeatureGate from '../../../components/FeatureGate';
 import api from '../../../api/axios';
 import DarkCalendarPicker from '../../../components/DarkCalendarPicker';
 import { searchFoodDatabase } from '../../../data/foodDatabase';
+import { fetchProgressDays, saveDayMetrics, readOfflineDay } from '../../../utils/progressLog';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
@@ -531,29 +532,10 @@ const Reports = () => {
     const [backendProgressLogs, setBackendProgressLogs] = useState({});
 
     // Today's Live Hydration State (100% Real, defaults to 0 if not logged)
-    const [waterConsumedMl, setWaterConsumedMl] = useState(() => {
-        const today = new Date().toISOString().split('T')[0];
-        const saved = localStorage.getItem(`nutrimunch_water_consumed_${today}`) || localStorage.getItem('nutrimunch_water_consumed');
-        return saved ? parseInt(saved, 10) : 0;
-    });
-
-    // Today's Live Food Intake State (100% Real, defaults to 0 if not logged)
-    const [todayNutrition, setTodayNutrition] = useState(() => {
-        const todayStr = new Date().toISOString().split('T')[0];
-        try {
-            const saved = localStorage.getItem(`nutrimunch_logged_foods_${todayStr}`);
-            if (saved) {
-                const foods = JSON.parse(saved);
-                return foods.reduce((acc, f) => ({
-                    calories: acc.calories + (f.calories || 0),
-                    protein: acc.protein + (f.protein || 0),
-                    carbs: acc.carbs + (f.carbs || 0),
-                    fats: acc.fats + (f.fats || 0)
-                }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
-            }
-        } catch (e) {}
-        return { calories: 0, protein: 0, carbs: 0, fats: 0 };
-    });
+    // These two states are populated from the backend progress_logs row. The
+    // browser cache is read only when the server cannot be reached.
+    const [waterConsumedMl, setWaterConsumedMl] = useState(0);
+    const [todayNutrition, setTodayNutrition] = useState({ calories: 0, protein: 0, carbs: 0, fats: 0 });
 
     const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
     const [downloadSuccessToast, setDownloadSuccessToast] = useState(null);
@@ -579,105 +561,78 @@ const Reports = () => {
             }
         });
 
-        // Sync with backend progress logs
-        api.get('/progress/me').then(res => {
-            if (Array.isArray(res.data)) {
-                const map = {};
-                res.data.forEach(item => {
-                    if (item.logDate) {
-                        map[item.logDate] = item;
-                    }
+        // Load the authoritative daily rows from the database.
+        const loadDays = () => fetchProgressDays()
+            .then(days => {
+                setBackendProgressLogs(days);
+                const today = days[todayStr];
+                if (today) {
+                    setWaterConsumedMl(today.waterMl);
+                    setTodayNutrition({
+                        calories: today.calories, protein: today.protein,
+                        carbs: today.carbs, fats: today.fats
+                    });
+                } else {
+                    const offline = readOfflineDay(todayStr);
+                    setWaterConsumedMl(offline.waterMl);
+                    setTodayNutrition({
+                        calories: offline.calories, protein: offline.protein,
+                        carbs: offline.carbs, fats: offline.fats
+                    });
+                }
+                setNutritionLogVersion(v => v + 1);
+            })
+            .catch(err => {
+                console.error('Failed to load persisted progress logs:', err);
+                const offline = readOfflineDay(todayStr);
+                setWaterConsumedMl(offline.waterMl);
+                setTodayNutrition({
+                    calories: offline.calories, protein: offline.protein,
+                    carbs: offline.carbs, fats: offline.fats
                 });
-                setBackendProgressLogs(map);
-            }
-        }).catch(() => {});
-    }, []);
+            });
+        loadDays();
+        window.addEventListener('nutrimunch_progress_updated', loadDays);
+        return () => window.removeEventListener('nutrimunch_progress_updated', loadDays);
+    }, [todayStr]);
 
-    // Refresh live metrics on storage or local events
+    // Re-read the authoritative rows whenever another component writes a day.
     useEffect(() => {
         const refreshMetrics = () => {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const savedWater = localStorage.getItem(`nutrimunch_water_consumed_${todayStr}`) || localStorage.getItem('nutrimunch_water_consumed');
-            setWaterConsumedMl(savedWater ? parseInt(savedWater, 10) : 0);
-
-            try {
-                const savedFoods = localStorage.getItem(`nutrimunch_logged_foods_${todayStr}`);
-                if (savedFoods) {
-                    const foods = JSON.parse(savedFoods);
-                    const totals = foods.reduce((acc, f) => ({
-                        calories: acc.calories + (f.calories || 0),
-                        protein: acc.protein + (f.protein || 0),
-                        carbs: acc.carbs + (f.carbs || 0),
-                        fats: acc.fats + (f.fats || 0)
-                    }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
-                    setTodayNutrition(totals);
-                } else {
-                    setTodayNutrition({ calories: 0, protein: 0, carbs: 0, fats: 0 });
-                }
-            } catch (e) {
-                setTodayNutrition({ calories: 0, protein: 0, carbs: 0, fats: 0 });
-            }
+            fetchProgressDays()
+                .then(days => {
+                    setBackendProgressLogs(days);
+                    const today = days[todayStr] || readOfflineDay(todayStr);
+                    setWaterConsumedMl(today.waterMl);
+                    setTodayNutrition({
+                        calories: today.calories, protein: today.protein,
+                        carbs: today.carbs, fats: today.fats
+                    });
+                    setNutritionLogVersion(v => v + 1);
+                })
+                .catch(err => console.error('Failed to refresh progress logs:', err));
         };
-
         window.addEventListener('storage', refreshMetrics);
         window.addEventListener('nutrimunch_profile_updated', refreshMetrics);
+        window.addEventListener('nutrimunch_progress_updated', refreshMetrics);
         return () => {
             window.removeEventListener('storage', refreshMetrics);
             window.removeEventListener('nutrimunch_profile_updated', refreshMetrics);
+            window.removeEventListener('nutrimunch_progress_updated', refreshMetrics);
         };
-    }, []);
+    }, [todayStr]);
 
     // Helper: Retrieve real tracked data for any specific date string (YYYY-MM-DD)
+    // The five criteria come from the persisted backend row. Pre-C6 browser
+    // values are only a read-only offline fallback when the server has no row.
     const getRealDayMetrics = useCallback((dateStr) => {
-        let cals = 0;
-        let prot = 0;
-        let carbs = 0;
-        let fats = 0;
-        let hasFood = false;
-
-        try {
-            const saved = localStorage.getItem(`nutrimunch_logged_foods_${dateStr}`);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    parsed.forEach(f => {
-                        cals += Number(f.calories) || 0;
-                        prot += Number(f.protein) || 0;
-                        carbs += Number(f.carbs) || 0;
-                        fats += Number(f.fats) || 0;
-                    });
-                    hasFood = true;
-                }
-            }
-        } catch (e) {}
-
-        // Fallback to backend progress log if food wasn't found in localStorage
-        if (!hasFood && backendProgressLogs[dateStr]) {
-            const p = backendProgressLogs[dateStr];
-            if (p.caloriesConsumed && p.caloriesConsumed > 0) {
-                cals = p.caloriesConsumed;
-                hasFood = true;
-                prot = Math.round((cals * 0.25) / 4);
-                carbs = Math.round((cals * 0.50) / 4);
-                fats = Math.round((cals * 0.25) / 9);
-            }
-        }
-
-        let waterMl = 0;
-        let hasWater = false;
-        try {
-            const savedWater = localStorage.getItem(`nutrimunch_water_consumed_${dateStr}`);
-            if (savedWater !== null && savedWater !== undefined && savedWater !== '') {
-                waterMl = parseInt(savedWater, 10) || 0;
-                hasWater = true;
-            } else if (dateStr === todayStr) {
-                const todaySaved = localStorage.getItem('nutrimunch_water_consumed');
-                if (todaySaved !== null && todaySaved !== undefined && todaySaved !== '') {
-                    waterMl = parseInt(todaySaved, 10) || 0;
-                    hasWater = true;
-                }
-            }
-        } catch (e) {}
+        const persisted = backendProgressLogs[dateStr];
+        const day = persisted || readOfflineDay(dateStr);
+        const cals = Number(day.calories) || 0;
+        const prot = Number(day.protein) || 0;
+        const carbs = Number(day.carbs) || 0;
+        const fats = Number(day.fats) || 0;
+        const waterMl = Number(day.waterMl) || 0;
 
         return {
             calories: Math.round(cals),
@@ -685,11 +640,11 @@ const Reports = () => {
             carbs: Math.round(carbs),
             fats: Math.round(fats),
             waterMl: Math.round(waterMl),
-            hasLog: hasFood || hasWater,
-            hasFood,
-            hasWater
+            hasLog: cals > 0 || prot > 0 || carbs > 0 || fats > 0 || waterMl > 0,
+            hasFood: cals > 0 || prot > 0 || carbs > 0 || fats > 0,
+            hasWater: waterMl > 0
         };
-    }, [backendProgressLogs, todayStr]);
+    }, [backendProgressLogs]);
 
     if (!user) {
         return <FeatureGate />;
@@ -2706,15 +2661,6 @@ const Reports = () => {
                 targets={targets}
                 onLogUpdated={(dateLogged, foods, msg) => {
                     setNutritionLogVersion(v => v + 1);
-                    if (dateLogged === todayStr) {
-                        const totals = foods.reduce((acc, f) => ({
-                            calories: acc.calories + (f.calories || 0),
-                            protein: acc.protein + (f.protein || 0),
-                            carbs: acc.carbs + (f.carbs || 0),
-                            fats: acc.fats + (f.fats || 0)
-                        }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
-                        setTodayNutrition(totals);
-                    }
                     setDownloadSuccessToast(msg || `Daily nutrition count for ${dateLogged} saved successfully.`);
                     setTimeout(() => setDownloadSuccessToast(null), 4000);
                 }}
@@ -2731,9 +2677,6 @@ const Reports = () => {
                 targets={targets}
                 onWaterUpdated={(dateLogged, totalMl, msg) => {
                     setNutritionLogVersion(v => v + 1);
-                    if (dateLogged === todayStr) {
-                        setWaterConsumedMl(totalMl);
-                    }
                     setDownloadSuccessToast(msg || `Fluid intake for ${dateLogged} saved successfully.`);
                     setTimeout(() => setDownloadSuccessToast(null), 4000);
                 }}
@@ -2774,8 +2717,10 @@ const LogDailyNutritionModal = ({
     const [selectedMeal, setSelectedMeal] = useState('Breakfast');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    // Current Logged Foods State for the active date
+    // Food names remain a browser-side display convenience. The five numeric
+    // criteria are always read from / written to the backend progress_logs row.
     const [dayLoggedFoods, setDayLoggedFoods] = useState([]);
+    const [serverDay, setServerDay] = useState(null);
     const [feedbackMsg, setFeedbackMsg] = useState(null);
 
     const searchRef = useRef(null);
@@ -2801,6 +2746,19 @@ const LogDailyNutritionModal = ({
         setFeedbackMsg(null);
     }, [selectedDate, isOpen]);
 
+    // Load the authoritative five values for this date.
+    useEffect(() => {
+        if (!isOpen) return;
+        let active = true;
+        fetchProgressDays()
+            .then(days => { if (active) setServerDay(days[selectedDate] || null); })
+            .catch(err => {
+                console.error('Failed to load persisted nutrition:', err);
+                if (active) setServerDay(null);
+            });
+        return () => { active = false; };
+    }, [selectedDate, isOpen]);
+
     // Handle outside clicks to close autocomplete dropdown
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -2824,19 +2782,38 @@ const LogDailyNutritionModal = ({
 
     if (!isOpen) return null;
 
-    // Helper: Persist updated array to localStorage and notify parent
-    const persistLoggedFoods = (updatedFoods, successMessage) => {
+    // Persist ONLY the five numeric criteria to the database. Food item names
+    // stay in the browser as a display convenience and are never sent to the DB.
+    const sumFoods = (list) => list.reduce((acc, f) => ({
+        calories: acc.calories + (Number(f.calories) || 0),
+        protein: acc.protein + (Number(f.protein) || 0),
+        carbs: acc.carbs + (Number(f.carbs) || 0),
+        fats: acc.fats + (Number(f.fats) || 0)
+    }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+
+    const persistLoggedFoods = async (updatedFoods, successMessage) => {
+        const before = sumFoods(dayLoggedFoods);
+        const after = sumFoods(updatedFoods);
+        const base = serverDay || { calories: 0, protein: 0, carbs: 0, fats: 0 };
         try {
-            localStorage.setItem(`nutrimunch_logged_foods_${selectedDate}`, JSON.stringify(updatedFoods));
+            const saved = await saveDayMetrics(selectedDate, {
+                calories: Math.max(0, base.calories + (after.calories - before.calories)),
+                protein: Math.max(0, base.protein + (after.protein - before.protein)),
+                carbs: Math.max(0, base.carbs + (after.carbs - before.carbs)),
+                fats: Math.max(0, base.fats + (after.fats - before.fats))
+            });
+            setServerDay(saved);
             setDayLoggedFoods(updatedFoods);
-            window.dispatchEvent(new Event('storage'));
+            window.dispatchEvent(new Event('nutrimunch_progress_updated'));
             if (onLogUpdated) {
                 onLogUpdated(selectedDate, updatedFoods, successMessage);
             }
             setFeedbackMsg(successMessage || 'Updated successfully');
             setTimeout(() => setFeedbackMsg(null), 3500);
-        } catch (e) {
-            console.error('Failed to save nutrition log:', e);
+        } catch (err) {
+            console.error('Failed to save nutrition log:', err);
+            setFeedbackMsg('Could not save nutrition data. Please try again.');
+            setTimeout(() => setFeedbackMsg(null), 4500);
         }
     };
 
@@ -3400,42 +3377,40 @@ const LogDailyWaterModal = ({
         if (initialDate) setSelectedDate(initialDate);
     }, [initialDate, isOpen]);
 
-    // Load water consumption for selected date
+    // Load the persisted water value from the database (offline cache fallback only).
     useEffect(() => {
         if (!isOpen) return;
-        try {
-            const saved = localStorage.getItem(`nutrimunch_water_consumed_${selectedDate}`);
-            if (saved !== null) {
-                setWaterMl(parseInt(saved, 10));
-            } else if (selectedDate === todayStr) {
-                const todaySaved = localStorage.getItem('nutrimunch_water_consumed');
-                setWaterMl(todaySaved ? parseInt(todaySaved, 10) : 0);
-            } else {
-                setWaterMl(0);
-            }
-        } catch (e) {
-            setWaterMl(0);
-        }
+        let active = true;
+        fetchProgressDays()
+            .then(days => {
+                if (!active) return;
+                const day = days[selectedDate];
+                setWaterMl(day ? day.waterMl : readOfflineDay(selectedDate).waterMl);
+            })
+            .catch(err => {
+                console.error('Failed to load persisted water:', err);
+                if (active) setWaterMl(readOfflineDay(selectedDate).waterMl);
+            });
         setFeedbackMsg(null);
-    }, [selectedDate, isOpen, todayStr]);
+        return () => { active = false; };
+    }, [selectedDate, isOpen]);
 
     if (!isOpen) return null;
 
-    const persistWater = (amount, msg) => {
+    const persistWater = async (amount, msg) => {
         try {
-            localStorage.setItem(`nutrimunch_water_consumed_${selectedDate}`, amount.toString());
-            if (selectedDate === todayStr) {
-                localStorage.setItem('nutrimunch_water_consumed', amount.toString());
-            }
-            setWaterMl(amount);
-            window.dispatchEvent(new Event('storage'));
+            const saved = await saveDayMetrics(selectedDate, { waterMl: amount });
+            setWaterMl(saved.waterMl);
+            window.dispatchEvent(new Event('nutrimunch_progress_updated'));
             if (onWaterUpdated) {
-                onWaterUpdated(selectedDate, amount, msg);
+                onWaterUpdated(selectedDate, saved.waterMl, msg);
             }
             setFeedbackMsg(msg);
             setTimeout(() => setFeedbackMsg(null), 3000);
-        } catch (e) {
-            console.error('Failed to save water log:', e);
+        } catch (err) {
+            console.error('Failed to save water log:', err);
+            setFeedbackMsg('Could not save water intake. Please try again.');
+            setTimeout(() => setFeedbackMsg(null), 4500);
         }
     };
 

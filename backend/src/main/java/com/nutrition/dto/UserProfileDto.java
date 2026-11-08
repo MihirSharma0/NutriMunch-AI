@@ -38,18 +38,8 @@ public class UserProfileDto {
     private Integer proteinTarget;
     private Integer carbsTarget;
     private Integer fatsTarget;
-    private Integer sugarTargetG;
-    
+
     private Double dailyWaterTargetLiters;
-    private Integer dailyFiberTargetG;
-    private Double ironTargetMg;
-    private Double calciumTargetMg;
-    private Double vitDTargetMcg;
-    private Double vitB12TargetMcg;
-    private Double vitCTargetMg;
-    private Double magnesiumTargetMg;
-    private Double potassiumTargetMg;
-    private Double zincTargetMg;
 
     private LocalDateTime updatedAt;
 }

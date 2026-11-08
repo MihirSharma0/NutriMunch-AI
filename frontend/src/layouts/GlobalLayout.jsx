@@ -24,7 +24,10 @@ const GlobalLayout = () => {
 
     useEffect(() => {
         if (!user) return;
-        const unsubscribe = subscribeWalletSse(user);
+        // Keep one listener registered for the whole session so the shared SSE
+        // stream is not torn down when individual pages unmount. The balance is
+        // fetched once here and then only updated by server pushes.
+        const unsubscribe = subscribeWalletSse(user, () => { });
         return () => {
             if (unsubscribe) unsubscribe();
         };

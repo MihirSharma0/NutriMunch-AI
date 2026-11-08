@@ -7,7 +7,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
-import { subscribeWalletSse } from '../../../utils/walletSse';
+import { subscribeWalletSse, getCanonicalBalance } from '../../../utils/walletSse';
 
 /**
  * Merges and deduplicates transactions across multiple sources and local caches.
@@ -60,18 +60,10 @@ const TransactionHistory = () => {
             const myId = user?.id || user?.userId;
             const myEmail = user?.email?.toLowerCase();
 
-            // Fetch balance
-            const balRes = await api.get('/wallet/me', {
-                params: { userId: myId || '', email: myEmail || '' }
-            }).catch(() => null);
-
-            if (balRes?.data && balRes.data.balance !== undefined) {
-                setBalance(Number(balRes.data.balance));
-            } else {
-                const cached = localStorage.getItem(`nutrimunch_wallet_balance_${myId}`) ||
-                               localStorage.getItem(`nutrimunch_wallet_balance_${myEmail}`);
-                if (cached) setBalance(Number(cached));
-            }
+            // Balance is canonical in the session store (fetched once at session
+            // start, kept current by SSE). No per-navigation balance GET.
+            const canonical = getCanonicalBalance();
+            if (canonical !== null) setBalance(canonical);
 
             // Fetch transactions (Try /api/transactions then fallback to /api/wallet/transactions)
             let txList = [];
@@ -147,6 +139,11 @@ const TransactionHistory = () => {
         window.addEventListener('wallet_update', handleLiveUpdate);
         window.addEventListener('wallet_updated', handleLiveUpdate);
         window.addEventListener('ledger_updated', handleLiveUpdate);
+        const onResync = (e) => {
+            const b = Number(e?.detail?.balance);
+            if (!isNaN(b)) setBalance(b);
+        };
+        window.addEventListener('wallet_balance_resynced', onResync);
 
         const unsubscribeSse = subscribeWalletSse(user, (b) => setBalance(Number(b)));
 
@@ -154,6 +151,7 @@ const TransactionHistory = () => {
             window.removeEventListener('wallet_update', handleLiveUpdate);
             window.removeEventListener('wallet_updated', handleLiveUpdate);
             window.removeEventListener('ledger_updated', handleLiveUpdate);
+            window.removeEventListener('wallet_balance_resynced', onResync);
             unsubscribeSse();
         };
     }, [user]);
