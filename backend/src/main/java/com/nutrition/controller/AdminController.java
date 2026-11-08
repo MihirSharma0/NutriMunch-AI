@@ -53,20 +53,12 @@ public class AdminController {
     @org.springframework.beans.factory.annotation.Value("${app.admin.email:}")
     private String configuredAdminEmail;
 
-    private String activeAdminEmail;
-
-    /**
-     * Handles request to init credentials.
-     */
-    @jakarta.annotation.PostConstruct
-    public void initCredentials() {
-        this.activeAdminEmail = configuredAdminEmail;
-    }
-
     @GetMapping("/credentials")
     public ResponseEntity<Map<String, String>> getAdminCredentials() {
         User adminUser = userRepository.findByRole(Role.ADMIN).stream().findFirst().orElse(null);
-        String email = adminUser != null ? adminUser.getEmail() : activeAdminEmail;
+        // The ADMIN row is authoritative; config is only a fallback for a
+        // database that has not been bootstrapped yet.
+        String email = adminUser != null ? adminUser.getEmail() : configuredAdminEmail;
         return ResponseEntity.ok(Map.of(
             "email", email == null ? "" : email,
             "firstName", adminUser != null && adminUser.getFirstName() != null ? adminUser.getFirstName() : "System",
@@ -87,7 +79,8 @@ public class AdminController {
 
         User adminUser = userRepository.findByRole(Role.ADMIN).stream().findFirst().orElse(null);
         if (adminUser == null) {
-            adminUser = userRepository.findByEmail(activeAdminEmail).orElse(null);
+            adminUser = configuredAdminEmail == null || configuredAdminEmail.isBlank()
+                ? null : userRepository.findByEmail(configuredAdminEmail).orElse(null);
         }
 
         if (adminUser != null) {
@@ -100,7 +93,6 @@ public class AdminController {
             adminUser.setRole(Role.ADMIN);
             adminUser.setVerified(true);
             userRepository.save(adminUser);
-            this.activeAdminEmail = newEmail;
             return ResponseEntity.ok(Map.of(
                 "message", "Admin credentials updated successfully!",
                 "email", newEmail

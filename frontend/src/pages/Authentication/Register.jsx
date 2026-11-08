@@ -361,6 +361,7 @@ const Register = () => {
                                         name="password"
                                         type={showPassword ? "text" : "password"}
                                         minLength="6"
+                                        maxLength="40"
                                         required
                                         placeholder="••••••••"
                                         value={formData.password}
@@ -387,6 +388,7 @@ const Register = () => {
                                         name="confirmPassword"
                                         type={showConfirmPassword ? "text" : "password"}
                                         minLength="6"
+                                        maxLength="40"
                                         required
                                         placeholder="••••••••"
                                         value={formData.confirmPassword}

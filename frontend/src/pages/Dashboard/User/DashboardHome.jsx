@@ -9,6 +9,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api, { API_BASE_URL } from '../../../api/axios';
 import { normalizeAndDeduplicatePlans } from '../../../utils/dietPlanSync';
+import { recentlyDeletedIds, markRecentlyDeleted } from '../../../utils/offlineCache';
 
 /**
  * DashboardHome Component
@@ -18,6 +19,8 @@ const DashboardHome = () => {
     const navigate = useNavigate();
     const { user, token } = useContext(AuthContext);
     const [clinicalDirectives, setClinicalDirectives] = useState([]);
+    // True only when the server could not be reached and cached data is shown.
+    const [directivesOffline, setDirectivesOffline] = useState(false);
 
     // Diet Plan from Nutritionist state
     const [plansList, setPlansList] = useState([]);
@@ -37,12 +40,12 @@ const DashboardHome = () => {
 
     useEffect(() => {
         const loadDirectives = async () => {
-            let deletedIds = new Set();
-            try {
-                const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
-                deletedIds = new Set(storedDeleted.map(String));
-            } catch (e) {}
+            // Short-lived, ID-only tombstones; the server is authoritative.
+            const deletedIds = recentlyDeletedIds();
 
+            // Server-first: local caches are used ONLY as an offline fallback,
+            // never merged ahead of (or alongside) authoritative server data.
+            let backendOk = false;
             let backendDirectives = [];
             if (token) {
                 try {
@@ -59,8 +62,17 @@ const DashboardHome = () => {
                             icon: n.icon || 'health_and_safety',
                             targetUrl: n.targetUrl || n.path || '/progress'
                         }));
+                        backendOk = true;
                     }
-                } catch (e) {}
+                } catch (err) {
+                    console.warn('Could not load clinical directives from server:', err);
+                }
+            }
+
+            setDirectivesOffline(!backendOk && Boolean(token));
+            if (backendOk) {
+                setClinicalDirectives(backendDirectives.filter(item => !deletedIds.has(String(item.id))));
+                return;
             }
 
             try {
@@ -69,14 +81,12 @@ const DashboardHome = () => {
                 const myId = String(user?.id || user?.userId || '');
                 const localDirectives = [...storedDirectives, ...storedNotifs.filter(n => n.title && n.title.includes('Clinical Directive'))]
                     .filter(n => !n.senderId || String(n.senderId) !== myId);
-
-                const allDirectives = [...backendDirectives, ...localDirectives];
-                const uniqueDirectives = Array.from(new Map(allDirectives.map(item => [item.id, item])).values())
+                const uniqueDirectives = Array.from(new Map(localDirectives.map(item => [item.id, item])).values())
                     .filter(item => !deletedIds.has(String(item.id)));
-
                 setClinicalDirectives(uniqueDirectives);
-            } catch (e) {
-                setClinicalDirectives(backendDirectives.filter(item => !deletedIds.has(String(item.id))));
+            } catch (err) {
+                console.warn('Offline directives cache unreadable:', err);
+                setClinicalDirectives([]);
             }
         };
 
@@ -107,10 +117,7 @@ const DashboardHome = () => {
         const stringId = String(id);
         setClinicalDirectives(prev => prev.filter(d => String(d.id) !== stringId));
         try {
-            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
-            if (!storedDeleted.includes(stringId)) {
-                localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify([...storedDeleted, stringId]));
-            }
+            markRecentlyDeleted([stringId]);
 
             const storedDirectives = JSON.parse(localStorage.getItem('nutrimunch_clinical_directives') || '[]');
             const updatedDirectives = storedDirectives.filter(n => String(n.id) !== stringId);
@@ -131,7 +138,7 @@ const DashboardHome = () => {
                 fetch(`${API_BASE_URL}/notifications/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
-                }).catch(() => {});
+                }).catch(err => console.error('Failed to delete notification:', err));
             }
         } catch (e) {}
     };
@@ -140,9 +147,7 @@ const DashboardHome = () => {
         const allIds = clinicalDirectives.map(d => String(d.id));
         setClinicalDirectives([]);
         try {
-            const storedDeleted = JSON.parse(localStorage.getItem('nutrimunch_deleted_notif_ids') || '[]');
-            const combinedDeleted = Array.from(new Set([...storedDeleted, ...allIds]));
-            localStorage.setItem('nutrimunch_deleted_notif_ids', JSON.stringify(combinedDeleted));
+            markRecentlyDeleted(allIds);
 
             localStorage.setItem('nutrimunch_clinical_directives', '[]');
             localStorage.setItem('nutrimunch_user_notifications', '[]');
@@ -158,7 +163,7 @@ const DashboardHome = () => {
                 fetch(`${API_BASE_URL}/notifications/clear-all`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
-                }).catch(() => {});
+                }).catch(err => console.error('Failed to clear notifications:', err));
             }
         } catch (e) {}
     };
@@ -354,8 +359,9 @@ const DashboardHome = () => {
                 water: payload.dailyWaterTargetLiters,
             };
             setCurrentUserTargets(localTargets);
+            // Targets are mirrored for offline display only. No "active
+            // imported plan" key: no persistent imported plan entity exists.
             localStorage.setItem('nutrimunch_user_targets', JSON.stringify(localTargets));
-            localStorage.setItem('nutrimunch_active_diet_plan', JSON.stringify(targetPlan));
 
             window.dispatchEvent(new Event('nutrimunch_profile_updated'));
             window.dispatchEvent(new Event('nutrimunch_macro_targets_updated'));
@@ -423,6 +429,11 @@ const DashboardHome = () => {
                             </span>
                         </div>
                     </div>
+                    {directivesOffline && (
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300/90">
+                            Offline — showing cached directives. Server data may differ.
+                        </p>
+                    )}
                     <div className="space-y-3">
                         {clinicalDirectives.map(dir => (
                             <div key={dir.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-[#a5d391]/30 transition-all">

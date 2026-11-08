@@ -64,8 +64,60 @@ public class AuthService {
     }
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final java.util.Map<String, Integer> OTP_ATTEMPTS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Failed OTP attempts per email, retained only for a bounded window. */
+    private static final java.util.Map<String, OtpAttempts> OTP_ATTEMPTS = new java.util.concurrent.ConcurrentHashMap<>();
     private static final int MAX_OTP_ATTEMPTS = 5;
+    /** A lock-out window expires after 15 minutes, matching the OTP lifetime. */
+    private static final long OTP_ATTEMPT_WINDOW_MILLIS = 15L * 60L * 1000L;
+    /** Hard cap on tracked emails so the in-memory map cannot grow without bound. */
+    private static final int MAX_TRACKED_EMAILS = 10000;
+
+    /** One email's failed-attempt count and the start of its window. */
+    private static final class OtpAttempts {
+        private int count;
+        private long windowStartMillis;
+    }
+
+    /** Returns the current (non-expired) failed-attempt count for an email. */
+    private static int currentOtpAttempts(String email) {
+        OtpAttempts entry = OTP_ATTEMPTS.get(email);
+        if (entry == null) return 0;
+        if (System.currentTimeMillis() - entry.windowStartMillis >= OTP_ATTEMPT_WINDOW_MILLIS) {
+            OTP_ATTEMPTS.remove(email);
+            return 0;
+        }
+        return entry.count;
+    }
+
+    /** Records one failed attempt, evicting stale entries so the map stays bounded. */
+    private static int recordOtpFailure(String email) {
+        long now = System.currentTimeMillis();
+        if (OTP_ATTEMPTS.size() >= MAX_TRACKED_EMAILS) {
+            // First drop expired windows. If every entry is still fresh, drop the
+            // oldest ones so a burst of distinct emails cannot grow the map.
+            OTP_ATTEMPTS.entrySet().removeIf(e ->
+                now - e.getValue().windowStartMillis >= OTP_ATTEMPT_WINDOW_MILLIS);
+            if (OTP_ATTEMPTS.size() >= MAX_TRACKED_EMAILS) {
+                int excess = OTP_ATTEMPTS.size() - MAX_TRACKED_EMAILS + 1;
+                OTP_ATTEMPTS.entrySet().stream()
+                    .sorted(java.util.Comparator.comparingLong(e -> e.getValue().windowStartMillis))
+                    .limit(excess)
+                    .map(java.util.Map.Entry::getKey)
+                    .toList()
+                    .forEach(OTP_ATTEMPTS::remove);
+            }
+        }
+        OtpAttempts entry = OTP_ATTEMPTS.compute(email, (k, existing) -> {
+            OtpAttempts fresh = (existing == null
+                || now - existing.windowStartMillis >= OTP_ATTEMPT_WINDOW_MILLIS)
+                ? new OtpAttempts() : existing;
+            if (fresh.count == 0) fresh.windowStartMillis = now;
+            fresh.count++;
+            return fresh;
+        });
+        return entry.count;
+    }
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -327,7 +379,7 @@ public class AuthService {
         }
         String normalizedEmail = email.toLowerCase().trim();
 
-        int attempts = OTP_ATTEMPTS.getOrDefault(normalizedEmail, 0);
+        int attempts = currentOtpAttempts(normalizedEmail);
         if (attempts >= MAX_OTP_ATTEMPTS) {
             User user = userRepository.findByEmail(normalizedEmail).orElse(null);
             if (user != null && user.getOtpCode() != null) {
@@ -340,8 +392,7 @@ public class AuthService {
 
         User user = userRepository.findByEmail(normalizedEmail).orElse(null);
         if (user == null || user.getOtpCode() == null || !user.getOtpCode().equals(otp)) {
-            int newAttempts = attempts + 1;
-            OTP_ATTEMPTS.put(normalizedEmail, newAttempts);
+            int newAttempts = recordOtpFailure(normalizedEmail);
             if (newAttempts >= MAX_OTP_ATTEMPTS && user != null) {
                 user.setOtpCode(null);
                 user.setOtpExpiryDate(null);

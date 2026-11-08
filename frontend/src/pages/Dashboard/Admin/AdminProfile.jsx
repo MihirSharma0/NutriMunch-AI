@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../../api/axios';
 import { Shield, Key, Mail, CheckCircle } from 'lucide-react';
 import { getEmailError } from '../../../utils/emailValidation';
+import { getPasswordError } from '../../../utils/formValidation';
 
 /**
  * AdminProfile Component
@@ -47,6 +48,11 @@ const AdminProfile = () => {
     const handleSave = async (e) => {
         e.preventDefault();
         if (emailError) return;
+        const passwordError = getPasswordError(password, { optional: true });
+        if (passwordError) {
+            setMessage({ text: passwordError, type: 'error' });
+            return;
+        }
         setSaving(true);
         setMessage({ text: '', type: '' });
         
@@ -153,6 +159,8 @@ const AdminProfile = () => {
                         </label>
                         <input 
                             type="password" 
+                            minLength="6"
+                            maxLength="40"
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Leave blank to keep current password"

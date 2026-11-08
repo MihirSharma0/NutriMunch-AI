@@ -70,39 +70,33 @@ export const fetchAllForAdmin = async () => {
  * @returns {Promise<Object>} The saved testimonial item
  */
 export const saveTestimonial = async (testimonialData) => {
-    let savedItem = null;
-    try {
-        if (testimonialData.id && !String(testimonialData.id).startsWith('local-')) {
-            const res = await api.put(`/testimonials/${testimonialData.id}`, testimonialData);
-            savedItem = res.data;
-        } else {
-            const res = await api.post('/testimonials', testimonialData);
-            savedItem = res.data;
-        }
-    } catch (err) {
-        console.warn("Backend API save failed, operating in offline/localStorage mode:", err);
-    }
-
-    // Always update local storage
-    const currentList = getLocalTestimonials();
-    const existingIndex = currentList.findIndex(t => t.id === testimonialData.id || (t.authorEmail && t.authorEmail === testimonialData.authorEmail));
-
-    const newItem = savedItem || {
-        ...testimonialData,
-        id: testimonialData.id || `local-${Date.now()}`,
-        createdAt: testimonialData.createdAt || new Date().toISOString(),
-        status: 'APPROVED'
-    };
-
-    if (existingIndex >= 0) {
-        currentList[existingIndex] = { ...currentList[existingIndex], ...newItem };
+    // A testimonial exists only once the server has persisted it. Never invent
+    // a browser-only `local-*` row that would be shown as an approved review.
+    let savedItem;
+    if (testimonialData.id && !String(testimonialData.id).startsWith('local-')) {
+        const res = await api.put(`/testimonials/${testimonialData.id}`, testimonialData);
+        savedItem = res.data;
     } else {
-        currentList.unshift(newItem);
+        const res = await api.post('/testimonials', testimonialData);
+        savedItem = res.data;
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(currentList));
+    // Mirror the server record into the public offline cache only after success.
+    try {
+        const currentList = getLocalTestimonials();
+        const existingIndex = currentList.findIndex(t =>
+            t.id === savedItem?.id || (t.authorEmail && t.authorEmail === testimonialData.authorEmail));
+        if (existingIndex >= 0) {
+            currentList[existingIndex] = { ...currentList[existingIndex], ...savedItem };
+        } else {
+            currentList.unshift(savedItem);
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentList));
+    } catch (err) {
+        console.warn('Could not mirror testimonial into offline cache:', err);
+    }
     window.dispatchEvent(new Event('nutrimunch_testimonials_updated'));
-    return newItem;
+    return savedItem;
 };
 
 /**
@@ -117,7 +111,8 @@ export const deleteTestimonial = async (id) => {
             await api.delete(`/testimonials/${id}`);
         }
     } catch (err) {
-        console.warn("Backend API delete failed:", err);
+        console.error('Failed to delete testimonial:', err);
+        return false;
     }
 
     const currentList = getLocalTestimonials().filter(t => String(t.id) !== String(id));

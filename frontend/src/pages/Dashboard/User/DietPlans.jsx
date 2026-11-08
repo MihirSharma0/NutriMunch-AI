@@ -122,7 +122,6 @@ const DietPlans = () => {
             localStorage.removeItem('nutrimunch_latest_deployed_plan_id');
             localStorage.removeItem('nutrimunch_general_diet_plan');
             localStorage.removeItem('nutrimunch_exclusive_diet_plans');
-            localStorage.removeItem('nutrimunch_active_diet_plan');
         }
 
         setPlansList(deduplicated);
@@ -208,7 +207,7 @@ const DietPlans = () => {
                 savedAiPlansRef.current = savedAiPlans;
                 loadPlans(null, [...serverPlansRef.current, ...savedAiPlans]);
             }
-        }).catch(() => {});
+        }).catch(err => console.error('Failed to load saved diet plans:', err));
 
         let bc;
         try {
@@ -612,9 +611,14 @@ const DietPlans = () => {
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                permanentlyDeleteDietPlan(plan, api);
-                                                setPlansList(previous => previous.filter(item => item.id !== plan.id));
-                                                if (selectedPlanId === plan.id) setSelectedPlanId(null);
+                                                permanentlyDeleteDietPlan(plan, api).then(ok => {
+                                                    if (!ok) {
+                                                        console.error('Failed to delete saved diet plan');
+                                                        return;
+                                                    }
+                                                    setPlansList(previous => previous.filter(item => item.id !== plan.id));
+                                                    if (selectedPlanId === plan.id) setSelectedPlanId(null);
+                                                }).catch(err => console.error('Failed to delete saved diet plan:', err));
                                             }}
                                             className="text-red-300/70 hover:text-red-300 text-[10px] font-bold px-2 py-1.5 rounded-xl transition-all cursor-pointer"
                                             title="Delete this saved diet plan"

@@ -7,6 +7,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { saveTestimonial, deleteTestimonial, getLocalTestimonials } from '../../services/testimonialService';
+import { getShortTextError, getContentError, getEmailError, getRatingError } from '../../utils/formValidation';
 
 /**
  * Resolves the verified display badge title for the current authenticated user.
@@ -122,6 +123,15 @@ const ShareYourStoryForm = () => {
             setNotification({ type: 'error', message: 'Please provide your name and transformation story.' });
             return;
         }
+        const fieldError = getShortTextError(name, 'Name')
+            || getContentError(content, 'Your story', 2000)
+            || (programResult ? getShortTextError(programResult, 'Result', 200) : '')
+            || (email ? getEmailError(email) : '')
+            || getRatingError(rating);
+        if (fieldError) {
+            setNotification({ type: 'error', message: fieldError });
+            return;
+        }
 
         setIsSubmitting(true);
         const avatarUrl = user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=38bdf8&color=000`;
@@ -139,15 +149,25 @@ const ShareYourStoryForm = () => {
             avatarUrl: avatarUrl
         };
 
-        await saveTestimonial(payload);
-        setIsSubmitting(false);
-        setIsPreviewOpen(false);
-        setNotification({
-            type: 'success',
-            message: editingId ? 'Testimonial updated successfully and published to Home Page!' : 'Testimonial created & deployed to Home Page!'
-        });
-        setTimeout(() => setNotification(null), 4000);
-        resetForm();
+        try {
+            await saveTestimonial(payload);
+            setIsPreviewOpen(false);
+            setNotification({
+                type: 'success',
+                message: editingId ? 'Testimonial updated successfully and published to Home Page!' : 'Testimonial created & deployed to Home Page!'
+            });
+            setTimeout(() => setNotification(null), 4000);
+            resetForm();
+        } catch (err) {
+            console.error('Failed to save testimonial:', err);
+            setNotification({
+                type: 'error',
+                message: 'Could not save your story. Please check your connection and try again.'
+            });
+            setTimeout(() => setNotification(null), 5000);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (!user) {
@@ -224,6 +244,7 @@ const ShareYourStoryForm = () => {
                             <input
                                 type="text"
                                 value={name}
+                                maxLength="80"
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full h-[50px] bg-black/50 border border-white/10 rounded-2xl px-5 text-white focus:outline-none focus:border-primary transition-colors text-sm"
                                 placeholder="Jane Doe"
@@ -248,6 +269,7 @@ const ShareYourStoryForm = () => {
                             <input
                                 type="text"
                                 value={programResult}
+                                maxLength="200"
                                 onChange={(e) => setProgramResult(e.target.value)}
                                 className="w-full h-[50px] bg-black/50 border border-white/10 rounded-2xl px-5 text-white focus:outline-none focus:border-primary transition-colors text-sm"
                                 placeholder="e.g. your own result"
@@ -290,6 +312,7 @@ const ShareYourStoryForm = () => {
                         <label className="block text-white/50 text-xs font-bold uppercase tracking-widest mb-2">Transformation Details & Feedback</label>
                         <textarea
                             rows="4"
+                            maxLength="2000"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             className="w-full bg-black/50 border border-white/10 rounded-2xl p-5 text-white focus:outline-none focus:border-primary transition-colors resize-none text-sm leading-relaxed"

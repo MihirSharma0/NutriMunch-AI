@@ -376,7 +376,7 @@ const Navbar = () => {
             setNotificationsUnread(prev => Math.max(0, prev - 1));
         }
         if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
-            api.delete(`/notifications/${id}`).catch(() => {});
+            api.delete(`/notifications/${id}`).catch(err => console.error('Failed to delete notification:', err));
         }
     };
 
@@ -384,7 +384,7 @@ const Navbar = () => {
         setNotifications([]);
         setNotificationsUnread(0);
         if (token) {
-            api.delete('/notifications/clear-all').catch(() => {});
+            api.delete('/notifications/clear-all').catch(err => console.error('Failed to clear notifications:', err));
         }
     };
 

@@ -8,6 +8,7 @@ import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import { loadRazorpay } from '../../../utils/loadRazorpay';
 import { subscribeWalletSse } from '../../../utils/walletSse';
+import { getAmountError } from '../../../utils/formValidation';
 
 // DEMO SIMULATION — this checkout showcases the credit logic with no real money
 // involved. The page and its /api/wallet/admin/** endpoints are ADMIN-only.
@@ -304,11 +305,12 @@ const PaymentManagement = () => {
     const handleInitiateCreditAllocation = async (e) => {
         e.preventDefault();
 
-        const amountNum = parseFloat(customAmount);
-        if (!amountNum || amountNum <= 0) {
-            showToast('error', 'Please enter a valid amount greater than ₹0.');
+        const amountError = getAmountError(customAmount);
+        if (amountError) {
+            showToast('error', amountError);
             return;
         }
+        const amountNum = parseFloat(customAmount);
 
         if (!selectedRecipientId) {
             showToast('error', 'Please select a recipient (User or Nutritionist).');
@@ -1041,7 +1043,8 @@ const PaymentManagement = () => {
                                 <input
                                     type="number"
                                     min="1"
-                                    step="1"
+                                    max="1000000"
+                                    step="0.01"
                                     required
                                     placeholder="Enter custom amount..."
                                     value={customAmount}

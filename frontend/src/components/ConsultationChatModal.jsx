@@ -268,6 +268,11 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
         const content = input.trim();
         if (!conversation?.id || !content || content.length > MAX_MESSAGE_LENGTH || sending) return;
         const clientMessageId = crypto.randomUUID();
+        // Backend @Size(max = 128); a UUID is 36 chars, but never send a longer id.
+        if (clientMessageId.length > 128) {
+            setError('Could not send message: invalid message id.');
+            return;
+        }
         const optimistic = {
             id: `pending-${clientMessageId}`,
             senderId: currentUser?.id,

@@ -9,6 +9,7 @@ import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import { getEmailError } from '../../../utils/emailValidation';
+import { getPasswordError } from '../../../utils/formValidation';
 
 /**
  * AdminHome Component
@@ -74,6 +75,11 @@ const AdminHome = () => {
     const handleSaveCredentials = async (e) => {
         e.preventDefault();
         if (editEmailError) return;
+        const passwordError = getPasswordError(editPassword, { optional: true });
+        if (passwordError) {
+            setUpdateError(passwordError);
+            return;
+        }
         setUpdateLoading(true);
         setUpdateMessage(null);
         setUpdateError(null);
@@ -291,6 +297,8 @@ const AdminHome = () => {
                                 <label className="block text-xs font-bold text-white/70 uppercase mb-2">New Admin Password (optional)</label>
                                 <input
                                     type="password"
+                                    minLength="6"
+                                    maxLength="40"
                                     value={editPassword}
                                     onChange={(e) => setEditPassword(e.target.value)}
                                     autoComplete="new-password"

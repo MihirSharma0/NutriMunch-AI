@@ -749,6 +749,9 @@ const Profile = () => {
                             <input
                                 type="number"
                                 name="age"
+                                min="1"
+                                max="120"
+                                step="1"
                                 value={profile.age}
                                 onChange={handleChange}
                                 className="w-full bg-[#080b12]/80 border border-white/10 px-4 py-3.5 rounded-2xl font-bold text-white outline-none focus:border-[#a5d391]/50 transition-colors"
@@ -781,6 +784,9 @@ const Profile = () => {
                                 <input
                                     type="number"
                                     name="heightCm"
+                                    min="50"
+                                    max="300"
+                                    step="0.1"
                                     value={profile.heightCm}
                                     onChange={handleMetricHeightChange}
                                     className="w-full bg-[#080b12]/80 border border-white/10 px-4 py-3.5 rounded-2xl font-bold text-white outline-none focus:border-[#a5d391]/50 transition-colors"
@@ -816,6 +822,9 @@ const Profile = () => {
                                 <input
                                     type="number"
                                     name="weightKg"
+                                    min="1"
+                                    max="500"
+                                    step="0.1"
                                     value={profile.weightKg}
                                     onChange={handleMetricWeightChange}
                                     className="w-full bg-[#080b12]/80 border border-white/10 px-4 py-3.5 rounded-2xl font-bold text-white outline-none focus:border-[#a5d391]/50 transition-colors"
@@ -825,6 +834,9 @@ const Profile = () => {
                                 <input
                                     type="number"
                                     name="weightLbs"
+                                    min="1"
+                                    max="1100"
+                                    step="0.1"
                                     value={profile.weightLbs}
                                     onChange={handleImperialWeightChange}
                                     className="w-full bg-[#080b12]/80 border border-white/10 px-4 py-3.5 rounded-2xl font-bold text-white outline-none focus:border-[#a5d391]/50 transition-colors"
@@ -1257,6 +1269,9 @@ const Profile = () => {
                                 <input
                                     type="number"
                                     name="calories"
+                                    min="800"
+                                    max="6000"
+                                    step="1"
                                     value={customTargets.calories}
                                     onChange={handleCustomTargetChange}
                                     className="w-full bg-white/5 border border-[#38bdf8]/40 px-3 py-2 rounded-xl text-xl font-bold text-white outline-none focus:border-[#38bdf8]"
@@ -1270,6 +1285,9 @@ const Profile = () => {
                                 <input
                                     type="number"
                                     name="protein"
+                                    min="0"
+                                    max="1000"
+                                    step="1"
                                     value={customTargets.protein}
                                     onChange={handleCustomTargetChange}
                                     className="w-full bg-white/5 border border-[#a5d391]/40 px-3 py-2 rounded-xl text-xl font-bold text-[#a5d391] outline-none focus:border-[#a5d391]"
@@ -1283,6 +1301,9 @@ const Profile = () => {
                                 <input
                                     type="number"
                                     name="carbs"
+                                    min="0"
+                                    max="2000"
+                                    step="1"
                                     value={customTargets.carbs}
                                     onChange={handleCustomTargetChange}
                                     className="w-full bg-white/5 border border-[#38bdf8]/40 px-3 py-2 rounded-xl text-xl font-bold text-[#38bdf8] outline-none focus:border-[#38bdf8]"
@@ -1296,6 +1317,9 @@ const Profile = () => {
                                 <input
                                     type="number"
                                     name="fats"
+                                    min="0"
+                                    max="500"
+                                    step="1"
                                     value={customTargets.fats}
                                     onChange={handleCustomTargetChange}
                                     className="w-full bg-white/5 border border-yellow-400/40 px-3 py-2 rounded-xl text-xl font-bold text-yellow-400 outline-none focus:border-yellow-400"
@@ -1312,6 +1336,7 @@ const Profile = () => {
                                     value={customTargets.water}
                                     onChange={handleCustomTargetChange}
                                     min="0"
+                                    max="20"
                                     step="0.1"
                                     className="w-full bg-white/5 border border-cyan-400/40 px-3 py-2 rounded-xl text-xl font-bold text-cyan-300 outline-none focus:border-cyan-400"
                                     placeholder="e.g. 2.5"

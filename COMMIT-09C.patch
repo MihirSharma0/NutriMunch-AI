@@ -1,0 +1,1717 @@
+diff --git a/frontend/src/pages/Dashboard/User/Reports.jsx b/frontend/src/pages/Dashboard/User/Reports.jsx
+index f57daa4..0f417c8 100644
+--- a/frontend/src/pages/Dashboard/User/Reports.jsx
++++ b/frontend/src/pages/Dashboard/User/Reports.jsx
+@@ -12,7 +12,7 @@ import FeatureGate from '../../../components/FeatureGate';
+ import api from '../../../api/axios';
+ import DarkCalendarPicker from '../../../components/DarkCalendarPicker';
+ import { searchFoodDatabase } from '../../../data/foodDatabase';
+-import { fetchProgressDays, saveDayMetrics, readOfflineDay } from '../../../utils/progressLog';
++import { fetchProgressDays, saveDayMetrics, readOfflineDay, EMPTY_DAY } from '../../../utils/progressLog';
+ import { escapeHtml, rawHtml, reportHtml } from '../../../utils/reportHtml';
+ 
+ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
+@@ -27,6 +27,79 @@ const DEFAULT_TARGETS = {
+ 
+ const SHORT_MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+ 
++/** Local calendar date (YYYY-MM-DD). `toISOString()` is UTC and is one day
++ *  behind local time before 05:30 IST, so it must not be used for log dates. */
++const toLocalDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
++
++/**
++ * C6 stores PER-DAY targets only. A period statement therefore has two valid
++ * denominators and must never mix them:
++ *   - periodTarget  = daily x N (all calendar days)      -> "% of period target"
++ *   - trackedTarget = daily x L (only days actually logged) -> "% on tracked days"
++ * Both are reported explicitly, together with L/N coverage.
++ */
++const METRIC_KEYS = ['waterMl', 'calories', 'protein', 'carbs', 'fats'];
++const buildPeriodSummary = (totals, days, loggedDays, targets) => {
++    const N = Math.max(1, Math.round(days));
++    const L = Math.max(0, Math.min(N, Math.round(loggedDays)));
++    const daily = {
++        waterMl: Math.round(Number(targets.water) * 1000),
++        calories: Number(targets.calories) || 0,
++        protein: Number(targets.protein) || 0,
++        carbs: Number(targets.carbs) || 0,
++        fats: Number(targets.fats) || 0
++    };
++    const cleanTotals = {}, periodTargets = {}, trackedTargets = {},
++          avgPerLoggedDay = {}, periodPct = {}, trackedPct = {},
++          periodDeficit = {}, trackedDeficit = {};
++    METRIC_KEYS.forEach((k) => {
++        const total = Math.max(0, Number(totals[k]) || 0);
++        cleanTotals[k] = Math.round(total);
++        periodTargets[k] = Math.round(daily[k] * N);
++        trackedTargets[k] = Math.round(daily[k] * L);
++        const divisor = Math.max(1, L);
++        avgPerLoggedDay[k] = Math.round(total / divisor);
++        periodPct[k] = periodTargets[k] > 0 ? Math.round((total / periodTargets[k]) * 100) : 0;
++        trackedPct[k] = trackedTargets[k] > 0 ? Math.round((total / trackedTargets[k]) * 100) : 0;
++        periodDeficit[k] = periodTargets[k] - Math.round(total);
++        trackedDeficit[k] = trackedTargets[k] - Math.round(total);
++    });
++    return {
++        days: N, loggedDays: L, coveragePct: Math.round((L / N) * 100),
++        daily, totals: cleanTotals, periodTargets, trackedTargets,
++        avgPerLoggedDay, periodPct, trackedPct, periodDeficit, trackedDeficit
++    };
++};
++
++/** Verdict prose that always names its denominator. */
++const buildStatementNarrative = (period, label) => {
++    const L = period.loggedDays, N = period.days;
++    const coverage = `${L} of ${N} days logged (${period.coveragePct}% coverage)`;
++    const litre = (ml) => (ml / 1000).toFixed(2);
++    const num = (v) => Math.round(v).toLocaleString();
++    if (N === 1) {
++        return {
++            status: L === 0 ? 'No Intake Logged'
++                : (period.trackedPct.calories > 100 || period.trackedPct.waterMl > 100
++                    ? 'Above Target (Review)' : 'Daily Statement Verified'),
++            keyTakeaway: L === 0
++                ? `No intake was recorded for ${label}; all values are shown as 0.`
++                : `Single-day intake and clinical biometric compliance for ${label}.`,
++            hydrationVerdict: `Consumed ${litre(period.totals.waterMl)} L of ${litre(period.daily.waterMl)} L daily target (${period.periodPct.waterMl}% of daily target).`,
++            calorieVerdict: `Logged ${num(period.totals.calories)} kcal of ${num(period.daily.calories)} kcal daily target (${period.periodPct.calories}% of daily target).`,
++            macroVerdict: `Protein ${num(period.totals.protein)}g/${num(period.daily.protein)}g, Carbs ${num(period.totals.carbs)}g/${num(period.daily.carbs)}g, Fats ${num(period.totals.fats)}g/${num(period.daily.fats)}g (daily targets).`
++        };
++    }
++    return {
++        status: L === 0 ? 'No Data Logged'
++            : (period.trackedPct.calories > 100 ? 'Above Target (Review)' : `${period.coveragePct}% Days Logged`),
++        keyTakeaway: `Period totals are compared with the ${N}-day target; daily averages are compared with the daily target. ${coverage}.`,
++        hydrationVerdict: `Period total ${litre(period.totals.waterMl)} L of ${litre(period.periodTargets.waterMl)} L ${N}-day target (${period.periodPct.waterMl}% of period target). On logged days: ${num(period.avgPerLoggedDay.waterMl)} ml/day vs ${num(period.daily.waterMl)} ml/day (${period.trackedPct.waterMl}% on tracked days).`,
++        calorieVerdict: `Period total ${num(period.totals.calories)} kcal of ${num(period.periodTargets.calories)} kcal ${N}-day target (${period.periodPct.calories}% of period target). On logged days: ${num(period.avgPerLoggedDay.calories)} kcal/day vs ${num(period.daily.calories)} kcal/day (${period.trackedPct.calories}% on tracked days).`,
++        macroVerdict: `Protein ${num(period.totals.protein)}g/${num(period.periodTargets.protein)}g, Carbs ${num(period.totals.carbs)}g/${num(period.periodTargets.carbs)}g, Fats ${num(period.totals.fats)}g/${num(period.periodTargets.fats)}g (period targets). ${coverage}.`
++    };
++};
++
+ const INTERVAL_PRESETS = [
+     { id: '1D', label: '1 Day', days: 1 },
+     { id: '1W', label: '1 Week', days: 7 },
+@@ -39,6 +112,24 @@ const INTERVAL_PRESETS = [
+     { id: 'CUSTOM', label: 'Custom Date', days: 1 }
+ ];
+ 
++/** Deliberate chart range for the exported document (defaults to statement period). */
++const ExportRangeSelect = ({ value, onChange }) => (
++    <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/50">
++        <span>Charts in report:</span>
++        <select
++            value={value}
++            onChange={(e) => onChange(e.target.value)}
++            className="bg-[#080b12] border border-white/15 text-white text-xs rounded-lg px-2 py-1.5 cursor-pointer"
++            title="Choose which period the exported report's charts cover"
++        >
++            <option value="STATEMENT">Statement period (default)</option>
++            {INTERVAL_PRESETS.map((preset) => (
++                <option key={preset.id} value={preset.id}>{preset.label}</option>
++            ))}
++        </select>
++    </label>
++);
++
+ /**
+  * Custom Year Selector supporting any year with steppers, direct number input, and styling
+  */
+@@ -92,59 +183,28 @@ const YearSelector = ({ value, onChange, label }) => {
+  * Dynamic nice-scale tick calculator matching Chart.js automatic Y-axis bounding
+  */
+ const calculateNiceYScale = (allValues, targetTicks = 8) => {
+-    const valid = allValues.map(Number).filter((v) => !isNaN(v));
+-    if (valid.length === 0) {
+-        return { minY: 0, maxY: 100, step: 20, ticks: [0, 20, 40, 60, 80, 100] };
+-    }
+-
+-    let minVal = Math.min(...valid);
+-    let maxVal = Math.max(...valid);
+-
+-    // If all values are identical
+-    if (minVal === maxVal) {
+-        const pad = minVal === 0 ? 10 : Math.max(5, Math.round(minVal * 0.1));
+-        minVal = Math.max(0, minVal - pad);
+-        maxVal = maxVal + pad;
+-    }
+-
+-    const span = maxVal - minVal;
+-    const rawStep = Math.max(1, span / targetTicks);
++    const valid = allValues.map(Number).filter((v) => !isNaN(v) && v >= 0);
++    // Intake values are never negative. Always start the axis at zero: a
++    // 1800-2200 kcal range must not be zoomed to look like a huge swing.
++    const maxVal = Math.max(...valid, 1);
++    const rawStep = Math.max(1, maxVal / targetTicks);
+     const power = Math.pow(10, Math.floor(Math.log10(rawStep)));
+     const fraction = rawStep / power;
+-
+     let niceMultiplier = 1;
+     if (fraction <= 1.25) niceMultiplier = 1;
+     else if (fraction <= 2.5) niceMultiplier = 2;
+     else if (fraction <= 5.5) niceMultiplier = 5;
+     else niceMultiplier = 10;
++    const step = Math.max(1, Math.round(niceMultiplier * power));
++    let maxY = Math.ceil((maxVal * 1.05) / step) * step;
++    if (maxY <= 0) maxY = step;
+ 
+-    let step = Math.round(niceMultiplier * power);
+-    if (step < 1) step = 1;
+-
+-    let minY = Math.floor(minVal / step) * step;
+-    let maxY = Math.ceil(maxVal / step) * step;
+-
+-    // If minVal is within 1.5 steps of 0, start at 0
+-    if (minVal >= 0 && minVal < step * 1.5) {
+-        minY = 0;
+-    }
+-
+-    // Ensure ceiling gives room for max peak if maxVal lands exactly on maxY
+-    if (maxY === maxVal) {
+-        maxY += step;
+-    }
+-
+-    if (minY < 0 && minVal >= 0) {
+-        minY = 0;
+-    }
+-
++    const tickCount = Math.min(10, Math.max(4, Math.ceil(maxY / step)));
+     const ticks = [];
+-    const count = Math.min(25, Math.round((maxY - minY) / step));
+-    for (let i = 0; i <= count; i++) {
+-        ticks.push(Math.round(minY + i * step));
++    for (let i = 0; i <= tickCount; i++) {
++        ticks.push(Math.round((maxY * i) / tickCount));
+     }
+-
+-    return { minY, maxY, step, ticks };
++    return { minY: 0, maxY, step, ticks };
+ };
+ 
+ /**
+@@ -153,6 +213,12 @@ const calculateNiceYScale = (allValues, targetTicks = 8) => {
+ const getSmoothCurvePath = (pts, tension = 0.35) => {
+     if (!pts || pts.length === 0) return '';
+     if (pts.length === 1) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
++    // tension 0 => straight segments between real samples, never a smoothed
++    // Bezier that implies values which were never logged.
++    if (tension === 0) {
++        return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
++            + pts.slice(1).map((pt) => ` L ${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join('');
++    }
+     if (pts.length === 2) {
+         return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+     }
+@@ -234,8 +300,8 @@ const generateSvgLineChart = ({
+ 
+     // Points with coordinates
+     const actualPoints = actualData.map((val, idx) => ({ x: getX(idx), y: getY(val) }));
+-    const pathD = getSmoothCurvePath(actualPoints, 0.35);
+-    const areaD = getSmoothAreaPath(actualPoints, baselineY, 0.35);
++    const pathD = getSmoothCurvePath(actualPoints, 0);
++    const areaD = getSmoothAreaPath(actualPoints, baselineY, 0);
+ 
+     // Target line (dashed, tension: 0)
+     const targetPoints = targetData.map((val, idx) => ({ x: getX(idx), y: getY(val) }));
+@@ -254,6 +320,11 @@ const generateSvgLineChart = ({
+         return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#080b12" stroke="${actualColor}" stroke-width="2" />`;
+     }).join('');
+ 
++    const allZero = actualData.every((v) => (Number(v) || 0) <= 0);
++    const zeroBadge = allZero
++        ? `<text x="${width - padRight}" y="${padTop + 10}" font-size="9" fill="#94a3b8" text-anchor="end">No intake logged — shown as 0</text>`
++        : '';
++
+     const gradId = `grad_${actualColor.replace(/[^a-zA-Z0-9]/g, '')}_${Math.random().toString(36).substring(2, 7)}`;
+ 
+     return `
+@@ -288,6 +359,56 @@ const generateSvgLineChart = ({
+                 ${pathD ? `<path d="${pathD}" fill="none" stroke="${actualColor}" stroke-width="2.5" />` : ''}
+                 ${dots}
+                 ${xLabels}
++                ${zeroBadge}
++            </svg>
++        </div>
++    `;
++};
++
++/**
++ * Honest single-day chart: one "daily total" bar next to the daily target bar.
++ * C6 stores only per-day totals, so there is no intra-day series to draw.
++ */
++const generateSvgDailyComparison = ({ title, unit, actualLabel, targetLabel, value, target,
++                                      actualColor = '#38bdf8', targetColor = '#a5d391' }) => {
++    const width = 680, height = 210, padLeft = 55, padRight = 20, padTop = 22, padBottom = 40;
++    const plotW = width - padLeft - padRight;
++    const plotH = height - padTop - padBottom;
++    const consumed = Math.max(0, Number(value) || 0);
++    const goal = Math.max(0, Number(target) || 0);
++    const maxVal = Math.max(consumed, goal, 1);
++    const step = Math.pow(10, Math.floor(Math.log10(maxVal / 4))) || 1;
++    const maxY = Math.ceil((maxVal * 1.1) / step) * step;
++    const zeroY = padTop + plotH;
++    const getY = (v) => padTop + plotH - (v / maxY) * plotH;
++    const barW = 108;
++    const consumedX = padLeft + plotW * 0.30 - barW / 2;
++    const targetX = padLeft + plotW * 0.70 - barW / 2;
++    const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxY * f));
++    const gridLines = ticks.map((t) => `
++        <line x1="${padLeft}" y1="${getY(t)}" x2="${width - padRight}" y2="${getY(t)}" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="2,3" />
++        <text x="${padLeft - 10}" y="${getY(t) + 3.5}" font-size="9" fill="#94a3b8" text-anchor="end">${escapeHtml(t.toLocaleString())}</text>
++    `).join('');
++    const bar = (x, v, color) => {
++        if (v <= 0) {
++            // Show the recorded zero instead of an empty slot.
++            return `<line x1="${x}" y1="${zeroY}" x2="${x + barW}" y2="${zeroY}" stroke="${color}" stroke-width="2" />`
++                + `<text x="${x + barW / 2}" y="${zeroY - 6}" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">0</text>`;
++        }
++        const y = getY(v);
++        return `<rect x="${x}" y="${y}" width="${barW}" height="${Math.max(0, zeroY - y)}" fill="${color}" opacity="0.85" rx="4" />
++                <text x="${x + barW / 2}" y="${y - 6}" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">${escapeHtml(v.toLocaleString())}</text>`;
++    };
++    return `
++        <div class="chart-card" style="background: #080b12; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
++            <div style="font-weight: 700; font-size: 11pt; color: #ffffff; margin-bottom: 4px;">${escapeHtml(title)}</div>
++            <div style="font-size: 8.5pt; color: #94a3b8; margin-bottom: 12px;">Daily total vs profile daily target (${escapeHtml(unit)}). No intra-day timestamps are recorded.</div>
++            <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible; display: block;">
++                ${gridLines}
++                ${bar(consumedX, consumed, actualColor)}
++                ${bar(targetX, goal, targetColor)}
++                <text x="${consumedX + barW / 2}" y="${height - 12}" font-size="9" fill="#94a3b8" text-anchor="middle">${escapeHtml(actualLabel)}</text>
++                <text x="${targetX + barW / 2}" y="${height - 12}" font-size="9" fill="#94a3b8" text-anchor="middle">${escapeHtml(targetLabel)}</text>
+             </svg>
+         </div>
+     `;
+@@ -351,9 +472,11 @@ const generateSvgBarChart = ({ title, labels, proteinData, carbsData, fatsData }
+         const cVal = Number(carbsData[idx]) || 0;
+         const fVal = Number(fatsData[idx]) || 0;
+ 
+-        const pH = Math.max(1, (pVal / (maxY || 1)) * plotH);
+-        const cH = Math.max(1, (cVal / (maxY || 1)) * plotH);
+-        const fH = Math.max(1, (fVal / (maxY || 1)) * plotH);
++        // Zero intake must draw no bar at all (previously a 1 px stub appeared,
++        // making an empty period look like it had recorded data).
++        const pH = pVal > 0 ? (pVal / (maxY || 1)) * plotH : 0;
++        const cH = cVal > 0 ? (cVal / (maxY || 1)) * plotH : 0;
++        const fH = fVal > 0 ? (fVal / (maxY || 1)) * plotH : 0;
+ 
+         const pX = groupCenterX - barW * 1.5;
+         const cX = groupCenterX - barW * 0.5;
+@@ -363,11 +486,12 @@ const generateSvgBarChart = ({ title, labels, proteinData, carbsData, fatsData }
+         const cY = padTop + plotH - cH;
+         const fY = padTop + plotH - fH;
+ 
+-        barsSvg += `
+-            <rect x="${pX}" y="${pY}" width="${barW - 0.5}" height="${pH}" fill="#a5d391" rx="2" />
+-            <rect x="${cX}" y="${cY}" width="${barW - 0.5}" height="${cH}" fill="#38bdf8" rx="2" />
+-            <rect x="${fX}" y="${fY}" width="${barW - 0.5}" height="${fH}" fill="#facc15" rx="2" />
+-        `;
++        if (pH > 0) barsSvg += `<rect x="${pX}" y="${pY}" width="${barW - 0.5}" height="${pH}" fill="#a5d391" rx="2" />`;
++        if (cH > 0) barsSvg += `<rect x="${cX}" y="${cY}" width="${barW - 0.5}" height="${cH}" fill="#38bdf8" rx="2" />`;
++        if (fH > 0) barsSvg += `<rect x="${fX}" y="${fY}" width="${barW - 0.5}" height="${fH}" fill="#facc15" rx="2" />`;
++        if (pH === 0 && cH === 0 && fH === 0) {
++            barsSvg += `<text x="${groupCenterX}" y="${padTop + plotH - 4}" font-size="9" fill="#94a3b8" text-anchor="middle">0</text>`;
++        }
+ 
+         if (idx % labelStep === 0 || idx === labels.length - 1) {
+             barsSvg += `<text x="${groupCenterX}" y="${height - 10}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="middle">${escapeHtml(lbl)}</text>`;
+@@ -413,14 +537,14 @@ const Reports = () => {
+     const navigate = useNavigate();
+ 
+     // Current date string
+-    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
++    const todayStr = useMemo(() => toLocalDateStr(new Date()), []);
+ 
+     // Active Aggregated View Mode: 'today' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+     const [viewMode, setViewMode] = useState('today');
+ 
+     // Statement Pickers State (Account Statement Style)
+-    const [selectedDayDate, setSelectedDayDate] = useState(() => new Date().toISOString().split('T')[0]);
+-    const [selectedWeekDate, setSelectedWeekDate] = useState(() => new Date().toISOString().split('T')[0]);
++    const [selectedDayDate, setSelectedDayDate] = useState(() => toLocalDateStr(new Date()));
++    const [selectedWeekDate, setSelectedWeekDate] = useState(() => toLocalDateStr(new Date()));
+     const [selectedMonthStr, setSelectedMonthStr] = useState(() => {
+         const d = new Date();
+         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+@@ -434,20 +558,24 @@ const Reports = () => {
+ 
+     // Interactive chart viewing interval state (independent of statement export)
+     const [selectedInterval, setSelectedInterval] = useState('STATEMENT');
++
++    // Charts in the exported document use this deliberately chosen range.
++    // Changing the on-screen chart interval never changes the PDF.
++    const [exportRange, setExportRange] = useState('STATEMENT');
+     const [customSingleDate, setCustomSingleDate] = useState(() => {
+         const d = new Date();
+         d.setDate(d.getDate() - 1);
+-        return d.toISOString().split('T')[0];
++        return toLocalDateStr(d);
+     });
+ 
+     // Daily Nutrition Logging Modal State (Strictly single-day resolution)
+     const [isLogNutritionModalOpen, setIsLogNutritionModalOpen] = useState(false);
+-    const [logNutritionTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
++    const [logNutritionTargetDate] = useState(() => toLocalDateStr(new Date()));
+     const [nutritionLogVersion, setNutritionLogVersion] = useState(0);
+ 
+     // Daily Water Logging Modal State (Strictly single-day resolution)
+     const [isLogWaterModalOpen, setIsLogWaterModalOpen] = useState(false);
+-    const [logWaterTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
++    const [logWaterTargetDate] = useState(() => toLocalDateStr(new Date()));
+ 
+     // Date Range Formatting Helpers (Clicked date is strictly the starting date of the 7-day week)
+     const getWeekRange = (dateStr) => {
+@@ -574,23 +702,16 @@ const Reports = () => {
+                         carbs: today.carbs, fats: today.fats
+                     });
+                 } else {
+-                    const offline = readOfflineDay(todayStr);
+-                    setWaterConsumedMl(offline.waterMl);
+-                    setTodayNutrition({
+-                        calories: offline.calories, protein: offline.protein,
+-                        carbs: offline.carbs, fats: offline.fats
+-                    });
++                    setWaterConsumedMl(0);
++                    setTodayNutrition({ calories: 0, protein: 0, carbs: 0, fats: 0 });
+                 }
+                 setNutritionLogVersion(v => v + 1);
+             })
+             .catch(err => {
+                 console.error('Failed to load persisted progress logs:', err);
+-                const offline = readOfflineDay(todayStr);
+-                setWaterConsumedMl(offline.waterMl);
+-                setTodayNutrition({
+-                    calories: offline.calories, protein: offline.protein,
+-                    carbs: offline.carbs, fats: offline.fats
+-                });
++                setWaterConsumedMl(0);
++                setTodayNutrition({ calories: 0, protein: 0, carbs: 0, fats: 0 });
++                setNutritionLogVersion(v => v + 1);
+             });
+         loadDays();
+         window.addEventListener('nutrimunch_progress_updated', loadDays);
+@@ -603,7 +724,7 @@ const Reports = () => {
+             fetchProgressDays()
+                 .then(days => {
+                     setBackendProgressLogs(days);
+-                    const today = days[todayStr] || readOfflineDay(todayStr);
++                    const today = days[todayStr] || EMPTY_DAY;
+                     setWaterConsumedMl(today.waterMl);
+                     setTodayNutrition({
+                         calories: today.calories, protein: today.protein,
+@@ -624,11 +745,11 @@ const Reports = () => {
+     }, [todayStr]);
+ 
+     // Helper: Retrieve real tracked data for any specific date string (YYYY-MM-DD)
+-    // The five criteria come from the persisted backend row. Pre-C6 browser
+-    // values are only a read-only offline fallback when the server has no row.
++    // The server is the ONLY source of truth for a clinical report. A date with
++    // no server row is "not logged"; browser-only caches are read solely by the
++    // logging modals, never silently merged into the statement.
+     const getRealDayMetrics = useCallback((dateStr) => {
+-        const persisted = backendProgressLogs[dateStr];
+-        const day = persisted || readOfflineDay(dateStr);
++        const day = backendProgressLogs[dateStr] || EMPTY_DAY;
+         const cals = Number(day.calories) || 0;
+         const prot = Number(day.protein) || 0;
+         const carbs = Number(day.carbs) || 0;
+@@ -665,10 +786,10 @@ const Reports = () => {
+             const cbConsumed = todayNutrition.carbs || realToday.carbs;
+             const fConsumed = todayNutrition.fats || realToday.fats;
+ 
+-            const wDeficit = Math.max(targetWaterMl - wConsumed, 0);
+-            const wPct = targetWaterMl > 0 ? Math.min(Math.round((wConsumed / targetWaterMl) * 100), 100) : 0;
+-            const cPct = targetCalories > 0 ? Math.min(Math.round((cConsumed / targetCalories) * 100), 100) : 0;
+-            const cRemaining = Math.max(targetCalories - cConsumed, 0);
++            const wDeficit = targetWaterMl - wConsumed;
++            const wPct = targetWaterMl > 0 ? Math.round((wConsumed / targetWaterMl) * 100) : 0;
++            const cPct = targetCalories > 0 ? Math.round((cConsumed / targetCalories) * 100) : 0;
++            const cRemaining = targetCalories - cConsumed;
+             const wLit = (wConsumed / 1000).toFixed(2);
+ 
+             return {
+@@ -677,6 +798,8 @@ const Reports = () => {
+                 dateLabel: `Today, ${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`,
+                 shortDate: 'Today',
+                 daysCount: 1,
++                periodTotals: { waterMl: wConsumed, calories: cConsumed, protein: pConsumed, carbs: cbConsumed, fats: fConsumed },
++                periodLoggedDays: (wConsumed > 0 || cConsumed > 0 || pConsumed > 0 || cbConsumed > 0 || fConsumed > 0) ? 1 : 0,
+                 isLive: true,
+                 waterConsumed: wConsumed,
+                 waterTarget: targetWaterMl,
+@@ -692,13 +815,13 @@ const Reports = () => {
+                 calorieRemaining: cRemaining,
+                 protein: pConsumed,
+                 cumulativeProtein: pConsumed,
+-                proteinPercent: targetProtein > 0 ? Math.min(Math.round((pConsumed / targetProtein) * 100), 100) : 0,
++                proteinPercent: targetProtein > 0 ? Math.round((pConsumed / targetProtein) * 100) : 0,
+                 carbs: cbConsumed,
+                 cumulativeCarbs: cbConsumed,
+-                carbsPercent: targetCarbs > 0 ? Math.min(Math.round((cbConsumed / targetCarbs) * 100), 100) : 0,
++                carbsPercent: targetCarbs > 0 ? Math.round((cbConsumed / targetCarbs) * 100) : 0,
+                 fats: fConsumed,
+                 cumulativeFats: fConsumed,
+-                fatsPercent: targetFats > 0 ? Math.min(Math.round((fConsumed / targetFats) * 100), 100) : 0,
++                fatsPercent: targetFats > 0 ? Math.round((fConsumed / targetFats) * 100) : 0,
+                 totalWaterLiters: wLit,
+                 avgWaterLiters: wLit,
+                 totalCalories: cConsumed.toLocaleString(),
+@@ -714,7 +837,10 @@ const Reports = () => {
+                 subtitle: "Real-time 24-hour log and live nutritional breakdown",
+                 loggedVisits: (wConsumed > 0 || cConsumed > 0) ? 'Active Today (1 Logged Day)' : '0 Logged Days (No entries recorded today)',
+                 demographicSummary: {
+-                    status: wPct >= 100 && cPct >= 90 ? 'Target Met (Optimal)' : ((wConsumed > 0 || cConsumed > 0) ? 'In Progress (Active Monitoring)' : 'No Intake Logged Today'),
++                    status: (wConsumed > 0 || cConsumed > 0)
++                        ? (wPct > 100 || cPct > 100 ? 'Above Target (Review)'
++                            : (wPct >= 100 && cPct >= 90 ? 'Target Met' : 'In Progress (Active Monitoring)'))
++                        : 'No Intake Logged Today',
+                     keyTakeaway: (wConsumed > 0 || cConsumed > 0) ? 'Live 24-hour intake telemetry actively synchronized with your clinical metabolic targets.' : 'No intake has been logged for today yet. Use the log buttons above to record your nutrition and water.',
+                     hydrationVerdict: `Consumed ${wLit} L of ${targets.water} L daily target (${wPct}% completed, ${wDeficit > 0 ? `${wDeficit} ml remaining` : 'Optimal hydration met'}).`,
+                     calorieVerdict: `Logged ${cConsumed} kcal of ${targetCalories} kcal daily target (${cPct}% met, ${cRemaining > 0 ? `${cRemaining} kcal remaining` : 'Target energy reached'}).`,
+@@ -729,8 +855,8 @@ const Reports = () => {
+             const dayWater = isToday && waterConsumedMl > 0 ? waterConsumedMl : dayMetrics.waterMl;
+             const dayNutr = isToday && todayNutrition.calories > 0 ? todayNutrition : dayMetrics;
+ 
+-            const dWaterPct = targetWaterMl > 0 ? Math.min(Math.round((dayWater / targetWaterMl) * 100), 100) : 0;
+-            const dCalPct = targetCalories > 0 ? Math.min(Math.round((dayNutr.calories / targetCalories) * 100), 100) : 0;
++            const dWaterPct = targetWaterMl > 0 ? Math.round((dayWater / targetWaterMl) * 100) : 0;
++            const dCalPct = targetCalories > 0 ? Math.round((dayNutr.calories / targetCalories) * 100) : 0;
+             const dDateFormatted = new Date(selectedDayDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+             const dLit = (dayWater / 1000).toFixed(2);
+ 
+@@ -740,28 +866,30 @@ const Reports = () => {
+                 dateLabel: dDateFormatted,
+                 shortDate: selectedDayDate,
+                 daysCount: 1,
++                periodTotals: { waterMl: dayWater, calories: dayNutr.calories, protein: dayNutr.protein, carbs: dayNutr.carbs, fats: dayNutr.fats },
++                periodLoggedDays: (dayWater > 0 || dayNutr.calories > 0 || dayNutr.protein > 0 || dayNutr.carbs > 0 || dayNutr.fats > 0) ? 1 : 0,
+                 isLive: isToday,
+                 waterConsumed: dayWater,
+                 waterTarget: targetWaterMl,
+                 cumulativeWaterConsumed: dLit,
+                 cumulativeWaterTarget: targets.water,
+                 waterPercent: dWaterPct,
+-                waterDeficit: Math.max(targetWaterMl - dayWater, 0),
++                waterDeficit: targetWaterMl - dayWater,
+                 calories: dayNutr.calories,
+                 calorieTarget: targetCalories,
+                 cumulativeCalories: dayNutr.calories,
+                 cumulativeCalorieTarget: targetCalories,
+                 caloriePercent: dCalPct,
+-                calorieRemaining: Math.max(targetCalories - dayNutr.calories, 0),
++                calorieRemaining: targetCalories - dayNutr.calories,
+                 protein: dayNutr.protein,
+                 cumulativeProtein: dayNutr.protein,
+-                proteinPercent: targetProtein > 0 ? Math.min(Math.round((dayNutr.protein / targetProtein) * 100), 100) : 0,
++                proteinPercent: targetProtein > 0 ? Math.round((dayNutr.protein / targetProtein) * 100) : 0,
+                 carbs: dayNutr.carbs,
+                 cumulativeCarbs: dayNutr.carbs,
+-                carbsPercent: targetCarbs > 0 ? Math.min(Math.round((dayNutr.carbs / targetCarbs) * 100), 100) : 0,
++                carbsPercent: targetCarbs > 0 ? Math.round((dayNutr.carbs / targetCarbs) * 100) : 0,
+                 fats: dayNutr.fats,
+                 cumulativeFats: dayNutr.fats,
+-                fatsPercent: targetFats > 0 ? Math.min(Math.round((dayNutr.fats / targetFats) * 100), 100) : 0,
++                fatsPercent: targetFats > 0 ? Math.round((dayNutr.fats / targetFats) * 100) : 0,
+                 totalWaterLiters: dLit,
+                 avgWaterLiters: dLit,
+                 totalCalories: dayNutr.calories.toLocaleString(),
+@@ -777,7 +905,10 @@ const Reports = () => {
+                 subtitle: "Single-day verified intake and biometric audit",
+                 loggedVisits: (dayNutr.calories > 0 || dayWater > 0) ? (isToday ? 'Active Today' : '1 Logged Day') : '0 Logged Days (No entries recorded)',
+                 demographicSummary: {
+-                    status: dWaterPct >= 100 && dCalPct >= 90 ? 'Target Met (Optimal)' : ((dayNutr.calories > 0 || dayWater > 0) ? 'Daily Statement Verified' : 'No Data Logged for This Day'),
++                    status: (dayNutr.calories > 0 || dayWater > 0)
++                        ? (dWaterPct > 100 || dCalPct > 100 ? 'Above Target (Review)'
++                            : (dWaterPct >= 100 && dCalPct >= 90 ? 'Target Met' : 'Daily Statement Verified'))
++                        : 'No Data Logged for This Day',
+                     keyTakeaway: (dayNutr.calories > 0 || dayWater > 0) ? `Verified single-day intake and clinical biometric compliance for ${dDateFormatted}.` : `No intake data recorded for ${dDateFormatted}.`,
+                     hydrationVerdict: `Consumed ${dLit} L of ${targets.water} L daily target (${dWaterPct}% completed).`,
+                     calorieVerdict: `Caloric energy: ${dayNutr.calories} kcal of ${targetCalories} kcal target (${dCalPct}% met).`,
+@@ -804,19 +935,22 @@ const Reports = () => {
+                 if (m.hasLog) loggedDays++;
+             }
+ 
++            const divisor = Math.max(loggedDays, 1);
++            const trackedTargetW = Math.round(targets.water * divisor * 10) / 10;
++            const trackedTargetCal = targetCalories * divisor;
+             const totTargetW = Math.round(targets.water * 7 * 10) / 10;
+             const totWLiter = (totW / 1000).toFixed(2);
+-            const avgWLiter = (totW / 7 / 1000).toFixed(2);
++            const avgWLiter = (totW / divisor / 1000).toFixed(2);
+             const totTargetCal = targetCalories * 7;
+-            const avgCal = Math.round(totCal / 7);
+-            const avgProt = Math.round(totProt / 7);
+-            const avgCarb = Math.round(totCarb / 7);
+-            const avgFat = Math.round(totFat / 7);
+-            const wPct = totTargetW > 0 ? Math.min(Math.round(((totW / 1000) / totTargetW) * 100), 100) : 0;
+-            const cPct = totTargetCal > 0 ? Math.min(Math.round((totCal / totTargetCal) * 100), 100) : 0;
+-            const pPct = (targetProtein * 7) > 0 ? Math.min(Math.round((totProt / (targetProtein * 7)) * 100), 100) : 0;
+-            const carbPct = (targetCarbs * 7) > 0 ? Math.min(Math.round((totCarb / (targetCarbs * 7)) * 100), 100) : 0;
+-            const fatPct = (targetFats * 7) > 0 ? Math.min(Math.round((totFat / (targetFats * 7)) * 100), 100) : 0;
++            const avgCal = Math.round(totCal / divisor);
++            const avgProt = Math.round(totProt / divisor);
++            const avgCarb = Math.round(totCarb / divisor);
++            const avgFat = Math.round(totFat / divisor);
++            const wPct = trackedTargetW > 0 ? Math.round(((totW / 1000) / trackedTargetW) * 100) : 0;
++            const cPct = trackedTargetCal > 0 ? Math.round((totCal / trackedTargetCal) * 100) : 0;
++            const pPct = (targetProtein * divisor) > 0 ? Math.round((totProt / (targetProtein * divisor)) * 100) : 0;
++            const carbPct = (targetCarbs * divisor) > 0 ? Math.round((totCarb / (targetCarbs * divisor)) * 100) : 0;
++            const fatPct = (targetFats * divisor) > 0 ? Math.round((totFat / (targetFats * divisor)) * 100) : 0;
+ 
+             return {
+                 mode: 'weekly',
+@@ -824,19 +958,21 @@ const Reports = () => {
+                 dateLabel: weekRange.formatted,
+                 shortDate: weekRange.shortLabel,
+                 daysCount: 7,
++                periodTotals: { waterMl: totW, calories: totCal, protein: totProt, carbs: totCarb, fats: totFat },
++                periodLoggedDays: loggedDays,
+                 isLive: false,
+-                waterConsumed: Math.round(totW / 7),
++                waterConsumed: Math.round(totW / divisor),
+                 waterTarget: targetWaterMl,
+                 cumulativeWaterConsumed: totWLiter,
+                 cumulativeWaterTarget: totTargetW,
+                 waterPercent: wPct,
+-                waterDeficit: Math.max(Math.round(totTargetW * 1000) - totW, 0),
++                waterDeficit: Math.round(trackedTargetW * 1000) - totW,
+                 calories: avgCal,
+                 calorieTarget: targetCalories,
+                 cumulativeCalories: totCal,
+                 cumulativeCalorieTarget: totTargetCal,
+                 caloriePercent: cPct,
+-                calorieRemaining: Math.max(totTargetCal - totCal, 0),
++                calorieRemaining: trackedTargetCal - totCal,
+                 protein: avgProt,
+                 cumulativeProtein: totProt,
+                 proteinPercent: pPct,
+@@ -863,7 +999,7 @@ const Reports = () => {
+                 demographicSummary: {
+                     status: loggedDays > 0 ? `Compliance ${cPct}% (${loggedDays}/7 Days Logged)` : 'No Logs for this Week',
+                     keyTakeaway: `This 7-day weekly statement captures your aggregated fluid and nutritional demographics for ${weekRange.formatted}.`,
+-                    hydrationVerdict: `You consumed ${totWLiter} L out of your ${totTargetW} L weekly target (${wPct}% compliance), maintaining a daily average of ${Math.round(totW / 7)} ml/day against your ${targetWaterMl} ml/day target.`,
++                    hydrationVerdict: `You consumed ${totWLiter} L out of your ${totTargetW} L weekly target (${wPct}% compliance), maintaining a daily average of ${Math.round(totW / divisor)} ml/day against your ${targetWaterMl} ml/day target.`,
+                     calorieVerdict: `Total weekly energy reached ${totCal.toLocaleString()} kcal out of ${totTargetCal.toLocaleString()} kcal cumulative target, averaging ${avgCal} kcal/day.`,
+                     macroVerdict: `Macronutrient delivery: Protein ${totProt}g total (${avgProt}g/day, ${pPct}%), Carbs ${totCarb}g total (${avgCarb}g/day, ${carbPct}%), Fats ${totFat}g total (${avgFat}g/day, ${fatPct}%).`
+                 }
+@@ -888,19 +1024,22 @@ const Reports = () => {
+                 if (metrics.hasLog) loggedDays++;
+             }
+ 
++            const divisor = Math.max(loggedDays, 1);
++            const trackedTargetW = Math.round(targets.water * divisor * 10) / 10;
++            const trackedTargetCal = targetCalories * divisor;
+             const totTargetW = Math.round(targets.water * daysInMonth * 10) / 10;
+             const totWLiter = (totW / 1000).toFixed(2);
+-            const avgWLiter = (totW / daysInMonth / 1000).toFixed(2);
++            const avgWLiter = (totW / divisor / 1000).toFixed(2);
+             const totTargetCal = targetCalories * daysInMonth;
+-            const avgCal = Math.round(totCal / daysInMonth);
+-            const avgProt = Math.round(totProt / daysInMonth);
+-            const avgCarb = Math.round(totCarb / daysInMonth);
+-            const avgFat = Math.round(totFat / daysInMonth);
+-            const wPct = totTargetW > 0 ? Math.min(Math.round(((totW / 1000) / totTargetW) * 100), 100) : 0;
+-            const cPct = totTargetCal > 0 ? Math.min(Math.round((totCal / totTargetCal) * 100), 100) : 0;
+-            const pPct = (targetProtein * daysInMonth) > 0 ? Math.min(Math.round((totProt / (targetProtein * daysInMonth)) * 100), 100) : 0;
+-            const carbPct = (targetCarbs * daysInMonth) > 0 ? Math.min(Math.round((totCarb / (targetCarbs * daysInMonth)) * 100), 100) : 0;
+-            const fatPct = (targetFats * daysInMonth) > 0 ? Math.min(Math.round((totFat / (targetFats * daysInMonth)) * 100), 100) : 0;
++            const avgCal = Math.round(totCal / divisor);
++            const avgProt = Math.round(totProt / divisor);
++            const avgCarb = Math.round(totCarb / divisor);
++            const avgFat = Math.round(totFat / divisor);
++            const wPct = trackedTargetW > 0 ? Math.round(((totW / 1000) / trackedTargetW) * 100) : 0;
++            const cPct = trackedTargetCal > 0 ? Math.round((totCal / trackedTargetCal) * 100) : 0;
++            const pPct = (targetProtein * divisor) > 0 ? Math.round((totProt / (targetProtein * divisor)) * 100) : 0;
++            const carbPct = (targetCarbs * divisor) > 0 ? Math.round((totCarb / (targetCarbs * divisor)) * 100) : 0;
++            const fatPct = (targetFats * divisor) > 0 ? Math.round((totFat / (targetFats * divisor)) * 100) : 0;
+ 
+             return {
+                 mode: 'monthly',
+@@ -908,19 +1047,21 @@ const Reports = () => {
+                 dateLabel: monthLabel,
+                 shortDate: selectedMonthStr,
+                 daysCount: daysInMonth,
++                periodTotals: { waterMl: totW, calories: totCal, protein: totProt, carbs: totCarb, fats: totFat },
++                periodLoggedDays: loggedDays,
+                 isLive: false,
+-                waterConsumed: Math.round(totW / daysInMonth),
++                waterConsumed: Math.round(totW / divisor),
+                 waterTarget: targetWaterMl,
+                 cumulativeWaterConsumed: totWLiter,
+                 cumulativeWaterTarget: totTargetW,
+                 waterPercent: wPct,
+-                waterDeficit: Math.max(Math.round(totTargetW * 1000) - totW, 0),
++                waterDeficit: Math.round(trackedTargetW * 1000) - totW,
+                 calories: avgCal,
+                 calorieTarget: targetCalories,
+                 cumulativeCalories: totCal,
+                 cumulativeCalorieTarget: totTargetCal,
+                 caloriePercent: cPct,
+-                calorieRemaining: Math.max(totTargetCal - totCal, 0),
++                calorieRemaining: trackedTargetCal - totCal,
+                 protein: avgProt,
+                 cumulativeProtein: totProt,
+                 proteinPercent: pPct,
+@@ -947,7 +1088,7 @@ const Reports = () => {
+                 demographicSummary: {
+                     status: loggedDays > 0 ? `Compliance ${cPct}% (${loggedDays}/${daysInMonth} Days Logged)` : 'No Logs for this Month',
+                     keyTakeaway: `Aggregated monthly statement summarizing metabolic intake for ${monthLabel}.`,
+-                    hydrationVerdict: `Monthly fluid intake reached ${totWLiter} L of ${totTargetW} L target (${wPct}% compliance, avg ${Math.round(totW / daysInMonth)} ml/day).`,
++                    hydrationVerdict: `Monthly fluid intake reached ${totWLiter} L of ${totTargetW} L target (${wPct}% compliance, avg ${Math.round(totW / divisor)} ml/day).`,
+                     calorieVerdict: `Total energy consumed: ${totCal.toLocaleString()} kcal out of ${totTargetCal.toLocaleString()} kcal monthly allowance (avg ${avgCal} kcal/day).`,
+                     macroVerdict: `Macronutrient compliance: Protein ${totProt}g total (${pPct}%), Carbs ${totCarb}g total (${carbPct}%), Fats ${totFat}g total (${fatPct}%).`
+                 }
+@@ -975,19 +1116,22 @@ const Reports = () => {
+                 }
+             }
+ 
++            const divisor = Math.max(loggedDays, 1);
++            const trackedTargetW = Math.round(targets.water * divisor * 10) / 10;
++            const trackedTargetCal = targetCalories * divisor;
+             const totTargetW = Math.round(targets.water * totalDaysInQuarter * 10) / 10;
+             const totWLiter = (totW / 1000).toFixed(2);
+-            const avgWLiter = (totW / totalDaysInQuarter / 1000).toFixed(2);
++            const avgWLiter = (totW / divisor / 1000).toFixed(2);
+             const totTargetCal = targetCalories * totalDaysInQuarter;
+-            const avgCal = Math.round(totCal / totalDaysInQuarter);
+-            const avgProt = Math.round(totProt / totalDaysInQuarter);
+-            const avgCarb = Math.round(totCarb / totalDaysInQuarter);
+-            const avgFat = Math.round(totFat / totalDaysInQuarter);
+-            const wPct = totTargetW > 0 ? Math.min(Math.round(((totW / 1000) / totTargetW) * 100), 100) : 0;
+-            const cPct = totTargetCal > 0 ? Math.min(Math.round((totCal / totTargetCal) * 100), 100) : 0;
+-            const pPct = (targetProtein * totalDaysInQuarter) > 0 ? Math.min(Math.round((totProt / (targetProtein * totalDaysInQuarter)) * 100), 100) : 0;
+-            const carbPct = (targetCarbs * totalDaysInQuarter) > 0 ? Math.min(Math.round((totCarb / (targetCarbs * totalDaysInQuarter)) * 100), 100) : 0;
+-            const fatPct = (targetFats * totalDaysInQuarter) > 0 ? Math.min(Math.round((totFat / (targetFats * totalDaysInQuarter)) * 100), 100) : 0;
++            const avgCal = Math.round(totCal / divisor);
++            const avgProt = Math.round(totProt / divisor);
++            const avgCarb = Math.round(totCarb / divisor);
++            const avgFat = Math.round(totFat / divisor);
++            const wPct = trackedTargetW > 0 ? Math.round(((totW / 1000) / trackedTargetW) * 100) : 0;
++            const cPct = trackedTargetCal > 0 ? Math.round((totCal / trackedTargetCal) * 100) : 0;
++            const pPct = (targetProtein * divisor) > 0 ? Math.round((totProt / (targetProtein * divisor)) * 100) : 0;
++            const carbPct = (targetCarbs * divisor) > 0 ? Math.round((totCarb / (targetCarbs * divisor)) * 100) : 0;
++            const fatPct = (targetFats * divisor) > 0 ? Math.round((totFat / (targetFats * divisor)) * 100) : 0;
+ 
+             return {
+                 mode: 'quarterly',
+@@ -995,19 +1139,21 @@ const Reports = () => {
+                 dateLabel: quarterLabel,
+                 shortDate: `${selectedQuarter} ${selectedQuarterYear}`,
+                 daysCount: totalDaysInQuarter,
++                periodTotals: { waterMl: totW, calories: totCal, protein: totProt, carbs: totCarb, fats: totFat },
++                periodLoggedDays: loggedDays,
+                 isLive: false,
+-                waterConsumed: Math.round(totW / totalDaysInQuarter),
++                waterConsumed: Math.round(totW / divisor),
+                 waterTarget: targetWaterMl,
+                 cumulativeWaterConsumed: totWLiter,
+                 cumulativeWaterTarget: totTargetW,
+                 waterPercent: wPct,
+-                waterDeficit: Math.max(Math.round(totTargetW * 1000) - totW, 0),
++                waterDeficit: Math.round(trackedTargetW * 1000) - totW,
+                 calories: avgCal,
+                 calorieTarget: targetCalories,
+                 cumulativeCalories: totCal,
+                 cumulativeCalorieTarget: totTargetCal,
+                 caloriePercent: cPct,
+-                calorieRemaining: Math.max(totTargetCal - totCal, 0),
++                calorieRemaining: trackedTargetCal - totCal,
+                 protein: avgProt,
+                 cumulativeProtein: totProt,
+                 proteinPercent: pPct,
+@@ -1059,19 +1205,22 @@ const Reports = () => {
+             }
+         }
+ 
++        const divisor = Math.max(loggedDays, 1);
++        const trackedTargetW = Math.round(targets.water * divisor * 10) / 10;
++        const trackedTargetCal = targetCalories * divisor;
+         const totTargetW = Math.round(targets.water * totalDaysInYear * 10) / 10;
+         const totWLiter = (totW / 1000).toFixed(2);
+-        const avgWLiter = (totW / totalDaysInYear / 1000).toFixed(2);
++        const avgWLiter = (totW / divisor / 1000).toFixed(2);
+         const totTargetCal = targetCalories * totalDaysInYear;
+-        const avgCal = Math.round(totCal / totalDaysInYear);
+-        const avgProt = Math.round(totProt / totalDaysInYear);
+-        const avgCarb = Math.round(totCarb / totalDaysInYear);
+-        const avgFat = Math.round(totFat / totalDaysInYear);
+-        const wPct = totTargetW > 0 ? Math.min(Math.round(((totW / 1000) / totTargetW) * 100), 100) : 0;
+-        const cPct = totTargetCal > 0 ? Math.min(Math.round((totCal / totTargetCal) * 100), 100) : 0;
+-        const pPct = (targetProtein * totalDaysInYear) > 0 ? Math.min(Math.round((totProt / (targetProtein * totalDaysInYear)) * 100), 100) : 0;
+-        const carbPct = (targetCarbs * totalDaysInYear) > 0 ? Math.min(Math.round((totCarb / (targetCarbs * totalDaysInYear)) * 100), 100) : 0;
+-        const fatPct = (targetFats * totalDaysInYear) > 0 ? Math.min(Math.round((totFat / (targetFats * totalDaysInYear)) * 100), 100) : 0;
++        const avgCal = Math.round(totCal / divisor);
++        const avgProt = Math.round(totProt / divisor);
++        const avgCarb = Math.round(totCarb / divisor);
++        const avgFat = Math.round(totFat / divisor);
++        const wPct = trackedTargetW > 0 ? Math.round(((totW / 1000) / trackedTargetW) * 100) : 0;
++        const cPct = trackedTargetCal > 0 ? Math.round((totCal / trackedTargetCal) * 100) : 0;
++        const pPct = (targetProtein * divisor) > 0 ? Math.round((totProt / (targetProtein * divisor)) * 100) : 0;
++        const carbPct = (targetCarbs * divisor) > 0 ? Math.round((totCarb / (targetCarbs * divisor)) * 100) : 0;
++        const fatPct = (targetFats * divisor) > 0 ? Math.round((totFat / (targetFats * divisor)) * 100) : 0;
+ 
+         return {
+             mode: 'yearly',
+@@ -1079,19 +1228,21 @@ const Reports = () => {
+             dateLabel: `Calendar Year ${selectedYear}`,
+             shortDate: selectedYear,
+             daysCount: totalDaysInYear,
++            periodTotals: { waterMl: totW, calories: totCal, protein: totProt, carbs: totCarb, fats: totFat },
++            periodLoggedDays: loggedDays,
+             isLive: false,
+-            waterConsumed: Math.round(totW / totalDaysInYear),
++            waterConsumed: Math.round(totW / divisor),
+             waterTarget: targetWaterMl,
+             cumulativeWaterConsumed: totWLiter,
+             cumulativeWaterTarget: totTargetW,
+             waterPercent: wPct,
+-            waterDeficit: Math.max(Math.round(totTargetW * 1000) - totW, 0),
++            waterDeficit: Math.round(trackedTargetW * 1000) - totW,
+             calories: avgCal,
+             calorieTarget: targetCalories,
+             cumulativeCalories: totCal,
+             cumulativeCalorieTarget: totTargetCal,
+             caloriePercent: cPct,
+-            calorieRemaining: Math.max(totTargetCal - totCal, 0),
++            calorieRemaining: trackedTargetCal - totCal,
+             protein: avgProt,
+             cumulativeProtein: totProt,
+             proteinPercent: pPct,
+@@ -1129,6 +1280,14 @@ const Reports = () => {
+         nutritionLogVersion, getRealDayMetrics, targets.water
+     ]);
+ 
++    // Single source of truth for period-aware targets / verdicts.
++    const period = buildPeriodSummary(
++        activeStatementData.periodTotals,
++        activeStatementData.daysCount,
++        activeStatementData.periodLoggedDays,
++        targets);
++    const statementNarrative = buildStatementNarrative(period, activeStatementData.dateLabel);
++
+     // Backwards-compatible alias for existing components
+     const aggregatedMetrics = activeStatementData;
+ 
+@@ -1144,34 +1303,17 @@ const Reports = () => {
+         const fatsData = [];
+ 
+         if (viewMode === 'today' || viewMode === 'daily') {
+-            // Same totals as the statement tables (activeStatementData), so tables and charts always agree
+-            const times = ['Morning (8 AM)', 'Midday (12 PM)', 'Afternoon (4 PM)', 'Night (8 PM)'];
+-            const totalCals = Number(activeStatementData.calories) || 0;
+-            const totalWater = Number(activeStatementData.waterConsumed) || 0;
+-            const totalProt = Number(activeStatementData.protein) || 0;
+-            const totalCarb = Number(activeStatementData.carbs) || 0;
+-            const totalFat = Number(activeStatementData.fats) || 0;
+-
+-            times.forEach((t, idx) => {
+-                labels.push(t);
+-                hydrationTargetLine.push(targetWaterMl);
+-                caloriesTargetLine.push(targetCalories);
+-
+-                if (totalCals === 0 && totalWater === 0) {
+-                    hydrationActual.push(0);
+-                    caloriesActual.push(0);
+-                    proteinData.push(0);
+-                    carbsData.push(0);
+-                    fatsData.push(0);
+-                } else {
+-                    const factor = (idx + 1) / times.length;
+-                    hydrationActual.push(Math.round(totalWater * factor));
+-                    caloriesActual.push(Math.round(totalCals * factor));
+-                    proteinData.push(Math.round(totalProt * factor));
+-                    carbsData.push(Math.round(totalCarb * factor));
+-                    fatsData.push(Math.round(totalFat * factor));
+-                }
+-            });
++            // C6 stores ONE row per day. There are no intra-day timestamps, so a
++            // 4-point "Morning/Midday/Afternoon/Night" curve would be fabricated.
++            // Emit a single real daily total per metric instead.
++            labels.push(viewMode === 'today' ? 'Today (daily total)' : 'Selected day (daily total)');
++            hydrationActual.push(Math.round(Number(activeStatementData.waterConsumed) || 0));
++            hydrationTargetLine.push(targetWaterMl);
++            caloriesActual.push(Math.round(Number(activeStatementData.calories) || 0));
++            caloriesTargetLine.push(targetCalories);
++            proteinData.push(Math.round(Number(activeStatementData.protein) || 0));
++            carbsData.push(Math.round(Number(activeStatementData.carbs) || 0));
++            fatsData.push(Math.round(Number(activeStatementData.fats) || 0));
+         } else if (viewMode === 'weekly') {
+             const wk = getWeekRange(selectedWeekDate);
+             const [y, m, dNum] = wk.startDate.split('-').map(Number);
+@@ -1225,16 +1367,17 @@ const Reports = () => {
+             for (let i = 0, w = 1; i < quarterDays.length; i += 7, w++) {
+                 const bucket = quarterDays.slice(i, i + 7);
+                 labels.push(`Wk ${w}`);
+-                let wWater = 0, wCal = 0, wProt = 0, wCarbs = 0, wFats = 0;
++                let wWater = 0, wCal = 0, wProt = 0, wCarbs = 0, wFats = 0, logged = 0;
+                 bucket.forEach(dStr => {
+                     const metrics = getRealDayMetrics(dStr);
++                    if (metrics.hasLog) logged++;
+                     wWater += metrics.waterMl;
+                     wCal += metrics.calories;
+                     wProt += metrics.protein;
+                     wCarbs += metrics.carbs;
+                     wFats += metrics.fats;
+                 });
+-                const n = bucket.length;
++                const n = Math.max(logged, 1);
+                 hydrationActual.push(Math.round(wWater / n));
+                 hydrationTargetLine.push(targetWaterMl);
+                 caloriesActual.push(Math.round(wCal / n));
+@@ -1250,23 +1393,24 @@ const Reports = () => {
+                 labels.push(mName);
+                 const m = idx + 1;
+                 const daysInM = new Date(yNum, m, 0).getDate();
+-                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0;
++                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0, logged = 0;
+                 for (let d = 1; d <= daysInM; d++) {
+                     const dStr = `${yNum}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                     const metrics = getRealDayMetrics(dStr);
++                    if (metrics.hasLog) logged++;
+                     mWater += metrics.waterMl;
+                     mCal += metrics.calories;
+                     mProt += metrics.protein;
+                     mCarbs += metrics.carbs;
+                     mFats += metrics.fats;
+                 }
+-                hydrationActual.push(Math.round(mWater / daysInM));
++                hydrationActual.push(Math.round(mWater / Math.max(logged, 1)));
+                 hydrationTargetLine.push(targetWaterMl);
+-                caloriesActual.push(Math.round(mCal / daysInM));
++                caloriesActual.push(Math.round(mCal / Math.max(logged, 1)));
+                 caloriesTargetLine.push(targetCalories);
+-                proteinData.push(Math.round(mProt / daysInM));
+-                carbsData.push(Math.round(mCarbs / daysInM));
+-                fatsData.push(Math.round(mFats / daysInM));
++                proteinData.push(Math.round(mProt / Math.max(logged, 1)));
++                carbsData.push(Math.round(mCarbs / Math.max(logged, 1)));
++                fatsData.push(Math.round(mFats / Math.max(logged, 1)));
+             });
+         }
+ 
+@@ -1285,9 +1429,10 @@ const Reports = () => {
+         selectedDayDate, todayStr, targetWaterMl, targetCalories, getRealDayMetrics, activeStatementData
+     ]);
+ 
+-    // On-Screen Interactive Chart Data: Synchronized with Real Tracked Data
+-    const chartData = useMemo(() => {
+-        if (selectedInterval === 'STATEMENT') {
++    // Single series builder shared by the on-screen chart and the exported
++    // report, so the two can never silently disagree about the period.
++    const buildChartData = (interval) => {
++        if (interval === 'STATEMENT') {
+             return pdfStatementChartData;
+         }
+ 
+@@ -1300,33 +1445,21 @@ const Reports = () => {
+         const carbsData = [];
+         const fatsData = [];
+ 
+-        if (selectedInterval === '1D') {
+-            const times = ['Morning (8 AM)', 'Midday (12 PM)', 'Afternoon (4 PM)', 'Night (8 PM)'];
++        if (interval === '1D') {
+             const dayMetrics = getRealDayMetrics(todayStr);
+-            times.forEach((t, idx) => {
+-                labels.push(t);
+-                hydrationTargetLine.push(targetWaterMl);
+-                caloriesTargetLine.push(targetCalories);
+-                if (dayMetrics.calories === 0 && dayMetrics.waterMl === 0) {
+-                    hydrationActual.push(0);
+-                    caloriesActual.push(0);
+-                    proteinData.push(0);
+-                    carbsData.push(0);
+-                    fatsData.push(0);
+-                } else {
+-                    const factor = (idx + 1) / times.length;
+-                    hydrationActual.push(Math.round(dayMetrics.waterMl * factor));
+-                    caloriesActual.push(Math.round(dayMetrics.calories * factor));
+-                    proteinData.push(Math.round(dayMetrics.protein * factor));
+-                    carbsData.push(Math.round(dayMetrics.carbs * factor));
+-                    fatsData.push(Math.round(dayMetrics.fats * factor));
+-                }
+-            });
+-        } else if (selectedInterval === '1W') {
++            labels.push('Today (daily total)');
++            hydrationActual.push(dayMetrics.waterMl);
++            hydrationTargetLine.push(targetWaterMl);
++            caloriesActual.push(dayMetrics.calories);
++            caloriesTargetLine.push(targetCalories);
++            proteinData.push(dayMetrics.protein);
++            carbsData.push(dayMetrics.carbs);
++            fatsData.push(dayMetrics.fats);
++        } else if (interval === '1W') {
+             for (let i = 6; i >= 0; i--) {
+                 const d = new Date();
+                 d.setDate(d.getDate() - i);
+-                const dStr = d.toISOString().split('T')[0];
++                const dStr = toLocalDateStr(d);
+                 labels.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+ 
+                 const m = getRealDayMetrics(dStr);
+@@ -1338,11 +1471,11 @@ const Reports = () => {
+                 carbsData.push(m.carbs);
+                 fatsData.push(m.fats);
+             }
+-        } else if (selectedInterval === '2W') {
++        } else if (interval === '2W') {
+             for (let i = 13; i >= 0; i--) {
+                 const d = new Date();
+                 d.setDate(d.getDate() - i);
+-                const dStr = d.toISOString().split('T')[0];
++                const dStr = toLocalDateStr(d);
+                 labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+ 
+                 const m = getRealDayMetrics(dStr);
+@@ -1354,11 +1487,11 @@ const Reports = () => {
+                 carbsData.push(m.carbs);
+                 fatsData.push(m.fats);
+             }
+-        } else if (selectedInterval === '3W') {
++        } else if (interval === '3W') {
+             for (let i = 20; i >= 0; i--) {
+                 const d = new Date();
+                 d.setDate(d.getDate() - i);
+-                const dStr = d.toISOString().split('T')[0];
++                const dStr = toLocalDateStr(d);
+                 labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+ 
+                 const m = getRealDayMetrics(dStr);
+@@ -1370,11 +1503,11 @@ const Reports = () => {
+                 carbsData.push(m.carbs);
+                 fatsData.push(m.fats);
+             }
+-        } else if (selectedInterval === '1M') {
++        } else if (interval === '1M') {
+             for (let i = 29; i >= 0; i--) {
+                 const d = new Date();
+                 d.setDate(d.getDate() - i);
+-                const dStr = d.toISOString().split('T')[0];
++                const dStr = toLocalDateStr(d);
+                 labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+ 
+                 const m = getRealDayMetrics(dStr);
+@@ -1386,30 +1519,31 @@ const Reports = () => {
+                 carbsData.push(m.carbs);
+                 fatsData.push(m.fats);
+             }
+-        } else if (selectedInterval === '3M') {
++        } else if (interval === '3M') {
+             for (let w = 11; w >= 0; w--) {
+                 labels.push(`Wk -${w}`);
+-                let wWater = 0, wCal = 0, wProt = 0, wCarbs = 0, wFats = 0;
++                let wWater = 0, wCal = 0, wProt = 0, wCarbs = 0, wFats = 0, logged = 0;
+                 for (let day = 0; day < 7; day++) {
+                     const d = new Date();
+                     d.setDate(d.getDate() - (w * 7 + day));
+-                    const dStr = d.toISOString().split('T')[0];
++                    const dStr = toLocalDateStr(d);
+                     const m = getRealDayMetrics(dStr);
++                    if (m.hasLog) logged++;
+                     wWater += m.waterMl;
+                     wCal += m.calories;
+                     wProt += m.protein;
+                     wCarbs += m.carbs;
+                     wFats += m.fats;
+                 }
+-                hydrationActual.push(Math.round(wWater / 7));
++                hydrationActual.push(Math.round(wWater / Math.max(logged, 1)));
+                 hydrationTargetLine.push(targetWaterMl);
+-                caloriesActual.push(Math.round(wCal / 7));
++                caloriesActual.push(Math.round(wCal / Math.max(logged, 1)));
+                 caloriesTargetLine.push(targetCalories);
+-                proteinData.push(Math.round(wProt / 7));
+-                carbsData.push(Math.round(wCarbs / 7));
+-                fatsData.push(Math.round(wFats / 7));
++                proteinData.push(Math.round(wProt / Math.max(logged, 1)));
++                carbsData.push(Math.round(wCarbs / Math.max(logged, 1)));
++                fatsData.push(Math.round(wFats / Math.max(logged, 1)));
+             }
+-        } else if (selectedInterval === '6M') {
++        } else if (interval === '6M') {
+             for (let m = 5; m >= 0; m--) {
+                 const d = new Date();
+                 d.setMonth(d.getMonth() - m);
+@@ -1418,25 +1552,26 @@ const Reports = () => {
+                 const month = d.getMonth() + 1;
+                 const daysInM = new Date(y, month, 0).getDate();
+ 
+-                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0;
++                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0, logged = 0;
+                 for (let day = 1; day <= daysInM; day++) {
+                     const dStr = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                     const metrics = getRealDayMetrics(dStr);
++                    if (metrics.hasLog) logged++;
+                     mWater += metrics.waterMl;
+                     mCal += metrics.calories;
+                     mProt += metrics.protein;
+                     mCarbs += metrics.carbs;
+                     mFats += metrics.fats;
+                 }
+-                hydrationActual.push(Math.round(mWater / daysInM));
++                hydrationActual.push(Math.round(mWater / Math.max(logged, 1)));
+                 hydrationTargetLine.push(targetWaterMl);
+-                caloriesActual.push(Math.round(mCal / daysInM));
++                caloriesActual.push(Math.round(mCal / Math.max(logged, 1)));
+                 caloriesTargetLine.push(targetCalories);
+-                proteinData.push(Math.round(mProt / daysInM));
+-                carbsData.push(Math.round(mCarbs / daysInM));
+-                fatsData.push(Math.round(mFats / daysInM));
++                proteinData.push(Math.round(mProt / Math.max(logged, 1)));
++                carbsData.push(Math.round(mCarbs / Math.max(logged, 1)));
++                fatsData.push(Math.round(mFats / Math.max(logged, 1)));
+             }
+-        } else if (selectedInterval === '1Y') {
++        } else if (interval === '1Y') {
+             for (let m = 11; m >= 0; m--) {
+                 const d = new Date();
+                 d.setMonth(d.getMonth() - m);
+@@ -1445,48 +1580,37 @@ const Reports = () => {
+                 const month = d.getMonth() + 1;
+                 const daysInM = new Date(y, month, 0).getDate();
+ 
+-                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0;
++                let mWater = 0, mCal = 0, mProt = 0, mCarbs = 0, mFats = 0, logged = 0;
+                 for (let day = 1; day <= daysInM; day++) {
+                     const dStr = `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                     const metrics = getRealDayMetrics(dStr);
++                    if (metrics.hasLog) logged++;
+                     mWater += metrics.waterMl;
+                     mCal += metrics.calories;
+                     mProt += metrics.protein;
+                     mCarbs += metrics.carbs;
+                     mFats += metrics.fats;
+                 }
+-                hydrationActual.push(Math.round(mWater / daysInM));
++                hydrationActual.push(Math.round(mWater / Math.max(logged, 1)));
+                 hydrationTargetLine.push(targetWaterMl);
+-                caloriesActual.push(Math.round(mCal / daysInM));
++                caloriesActual.push(Math.round(mCal / Math.max(logged, 1)));
+                 caloriesTargetLine.push(targetCalories);
+-                proteinData.push(Math.round(mProt / daysInM));
+-                carbsData.push(Math.round(mCarbs / daysInM));
+-                fatsData.push(Math.round(mFats / daysInM));
++                proteinData.push(Math.round(mProt / Math.max(logged, 1)));
++                carbsData.push(Math.round(mCarbs / Math.max(logged, 1)));
++                fatsData.push(Math.round(mFats / Math.max(logged, 1)));
+             }
+         } else {
+-            // CUSTOM: Single Selected Date Progression
++            // CUSTOM: one selected date, one real daily total per metric.
+             const targetDate = customSingleDate || todayStr;
+-            const times = ['Morning (8 AM)', 'Midday (12 PM)', 'Afternoon (4 PM)', 'Night (8 PM)'];
+             const dayMetrics = getRealDayMetrics(targetDate);
+-            times.forEach((t, idx) => {
+-                labels.push(t);
+-                hydrationTargetLine.push(targetWaterMl);
+-                caloriesTargetLine.push(targetCalories);
+-                if (dayMetrics.calories === 0 && dayMetrics.waterMl === 0) {
+-                    hydrationActual.push(0);
+-                    caloriesActual.push(0);
+-                    proteinData.push(0);
+-                    carbsData.push(0);
+-                    fatsData.push(0);
+-                } else {
+-                    const factor = (idx + 1) / times.length;
+-                    hydrationActual.push(Math.round(dayMetrics.waterMl * factor));
+-                    caloriesActual.push(Math.round(dayMetrics.calories * factor));
+-                    proteinData.push(Math.round(dayMetrics.protein * factor));
+-                    carbsData.push(Math.round(dayMetrics.carbs * factor));
+-                    fatsData.push(Math.round(dayMetrics.fats * factor));
+-                }
+-            });
++            labels.push(`${targetDate} (daily total)`);
++            hydrationActual.push(dayMetrics.waterMl);
++            hydrationTargetLine.push(targetWaterMl);
++            caloriesActual.push(dayMetrics.calories);
++            caloriesTargetLine.push(targetCalories);
++            proteinData.push(dayMetrics.protein);
++            carbsData.push(dayMetrics.carbs);
++            fatsData.push(dayMetrics.fats);
+         }
+ 
+         return {
+@@ -1499,10 +1623,36 @@ const Reports = () => {
+             carbsData,
+             fatsData
+         };
+-    }, [
+-        selectedInterval, customSingleDate, pdfStatementChartData,
+-        targetWaterMl, targetCalories, getRealDayMetrics, todayStr
+-    ]);
++    };
++
++    const chartData = buildChartData(selectedInterval);
++
++
++    // A single-day series has one real sample: render a two-bar comparison on
++    // screen instead of a one-point line, and never draw an empty chart frame.
++    const chartHasIntake = [
++        ...chartData.hydrationActual, ...chartData.caloriesActual,
++        ...chartData.proteinData, ...chartData.carbsData, ...chartData.fatsData
++    ].some(v => Number(v) > 0);
++    const isSingleDaySeries = chartData.labels.length === 1;
++    const fluidComplianceLabel = Number(activeStatementData.waterPercent) > 100 ? 'Above target'
++        : Number(activeStatementData.waterPercent) >= 100 ? 'Target met' : 'Below target';
++    const nutritionComplianceLabel = Number(activeStatementData.caloriePercent) > 100 ? 'Above target'
++        : Number(activeStatementData.caloriePercent) >= 90 ? 'On track' : 'Below target';
++    const hydrationComparisonConfig = {
++        labels: ['Daily total'],
++        datasets: [
++            { label: 'Consumed (ml)', data: [chartData.hydrationActual[0] || 0], backgroundColor: '#38bdf8', borderRadius: 6 },
++            { label: 'Daily target (ml)', data: [chartData.hydrationTargetLine[0] || 0], backgroundColor: '#a5d391', borderRadius: 6 }
++        ]
++    };
++    const nutritionComparisonConfig = {
++        labels: ['Daily total'],
++        datasets: [
++            { label: 'Consumed (kcal)', data: [chartData.caloriesActual[0] || 0], backgroundColor: '#fbbf24', borderRadius: 6 },
++            { label: 'Daily target (kcal)', data: [chartData.caloriesTargetLine[0] || 0], backgroundColor: '#ef4444', borderRadius: 6 }
++        ]
++    };
+ 
+     // Chart Configuration: Hydration
+     const hydrationChartConfig = {
+@@ -1522,7 +1672,7 @@ const Reports = () => {
+                 pointRadius: 4
+             },
+             {
+-                label: 'Water Target (ml)',
++                label: 'Daily target (ml/day)',
+                 data: chartData.hydrationTargetLine,
+                 borderColor: '#a5d391',
+                 borderDash: [5, 5],
+@@ -1552,7 +1702,7 @@ const Reports = () => {
+                 pointRadius: 4
+             },
+             {
+-                label: 'Calorie Target (kcal)',
++                label: 'Daily target (kcal/day)',
+                 data: chartData.caloriesTargetLine,
+                 borderColor: '#ef4444',
+                 borderDash: [5, 5],
+@@ -1648,14 +1798,29 @@ const Reports = () => {
+         const bmiText = userProfile?.heightCm && userProfile?.weightKg
+             ? ` (${(userProfile.weightKg / Math.pow(userProfile.heightCm / 100, 2)).toFixed(1)} BMI)`
+             : '';
+-        const progressRemark = (pct) => pct >= 100 ? 'Target met' : pct >= 75 ? 'Close to target' : pct > 0 ? 'Below target' : 'No intake logged';
+-
+-        // Charts in the PDF are exactly the charts shown on screen (same interval & data)
+-        const isStatementInterval = selectedInterval === 'STATEMENT';
+-        const pdfChartData = chartData;
+-        const chartRangeLabel = isStatementInterval
++        const progressRemark = (pct) => pct > 100 ? 'Above target' : pct >= 100 ? 'Target met' : pct >= 75 ? 'Close to target' : pct > 0 ? 'Below target' : 'No intake logged';
++
++        // The exported document uses the deliberately chosen export range, not
++        // whatever interval happens to be selected on screen.
++        const pdfChartData = exportRange === 'STATEMENT'
++            ? pdfStatementChartData
++            : buildChartData(exportRange);
++        const chartRangeLabel = exportRange === 'STATEMENT'
+             ? activeStatementData.dateLabel
+-            : (INTERVAL_PRESETS.find(pr => pr.id === selectedInterval)?.label || selectedInterval);
++            : (exportRange === 'CUSTOM'
++                ? (customSingleDate || activeStatementData.dateLabel)
++                : (INTERVAL_PRESETS.find(pr => pr.id === exportRange)?.label || exportRange));
++        const exportHasIntake = [
++            ...pdfChartData.hydrationActual, ...pdfChartData.caloriesActual,
++            ...pdfChartData.proteinData, ...pdfChartData.carbsData, ...pdfChartData.fatsData
++        ].some(v => Number(v) > 0);
++        const singlePoint = pdfChartData.labels.length === 1;
++        const scopePhrase = period.days === 1 ? 'a single day' : `${period.days}-day period`;
++        const hasReportData = Number(activeStatementData.waterConsumed) > 0
++            || Number(activeStatementData.calories) > 0
++            || Number(activeStatementData.protein) > 0
++            || Number(activeStatementData.carbs) > 0
++            || Number(activeStatementData.fats) > 0;
+ 
+         // Determine precise date / duration mentioned for document naming
+         let durationMentioned = '';
+@@ -1691,30 +1856,45 @@ const Reports = () => {
+         const reportDocumentTitle = `Health Report ${durationMentioned}`;
+         const safeFileName = reportDocumentTitle.replace(/[\/\\:*?"<>|]/g, '-');
+ 
+-        // Generate Vector SVG charts matching the active statement timeframe
+-        const svgHydration = generateSvgLineChart({
+-            title: 'Hydration Curve (Fluid Volume vs Daily Target)',
+-            unit: 'ml',
+-            actualLabel: 'Consumed Water',
+-            targetLabel: 'Water Target',
+-            labels: pdfChartData.labels,
+-            actualData: pdfChartData.hydrationActual,
+-            targetData: pdfChartData.hydrationTargetLine,
+-            actualColor: '#38bdf8',
+-            targetColor: '#a5d391'
+-        });
++        // Single-day statements have no intra-day samples: show one real total
++        // vs its target instead of a fabricated four-point curve.
++        const svgHydration = singlePoint
++            ? generateSvgDailyComparison({
++                title: 'Fluid Intake (Daily Total vs Target)', unit: 'ml',
++                actualLabel: 'Consumed', targetLabel: 'Daily target',
++                value: pdfChartData.hydrationActual[0], target: pdfChartData.hydrationTargetLine[0],
++                actualColor: '#38bdf8', targetColor: '#a5d391'
++            })
++            : generateSvgLineChart({
++                title: 'Hydration Trend (Fluid Volume vs Daily Target)',
++                unit: 'ml',
++                actualLabel: 'Consumed Water',
++                targetLabel: 'Daily target (ml/day)',
++                labels: pdfChartData.labels,
++                actualData: pdfChartData.hydrationActual,
++                targetData: pdfChartData.hydrationTargetLine,
++                actualColor: '#38bdf8',
++                targetColor: '#a5d391'
++            });
+ 
+-        const svgCalories = generateSvgLineChart({
+-            title: 'Calories Curve (Caloric Expenditure vs Threshold)',
+-            unit: 'kcal',
+-            actualLabel: 'Calories Consumed',
+-            targetLabel: 'Calorie Target',
+-            labels: pdfChartData.labels,
+-            actualData: pdfChartData.caloriesActual,
+-            targetData: pdfChartData.caloriesTargetLine,
+-            actualColor: '#fbbf24',
+-            targetColor: '#ef4444'
+-        });
++        const svgCalories = singlePoint
++            ? generateSvgDailyComparison({
++                title: 'Calories Consumed (Daily Total vs Target)', unit: 'kcal',
++                actualLabel: 'Consumed', targetLabel: 'Daily target',
++                value: pdfChartData.caloriesActual[0], target: pdfChartData.caloriesTargetLine[0],
++                actualColor: '#fbbf24', targetColor: '#ef4444'
++            })
++            : generateSvgLineChart({
++                title: 'Calories Consumed vs Daily Target',
++                unit: 'kcal',
++                actualLabel: 'Calories Consumed',
++                targetLabel: 'Daily target (kcal/day)',
++                labels: pdfChartData.labels,
++                actualData: pdfChartData.caloriesActual,
++                targetData: pdfChartData.caloriesTargetLine,
++                actualColor: '#fbbf24',
++                targetColor: '#ef4444'
++            });
+ 
+         const svgMacros = generateSvgBarChart({
+             title: 'Macros Split (Macronutrient Distribution: Protein, Carbs, Fats)',
+@@ -1724,6 +1904,13 @@ const Reports = () => {
+             fatsData: pdfChartData.fatsData
+         });
+ 
++        // An unlogged day is a recorded zero: keep the charts visible with a
++        // flat zero series, but say clearly that nothing was logged so a zero is
++        // never mistaken for measured intake.
++        const zeroNote = exportHasIntake ? ''
++            : `<div class="zero-note">No intake was logged for ${escapeHtml(chartRangeLabel)}. All values are shown as 0, not estimated.</div>`;
++        const chartsBlock = `${zeroNote}${svgHydration}${svgCalories}${svgMacros}`;
++
+         // Format clean, printable medical document HTML
+         // SEC-11: reportHtml escapes every interpolation by construction.
+         const reportContentHtml = reportHtml`
+@@ -1746,6 +1933,7 @@ const Reports = () => {
+                     th { background: #f1f5f9; color: #0f172a; font-weight: bold; }
+                     .status-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 8pt; font-weight: bold; background: #e2e8f0; }
+                     .status-pass { background: #dcfce7; color: #166534; }
++                    .zero-note { background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; padding: 9px 14px; border-radius: 8px; font-size: 9pt; margin-bottom: 14px; }
+                     .summary-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; }
+                     .footer { margin-top: 35px; border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 8.5pt; color: #64748b; display: flex; justify-content: space-between; }
+                     .signoff { display: flex; justify-content: space-between; margin-top: 25px; padding-top: 15px; }
+@@ -1766,7 +1954,7 @@ const Reports = () => {
+                         <div style="font-size: 9pt; color: #64748b; margin-top: 2px;">Official Nutritional & Hydration Metabolic Statement • ${evalSubtitle}</div>
+                     </div>
+                     <div style="text-align: right;">
+-                        <span class="badge">Verified Statement</span>
++                        <span class="badge">${hasReportData ? 'Generated Statement' : 'No Data Logged'}</span>
+                         <div style="font-size: 8.5pt; color: #64748b; margin-top: 4px;">Doc ID: ${reportId}</div>
+                     </div>
+                 </div>
+@@ -1777,124 +1965,174 @@ const Reports = () => {
+                     <div class="meta-item"><strong>Demographics</strong> ${ageText} • ${genderText}</div>
+                     <div class="meta-item"><strong>Biometrics</strong> ${heightText} • ${weightText}${bmiText}</div>
+                     <div class="meta-item"><strong>Primary Goal</strong> ${userProfile?.goal || 'Not set'}</div>
+-                    <div class="meta-item"><strong>Daily Targets</strong> ${targetCalories} kcal • ${targets.water} L</div>
++                    <div class="meta-item"><strong>Profile Daily Targets (reference)</strong> ${period.daily.calories} kcal • ${(period.daily.waterMl / 1000).toFixed(2)} L</div>
++                    <div class="meta-item"><strong>Period Target</strong> ${period.periodTargets.calories.toLocaleString()} kcal • ${(period.periodTargets.waterMl / 1000).toFixed(1)} L (${period.days} days)</div>
+                     <div class="meta-item"><strong>Statement Scope</strong> ${scopeTitle}</div>
+                     <div class="meta-item"><strong>Evaluated Period</strong> ${dateRangeLabel}</div>
++                    <div class="meta-item"><strong>Record Coverage</strong> ${period.loggedDays} / ${period.days} days (${period.coveragePct}%)</div>
+                 </div>
+ 
+                 <div class="summary-box">
+                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                         <strong style="color: #166534; font-size: 11pt;">Clinical Biometric Adherence Summary & What This Statement Tells You:</strong>
+-                        <span class="badge" style="background: #166534; color: #fff;">${activeStatementData.demographicSummary?.status || 'Verified'}</span>
++                        <span class="badge" style="background: #166534; color: #fff;">${statementNarrative.status}</span>
+                     </div>
+                     <p style="margin: 0 0 8px 0; font-size: 9.5pt; color: #1e293b; line-height: 1.45;">
+-                        ${activeStatementData.demographicSummary?.keyTakeaway || `Patient demonstrated an overall ${activeStatementData.hydrationAdherence} hydration velocity adherence and a ${activeStatementData.nutritionAdherence} macronutrient compliance score over the evaluated monitoring interval (${activeStatementData.dateLabel}).`}
++                        ${statementNarrative.keyTakeaway}
+                     </p>
+                     <div style="font-size: 9pt; color: #334155; border-top: 1px dashed #bbf7d0; padding-top: 6px; display: grid; grid-template-columns: 1fr; gap: 4px;">
+-                        <div>• <strong>Hydration:</strong> ${activeStatementData.demographicSummary?.hydrationVerdict}</div>
+-                        <div>• <strong>Calories & Energy:</strong> ${activeStatementData.demographicSummary?.calorieVerdict}</div>
+-                        <div>• <strong>Macronutrients:</strong> ${activeStatementData.demographicSummary?.macroVerdict}</div>
++                        <div>• <strong>Hydration:</strong> ${statementNarrative.hydrationVerdict}</div>
++                        <div>• <strong>Calories & Energy:</strong> ${statementNarrative.calorieVerdict}</div>
++                        <div>• <strong>Macronutrients:</strong> ${statementNarrative.macroVerdict}</div>
+                     </div>
+                 </div>
+ 
+                 <h2>1. Fluid & Hydration Tracking (${activeStatementData.shortDate})</h2>
++                <div style="font-size: 8.5pt; color: #64748b; margin-bottom: 8px;">
++                    Record coverage: <strong>${period.loggedDays} of ${period.days} days logged (${period.coveragePct}%)</strong>.
++                    The period target is the profile daily target multiplied by ${period.days}; the tracked-day comparison uses only the ${period.loggedDays} days with a record.
++                </div>
+                 <table>
+                     <thead>
+                         <tr>
+-                            <th>Parameter</th>
+-                            <th>Daily Target</th>
+-                            <th>Total Consumed</th>
+-                            <th>Completion %</th>
++                            <th>Comparison basis</th>
++                            <th>Target</th>
++                            <th>Consumed</th>
++                            <th>% of target</th>
+                             <th>Status / Variance</th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         <tr>
+-                            <td><strong>Water Intake (Fluid Volume)</strong></td>
+-                            <td>${targets.water} L (${targetWaterMl} ml)</td>
+-                            <td>${(activeStatementData.waterConsumed / 1000).toFixed(2)} L (${activeStatementData.waterConsumed} ml)</td>
+-                            <td><strong>${activeStatementData.waterPercent}%</strong></td>
+-                            <td><span class="status-pill status-pass">${activeStatementData.waterPercent >= 100 ? 'Target Achieved' : (activeStatementData.waterDeficit > 0 ? `Needs +${activeStatementData.waterDeficit} ml` : 'Optimal')}</span></td>
++                            <td><strong>Period total (${scopePhrase})</strong></td>
++                            <td>${(period.periodTargets.waterMl / 1000).toFixed(2)} L (${period.periodTargets.waterMl} ml)</td>
++                            <td>${(period.totals.waterMl / 1000).toFixed(2)} L (${period.totals.waterMl} ml)</td>
++                            <td><strong>${period.periodPct.waterMl}% of period target</strong></td>
++                            <td>${period.periodDeficit.waterMl < 0 ? `Over period target by ${Math.abs(period.periodDeficit.waterMl)} ml` : (period.periodDeficit.waterMl > 0 ? `${period.periodDeficit.waterMl} ml of period target remaining` : 'Period target met')}</td>
+                         </tr>
+                         <tr>
+-                            <td><strong>Aggregated Interval Volume (${activeStatementData.mode.toUpperCase()})</strong></td>
+-                            <td>${(targets.water * activeStatementData.daysCount).toFixed(0)} L</td>
+-                            <td>${activeStatementData.totalWaterLiters} L</td>
+-                            <td><strong>${activeStatementData.hydrationAdherence}</strong></td>
+-                            <td><span class="status-pill">${progressRemark(parseInt(activeStatementData.hydrationAdherence, 10) || 0)}</span></td>
++                            <td><strong>Avg on logged days (${period.loggedDays}/${period.days})</strong></td>
++                            <td>${period.daily.waterMl} ml/day</td>
++                            <td>${period.avgPerLoggedDay.waterMl} ml/day</td>
++                            <td><strong>${period.trackedPct.waterMl}% on tracked days</strong></td>
++                            <td>${progressRemark(period.trackedPct.waterMl)}</td>
+                         </tr>
+                     </tbody>
+                 </table>
+ 
+-                <h2>2. Macronutrient & Calorie Nutrition Count</h2>
++                <h2>2. Macronutrient & Calorie Nutrition Count — Period Totals (${scopePhrase})</h2>
+                 <table>
+                     <thead>
+                         <tr>
+                             <th>Nutritional Metric</th>
+-                            <th>Clinical Target</th>
++                            <th>Period Target (daily x ${period.days})</th>
+                             <th>Total Consumed</th>
+-                            <th>% Target Completed</th>
++                            <th>% of Period Target</th>
+                             <th>Clinical Remarks</th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         <tr>
+                             <td><strong>Caloric Energy</strong></td>
+-                            <td>${targetCalories} kcal</td>
+-                            <td>${activeStatementData.calories} kcal</td>
+-                            <td><strong>${activeStatementData.caloriePercent}%</strong></td>
+-                            <td>${activeStatementData.calorieRemaining > 0 ? `${activeStatementData.calorieRemaining} kcal remaining deficit` : 'Target energy threshold met'}</td>
++                            <td>${period.periodTargets.calories} kcal</td>
++                            <td>${period.totals.calories} kcal</td>
++                            <td><strong>${period.periodPct.calories}%</strong></td>
++                            <td>${period.periodDeficit.calories < 0 ? `Over by ${Math.abs(period.periodDeficit.calories)} kcal` : (period.periodDeficit.calories > 0 ? `${period.periodDeficit.calories} kcal of period target remaining` : 'Period target met')}</td>
+                         </tr>
+                         <tr>
+                             <td><strong>Dietary Protein</strong></td>
+-                            <td>${targetProtein} g</td>
+-                            <td>${activeStatementData.protein} g</td>
+-                            <td><strong>${activeStatementData.proteinPercent}%</strong></td>
+-                            <td>${progressRemark(activeStatementData.proteinPercent)}</td>
++                            <td>${period.periodTargets.protein} g</td>
++                            <td>${period.totals.protein} g</td>
++                            <td><strong>${period.periodPct.protein}%</strong></td>
++                            <td>${progressRemark(period.periodPct.protein)}</td>
+                         </tr>
+                         <tr>
+                             <td><strong>Carbohydrates</strong></td>
+-                            <td>${targetCarbs} g</td>
+-                            <td>${activeStatementData.carbs} g</td>
+-                            <td><strong>${activeStatementData.carbsPercent}%</strong></td>
+-                            <td>${progressRemark(activeStatementData.carbsPercent)}</td>
++                            <td>${period.periodTargets.carbs} g</td>
++                            <td>${period.totals.carbs} g</td>
++                            <td><strong>${period.periodPct.carbs}%</strong></td>
++                            <td>${progressRemark(period.periodPct.carbs)}</td>
+                         </tr>
+                         <tr>
+                             <td><strong>Fats & Essential Lipids</strong></td>
+-                            <td>${targetFats} g</td>
+-                            <td>${activeStatementData.fats} g</td>
+-                            <td><strong>${activeStatementData.fatsPercent}%</strong></td>
+-                            <td>${progressRemark(activeStatementData.fatsPercent)}</td>
++                            <td>${period.periodTargets.fats} g</td>
++                            <td>${period.totals.fats} g</td>
++                            <td><strong>${period.periodPct.fats}%</strong></td>
++                            <td>${progressRemark(period.periodPct.fats)}</td>
+                         </tr>
+                     </tbody>
+                 </table>
+ 
+-                <h2>3. Longitudinal Performance Curves (${activeStatementData.scopeName})</h2>
++                <h2>2b. Daily Adherence on Logged Days (${period.loggedDays}/${period.days} days)</h2>
++                <div style="font-size: 8.5pt; color: #64748b; margin-bottom: 8px;">
++                    This table answers "on days I tracked, did I hit my daily target?" It uses the profile daily target, not the period target.
++                </div>
++                <table>
++                    <thead>
++                        <tr>
++                            <th>Nutritional Metric</th>
++                            <th>Daily Target (profile)</th>
++                            <th>Avg per Logged Day</th>
++                            <th>% on Tracked Days</th>
++                            <th>Clinical Remarks</th>
++                        </tr>
++                    </thead>
++                    <tbody>
++                        <tr>
++                            <td><strong>Caloric Energy</strong></td>
++                            <td>${period.daily.calories} kcal/day</td>
++                            <td>${period.avgPerLoggedDay.calories} kcal/day</td>
++                            <td><strong>${period.trackedPct.calories}%</strong></td>
++                            <td>${progressRemark(period.trackedPct.calories)}</td>
++                        </tr>
++                        <tr>
++                            <td><strong>Dietary Protein</strong></td>
++                            <td>${period.daily.protein} g/day</td>
++                            <td>${period.avgPerLoggedDay.protein} g/day</td>
++                            <td><strong>${period.trackedPct.protein}%</strong></td>
++                            <td>${progressRemark(period.trackedPct.protein)}</td>
++                        </tr>
++                        <tr>
++                            <td><strong>Carbohydrates</strong></td>
++                            <td>${period.daily.carbs} g/day</td>
++                            <td>${period.avgPerLoggedDay.carbs} g/day</td>
++                            <td><strong>${period.trackedPct.carbs}%</strong></td>
++                            <td>${progressRemark(period.trackedPct.carbs)}</td>
++                        </tr>
++                        <tr>
++                            <td><strong>Fats & Essential Lipids</strong></td>
++                            <td>${period.daily.fats} g/day</td>
++                            <td>${period.avgPerLoggedDay.fats} g/day</td>
++                            <td><strong>${period.trackedPct.fats}%</strong></td>
++                            <td>${progressRemark(period.trackedPct.fats)}</td>
++                        </tr>
++                    </tbody>
++                </table>
++
++                <h2>${singlePoint ? '3. Intake Comparison (Daily Totals)' : '3. Longitudinal Performance Curves'} (${activeStatementData.scopeName})</h2>
+                 <div style="font-size: 8.5pt; color: #64748b; margin-top: -6px; margin-bottom: 12px;">
+-                    Charts cover: <strong>${chartRangeLabel}</strong>${isStatementInterval ? '' : ' (chart range selected on screen)'}
++                    Charts cover: <strong>${chartRangeLabel}</strong> (selected export range)${singlePoint ? ' — daily totals only; no intra-day timestamps are recorded' : ` — each point is one day (or a daily average); the dashed/second series is the profile DAILY target per day. Period totals and ${period.days}-day targets are in the tables above.`}
+                 </div>
+-                ${rawHtml(svgHydration)}
+-                ${rawHtml(svgCalories)}
+-                ${rawHtml(svgMacros)}
++                ${rawHtml(chartsBlock)}
+ 
+                 <h2>4. Longitudinal Statement Trends (${activeStatementData.mode.toUpperCase()})</h2>
+                 <table>
+                     <thead>
+                         <tr>
+                             <th>Timeframe Scope</th>
+-                            <th>Avg Daily Calories</th>
+-                            <th>Avg Daily Water</th>
+-                            <th>Logged Engagement</th>
+-                            <th>Metabolic Score</th>
++                            <th>Avg / Logged Day (kcal)</th>
++                            <th>Avg / Logged Day (L)</th>
++                            <th>Record Coverage</th>
++                            <th>Adherence on Tracked Days</th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         <tr>
+                             <td><strong>${activeStatementData.title}</strong></td>
+-                            <td>${activeStatementData.avgCalories} kcal / day</td>
+-                            <td>${activeStatementData.avgWaterLiters} L / day</td>
+-                            <td>${activeStatementData.loggedVisits}</td>
+-                            <td><strong>${activeStatementData.nutritionAdherence} of calorie target</strong></td>
++                            <td>${period.avgPerLoggedDay.calories} kcal / day</td>
++                            <td>${(period.avgPerLoggedDay.waterMl / 1000).toFixed(2)} L / day</td>
++                            <td>${period.loggedDays} / ${period.days} days (${period.coveragePct}%)</td>
++                            <td><strong>${period.trackedPct.calories}% of daily calorie target</strong> (${period.periodPct.calories}% of period target)</td>
+                         </tr>
+                     </tbody>
+                 </table>
+@@ -1981,6 +2219,7 @@ const Reports = () => {
+ 
+                 {/* PDF Generation Direct Action: Downloads selected period */}
+                 <div className="flex flex-wrap items-center gap-3">
++                    <ExportRangeSelect value={exportRange} onChange={setExportRange} />
+                     <button
+                         type="button"
+                         onClick={() => handleDownloadReportPdf('Active')}
+@@ -2098,7 +2337,7 @@ const Reports = () => {
+                                 onClick={() => {
+                                     const d = new Date();
+                                     d.setDate(d.getDate() - 1);
+-                                    setSelectedDayDate(d.toISOString().split('T')[0]);
++                                    setSelectedDayDate(toLocalDateStr(d));
+                                 }}
+                                 className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                     selectedDayDate === yesterdayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+@@ -2222,6 +2461,7 @@ const Reports = () => {
+                     )}
+ 
+                     {/* Direct Statement PDF Action */}
++                    <ExportRangeSelect value={exportRange} onChange={setExportRange} />
+                     <button
+                         onClick={() => handleDownloadReportPdf('Active')}
+                         disabled={isDownloadingPdf}
+@@ -2311,12 +2551,12 @@ const Reports = () => {
+                             </div>
+ 
+                             <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+-                                <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">% Completed</span>
+-                                <strong className="text-xl font-bold text-[#a5d391]">{activeStatementData.waterPercent}%</strong>
++                                <span className="text-[10px] uppercase font-bold text-white/40 block mb-1">% on Tracked Days</span>
++                                <strong className="text-xl font-bold text-[#a5d391]">{period.trackedPct.waterMl}%</strong>
+                                 <span className="text-[10px] text-white/40 block mt-0.5">
+                                     {activeStatementData.daysCount > 1 
+                                         ? `${activeStatementData.cumulativeWaterConsumed} L of ${activeStatementData.cumulativeWaterTarget} L` 
+-                                        : (activeStatementData.waterDeficit > 0 ? `${activeStatementData.waterDeficit} ml left` : 'Completed')}
++                                        : (activeStatementData.waterDeficit < 0 ? `${Math.abs(activeStatementData.waterDeficit)} ml above target` : (activeStatementData.waterDeficit > 0 ? `${activeStatementData.waterDeficit} ml left` : 'Completed'))}
+                                 </span>
+                             </div>
+                         </div>
+@@ -2324,8 +2564,8 @@ const Reports = () => {
+                         {/* Progress Bar */}
+                         <div className="space-y-1.5">
+                             <div className="flex justify-between text-xs text-white/50">
+-                                <span>Hydration Completion Progress</span>
+-                                <span className="font-bold text-white">{activeStatementData.waterPercent}%</span>
++                                <span>Adherence on tracked days ({period.loggedDays}/{period.days} logged)</span>
++                                <span className="font-bold text-white">{period.trackedPct.waterMl}%</span>
+                             </div>
+                             <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden p-0.5">
+                                 <div 
+@@ -2338,7 +2578,7 @@ const Reports = () => {
+ 
+                     <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-white/50">
+                         <span>Total Fluid Intake: <strong className="text-white">{activeStatementData.daysCount > 1 ? `${activeStatementData.cumulativeWaterConsumed} L` : `${activeStatementData.totalWaterLiters} L`}</strong></span>
+-                        <span>Adherence Velocity: <strong className="text-[#a5d391]">{activeStatementData.adherenceRate}</strong></span>
++                        <span>On tracked days: <strong className="text-[#a5d391]">{period.trackedPct.waterMl}% of daily target</strong></span>
+                     </div>
+                 </div>
+ 
+@@ -2413,7 +2653,7 @@ const Reports = () => {
+                                 <span>
+                                     {activeStatementData.daysCount > 1 
+                                         ? `Daily Average: ${activeStatementData.avgCalories} kcal/day (Baseline: ${targetCalories} kcal)`
+-                                        : (activeStatementData.calorieRemaining > 0 ? `${activeStatementData.calorieRemaining} kcal remaining` : 'Target met')}
++                                        : (activeStatementData.calorieRemaining < 0 ? `${Math.abs(activeStatementData.calorieRemaining)} kcal above target` : (activeStatementData.calorieRemaining > 0 ? `${activeStatementData.calorieRemaining} kcal remaining` : 'Target met'))}
+                                 </span>
+                                 <span>
+                                     {activeStatementData.avgCalories > targetCalories 
+@@ -2458,8 +2698,8 @@ const Reports = () => {
+                     </div>
+ 
+                     <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-white/50">
+-                        <span>Period Average: <strong className="text-white">{activeStatementData.avgCalories} kcal/day</strong></span>
+-                        <span>Macro Compliance: <strong className="text-[#a5d391]">{activeStatementData.nutritionScore}</strong></span>
++                        <span>Avg / logged day: <strong className="text-white">{period.avgPerLoggedDay.calories} kcal/day</strong></span>
++                        <span>On tracked days: <strong className="text-[#a5d391]">{period.trackedPct.calories}% of daily target</strong></span>
+                     </div>
+                 </div>
+             </div>
+@@ -2476,7 +2716,7 @@ const Reports = () => {
+                     </div>
+ 
+                     <span className="text-xs font-mono font-bold text-[#a5d391] bg-[#a5d391]/10 px-3.5 py-1.5 rounded-full border border-[#a5d391]/30">
+-                        Visits Logged: {aggregatedMetrics.loggedVisits}
++                        Coverage: {period.loggedDays} / {period.days} days ({period.coveragePct}%)
+                     </span>
+                 </div>
+ 
+@@ -2488,15 +2728,15 @@ const Reports = () => {
+                     </div>
+ 
+                     <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+-                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Fluid Compliance</span>
+-                        <div className="text-xl font-bold text-[#a5d391]">{aggregatedMetrics.hydrationAdherence}</div>
+-                        <span className="text-[10px] text-emerald-400 block mt-0.5">Optimal Range</span>
++                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">% on Tracked Days (fluid)</span>
++                        <div className="text-xl font-bold text-[#a5d391]">{period.trackedPct.waterMl}%</div>
++                        <span className="text-[10px] text-emerald-400 block mt-0.5">{fluidComplianceLabel}</span>
+                     </div>
+ 
+                     <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+-                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Average Daily Cal</span>
+-                        <div className="text-xl font-bold text-amber-400">{aggregatedMetrics.avgCalories}</div>
+-                        <span className="text-[10px] text-white/40 block mt-0.5">Target: {targetCalories} kcal</span>
++                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Avg / Logged Day (kcal)</span>
++                        <div className="text-xl font-bold text-amber-400">{period.avgPerLoggedDay.calories}</div>
++                        <span className="text-[10px] text-white/40 block mt-0.5">Daily target: {period.daily.calories} kcal • Period: {period.periodTargets.calories.toLocaleString()} kcal</span>
+                     </div>
+ 
+                     <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+@@ -2512,9 +2752,9 @@ const Reports = () => {
+                     </div>
+ 
+                     <div className="bg-[#080b12]/80 p-4 rounded-2xl border border-white/5">
+-                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">Nutrition Score</span>
+-                        <div className="text-xl font-bold text-white">{aggregatedMetrics.nutritionAdherence}</div>
+-                        <span className="text-[10px] text-[#a5d391] block mt-0.5">Clinical Grade</span>
++                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 block mb-1">% on Tracked Days (kcal)</span>
++                        <div className="text-xl font-bold text-white">{period.trackedPct.calories}%</div>
++                        <span className="text-[10px] text-[#a5d391] block mt-0.5">{nutritionComplianceLabel}</span>
+                     </div>
+                 </div>
+             </div>
+@@ -2580,7 +2820,7 @@ const Reports = () => {
+                 {/* One-line clarification notice */}
+                 <div className="flex items-center gap-2 bg-[#080b12]/80 border border-white/10 px-4 py-2.5 rounded-xl text-xs text-white/70">
+                     <span className="material-symbols-outlined text-[#38bdf8] text-sm shrink-0">info</span>
+-                    <span className="truncate">Click <strong>Statement Duration</strong> to see the graph of the duration selected in the Statement Controller above, or choose any preset below for viewing. (Exported PDF always captures the Statement Controller duration).</span>
++                    <span className="truncate">These presets change the on-screen chart only. The exported report uses the <strong>Charts in report</strong> selector next to the Download Health Report buttons (default: statement period). Single days show a daily total, not an invented intra-day curve. The target series is the profile <strong>daily target per day</strong>; period targets for {period.days} days and both comparison bases are in the statement tables.</span>
+                 </div>
+ 
+                 {/* Interval Presets & Custom Input Bar */}
+@@ -2652,14 +2892,22 @@ const Reports = () => {
+                     )}
+                 </div>
+ 
++                {/* An unlogged day is a recorded zero, so the chart still renders. */}
++                {!chartHasIntake && (
++                    <div className="flex items-center gap-1.5 text-xs text-amber-300/80">
++                        <span className="material-symbols-outlined text-sm">info</span>
++                        No intake logged for this range — values shown as 0 (not estimated).
++                    </div>
++                )}
++
+                 {/* Graph Visualization Canvas */}
+                 <div className="h-[280px] sm:h-[320px] lg:h-[360px] w-full pt-4">
+-                    {activeGraphMetric === 'hydration' && (
+-                        <Line data={hydrationChartConfig} options={commonChartOptions} />
+-                    )}
+-                    {activeGraphMetric === 'nutrition' && (
+-                        <Line data={nutritionChartConfig} options={commonChartOptions} />
+-                    )}
++                    {activeGraphMetric === 'hydration' && (isSingleDaySeries
++                        ? <Bar data={hydrationComparisonConfig} options={commonChartOptions} />
++                        : <Line data={hydrationChartConfig} options={commonChartOptions} />)}
++                    {activeGraphMetric === 'nutrition' && (isSingleDaySeries
++                        ? <Bar data={nutritionComparisonConfig} options={commonChartOptions} />
++                        : <Line data={nutritionChartConfig} options={commonChartOptions} />)}
+                     {activeGraphMetric === 'macros' && (
+                         <Bar data={macrosChartConfig} options={commonChartOptions} />
+                     )}
