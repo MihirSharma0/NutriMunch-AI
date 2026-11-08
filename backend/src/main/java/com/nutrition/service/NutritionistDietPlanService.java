@@ -13,12 +13,15 @@ import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +37,11 @@ public class NutritionistDietPlanService {
 
     public static final String SCOPE_GENERAL = "GENERAL";
     public static final String SCOPE_EXCLUSIVE = "EXCLUSIVE";
+
+    /** Client-supplied plan ids must be short, path/HTML-safe and non-numeric. */
+    private static final Pattern CLIENT_PLAN_ID = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$");
+    /** Reserved for server-owned keys: plan_&lt;authorId&gt;_&lt;clientId&gt;. */
+    private static final Pattern SERVER_PLAN_KEY = Pattern.compile("^plan_(\\d+)_(.*)$");
 
     private final NutritionistDietPlanRepository planRepository;
     private final UserRepository userRepository;
@@ -120,16 +128,65 @@ public class NutritionistDietPlanService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "The selected client account does not exist");
             }
+            // SEC-09: the roster filter in DietPlanBuilder is client-side only.
+            // Refuse to publish (and refuse to notify) a client this nutritionist
+            // has no accepted consultation with. Admins keep their audit override.
+            if (role != Role.ADMIN && target.getId() != null) {
+                Number missing = userRepository.countMissingAcceptedConsultation(
+                        principalId, target.getId());
+                if (missing != null && missing.longValue() > 0) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "An accepted consultation with this client is required "
+                                    + "before publishing an exclusive plan");
+                }
+            }
         }
 
-        String planKey = firstNonBlank(payload.get("id"));
-        if (planKey == null || planKey.isBlank()) {
-            planKey = "plan_" + UUID.randomUUID();
+        // SEC-17: the server owns the plan_key namespace, while the id the UI sees
+        // stays exactly the value it sent (so local history, caches and DELETE calls
+        // keep working byte-for-byte). Existing rows are still found by their old key.
+        String clientId = firstNonBlank(payload.get("id"));
+        if (clientId == null || clientId.isBlank()) {
+            clientId = "plan_" + UUID.randomUUID();
         }
-        planKey = planKey.trim();
-        if (planKey.length() > 120) planKey = planKey.substring(0, 120);
+        clientId = clientId.trim();
+        if (!CLIENT_PLAN_ID.matcher(clientId).matches()
+                || clientId.matches("\\d+")
+                || SERVER_PLAN_KEY.matcher(clientId).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid plan identifier");
+        }
 
-        NutritionistDietPlan existing = planRepository.findByPlanKey(planKey).orElse(null);
+        String serverKey = "plan_" + principalId + "_" + clientId;
+        if (serverKey.length() > 120) serverKey = serverKey.substring(0, 120);
+
+        NutritionistDietPlan existing = planRepository.findByPlanKey(clientId).orElse(null);
+        if (existing == null) {
+            List<String> candidates = new ArrayList<>();
+            candidates.add(serverKey);
+            // A promoted plan carries the original author id, so an admin can still
+            // update it instead of creating a duplicate.
+            Long hintedAuthor = parseId(payload.get("nutritionistId"));
+            if (hintedAuthor != null && !Objects.equals(hintedAuthor, principalId)) {
+                String hintedKey = "plan_" + hintedAuthor + "_" + clientId;
+                if (hintedKey.length() > 120) hintedKey = hintedKey.substring(0, 120);
+                candidates.add(hintedKey);
+            }
+            List<NutritionistDietPlan> matches = planRepository.findByPlanKeyIn(candidates);
+            if (matches != null) {
+                existing = matches.stream().filter(Objects::nonNull).findFirst().orElse(null);
+            }
+            if (existing == null && role == Role.ADMIN) {
+                List<NutritionistDietPlan> active = planRepository.findByDeletedFalseOrderByCreatedAtDesc();
+                if (active != null) {
+                    String suffix = "_" + clientId;
+                    existing = active.stream()
+                            .filter(p -> p != null && p.getPlanKey() != null
+                                    && p.getPlanKey().endsWith(suffix))
+                            .findFirst().orElse(null);
+                }
+            }
+        }
         boolean created = existing == null;
         NutritionistDietPlan plan = existing != null ? existing : new NutritionistDietPlan();
 
@@ -141,7 +198,7 @@ public class NutritionistDietPlanService {
                         "This plan belongs to another nutritionist");
             }
         } else {
-            plan.setPlanKey(planKey);
+            plan.setPlanKey(serverKey);
             plan.setNutritionist(author);
         }
 
@@ -149,7 +206,7 @@ public class NutritionistDietPlanService {
         plan.setTitle(title);
         plan.setTargetUser(target);
         plan.setDeleted(false);
-        plan.setPayloadJson(writeJson(sanitized(payload, planKey, title, scope, author, target)));
+        plan.setPayloadJson(writeJson(sanitized(payload, clientId, title, scope, author, target)));
         planRepository.save(plan);
 
         if (created && SCOPE_EXCLUSIVE.equals(scope) && target != null) {
@@ -180,6 +237,25 @@ public class NutritionistDietPlanService {
 
         NutritionistDietPlan plan = planRepository.findByPlanKeyAndDeletedFalse(clean).orElse(null);
         if (plan == null) {
+            String ownKey = "plan_" + principalId + "_" + clean;
+            if (ownKey.length() > 120) ownKey = ownKey.substring(0, 120);
+            List<NutritionistDietPlan> matches = planRepository.findByPlanKeyIn(List.of(ownKey));
+            if (matches != null) {
+                plan = matches.stream()
+                        .filter(p -> p != null && !p.isDeleted()).findFirst().orElse(null);
+            }
+        }
+        if (plan == null && role == Role.ADMIN) {
+            List<NutritionistDietPlan> active = planRepository.findByDeletedFalseOrderByCreatedAtDesc();
+            if (active != null) {
+                String suffix = "_" + clean;
+                plan = active.stream()
+                        .filter(p -> p != null && p.getPlanKey() != null
+                                && p.getPlanKey().endsWith(suffix) && !p.isDeleted())
+                        .findFirst().orElse(null);
+            }
+        }
+        if (plan == null) {
             Long numeric = parseId(clean);
             if (numeric != null) {
                 plan = planRepository.findById(numeric).filter(p -> !p.isDeleted()).orElse(null);
@@ -207,7 +283,18 @@ public class NutritionistDietPlanService {
         } catch (Exception e) {
             map = new LinkedHashMap<>();
         }
-        map.put("id", plan.getPlanKey());
+        // COMMIT 09 stores plan_key as plan_<authorId>_<clientId>, but the UI must
+        // keep receiving the original client id so nothing duplicates in history.
+        // sanitized() server-stamps that id into payloadJson on every deploy; older
+        // rows carry their old planKey there too. Only fall back to the internal key
+        // when a row has no usable payload id.
+        Object storedId = map.get("id");
+        String clientId = storedId == null ? null : String.valueOf(storedId).trim();
+        if (clientId == null || !CLIENT_PLAN_ID.matcher(clientId).matches()
+                || SERVER_PLAN_KEY.matcher(clientId).matches()) {
+            clientId = plan.getPlanKey();
+        }
+        map.put("id", clientId);
         map.put("title", plan.getTitle());
         map.put("planTitle", plan.getTitle());
         map.put("scope", plan.getScope());
@@ -225,12 +312,12 @@ public class NutritionistDietPlanService {
     }
 
     /** Strip untrusted identity/visibility hints and stamp the authenticated author. */
-    private Map<String, Object> sanitized(Map<String, Object> payload, String planKey,
+    private Map<String, Object> sanitized(Map<String, Object> payload, String clientId,
                                           String title, String scope, User author, User target) {
         Map<String, Object> clean = new LinkedHashMap<>(payload);
         clean.remove("isExclusiveForUser");
         clean.remove("senderId");
-        clean.put("id", planKey);
+        clean.put("id", clientId);
         clean.put("title", title);
         clean.put("planTitle", title);
         clean.put("scope", scope);

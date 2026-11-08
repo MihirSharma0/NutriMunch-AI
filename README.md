@@ -35,6 +35,7 @@ NutriMunch AI is an enterprise-grade clinical nutrition, dietetics, and patient-
   - [7.5 Running via Docker / Dev Container](#75-running-via-docker--dev-container)
   - [7.6 Seed Data & Initial Credentials](#76-seed-data--initial-credentials)
 - [8. REST API Reference](#8-rest-api-reference)
+  - [Authentication Test Matrix (TC1-TC5)](#authentication-test-matrix-tc1-tc5)
 - [9. Project Directory Structure](#9-project-directory-structure)
 
 ---
@@ -650,7 +651,10 @@ To test nutritionist workflows, register an account via `/register`, choose the 
 
 ### Wallet & Escrow Ledger (`/api/wallet`, `/api/transactions`)
 * `GET /api/wallet/me` — Retrieve available balance and funds held in escrow.
-* `POST /api/wallet/topup` — Credit wallet balance via payment gateway order verification.
+* `POST /api/wallet/pay-service` — Pay for a consultation from the available balance.
+* `POST /api/wallet/admin/create-order` — Create a Razorpay order *(Admin only)*.
+* `POST /api/wallet/admin/verify-and-credit` — Verify a payment and credit the wallet *(Admin only)*.
+* `GET /api/wallet/admin/ledger` — Read the wallet audit ledger *(Admin only)*.
 * `GET /api/transactions/me` — View complete transaction and escrow audit history.
 
 ### In-App Notifications (`/api/notifications`)
@@ -658,6 +662,33 @@ To test nutritionist workflows, register an account via `/register`, choose the 
 * `GET /api/notifications/unread-count` — Count of unread alerts for badge display.
 * `PUT /api/notifications/{id}/read` — Mark an alert as read.
 * `PUT /api/notifications/read-all` — Mark all alerts as read.
+
+### Authentication Test Matrix (TC1-TC5)
+
+The login module is validated in the browser before any request is sent. **NutriMunch
+authenticates by email address, not by username**; the identifier limit is 254
+characters and the submitted password limit is 128 characters. The two original
+credential-failure messages are intentionally retained, and the DOM carries no
+test-only identifiers.
+
+| Case | Input | Actual behaviour |
+| --- | --- | --- |
+| TC1 | Both fields empty | Submit is gated by `areLoginFieldsFilled`; `validateLoginFields` reports **"Fields cannot be empty"**. No request is sent. |
+| TC2 | Valid credentials | **"Login Successful"** is shown, then the user is routed to the dashboard for their role after a short delay. A mismatched role tab is rejected locally. |
+| TC3 | Wrong password | **"Incorrect Password"** (backend `AuthService.INCORRECT_PASSWORD_MESSAGE`). |
+| TC4 | Unknown e-mail | **"Profile/E-Mail Id Doesn't Exist. Please Create One"** (backend `AuthService.PROFILE_NOT_FOUND_MESSAGE`). |
+| TC5 | Special characters, e.g. `user@#` | The e-mail field shows an inline format hint and `validateLoginFields` returns **"Invalid Username/Password"**; no request is sent. Malformed or over-long input uses the same message. |
+| — | Unexpected backend / network failure | The user sees a generic message; any `debug` detail is written to the browser console with `console.error`. |
+
+Verification is performed with throwaway probes outside the repository; no test
+files or test-only attributes are shipped with the application.
+
+**Preserved scope:** the SQL Console (`SqlConsole.jsx`) and its preset queries are
+intentionally kept as operational samples (DD-16 / FV-13, documented only), and
+User Management is unchanged. The frontend deployment sends a
+`Content-Security-Policy-Report-Only` header (see `vercel.json`): a CSP baseline
+that logs violations in DevTools without blocking resources. Printed clinical
+statements escape every interpolated value (`frontend/src/utils/reportHtml.js`).
 
 ---
 
