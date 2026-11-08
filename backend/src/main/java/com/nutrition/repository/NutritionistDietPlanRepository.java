@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,4 +35,7 @@ public interface NutritionistDietPlanRepository extends JpaRepository<Nutritioni
     Optional<NutritionistDietPlan> findByPlanKey(String planKey);
 
     Optional<NutritionistDietPlan> findByPlanKeyAndDeletedFalse(String planKey);
+
+    /** Exact lookup of server-namespaced keys created by COMMIT 09. */
+    List<NutritionistDietPlan> findByPlanKeyIn(Collection<String> planKeys);
 }

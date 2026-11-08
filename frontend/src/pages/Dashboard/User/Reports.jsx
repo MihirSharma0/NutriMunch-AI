@@ -13,6 +13,7 @@ import api from '../../../api/axios';
 import DarkCalendarPicker from '../../../components/DarkCalendarPicker';
 import { searchFoodDatabase } from '../../../data/foodDatabase';
 import { fetchProgressDays, saveDayMetrics, readOfflineDay } from '../../../utils/progressLog';
+import { escapeHtml, rawHtml, reportHtml } from '../../../utils/reportHtml';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
@@ -227,7 +228,7 @@ const generateSvgLineChart = ({
         const y = getY(val);
         return `
             <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" stroke-dasharray="2,3" />
-            <text x="${padLeft - 10}" y="${y + 3.5}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="end">${val.toLocaleString()}</text>
+            <text x="${padLeft - 10}" y="${y + 3.5}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="end">${escapeHtml(val.toLocaleString())}</text>
         `;
     });
 
@@ -245,7 +246,7 @@ const generateSvgLineChart = ({
     const xLabels = labels.map((lbl, idx) => {
         if (idx % labelStep !== 0 && idx !== labels.length - 1) return '';
         const x = getX(idx);
-        return `<text x="${x.toFixed(1)}" y="${height - 10}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="middle">${lbl}</text>`;
+        return `<text x="${x.toFixed(1)}" y="${height - 10}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="middle">${escapeHtml(lbl)}</text>`;
     }).join('');
 
     // Dots matching website Chart.js pointBackgroundColor & pointBorderColor
@@ -260,16 +261,16 @@ const generateSvgLineChart = ({
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
                 <div style="font-weight: 700; font-size: 11pt; color: #ffffff; display: flex; align-items: center; gap: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${actualColor}; box-shadow: 0 0 8px ${actualColor};"></span>
-                    ${title}
+                    ${escapeHtml(title)}
                 </div>
                 <div style="font-size: 8.5pt; color: #e2e8f0; display: flex; align-items: center; gap: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="display: inline-block; width: 16px; height: 9px; border: 2px solid ${actualColor}; background: ${actualColor}25; border-radius: 2px;"></span>
-                        <span style="font-weight: 600; color: #f8fafc;">${actualLabel} (${unit})</span>
+                        <span style="font-weight: 600; color: #f8fafc;">${escapeHtml(actualLabel)} (${escapeHtml(unit)})</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <span style="display: inline-block; width: 16px; height: 0px; border-top: 2px dashed ${targetColor};"></span>
-                        <span style="font-weight: 600; color: #f8fafc;">${targetLabel} (${unit})</span>
+                        <span style="font-weight: 600; color: #f8fafc;">${escapeHtml(targetLabel)} (${escapeHtml(unit)})</span>
                     </div>
                 </div>
             </div>
@@ -337,7 +338,7 @@ const generateSvgBarChart = ({ title, labels, proteinData, carbsData, fatsData }
         const y = padTop + plotH - (val / (maxY || 1)) * plotH;
         return `
             <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" stroke-dasharray="2,3" />
-            <text x="${padLeft - 8}" y="${y + 3.5}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="end">${val}g</text>
+            <text x="${padLeft - 8}" y="${y + 3.5}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="end">${escapeHtml(val)}g</text>
         `;
     });
 
@@ -369,7 +370,7 @@ const generateSvgBarChart = ({ title, labels, proteinData, carbsData, fatsData }
         `;
 
         if (idx % labelStep === 0 || idx === labels.length - 1) {
-            barsSvg += `<text x="${groupCenterX}" y="${height - 10}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="middle">${lbl}</text>`;
+            barsSvg += `<text x="${groupCenterX}" y="${height - 10}" font-size="9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fill="#94a3b8" text-anchor="middle">${escapeHtml(lbl)}</text>`;
         }
     });
 
@@ -378,7 +379,7 @@ const generateSvgBarChart = ({ title, labels, proteinData, carbsData, fatsData }
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
                 <div style="font-weight: 700; font-size: 11pt; color: #ffffff; display: flex; align-items: center; gap: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #a5d391;"></span>
-                    ${title}
+                    ${escapeHtml(title)}
                 </div>
                 <div style="font-size: 8.5pt; color: #e2e8f0; display: flex; align-items: center; gap: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                     <div style="display: flex; align-items: center; gap: 6px;">
@@ -1724,7 +1725,8 @@ const Reports = () => {
         });
 
         // Format clean, printable medical document HTML
-        const reportContentHtml = `
+        // SEC-11: reportHtml escapes every interpolation by construction.
+        const reportContentHtml = reportHtml`
             <!DOCTYPE html>
             <html>
             <head>
@@ -1871,9 +1873,9 @@ const Reports = () => {
                 <div style="font-size: 8.5pt; color: #64748b; margin-top: -6px; margin-bottom: 12px;">
                     Charts cover: <strong>${chartRangeLabel}</strong>${isStatementInterval ? '' : ' (chart range selected on screen)'}
                 </div>
-                ${svgHydration}
-                ${svgCalories}
-                ${svgMacros}
+                ${rawHtml(svgHydration)}
+                ${rawHtml(svgCalories)}
+                ${rawHtml(svgMacros)}
 
                 <h2>4. Longitudinal Statement Trends (${activeStatementData.mode.toUpperCase()})</h2>
                 <table>
@@ -1913,11 +1915,8 @@ const Reports = () => {
                     <div>Generated: ${reportDate} • Confidential</div>
                 </div>
 
-                <script>
-                    window.onload = function() {
-                        window.print();
-                    };
-                </script>
+                <!-- SEC-19: no inline script in the generated document, so an
+                     enforced CSP can be adopted later without breaking printing. -->
             </body>
             </html>
         `;
@@ -1928,10 +1927,28 @@ const Reports = () => {
             printWindow.document.open();
             printWindow.document.write(reportContentHtml);
             printWindow.document.close();
+            // The print dialog is triggered from this (trusted) window rather than
+            // by an inline <script> in the generated document.
+            let printRequested = false;
+            const requestPrint = () => {
+                if (printRequested) return;
+                printRequested = true;
+                try {
+                    printWindow.focus();
+                    printWindow.print();
+                } catch (err) {
+                    console.error('Could not open the print dialog:', err);
+                }
+            };
+            printWindow.onload = requestPrint;
+            setTimeout(requestPrint, 350);
             setDownloadSuccessToast(`Successfully prepared ${reportDocumentTitle} PDF!`);
         } else {
-            // Fallback: create downloadable HTML/Blob
-            const blob = new Blob([reportContentHtml], { type: 'text/html' });
+            // Fallback: create downloadable HTML/Blob. The downloaded file keeps its
+            // own print trigger, so popup-blocked users see the same behaviour.
+            const fallbackHtml = reportContentHtml.replace('</body>',
+                '<script>window.onload=function(){window.print();};</script></body>');
+            const blob = new Blob([fallbackHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
