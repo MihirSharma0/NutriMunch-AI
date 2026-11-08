@@ -88,15 +88,7 @@ public class UserProfileService {
             if (dto.getProteinTarget() != null) profile.setProteinTarget(dto.getProteinTarget());
             if (dto.getCarbsTarget() != null) profile.setCarbsTarget(dto.getCarbsTarget());
             if (dto.getFatsTarget() != null) profile.setFatsTarget(dto.getFatsTarget());
-            if (dto.getSugarTargetG() != null) profile.setSugarTargetG(dto.getSugarTargetG());
             if (dto.getDailyWaterTargetLiters() != null) profile.setDailyWaterTargetLiters(dto.getDailyWaterTargetLiters());
-            if (dto.getDailyFiberTargetG() != null) profile.setDailyFiberTargetG(dto.getDailyFiberTargetG());
-            if (dto.getIronTargetMg() != null) profile.setIronTargetMg(dto.getIronTargetMg());
-            if (dto.getCalciumTargetMg() != null) profile.setCalciumTargetMg(dto.getCalciumTargetMg());
-            if (dto.getVitDTargetMcg() != null) profile.setVitDTargetMcg(dto.getVitDTargetMcg());
-            if (dto.getVitB12TargetMcg() != null) profile.setVitB12TargetMcg(dto.getVitB12TargetMcg());
-            if (dto.getVitCTargetMg() != null) profile.setVitCTargetMg(dto.getVitCTargetMg());
-            if (dto.getZincTargetMg() != null) profile.setZincTargetMg(dto.getZincTargetMg());
 
             recalculateBmrTdeeOnly(profile);
         } else {
@@ -210,26 +202,10 @@ public class UserProfileService {
         profile.setProteinTarget((int) ((calories * proteinPct) / 4));
         profile.setCarbsTarget((int) ((calories * carbsPct) / 4));
         profile.setFatsTarget((int) ((calories * fatsPct) / 9));
-        // Free sugar limit: WHO guideline of 10% of daily calories (4 kcal per gram)
-        profile.setSugarTargetG((int) ((calories * 0.10) / 4));
 
-        // Water and Fiber
+        // Water target (fifth of the five core daily targets).
         double waterMultiplier = getRuleValue("water_multiplier_liters_per_kg", 0.033);
         profile.setDailyWaterTargetLiters(profile.getWeightKg() * waterMultiplier);
-        
-        double fiberMultiplier = getRuleValue("fiber_grams_per_1000_kcal", 14.0);
-        profile.setDailyFiberTargetG((int) ((calories / 1000.0) * fiberMultiplier));
-
-        // Basic Micronutrient RDAs (simplified estimation logic)
-        boolean isFemale = "Female".equalsIgnoreCase(profile.getGender());
-        profile.setIronTargetMg(isFemale && profile.getAge() <= 50 ? 18.0 : 8.0);
-        profile.setCalciumTargetMg(1000.0);
-        profile.setVitDTargetMcg(15.0);
-        profile.setVitB12TargetMcg(2.4);
-        profile.setVitCTargetMg(isFemale ? 75.0 : 90.0);
-        profile.setMagnesiumTargetMg(isFemale ? 310.0 : 400.0);
-        profile.setPotassiumTargetMg(3400.0);
-        profile.setZincTargetMg(isFemale ? 8.0 : 11.0);
     }
 
     /**
@@ -266,18 +242,8 @@ public class UserProfileService {
         dto.setProteinTarget(profile.getProteinTarget());
         dto.setCarbsTarget(profile.getCarbsTarget());
         dto.setFatsTarget(profile.getFatsTarget());
-        dto.setSugarTargetG(profile.getSugarTargetG());
-        
+
         dto.setDailyWaterTargetLiters(profile.getDailyWaterTargetLiters());
-        dto.setDailyFiberTargetG(profile.getDailyFiberTargetG());
-        dto.setIronTargetMg(profile.getIronTargetMg());
-        dto.setCalciumTargetMg(profile.getCalciumTargetMg());
-        dto.setVitDTargetMcg(profile.getVitDTargetMcg());
-        dto.setVitB12TargetMcg(profile.getVitB12TargetMcg());
-        dto.setVitCTargetMg(profile.getVitCTargetMg());
-        dto.setMagnesiumTargetMg(profile.getMagnesiumTargetMg());
-        dto.setPotassiumTargetMg(profile.getPotassiumTargetMg());
-        dto.setZincTargetMg(profile.getZincTargetMg());
 
         dto.setUpdatedAt(profile.getUpdatedAt());
         return dto;

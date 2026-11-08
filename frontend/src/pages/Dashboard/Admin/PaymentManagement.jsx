@@ -158,16 +158,8 @@ const PaymentManagement = () => {
                 }
             }
 
-            // Sync with locally stored balances if any
-            loadedRecipients = loadedRecipients.map(r => {
-                const storedBal = localStorage.getItem(`nutrimunch_wallet_balance_${r.id}`);
-                const currentBal = Number(r.balance || 0);
-                if (storedBal !== null && !isNaN(Number(storedBal)) && Number(storedBal) > currentBal) {
-                    return { ...r, balance: Number(storedBal) };
-                }
-                return r;
-            });
-
+            // Server balances are authoritative: never override them with a
+            // browser localStorage value (DP-03 / SEC-06).
             setRecipients(loadedRecipients);
 
             let backendLedger = [];
@@ -175,19 +167,8 @@ const PaymentManagement = () => {
                 backendLedger = ledgerRes.value.data;
             }
 
-            let storedLedger = [];
-            try {
-                storedLedger = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
-            } catch (e) { }
-
-            // Deduplicate: merge backend records (canonical) with any unsaved stored items
-            const uniqueLedger = deduplicateTransactions([...backendLedger, ...storedLedger]);
-            setLedger(uniqueLedger);
-
-            // Clean up localStorage to permanently eliminate duplicate garbage
-            try {
-                localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(uniqueLedger));
-            } catch (e) { }
+            // The DB wallet_transactions ledger is the only ledger (DP-06).
+            setLedger(deduplicateTransactions(backendLedger));
 
             // Auto-select first recipient if none selected
             if (loadedRecipients.length > 0 && !selectedRecipientId) {
@@ -446,11 +427,6 @@ const PaymentManagement = () => {
                         }
 
                         setLedger(prev => deduplicateTransactions([canonicalCancelTx, ...prev]));
-                        try {
-                            const prevL = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
-                            const updatedL = deduplicateTransactions([canonicalCancelTx, ...prevL]);
-                            localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(updatedL));
-                        } catch (e) { }
 
                         showToast('info', `Transaction of ₹${amountNum.toFixed(2)} to ${recipient.name} was cancelled.`);
                     }
@@ -459,12 +435,6 @@ const PaymentManagement = () => {
                     const prevBalanceNum = Number(recipient.balance || 0);
                     const newCalculatedBalance = prevBalanceNum + amountNum;
 
-                    // Persist balance strictly for this specific recipient account
-                    localStorage.setItem(`nutrimunch_wallet_balance_id_${selectedRecipientId}`, String(newCalculatedBalance));
-                    localStorage.setItem(`nutrimunch_wallet_balance_${selectedRecipientId}`, String(newCalculatedBalance));
-                    if (recipient.email) {
-                        localStorage.setItem(`nutrimunch_wallet_balance_email_${recipient.email.toLowerCase()}`, String(newCalculatedBalance));
-                    }
 
                     // Update UI state immediately!
                     setRecipients(prev => prev.map(r => {
@@ -474,23 +444,9 @@ const PaymentManagement = () => {
                         return r;
                     }));
 
-                    // Dispatch account-isolated event for user/nutritionist layouts & components
-                    window.dispatchEvent(new CustomEvent('wallet_updated', {
-                        detail: { recipientId: selectedRecipientId, recipientEmail: recipient.email, newBalance: newCalculatedBalance, balance: newCalculatedBalance }
-                    }));
-
-                    try {
-                        const bc = new BroadcastChannel('nutrimunch_clinical_channel');
-                        bc.postMessage({
-                            type: 'WALLET_UPDATED',
-                            recipientId: selectedRecipientId,
-                            recipientEmail: recipient.email,
-                            amount: amountNum,
-                            balance: newCalculatedBalance,
-                            newBalance: newCalculatedBalance
-                        });
-                    } catch (e) { }
-
+                    // The authoritative balance comes back from the backend (and
+                    // is pushed to every open tab by SSE). No client-invented
+                    // balance is broadcast before the server has committed it.
                     let finalServerBalance = newCalculatedBalance;
                     let txnRef = null;
                     let canonicalTx = null;
@@ -556,17 +512,7 @@ const PaymentManagement = () => {
 
                     // Log ONLY the single unique canonical transaction to ledger & storage
                     setLedger(prev => deduplicateTransactions([canonicalTx, ...prev]));
-                    try {
-                        const prevL = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
-                        const updatedL = deduplicateTransactions([canonicalTx, ...prevL]);
-                        localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(updatedL));
-                    } catch (e) { }
 
-                    localStorage.setItem(`nutrimunch_wallet_balance_id_${selectedRecipientId}`, String(finalServerBalance));
-                    localStorage.setItem(`nutrimunch_wallet_balance_${selectedRecipientId}`, String(finalServerBalance));
-                    if (recipient.email) {
-                        localStorage.setItem(`nutrimunch_wallet_balance_email_${recipient.email.toLowerCase()}`, String(finalServerBalance));
-                    }
 
                     window.dispatchEvent(new CustomEvent('wallet_updated', {
                         detail: { recipientId: selectedRecipientId, recipientEmail: recipient.email, newBalance: finalServerBalance, balance: finalServerBalance }
@@ -663,11 +609,6 @@ const PaymentManagement = () => {
                 }
 
                 setLedger(prev => deduplicateTransactions([canonicalFailTx, ...prev]));
-                try {
-                    const prevL = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
-                    const updatedL = deduplicateTransactions([canonicalFailTx, ...prevL]);
-                    localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(updatedL));
-                } catch (e) { }
 
                 showToast('error', `Payment Failed: ${failReason}`);
             });
@@ -705,11 +646,6 @@ const PaymentManagement = () => {
                 }
             };
             setLedger(prev => deduplicateTransactions([failTx, ...prev]));
-            try {
-                const prevL = JSON.parse(localStorage.getItem('nutrimunch_audit_ledger') || '[]');
-                const updatedL = deduplicateTransactions([failTx, ...prevL]);
-                localStorage.setItem('nutrimunch_audit_ledger', JSON.stringify(updatedL));
-            } catch (e) { }
             showToast('error', failReason);
         }
     };

@@ -53,39 +53,11 @@ public class UserProfile {
     private Integer carbsTarget;
     private Integer fatsTarget;
 
-    @Column(name = "sugar_target_g")
-    private Integer sugarTargetG;
-    
-    // New targets for Module 3
+    // Only the five core daily targets are kept: calories, protein, carbs,
+    // fats and water. The micronutrient / sugar / fibre target columns were
+    // removed from the entity (DB columns are left in place by ddl-auto:update).
     @Column(name = "daily_water_target_liters")
     private Double dailyWaterTargetLiters;
-    
-    @Column(name = "daily_fiber_target_g")
-    private Integer dailyFiberTargetG;
-    
-    @Column(name = "iron_target_mg")
-    private Double ironTargetMg;
-    
-    @Column(name = "calcium_target_mg")
-    private Double calciumTargetMg;
-    
-    @Column(name = "vit_d_target_mcg")
-    private Double vitDTargetMcg;
-    
-    @Column(name = "vit_b12_target_mcg")
-    private Double vitB12TargetMcg;
-    
-    @Column(name = "vit_c_target_mg")
-    private Double vitCTargetMg;
-    
-    @Column(name = "magnesium_target_mg")
-    private Double magnesiumTargetMg;
-    
-    @Column(name = "potassium_target_mg")
-    private Double potassiumTargetMg;
-    
-    @Column(name = "zinc_target_mg")
-    private Double zincTargetMg;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

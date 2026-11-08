@@ -114,11 +114,6 @@ const DietPlanBuilder = () => {
         carbs: 150,
         fats: 70,
         waterLiters: 3.0,
-        fiber: 28,
-        iron: 18,
-        calcium: 1000,
-        vitD: 15,
-        vitC: 90,
         dietType: 'High-Protein Metabolic',
         nutritionistNotes: 'Maintain strict meal cadence. Hydrate with 500ml water upon waking. Emphasize whole-food bioavailable protein sources.'
     });
@@ -252,11 +247,6 @@ const DietPlanBuilder = () => {
                             fats: p.fatsTarget ? `${p.fatsTarget}g` : 'Not set',
                             fatsNum: p.fatsTarget ?? null,
                             waterLiters: p.dailyWaterTargetLiters ?? null,
-                            fiberG: p.dailyFiberTargetG ?? null,
-                            ironMg: p.ironTargetMg ?? null,
-                            calciumMg: p.calciumTargetMg ?? null,
-                            vitDMcg: p.vitDTargetMcg ?? null,
-                            vitCMg: p.vitCTargetMg ?? null,
                             notes: p.dietType ? `Preferred Diet: ${p.dietType}` : 'No dietary information recorded.'
                         };
                     });
@@ -313,7 +303,6 @@ const DietPlanBuilder = () => {
             carbs: patient.carbsNum || 180,
             fats: patient.fatsNum || 60,
             waterLiters: patient.waterLiters || 3.0,
-            fiber: patient.fiberG || 28,
             dietType: patient.dietType || prev.dietType,
             nutritionistNotes: `Prescribed based on patient profile goals: ${patient.goal}. Allergies noted: ${patient.allergies}.`
         }));
@@ -388,11 +377,6 @@ const DietPlanBuilder = () => {
             carbs: Number(planForm.carbs),
             fats: Number(planForm.fats),
             waterLiters: Number(planForm.waterLiters),
-            fiber: Number(planForm.fiber || 28),
-            iron: Number(planForm.iron || 18),
-            calcium: Number(planForm.calcium || 1000),
-            vitD: Number(planForm.vitD || 15),
-            vitC: Number(planForm.vitC || 90),
             dietType: planForm.dietType,
             nutritionistNotes: planForm.nutritionistNotes,
             nutritionistName: nutritionistName,
@@ -512,11 +496,6 @@ const DietPlanBuilder = () => {
             carbs: plan.carbs || 150,
             fats: plan.fats || 70,
             waterLiters: plan.waterLiters || 3.0,
-            fiber: plan.fiber || 28,
-            iron: plan.iron || 18,
-            calcium: plan.calcium || 1000,
-            vitD: plan.vitD || 15,
-            vitC: plan.vitC || 90,
             dietType: plan.dietType || 'High-Protein Metabolic',
             nutritionistNotes: plan.nutritionistNotes || ''
         });

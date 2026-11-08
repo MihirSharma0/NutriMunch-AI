@@ -3,7 +3,7 @@
  * Maintains a live streaming connection with the Spring Boot backend
  * for instant balance updates, escrow state transitions, and ledger refreshes.
  */
-import { API_BASE_URL } from '../api/axios';
+import api, { API_BASE_URL } from '../api/axios';
 
 /**
  * Shared singleton manager for real-time Server-Sent Events (SSE).
@@ -17,13 +17,54 @@ let reconnectTimer = null;
 const updateCallbacks = new Set();
 const ledgerCallbacks = new Set();
 
+// The single canonical wallet balance for this browser session. It is fetched
+// ONCE from the server when the session starts, then kept current by SSE pushes.
+// Nothing is written to localStorage: the DB is the only source of truth.
+let canonicalBalance = null;
+let balanceResyncedForSession = false;
+let resyncInFlight = null;
+let lastFocusResyncAt = 0;
+
+/** Returns the authoritative balance for the current session (or null before the first fetch). */
+export const getCanonicalBalance = () => canonicalBalance;
+
+/**
+ * Fetch the balance once from /wallet/me. `force` is used after a reconnect or a
+ * tab regains focus, because SSE events can be lost while the stream is down
+ * (the emitter registry is process-local on the server).
+ */
+export const resyncWalletBalance = async (force = false) => {
+    if (!force && balanceResyncedForSession) return canonicalBalance;
+    if (resyncInFlight) return resyncInFlight;
+    resyncInFlight = (async () => {
+        try {
+            const res = await api.get('/wallet/me');
+            const bal = Number(res?.data?.balance);
+            if (!isNaN(bal)) {
+                canonicalBalance = bal;
+                balanceResyncedForSession = true;
+                try {
+                    window.dispatchEvent(new CustomEvent('wallet_balance_resynced', { detail: { balance: bal } }));
+                } catch (e) { }
+            }
+        } catch (err) {
+            console.warn('[Wallet SSE] balance resync failed:', err);
+        } finally {
+            resyncInFlight = null;
+        }
+        return canonicalBalance;
+    })();
+    return resyncInFlight;
+};
+
 let broadcastChannel = null;
 try {
     broadcastChannel = new BroadcastChannel('nutrimunch_clinical_channel');
     broadcastChannel.onmessage = (event) => {
         if (!event?.data) return;
         if (event.data.type === 'WALLET_CREDITED' || event.data.type === 'WALLET_UPDATED' || event.data.eventType === 'ADMIN_CREDIT') {
-            handleParsedWalletPayload(event.data, false);
+            // Balance is authoritative only from the server SSE stream. Every tab
+            // has its own stream, so a client-computed cross-tab value is ignored.
         } else if (event.data.type === 'LEDGER_UPDATED') {
             for (const cb of ledgerCallbacks) {
                 try { cb(event.data); } catch (e) { }
@@ -50,22 +91,10 @@ function handleParsedWalletPayload(data, shouldBroadcast = true) {
 
     if (newBal === null || isNaN(newBal)) return;
 
-    // Persist to user-isolated localStorage keys
-    const targetId = String(data.recipientId || data.userId || '');
-    const targetEmail = (data.recipientEmail || data.email || '').toLowerCase();
-
-    if (targetId) {
-        try {
-            localStorage.setItem(`nutrimunch_wallet_balance_id_${targetId}`, String(newBal));
-            localStorage.setItem(`nutrimunch_wallet_balance_${targetId}`, String(newBal));
-        } catch (e) { }
-    }
-    if (targetEmail) {
-        try {
-            localStorage.setItem(`nutrimunch_wallet_balance_email_${targetEmail}`, String(newBal));
-            localStorage.setItem(`nutrimunch_wallet_balance_${targetEmail}`, String(newBal));
-        } catch (e) { }
-    }
+    // The DB is the source of truth: keep the single in-memory balance current.
+    // No localStorage balance keys are written (DP-03 / DP-04).
+    canonicalBalance = newBal;
+    balanceResyncedForSession = true;
 
     const eventDetail = {
         ...data,
@@ -136,6 +165,9 @@ function initEventSource(user) {
 
     try {
         activeEventSource = new EventSource(sseUrl);
+
+        // Session start: exactly one balance GET. Subsequent changes arrive by SSE push.
+        resyncWalletBalance(false);
 
         const onWalletMessage = (event) => {
             try {
@@ -211,6 +243,7 @@ function initEventSource(user) {
                 if (reconnectTimer) clearTimeout(reconnectTimer);
                 reconnectTimer = setTimeout(() => {
                     initEventSource(user);
+                    resyncWalletBalance(true);
                 }, 3000);
             }
         };
@@ -254,6 +287,8 @@ try {
     window.addEventListener('nutrimunch_logout', () => {
         updateCallbacks.clear();
         ledgerCallbacks.clear();
+        canonicalBalance = null;
+        balanceResyncedForSession = false;
         closeConnection();
     });
 } catch (e) { }
@@ -262,6 +297,15 @@ try {
 /**
  * Closes the active Server-Sent Events connection and resets internal retry counters.
  */
+try {
+    window.addEventListener('focus', () => {
+        const now = Date.now();
+        if (now - lastFocusResyncAt < 30000) return;
+        lastFocusResyncAt = now;
+        resyncWalletBalance(true);
+    });
+} catch (e) { }
+
 export const closeWalletSse = () => {
     updateCallbacks.clear();
     ledgerCallbacks.clear();

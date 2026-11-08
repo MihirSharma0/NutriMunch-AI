@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import api from '../../../api/axios';
+import { getCanonicalBalance } from '../../../utils/walletSse';
 
 /**
  * NutritionistHome Component
@@ -15,7 +16,7 @@ import api from '../../../api/axios';
  */
 const NutritionistHome = () => {
     const { user } = useContext(AuthContext);
-    const [walletBalance, setWalletBalance] = useState(null);
+    const [walletBalance, setWalletBalance] = useState(() => getCanonicalBalance() ?? 0);
     const [upcomingConsultations, setUpcomingConsultations] = useState([]);
     const [consultationRecords, setConsultationRecords] = useState([]);
     const [consultationsLoading, setConsultationsLoading] = useState(true);
@@ -61,128 +62,38 @@ const NutritionistHome = () => {
         };
     }, [myId, myEmail]);
 
+    // Server-authoritative wallet balance: one fetch at session start, SSE pushes
+    // afterwards. No per-navigation balance GET and no localStorage balance keys.
     useEffect(() => {
-        const userKeyId = user?.id || user?.userId;
-        const userKeyEmail = user?.email?.toLowerCase();
-
-        const resolveCachedBalance = () => {
-            if (!userKeyId && !userKeyEmail) return 0;
-            const keys = [
-                userKeyId ? `nutrimunch_wallet_balance_id_${userKeyId}` : null,
-                userKeyId ? `nutrimunch_wallet_balance_${userKeyId}` : null,
-                userKeyEmail ? `nutrimunch_wallet_balance_email_${userKeyEmail}` : null,
-                userKeyEmail ? `nutrimunch_wallet_balance_${userKeyEmail}` : null
-            ].filter(Boolean);
-            let maxBal = 0;
-            for (const k of keys) {
-                const v = localStorage.getItem(k);
-                if (v !== null && !isNaN(Number(v))) {
-                    maxBal = Math.max(maxBal, Number(v));
-                }
-            }
-            return maxBal;
+        const applyBalance = (bal) => {
+            const num = Number(bal);
+            if (!isNaN(num)) setWalletBalance(num);
+        };
+        const onResync = (e) => applyBalance(e?.detail?.balance);
+        const onPush = (e) => {
+            const d = e?.detail;
+            if (!d) return;
+            const myId = String(user?.id || user?.userId || '');
+            const myEmail = String(user?.email || '').toLowerCase();
+            const targetId = String(d.recipientId || '');
+            const targetEmail = String(d.recipientEmail || '').toLowerCase();
+            const isForMe = (targetId && myId && targetId === myId) ||
+                            (targetEmail && myEmail && targetEmail === myEmail) ||
+                            (!targetId && !targetEmail);
+            if (!isForMe) return;
+            applyBalance(d.newBalance ?? d.balance);
         };
 
-        const fetchWallet = async () => {
-            if (!userKeyId && !userKeyEmail) {
-                setWalletBalance(0);
-                return;
-            }
-            try {
-                const res = await api.get('/wallet/me', {
-                    params: {
-                        userId: userKeyId || '',
-                        email: userKeyEmail || ''
-                    }
-                });
-                if (res.data && typeof res.data.balance !== 'undefined' && res.data.balance !== null) {
-                    const sBal = Number(res.data.balance);
-                    setWalletBalance(sBal);
-                    if (userKeyId) localStorage.setItem(`nutrimunch_wallet_balance_id_${userKeyId}`, String(sBal));
-                    if (userKeyEmail) localStorage.setItem(`nutrimunch_wallet_balance_email_${userKeyEmail}`, String(sBal));
-                    return;
-                }
-            } catch (err) {}
-            const cached = resolveCachedBalance();
-            setWalletBalance(cached);
-        };
-
-        fetchWallet();
-
-        const handleWalletUpdate = (e) => {
-            const myId = String(userKeyId || '');
-            const myEmail = (userKeyEmail || user?.username || '').toLowerCase();
-
-            if (e?.type === 'storage' && e?.key) {
-                const key = e.key;
-                if (!key.startsWith('nutrimunch_wallet_balance')) return;
-                const matchesMe = (myId && key.includes(myId)) || (myEmail && key.includes(myEmail));
-                if (!matchesMe) return;
-                const val = localStorage.getItem(key);
-                if (val !== null && !isNaN(Number(val))) {
-                    setWalletBalance(Number(val));
-                    return;
-                }
-            }
-
-            if (e?.detail) {
-                const targetId = String(e.detail.recipientId || '');
-                const targetEmail = (e.detail.recipientEmail || '').toLowerCase();
-                const isForMe = (targetId && myId && targetId === myId) || 
-                                (targetEmail && myEmail && targetEmail === myEmail) ||
-                                (!targetId && !targetEmail);
-                if (!isForMe) return;
-
-                const pushedVal = e.detail.newBalance !== undefined && e.detail.newBalance !== null
-                    ? e.detail.newBalance
-                    : e.detail.balance;
-
-                if (pushedVal !== undefined && pushedVal !== null) {
-                    const newBal = Number(pushedVal);
-                    setWalletBalance(newBal);
-                    if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
-                    if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
-                    return;
-                }
-            }
-        };
-
-        window.addEventListener('wallet_updated', handleWalletUpdate);
-        window.addEventListener('storage', handleWalletUpdate);
-
-        let bc;
-        try {
-            bc = new BroadcastChannel('nutrimunch_clinical_channel');
-            bc.onmessage = (event) => {
-                if (event.data?.type === 'WALLET_CREDITED' || event.data?.type === 'WALLET_UPDATED') {
-                    const targetId = String(event.data.recipientId || '');
-                    const targetEmail = (event.data.recipientEmail || '').toLowerCase();
-                    const myId = String(userKeyId || '');
-                    const myEmail = (userKeyEmail || user?.username || '').toLowerCase();
-                    const isForMe = (targetId && myId && targetId === myId) || 
-                                    (targetEmail && myEmail && targetEmail === myEmail) ||
-                                    (!targetId && !targetEmail);
-                    if (!isForMe) return;
-
-                    // Direct Push: Apply pushed balance immediately with zero server load
-                    const pushedVal = event.data.newBalance !== undefined && event.data.newBalance !== null
-                        ? event.data.newBalance
-                        : event.data.balance;
-
-                    if (pushedVal !== undefined && pushedVal !== null) {
-                        const newBal = Number(pushedVal);
-                        setWalletBalance(newBal);
-                        if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
-                        if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
-                    }
-                }
-            };
-        } catch (e) {}
+        const initial = getCanonicalBalance();
+        if (initial !== null) applyBalance(initial);
+        window.addEventListener('wallet_balance_resynced', onResync);
+        window.addEventListener('wallet_update', onPush);
+        window.addEventListener('wallet_updated', onPush);
 
         return () => {
-            window.removeEventListener('wallet_updated', handleWalletUpdate);
-            window.removeEventListener('storage', handleWalletUpdate);
-            if (bc) bc.close();
+            window.removeEventListener('wallet_balance_resynced', onResync);
+            window.removeEventListener('wallet_update', onPush);
+            window.removeEventListener('wallet_updated', onPush);
         };
     }, [user]);
 

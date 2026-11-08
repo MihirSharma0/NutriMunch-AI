@@ -8,7 +8,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../../../context/AuthContext';
 import api from '../../../api/axios';
 import FeatureGate from '../../../components/FeatureGate';
-import { subscribeWalletSse } from '../../../utils/walletSse';
+import { subscribeWalletSse, getCanonicalBalance } from '../../../utils/walletSse';
 
 const PREDEFINED_ALLERGENS = [
     { id: 'Nuts', label: 'Nuts & Peanuts', icon: '🥜' },
@@ -40,15 +40,7 @@ const DEFAULT_TARGETS = {
     protein: 140,
     carbs: 200,
     fats: 65,
-    sugar: 50,
     water: 2.5,
-    fiber: 28,
-    iron: 18,
-    calcium: 1000,
-    vitD: 15,
-    vitB12: 2.4,
-    vitC: 90,
-    zinc: 11
 };
 
 /**
@@ -108,162 +100,36 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
-    const resolveWalletBalance = () => {
-        try {
-            const userKeyId = user?.id || user?.userId;
-            const userKeyEmail = user?.email?.toLowerCase();
-            if (!userKeyId && !userKeyEmail) return 0;
-
-            const keysToCheck = [
-                userKeyId ? `nutrimunch_wallet_balance_id_${userKeyId}` : null,
-                userKeyId ? `nutrimunch_wallet_balance_${userKeyId}` : null,
-                userKeyEmail ? `nutrimunch_wallet_balance_email_${userKeyEmail}` : null,
-                userKeyEmail ? `nutrimunch_wallet_balance_${userKeyEmail}` : null
-            ].filter(Boolean);
-
-            let maxBal = 0;
-            for (const k of keysToCheck) {
-                const val = localStorage.getItem(k);
-                if (val !== null && !isNaN(Number(val))) {
-                    maxBal = Math.max(maxBal, Number(val));
-                }
-            }
-            return maxBal;
-        } catch (e) {
-            return 0;
-        }
-    };
-
-    const [walletBalance, setWalletBalance] = useState(() => resolveWalletBalance());
+    // The database is the only source of truth. The session balance is fetched
+    // once by the global SSE subscription and kept current by server pushes.
+    const [walletBalance, setWalletBalance] = useState(() => getCanonicalBalance() ?? 0);
     const [walletLoading, setWalletLoading] = useState(false);
 
-    const loadWallet = async () => {
-        try {
-            setWalletLoading(true);
-            const userKeyId = user?.id || user?.userId;
-            const userKeyEmail = user?.email?.toLowerCase();
-
-            if (!userKeyId && !userKeyEmail) {
-                setWalletBalance(0);
-                return;
-            }
-
-            const res = await api.get('/wallet/me', {
-                params: {
-                    userId: userKeyId || '',
-                    email: userKeyEmail || ''
-                }
-            });
-
-            if (res.data && typeof res.data.balance !== 'undefined' && res.data.balance !== null) {
-                const sBal = Number(res.data.balance);
-                setWalletBalance(sBal);
-                if (userKeyId) {
-                    localStorage.setItem(`nutrimunch_wallet_balance_id_${userKeyId}`, String(sBal));
-                    localStorage.setItem(`nutrimunch_wallet_balance_${userKeyId}`, String(sBal));
-                }
-                if (userKeyEmail) {
-                    localStorage.setItem(`nutrimunch_wallet_balance_email_${userKeyEmail}`, String(sBal));
-                    localStorage.setItem(`nutrimunch_wallet_balance_${userKeyEmail}`, String(sBal));
-                }
-                return;
-            }
-        } catch (err) {
-            console.warn('Failed to load wallet on profile:', err);
-        } finally {
-            const fallbackBal = resolveWalletBalance();
-            setWalletBalance(prev => (prev !== undefined && prev !== null ? prev : fallbackBal));
-            setWalletLoading(false);
-        }
-    };
-
     useEffect(() => {
-        loadWallet();
-
-        const handleWalletUpdated = (e) => {
-            const myId = String(user?.id || user?.userId || '');
-            const myEmail = (user?.email || user?.username || '').toLowerCase();
-
-            if (e?.type === 'storage' && e?.key) {
-                const key = e.key;
-                if (!key.startsWith('nutrimunch_wallet_balance')) return;
-                const matchesMe = (myId && key.includes(myId)) || (myEmail && key.includes(myEmail));
-                if (!matchesMe) return;
-                const val = localStorage.getItem(key);
-                if (val !== null && !isNaN(Number(val))) {
-                    setWalletBalance(Number(val));
-                    return;
-                }
-            }
-
-            if (e?.detail) {
-                const targetId = String(e.detail.recipientId || '');
-                const targetEmail = (e.detail.recipientEmail || '').toLowerCase();
-                const isForMe = (targetId && myId && targetId === myId) ||
-                                (targetEmail && myEmail && targetEmail === myEmail) ||
-                                (!targetId && !targetEmail);
-                if (!isForMe) return;
-
-                const pushedVal = e.detail.newBalance !== undefined && e.detail.newBalance !== null
-                    ? e.detail.newBalance
-                    : e.detail.balance;
-
-                if (pushedVal !== undefined && pushedVal !== null) {
-                    const newBal = Number(pushedVal);
-                    setWalletBalance(newBal);
-                    if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
-                    if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
-                    return;
-                }
-            }
+        const applyBalance = (bal) => {
+            const num = Number(bal);
+            if (!isNaN(num)) setWalletBalance(num);
+        };
+        const onResync = (e) => applyBalance(e?.detail?.balance);
+        const onPush = (e) => {
+            const d = e?.detail;
+            if (d) applyBalance(d.newBalance ?? d.balance);
         };
 
-        window.addEventListener('wallet_update', handleWalletUpdated);
-        window.addEventListener('wallet_updated', handleWalletUpdated);
-        window.addEventListener('storage', handleWalletUpdated);
+        const initial = getCanonicalBalance();
+        if (initial !== null) applyBalance(initial);
 
-        const unsubscribeSse = subscribeWalletSse(user, (newBal) => {
-            const numBal = Number(newBal);
-            if (!isNaN(numBal)) {
-                setWalletBalance(numBal);
-            }
-        });
+        window.addEventListener('wallet_balance_resynced', onResync);
+        window.addEventListener('wallet_update', onPush);
+        window.addEventListener('wallet_updated', onPush);
 
-        let bc;
-        try {
-            bc = new BroadcastChannel('nutrimunch_clinical_channel');
-            bc.onmessage = (event) => {
-                if (event.data?.type === 'WALLET_CREDITED' || event.data?.type === 'WALLET_UPDATED') {
-                    const targetId = String(event.data.recipientId || '');
-                    const targetEmail = (event.data.recipientEmail || '').toLowerCase();
-                    const myId = String(user?.id || user?.userId || '');
-                    const myEmail = (user?.email || user?.username || '').toLowerCase();
-                    const isForMe = (targetId && myId && targetId === myId) ||
-                                    (targetEmail && myEmail && targetEmail === myEmail) ||
-                                    (!targetId && !targetEmail);
-                    if (!isForMe) return;
-
-                    // Direct Push: Apply pushed balance immediately with zero server load
-                    const pushedVal = event.data.newBalance !== undefined && event.data.newBalance !== null
-                        ? event.data.newBalance
-                        : event.data.balance;
-
-                    if (pushedVal !== undefined && pushedVal !== null) {
-                        const newBal = Number(pushedVal);
-                        setWalletBalance(newBal);
-                        if (myId) localStorage.setItem(`nutrimunch_wallet_balance_${myId}`, String(newBal));
-                        if (myEmail) localStorage.setItem(`nutrimunch_wallet_balance_${myEmail}`, String(newBal));
-                    }
-                }
-            };
-        } catch (e) {}
+        const unsubscribeSse = subscribeWalletSse(user, (newBal) => applyBalance(newBal));
 
         return () => {
             if (unsubscribeSse) unsubscribeSse();
-            window.removeEventListener('wallet_update', handleWalletUpdated);
-            window.removeEventListener('wallet_updated', handleWalletUpdated);
-            window.removeEventListener('storage', handleWalletUpdated);
-            if (bc) bc.close();
+            window.removeEventListener('wallet_balance_resynced', onResync);
+            window.removeEventListener('wallet_update', onPush);
+            window.removeEventListener('wallet_updated', onPush);
         };
     }, [user]);
 
@@ -326,17 +192,9 @@ const Profile = () => {
                             protein: res.data.proteinTarget || DEFAULT_TARGETS.protein,
                             carbs: res.data.carbsTarget || DEFAULT_TARGETS.carbs,
                             fats: res.data.fatsTarget || DEFAULT_TARGETS.fats,
-                            sugar: res.data.sugarTargetG || DEFAULT_TARGETS.sugar,
                             tdee: res.data.tdee || 2000,
                             bmr: res.data.bmr || 1600,
                             water: res.data.dailyWaterTargetLiters || DEFAULT_TARGETS.water,
-                            fiber: res.data.dailyFiberTargetG || DEFAULT_TARGETS.fiber,
-                            iron: res.data.ironTargetMg || DEFAULT_TARGETS.iron,
-                            calcium: res.data.calciumTargetMg || DEFAULT_TARGETS.calcium,
-                            vitD: res.data.vitDTargetMcg || DEFAULT_TARGETS.vitD,
-                            vitB12: res.data.vitB12TargetMcg || DEFAULT_TARGETS.vitB12,
-                            vitC: res.data.vitCTargetMg || DEFAULT_TARGETS.vitC,
-                            zinc: res.data.zincTargetMg || DEFAULT_TARGETS.zinc
                         };
                         setCustomTargets(loadedTargets);
                         if (loadedTargets.water) {
@@ -565,15 +423,7 @@ const Profile = () => {
             proteinTarget: parseInt(customTargets.protein, 10) || DEFAULT_TARGETS.protein,
             carbsTarget: parseInt(customTargets.carbs, 10) || DEFAULT_TARGETS.carbs,
             fatsTarget: parseInt(customTargets.fats, 10) || DEFAULT_TARGETS.fats,
-            sugarTargetG: parseInt(customTargets.sugar, 10) || DEFAULT_TARGETS.sugar,
             dailyWaterTargetLiters: parseFloat(customTargets.water) || DEFAULT_TARGETS.water,
-            dailyFiberTargetG: parseInt(customTargets.fiber, 10) || DEFAULT_TARGETS.fiber,
-            ironTargetMg: parseFloat(customTargets.iron) || DEFAULT_TARGETS.iron,
-            calciumTargetMg: parseFloat(customTargets.calcium) || DEFAULT_TARGETS.calcium,
-            vitDTargetMcg: parseFloat(customTargets.vitD) || DEFAULT_TARGETS.vitD,
-            vitB12TargetMcg: parseFloat(customTargets.vitB12) || DEFAULT_TARGETS.vitB12,
-            vitCTargetMg: parseFloat(customTargets.vitC) || DEFAULT_TARGETS.vitC,
-            zincTargetMg: parseFloat(customTargets.zinc) || DEFAULT_TARGETS.zinc
         };
 
         try {
@@ -584,17 +434,9 @@ const Profile = () => {
                     protein: res.data.proteinTarget,
                     carbs: res.data.carbsTarget,
                     fats: res.data.fatsTarget,
-                    sugar: res.data.sugarTargetG || DEFAULT_TARGETS.sugar,
                     tdee: res.data.tdee,
                     bmr: res.data.bmr,
                     water: res.data.dailyWaterTargetLiters,
-                    fiber: res.data.dailyFiberTargetG,
-                    iron: res.data.ironTargetMg,
-                    calcium: res.data.calciumTargetMg,
-                    vitD: res.data.vitDTargetMcg,
-                    vitB12: res.data.vitB12TargetMcg,
-                    vitC: res.data.vitCTargetMg,
-                    zinc: res.data.zincTargetMg
                 };
                 setCustomTargets(updatedT);
                 if (updatedT.water) {

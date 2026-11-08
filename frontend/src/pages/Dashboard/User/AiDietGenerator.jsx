@@ -413,11 +413,6 @@ const AiDietGenerator = () => {
         carbs: structuredPlan.targets.carbs,
         fats: structuredPlan.targets.fats,
         water: structuredPlan.targets.waterLiters,
-        fiber: structuredPlan.targets.fiber,
-        iron: structuredPlan.targets.iron,
-        calcium: structuredPlan.targets.calcium,
-        vitD: structuredPlan.targets.vitD,
-        vitC: structuredPlan.targets.vitC
       });
       setSaved(false);
     } catch (requestError) {
@@ -486,11 +481,6 @@ const AiDietGenerator = () => {
       carbsTarget: targets.carbs,
       fatsTarget: targets.fats,
       dailyWaterTargetLiters: targets.water,
-      dailyFiberTargetG: targets.fiber,
-      ironTargetMg: targets.iron,
-      calciumTargetMg: targets.calcium,
-      vitDTargetMcg: targets.vitD,
-      vitCTargetMg: targets.vitC
     };
     try {
       await api.put('/profiles/me', payload);
@@ -500,11 +490,6 @@ const AiDietGenerator = () => {
         carbs: targets.carbs,
         fats: targets.fats,
         water: targets.water,
-        fiber: targets.fiber,
-        iron: targets.iron,
-        calcium: targets.calcium,
-        vitD: targets.vitD,
-        vitC: targets.vitC
       }));
       localStorage.setItem('nutrimunch_water_target_liters', String(targets.water));
       window.dispatchEvent(new Event('nutrimunch_profile_updated'));
