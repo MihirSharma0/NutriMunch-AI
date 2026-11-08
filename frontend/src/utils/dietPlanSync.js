@@ -7,37 +7,13 @@
 // Provides single-source-of-truth syncing across Nutritionist, User Dashboard, and Admin Portal
 
 /**
- * Retrieves the set of diet plan IDs marked as deleted from localStorage.
- * 
- * @returns {Set<string>} Set of deleted plan ID strings
+ * Deletion is owned by the backend: published plans are soft-deleted in the
+ * `nutritionist_diet_plans` table and every read query filters `deleted = false`.
+ * Browser tombstones (and title-based matching) were removed in C7 because they
+ * hid *new* plans that happened to reuse a deleted plan's title, and because a
+ * deletion only persisted in one browser. Local caches are cleared here purely
+ * so stale entries do not linger until the next server fetch.
  */
-export const getDeletedPlanIds = () => {
-    try {
-        const stored = localStorage.getItem('nutrimunch_deleted_plan_ids');
-        if (!stored) return new Set();
-        const parsed = JSON.parse(stored);
-        return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
-    } catch (e) {
-        return new Set();
-    }
-};
-
-/**
- * Retrieves the set of normalized plan titles marked as deleted from localStorage.
- * 
- * @returns {Set<string>} Set of deleted plan title strings
- */
-export const getDeletedPlanTitles = () => {
-    try {
-        const stored = localStorage.getItem('nutrimunch_deleted_plan_titles');
-        if (!stored) return new Set();
-        const parsed = JSON.parse(stored);
-        return new Set(Array.isArray(parsed) ? parsed.map(s => String(s).toLowerCase().trim()) : []);
-    } catch (e) {
-        return new Set();
-    }
-};
-
 /**
  * Permanently purges a diet plan from backend storage, active session caches,
  * and local storage registries, broadcasting removal across browser tabs.
@@ -49,50 +25,13 @@ export const getDeletedPlanTitles = () => {
 export const permanentlyDeleteDietPlan = async (planOrId, apiInstance = null) => {
     if (!planOrId) return false;
 
-    let strId = '';
-    let targetTitle = '';
+    const strId = typeof planOrId === 'object' && planOrId !== null
+        ? String(planOrId.id || '').trim()
+        : String(planOrId).trim();
 
-    if (typeof planOrId === 'object' && planOrId !== null) {
-        strId = String(planOrId.id || '').trim();
-        targetTitle = String(planOrId.title || planOrId.planTitle || '').toLowerCase().trim();
-    } else {
-        strId = String(planOrId).trim();
-    }
-
-    // Attempt to locate plan title from local history if not already found
-    if (!targetTitle) {
-        try {
-            const rawHist = localStorage.getItem('nutrimunch_diet_plans_history');
-            if (rawHist) {
-                const hist = JSON.parse(rawHist);
-                const found = hist.find(p => String(p.id) === strId);
-                if (found) {
-                    targetTitle = String(found.title || found.planTitle || '').toLowerCase().trim();
-                }
-            }
-        } catch (e) {}
-    }
-
-    // 1. Add to permanent blacklist (ID and Title)
-    try {
-        if (strId) {
-            const deletedSet = getDeletedPlanIds();
-            deletedSet.add(strId);
-            localStorage.setItem('nutrimunch_deleted_plan_ids', JSON.stringify(Array.from(deletedSet)));
-        }
-        if (targetTitle) {
-            const deletedTitles = getDeletedPlanTitles();
-            deletedTitles.add(targetTitle);
-            localStorage.setItem('nutrimunch_deleted_plan_titles', JSON.stringify(Array.from(deletedTitles)));
-        }
-    } catch (e) {}
-
-    const isMatch = (item) => {
-        if (!item) return false;
-        const itemId = String(item.id || '').trim();
-        const itemTitle = String(item.title || item.planTitle || '').toLowerCase().trim();
-        return (strId && itemId === strId) || (targetTitle && itemTitle === targetTitle);
-    };
+    // Match by ID only. Titles are not unique and must never be used to hide
+    // a different (newer) plan.
+    const isMatch = (item) => item && strId && String(item.id || '').trim() === strId;
 
     // 2. Remove from History Vault
     try {
@@ -159,40 +98,29 @@ export const permanentlyDeleteDietPlan = async (planOrId, apiInstance = null) =>
         }
     } catch (e) {}
 
-    // 6. Remove from Active Diet Plan cache
-    try {
-        const rawActive = localStorage.getItem('nutrimunch_active_diet_plan');
-        if (rawActive) {
-            const active = JSON.parse(rawActive);
-            if (isMatch(active)) {
-                localStorage.removeItem('nutrimunch_active_diet_plan');
-            }
-        }
-    } catch (e) {}
-
     // 7. Broadcast across tabs via BroadcastChannel
     try {
         const bc = new BroadcastChannel('nutrimunch_diet_plan_channel');
-        bc.postMessage({ type: 'DIET_PLAN_DELETED', planId: strId, title: targetTitle });
+        bc.postMessage({ type: 'DIET_PLAN_DELETED', planId: strId });
         setTimeout(() => {
             try { bc.close(); } catch (err) {}
         }, 1000);
     } catch (e) {}
 
     // 8. Fire local window events
-    window.dispatchEvent(new CustomEvent('nutrimunch_diet_plan_deleted', { detail: { planId: strId, title: targetTitle } }));
+    window.dispatchEvent(new CustomEvent('nutrimunch_diet_plan_deleted', { detail: { planId: strId } }));
     window.dispatchEvent(new Event('nutrimunch_diet_history_updated'));
     window.dispatchEvent(new Event('nutrimunch_diet_plan_updated'));
     window.dispatchEvent(new Event('storage'));
 
-    // 9. Delete from backend database / in-memory registry
-    if (apiInstance) {
-        if (strId) {
-            try { await apiInstance.delete(`/diet-plans/${encodeURIComponent(strId)}`); } catch (e) {}
-            try { await apiInstance.delete(`/diet-plans/deploy/${encodeURIComponent(strId)}`); } catch (e) {}
-        }
-        if (targetTitle && targetTitle !== strId.toLowerCase()) {
-            try { await apiInstance.delete(`/diet-plans/${encodeURIComponent(targetTitle)}`); } catch (e) {}
+    // 9. Delete from the backend database. Surface a failed delete so the
+    // caller never reports success for a deletion the server did not commit.
+    if (apiInstance && strId) {
+        try {
+            await apiInstance.delete(`/diet-plans/${encodeURIComponent(strId)}`);
+        } catch (err) {
+            console.error('Failed to delete diet plan from server:', err);
+            return false;
         }
     }
 
@@ -220,8 +148,6 @@ export const normalizeAndDeduplicatePlans = ({
     currentUserName = '',
     isUserView = false
 }) => {
-    const deletedIds = getDeletedPlanIds();
-    const deletedTitles = getDeletedPlanTitles();
     const seenIds = new Set();
     const seenCanonicalKeys = new Set();
     const normalized = [];
@@ -235,15 +161,9 @@ export const normalizeAndDeduplicatePlans = ({
         if (!item) return;
         const id = String(item.id || `plan_auto_${idx}`);
 
-        // Permanently filter out any deleted plan (by ID or Title)
-        if (deletedIds.has(id)) {
-            return;
-        }
-
+        // Deletion is server-side: the backend already excludes soft-deleted
+        // plans, so no browser blacklist is applied here.
         const title = (item.title || item.planTitle || 'Custom Protocol').trim();
-        if (deletedTitles.has(title.toLowerCase())) {
-            return;
-        }
 
         // Scope resolution:
         // If targetMode or scope is EXCLUSIVE -> EXCLUSIVE.

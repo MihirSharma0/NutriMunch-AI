@@ -25,13 +25,40 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         if (token) {
-            const userData = localStorage.getItem('user');
-            if (userData) {
-                setUser(JSON.parse(userData));
+            // localStorage is untrusted input: a corrupt or tampered payload
+            // must not crash the app. Role here is display-only; the API/JWT
+            // remains the only authority for access control.
+            try {
+                const userData = localStorage.getItem('user');
+                if (userData) {
+                    const parsed = JSON.parse(userData);
+                    setUser(parsed && typeof parsed === 'object' ? parsed : null);
+                } else {
+                    setUser(null);
+                }
+            } catch (e) {
+                console.warn('[Auth] stored user was unreadable; clearing session:', e);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                setToken(null);
+                setUser(null);
             }
+        } else {
+            setUser(null);
         }
         setLoading(false);
     }, [token]);
+
+    // The axios interceptor clears an expired session on a non-auth 401.
+    useEffect(() => {
+        const onExpired = () => {
+            setToken(null);
+            setUser(null);
+            try { window.dispatchEvent(new Event('nutrimunch_logout')); } catch { /* best-effort signal */ }
+        };
+        window.addEventListener('nutrimunch_session_expired', onExpired);
+        return () => window.removeEventListener('nutrimunch_session_expired', onExpired);
+    }, []);
 
     /**
      * Authenticates a user with email and password credentials.
@@ -129,7 +156,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user');
         // Release live streams immediately; the layout effect would also catch this, but an
         // explicit signal keeps every logout path behaving identically.
-        try { window.dispatchEvent(new Event('nutrimunch_logout')); } catch (e) {}
+        try { window.dispatchEvent(new Event('nutrimunch_logout')); } catch { /* best-effort signal */ }
         setToken(null);
         setUser(null);
     };

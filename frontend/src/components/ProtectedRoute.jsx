@@ -21,6 +21,9 @@ const ProtectedRoute = ({ allowedRoles }) => {
     const navigate = useNavigate();
     const accessDeniedHandled = useRef(false);
 
+    // Display-only gate: localStorage role can be tampered with, so this only
+    // decides which dashboard shell to show. Every API call is separately
+    // authorised by the JWT / server-side role checks.
     const role = String(user?.role || '').toUpperCase().replace('ROLE_', '');
     const accessDenied = Boolean(allowedRoles && user && !allowedRoles.includes(role));
 

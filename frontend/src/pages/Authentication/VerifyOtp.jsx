@@ -8,6 +8,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import OnboardingWizard from '../../components/OnboardingWizard';
 import { getEmailError } from '../../utils/emailValidation';
+import { getOtpError } from '../../utils/formValidation';
 
 /**
  * VerifyOtp Component
@@ -51,6 +52,11 @@ const VerifyOtp = () => {
             return;
         }
         if (emailError) return;
+        const otpError = getOtpError(otp);
+        if (otpError) {
+            setError(otpError);
+            return;
+        }
         
         const result = await verifyOtp(email, otp);
         if (result.success) {
@@ -166,6 +172,8 @@ const VerifyOtp = () => {
                             <label className="block text-sm font-semibold text-gray-300 mb-2">OTP Code</label>
                             <input 
                                 type="text" 
+                                inputMode="numeric"
+                                pattern="[0-9]{6}"
                                 maxLength="6"
                                 className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-400/50 transition-colors placeholder-gray-600 text-center tracking-widest text-lg font-bold"
                                 placeholder="000000"

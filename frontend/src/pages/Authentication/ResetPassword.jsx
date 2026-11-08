@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import axios from '../../api/axios';
+import { getPasswordError } from '../../utils/formValidation';
 
 /**
  * ResetPassword Component
@@ -32,6 +33,12 @@ const ResetPassword = () => {
         if (password !== confirmPassword) {
             setStatus('error');
             setMessage('Passwords do not match.');
+            return;
+        }
+        const passwordError = getPasswordError(password);
+        if (passwordError) {
+            setStatus('error');
+            setMessage(passwordError);
             return;
         }
 
@@ -90,6 +97,8 @@ const ResetPassword = () => {
                                     name="password"
                                     type="password"
                                     required
+                                    minLength="6"
+                                    maxLength="40"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="appearance-none rounded-xl relative block w-full px-4 py-3 bg-white/5 border border-white/10 placeholder-white/30 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all sm:text-sm"
@@ -104,6 +113,8 @@ const ResetPassword = () => {
                                     name="confirmPassword"
                                     type="password"
                                     required
+                                    minLength="6"
+                                    maxLength="40"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     className="appearance-none rounded-xl relative block w-full px-4 py-3 bg-white/5 border border-white/10 placeholder-white/30 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all sm:text-sm"

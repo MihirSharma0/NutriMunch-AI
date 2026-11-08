@@ -7,7 +7,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
-import { permanentlyDeleteDietPlan, getDeletedPlanIds, getDeletedPlanTitles } from '../../../utils/dietPlanSync';
+import { permanentlyDeleteDietPlan } from '../../../utils/dietPlanSync';
+import { getMacroError } from '../../../utils/formValidation';
 
 /**
  * DietPlanBuilder Component
@@ -52,20 +53,13 @@ const DietPlanBuilder = () => {
 
     // Load only previously saved diet plan history.
     const loadDietHistory = async () => {
-        const deletedIds = getDeletedPlanIds();
-        const deletedTitles = getDeletedPlanTitles();
-        const isActive = (plan) => {
-            if (!plan) return false;
-            const id = String(plan.id ?? '');
-            const title = String(plan.title || plan.planTitle || '').toLowerCase().trim();
-            return !deletedIds.has(id) && !deletedTitles.has(title);
-        };
-
+        // No client-side deletion blacklist: the backend already filters
+        // soft-deleted plans. Cached history is offline-only display data.
         let localHistory = [];
         try {
             const raw = localStorage.getItem('nutrimunch_diet_plans_history');
             const parsed = raw !== null ? JSON.parse(raw) : [];
-            if (Array.isArray(parsed)) localHistory = parsed.filter(isActive);
+            if (Array.isArray(parsed)) localHistory = parsed;
         } catch (e) { localHistory = []; }
 
         // The server is the source of truth for plans this nutritionist created,
@@ -352,19 +346,21 @@ const DietPlanBuilder = () => {
             return;
         }
 
+        // C8: reject unbounded / negative macros before any save or deploy.
+        const macroError = getMacroError(planForm);
+        if (macroError) {
+            showToast(macroError);
+            return;
+        }
+        if (!Array.isArray(meals) || meals.length === 0) {
+            showToast('Add at least one meal before deploying.');
+            return;
+        }
+
         setIsDeploying(true);
 
         const currentTimestamp = new Date().toISOString();
         const planId = editingPlanId || `plan_${Date.now()}`;
-
-        // Ensure newly saved plan is un-blacklisted if it previously shared an ID
-        try {
-            const deleted = getDeletedPlanIds();
-            if (deleted.has(planId)) {
-                deleted.delete(planId);
-                localStorage.setItem('nutrimunch_deleted_plan_ids', JSON.stringify(Array.from(deleted)));
-            }
-        } catch (e) {}
 
         const basePlanPayload = {
             id: planId,
@@ -424,8 +420,13 @@ const DietPlanBuilder = () => {
                     setTimeout(() => { try { bc.close(); } catch (err) {} }, 1000);
                 } catch (err) {}
 
-                // Sync to backend API
-                await api.post('/diet-plans/deploy', finalDeployedPayload).catch(() => {});
+                // Sync to backend API. A failed deploy must never look successful.
+                try {
+                    await api.post('/diet-plans/deploy', finalDeployedPayload);
+                } catch (deployErr) {
+                    console.error('Failed to deploy diet plan:', deployErr);
+                    throw deployErr;
+                }
 
                 // General plans are discovered in the diet plan section; no notification is created.
                 showToast(`"${planForm.planTitle}" deployed successfully! Saved to history & active for all users.`);
@@ -475,8 +476,13 @@ const DietPlanBuilder = () => {
                     setTimeout(() => { try { bc.close(); } catch (err) {} }, 1000);
                 } catch (err) {}
 
-                // Sync to backend API database
-                await api.post('/diet-plans/deploy', finalDeployedPayload).catch(() => {});
+                // Sync to backend API database. A failed deploy must never look successful.
+                try {
+                    await api.post('/diet-plans/deploy', finalDeployedPayload);
+                } catch (deployErr) {
+                    console.error('Failed to deploy diet plan:', deployErr);
+                    throw deployErr;
+                }
                 showToast(`"${planForm.planTitle}" deployed directly for ${selectedClient.name}! Saved to history.`);
             }
         } catch (e) {
@@ -525,10 +531,14 @@ const DietPlanBuilder = () => {
         const targetPlan = dietHistory.find(p => p.id === planId);
         const planName = targetPlan?.title || targetPlan?.planTitle || 'Diet Protocol';
 
+        const ok = await permanentlyDeleteDietPlan(targetPlan || planId, api);
+        if (!ok) {
+            showToast('Could not delete the plan. The server did not confirm the deletion — please try again.');
+            return;
+        }
+
         const filtered = dietHistory.filter(p => p.id !== planId);
         setDietHistory(filtered);
-        
-        await permanentlyDeleteDietPlan(targetPlan || planId, api);
 
         showToast(`"${planName}" permanently deleted from database, registries, and all user dashboards.`);
         if (selectedHistoryPlan?.id === planId) {

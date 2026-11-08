@@ -142,7 +142,12 @@ const DietPlanManagement = () => {
         if (!planToDelete) return;
         setIsDeleting(true);
         try {
-            await permanentlyDeleteDietPlan(planToDelete, api);
+            const ok = await permanentlyDeleteDietPlan(planToDelete, api);
+            if (!ok) {
+                showToast('Could not delete the plan. The server did not confirm the deletion — please try again.');
+                setIsDeleting(false);
+                return;
+            }
             showToast(`Protocol "${planToDelete.title || planToDelete.planTitle}" permanently purged from database.`);
             setPlanToDelete(null);
             if (selectedPlan?.id === planToDelete.id) {
@@ -182,7 +187,12 @@ const DietPlanManagement = () => {
             window.dispatchEvent(new Event('nutrimunch_diet_plan_updated'));
             window.dispatchEvent(new Event('storage'));
 
-            await api.post('/diet-plans/deploy', updated).catch(() => {});
+            try {
+                await api.post('/diet-plans/deploy', updated);
+            } catch (deployErr) {
+                console.error('Failed to promote diet plan:', deployErr);
+                throw deployErr;
+            }
 
             // Dispatch notification with direct link to /diet-plans
             const promoNotif = {
@@ -210,7 +220,7 @@ const DietPlanManagement = () => {
                 type: 'DIET_PLAN',
                 icon: 'restaurant_menu',
                 path: '/diet-plans'
-            }).catch(() => {});
+            }).catch(err => console.error('Failed to send promotion notification:', err));
 
             showToast(`"${plan.title || plan.planTitle}" promoted to Platform Active Protocol!`);
             loadAllPlans();
