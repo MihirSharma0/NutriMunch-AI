@@ -46,6 +46,24 @@ export const fetchAllTestimonials = async () => {
 };
 
 /**
+ * Fetches ALL testimonials (including hidden/PENDING ones) for the admin
+ * moderation screen. Requires an ADMIN session. This deliberately does not
+ * write to the public localStorage cache, so hidden items never leak into the
+ * marketing page's offline fallback.
+ *
+ * @returns {Promise<Array<Object>>} All testimonial records, or [] on failure
+ */
+export const fetchAllForAdmin = async () => {
+    try {
+        const res = await api.get('/testimonials');
+        return Array.isArray(res.data) ? res.data : [];
+    } catch (err) {
+        console.warn('Admin testimonial list unavailable:', err);
+        return [];
+    }
+};
+
+/**
  * Creates or updates a testimonial via the backend API and syncs local storage.
  * 
  * @param {Object} testimonialData - Testimonial details including author and content

@@ -60,9 +60,8 @@ public class TestimonialService {
         if (testimonial.getRating() == null || testimonial.getRating() < 1) {
             testimonial.setRating(5);
         }
-        if (testimonial.getStatus() == null) {
-            testimonial.setStatus("APPROVED");
-        }
+        // Auto-approve is server-owned: a request body can never choose its own status.
+        testimonial.setStatus("APPROVED");
         return testimonialRepository.save(testimonial);
     }
 

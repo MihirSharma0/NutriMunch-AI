@@ -18,6 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -67,7 +68,12 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/v1/health").permitAll()
-                        .requestMatchers("/api/testimonials/**").permitAll()
+                        // Public marketing page reads only approved testimonials.
+                        .requestMatchers(HttpMethod.GET, "/api/testimonials/approved").permitAll()
+                        // All-status moderation listing and every wallet admin operation are ADMIN-only.
+                        .requestMatchers(HttpMethod.GET, "/api/testimonials").hasRole("ADMIN")
+                        .requestMatchers("/api/wallet/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/testimonials/**").authenticated()
                         // Nutritionist plans are private to signed-in accounts: role checks live in
                         // DietPlanController / NutritionistDietPlanService. Dead public matchers removed.
                         .requestMatchers("/api/diet-plans/all").hasRole("ADMIN")

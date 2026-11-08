@@ -9,6 +9,8 @@ import { AuthContext } from '../../../context/AuthContext';
 import { loadRazorpay } from '../../../utils/loadRazorpay';
 import { subscribeWalletSse } from '../../../utils/walletSse';
 
+// DEMO SIMULATION — this checkout showcases the credit logic with no real money
+// involved. The page and its /api/wallet/admin/** endpoints are ADMIN-only.
 const RAZORPAY_KEY_ID = "rzp_test_TpZmiL9G36VVd4";
 
 const PRESET_AMOUNTS = [100, 250, 500, 1000, 2500, 5000];
