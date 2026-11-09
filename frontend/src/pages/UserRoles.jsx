@@ -167,7 +167,7 @@ const UserRoles = () => {
                             }`}
                         >
                             <Stethoscope className="w-4 h-4" />
-                            <span>Nutritionist / Nutritionist</span>
+                            <span>Nutritionist</span>
                         </button>
                     </div>
                 </div>

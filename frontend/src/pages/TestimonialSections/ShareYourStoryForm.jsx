@@ -173,26 +173,26 @@ const ShareYourStoryForm = () => {
     if (!user) {
         return (
             <section id="story-form-container" className="py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-8 relative z-20">
-                <div className="bg-white/95 border border-slate-200/90 shadow-2xl dark:bg-gradient-to-br dark:from-primary/10 dark:via-[#080b12]/80 dark:to-[#38bdf8]/10 dark:border-white/10 rounded-[3rem] p-8 sm:p-12 md:p-14 text-center relative overflow-hidden dark:shadow-2xl dark:backdrop-blur-xl transition-colors">
-                    <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 dark:bg-primary/10 dark:text-primary border border-emerald-300 dark:border-primary/20 flex items-center justify-center mx-auto mb-6">
+                <div className="bg-white border border-slate-200 shadow-xl dark:bg-gradient-to-br dark:from-[#111b24] dark:via-[#0e151f] dark:to-[#101a25] dark:border-white/10 rounded-3xl p-7 sm:p-10 md:p-12 text-center relative overflow-hidden dark:shadow-[0_24px_70px_rgba(0,0,0,0.45)] transition-colors">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 dark:bg-[#a5d391]/10 dark:text-primary border border-emerald-300 dark:border-primary/20 flex items-center justify-center mx-auto mb-6">
                         <span className="material-symbols-outlined text-3xl">lock</span>
                     </div>
 
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 dark:bg-primary/10 dark:border-primary/20 dark:text-primary text-xs font-bold uppercase tracking-widest mb-4">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 dark:bg-[#a5d391]/10 dark:border-primary/20 dark:text-primary text-xs font-bold uppercase tracking-widest mb-5">
                         Login Required
                     </div>
 
-                    <h2 className="font-hero-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+                    <h2 className="font-hero-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white mb-4">
                         Share Your Transformation Story
                     </h2>
 
-                    <p className="text-slate-600 dark:text-white/60 mb-8 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
+                    <p className="text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
                         To submit a verified testimonial and share your health outcomes with the NutriMunch community, please log in to your account.
                     </p>
 
                     <Link
                         to="/login"
-                        className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-primary dark:text-[#080b12] font-bold px-8 py-4 rounded-full text-sm dark:hover:bg-white transition-all shadow-lg shadow-emerald-600/20 dark:shadow-primary/20 cursor-pointer hover:-translate-y-0.5"
+                        className="inline-flex min-h-14 items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white dark:bg-[#a5d391] dark:text-[#080b12] font-bold px-7 sm:px-8 py-4 rounded-full text-sm sm:text-base transition-all shadow-lg shadow-emerald-700/20 dark:shadow-primary/20 cursor-pointer hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/30 dark:focus-visible:ring-primary/30"
                     >
                         <span className="material-symbols-outlined text-lg">login</span>
                         Login to Submit Testimonial
