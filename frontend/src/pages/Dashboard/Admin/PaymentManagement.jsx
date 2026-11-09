@@ -724,7 +724,7 @@ const PaymentManagement = () => {
     const totalSystemLiquidity = recipients.reduce((sum, r) => sum + (parseFloat(r.balance) || 0), 0);
 
     return (
-        <div className="w-full space-y-8 text-white font-body-md">
+        <div className="admin-payments-page w-full space-y-8 text-white font-body-md">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
                 <div>

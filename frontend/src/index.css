@@ -625,6 +625,80 @@
     color: #0f172a !important;
   }
 
+  html.light .admin-payments-page {
+    color: #0f172a !important;
+  }
+
+  html.light .admin-payments-page [class*="bg-[#080b12]"],
+  html.light .admin-payments-page [class*="bg-[#0c121e]"],
+  html.light .admin-payments-page [class*="bg-[#0d131f]"],
+  html.light .admin-payments-page [class*="bg-black"] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  html.light .admin-payments-page [class*="from-[#0c121e]"],
+  html.light .admin-payments-page [class*="to-[#080b12]"] {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 58%, #f0f9ff 100%) !important;
+  }
+
+  html.light .admin-payments-page [class*="bg-white/5"],
+  html.light .admin-payments-page [class*="bg-white/10"],
+  html.light .admin-payments-page [class*="bg-white/15"],
+  html.light .admin-payments-page [class*="bg-white/20"] {
+    background-color: #f8fafc !important;
+  }
+
+  html.light .admin-payments-page [class*="border-white/"] {
+    border-color: #dbe3ec !important;
+  }
+
+  html.light .admin-payments-page .text-white {
+    color: #0f172a !important;
+  }
+
+  html.light .admin-payments-page .text-white\/90,
+  html.light .admin-payments-page .text-white\/80,
+  html.light .admin-payments-page .text-white\/70,
+  html.light .admin-payments-page .text-white\/60,
+  html.light .admin-payments-page .text-white\/50,
+  html.light .admin-payments-page .text-white\/40,
+  html.light .admin-payments-page .text-white\/30,
+  html.light .admin-payments-page .text-white\/20 {
+    color: #475569 !important;
+  }
+
+  html.light .admin-payments-page input,
+  html.light .admin-payments-page select {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  html.light .admin-payments-page input::placeholder {
+    color: #64748b !important;
+  }
+
+  html.light .admin-payments-page select option {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  html.light .admin-payments-page table thead tr {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+  }
+
+  html.light .admin-payments-page table tbody tr:hover {
+    background-color: #f8fafc !important;
+  }
+
+  html.light .admin-payments-page [class*="bg-emerald-950"],
+  html.light .admin-payments-page [class*="bg-amber-950"],
+  html.light .admin-payments-page [class*="bg-rose-950"] {
+    color: #0f172a !important;
+  }
+
   html.light .home-ai-diet-card {
     background: #ffffff !important;
     color: #0f172a !important;
