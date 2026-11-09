@@ -6,6 +6,7 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../api/axios';
 
 /**
@@ -135,6 +136,7 @@ const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout, token } = useContext(AuthContext);
+    const { isDark, toggleTheme } = useTheme();
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const navContainerRef = useRef(null);
@@ -407,17 +409,23 @@ const Navbar = () => {
     return (
         <>
             <div className="fixed top-4 left-4 right-4 z-50 pointer-events-none">
-            <nav ref={navContainerRef} className="mx-auto max-w-7xl bg-[#080b12]/85 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-3xl overflow-visible shadow-2xl pointer-events-auto">
+            <nav ref={navContainerRef} className={`mx-auto max-w-7xl backdrop-blur-2xl rounded-3xl md:rounded-3xl overflow-visible shadow-2xl pointer-events-auto transition-colors duration-300 ${
+                isDark
+                    ? 'bg-[#080b12]/85 border border-white/10 text-white shadow-black/50'
+                    : 'bg-white/85 border border-slate-200/90 text-slate-800 shadow-slate-300/40'
+            }`}>
                 <div className="flex justify-between items-center px-3 sm:px-6 py-2.5 sm:py-3 gap-2">
-                    <Link to="/" className="font-headline-lg text-lg sm:text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap shrink-0">
+                    <Link to="/" className={`font-headline-lg text-lg sm:text-xl font-bold flex items-center gap-2 whitespace-nowrap shrink-0 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         <span className="w-2.5 h-2.5 bg-[#a5d391] rounded-full shadow-[0_0_10px_rgba(165,211,145,0.8)]"></span>
-                        NutriMunch <span className="text-[#a5d391] italic font-semibold">AI</span>
+                        NutriMunch <span className={`${isDark ? 'text-[#a5d391]' : 'text-emerald-600'} italic font-semibold`}>AI</span>
                     </Link>
 
                     {/* Desktop Navigation Items Container */}
                     <div
                         ref={dropdownRef}
-                        className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-white/5 rounded-full px-2.5 xl:px-3.5 py-1 border border-white/10 mx-1 xl:mx-2 shrink-0 shadow-inner"
+                        className={`hidden lg:flex items-center gap-0.5 xl:gap-1 rounded-full px-2.5 xl:px-3.5 py-1 border mx-1 xl:mx-2 shrink-0 shadow-inner ${
+                            isDark ? 'bg-white/5 border-white/10' : 'bg-slate-100/90 border-slate-200'
+                        }`}
                     >
                         {(() => {
                             const isStandaloneActive = navItems.some(nav => !nav.subMenu && checkIsActive(location.pathname, nav.path));
@@ -436,7 +444,11 @@ const Navbar = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveDropdown(prev => prev === item.label ? null : item.label)}
-                                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center gap-1 leading-none cursor-pointer ${isChildActive || isOpen ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center gap-1 leading-none cursor-pointer ${
+                                                    isChildActive || isOpen 
+                                                        ? (isDark ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 shadow-sm')
+                                                        : (isDark ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60')
+                                                }`}
                                             >
                                                 <span>{item.label}</span>
                                                 <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
@@ -445,8 +457,10 @@ const Navbar = () => {
                                             {/* Dropdown for SubMenus */}
                                             {isOpen && (
                                                 <div className="absolute top-full left-0 pt-2 w-72 z-50">
-                                                    <div className="bg-[#080b12]/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-2 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
-                                                        <div className="text-[10px] font-black uppercase text-[#a5d391] tracking-widest px-3 py-1.5">
+                                                    <div className={`backdrop-blur-2xl rounded-2xl p-2 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 ${
+                                                        isDark ? 'bg-[#080b12]/95 border border-white/10' : 'bg-white/95 border border-slate-200 shadow-xl'
+                                                    }`}>
+                                                        <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 ${isDark ? 'text-[#a5d391]' : 'text-emerald-600'}`}>
                                                             {item.headerTitle || item.label}
                                                         </div>
                                                         {item.subMenu.map(sub => {
@@ -456,12 +470,16 @@ const Navbar = () => {
                                                                     key={sub.label}
                                                                     to={sub.path}
                                                                     onClick={() => setActiveDropdown(null)}
-                                                                    className={`flex items-start gap-3 p-2.5 rounded-xl transition-all ${isSubActive ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' : 'text-white/80 hover:bg-white/5 hover:text-white'}`}
+                                                                    className={`flex items-start gap-3 p-2.5 rounded-xl transition-all ${
+                                                                        isSubActive 
+                                                                            ? (isDark ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' : 'bg-emerald-50 text-emerald-800 border border-emerald-200')
+                                                                            : (isDark ? 'text-white/80 hover:bg-white/5 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900')
+                                                                    }`}
                                                                 >
-                                                                    <span className="material-symbols-outlined text-[#a5d391] text-lg mt-0.5">{sub.icon}</span>
+                                                                    <span className={`material-symbols-outlined text-lg mt-0.5 ${isDark ? 'text-[#a5d391]' : 'text-emerald-600'}`}>{sub.icon}</span>
                                                                     <div>
-                                                                        <div className="text-xs font-bold text-white">{sub.label}</div>
-                                                                        <div className="text-[10px] text-white/50 mt-0.5">{sub.desc}</div>
+                                                                        <div className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{sub.label}</div>
+                                                                        <div className={`text-[10px] ${isDark ? 'text-white/50' : 'text-slate-500'} mt-0.5`}>{sub.desc}</div>
                                                                     </div>
                                                                 </Link>
                                                             );
@@ -478,7 +496,11 @@ const Navbar = () => {
                                     <Link
                                         key={item.label}
                                         to={item.path}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center leading-none ${isActive ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap inline-flex items-center justify-center leading-none ${
+                                            isActive 
+                                                ? (isDark ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 shadow-sm' : 'bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 shadow-sm')
+                                                : (isDark ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60')
+                                        }`}
                                     >
                                         {item.label}
                                     </Link>
@@ -487,7 +509,7 @@ const Navbar = () => {
                         })()}
                     </div>
 
-                    {/* Right User Actions & Controls (Notifications, Mobile Toggle, Login/Profile) */}
+                    {/* Right User Actions & Controls (Theme Toggle, Notifications, Mobile Toggle, Login/Profile) */}
                     <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 shrink-0">
                         {/* Consultation Chat Button (clients and nutritionists only) */}
                         {user && rawRole !== 'ADMIN' && (
@@ -502,7 +524,11 @@ const Navbar = () => {
                                 aria-label={chatUnread > 0
                                     ? `Clinical Consultation Chat, ${chatUnread} unread message${chatUnread === 1 ? '' : 's'}`
                                     : 'Clinical Consultation Chat'}
-                                className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 flex items-center justify-center text-white/80 hover:text-[#a5d391] transition-all cursor-pointer shadow-sm"
+                                className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm ${
+                                    isDark
+                                        ? 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 text-white/80 hover:text-[#a5d391]'
+                                        : 'bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-emerald-500/40 text-slate-700 hover:text-emerald-700'
+                                }`}
                                 title="Consultation Chat with Nutritionist"
                             >
                                 <span className="material-symbols-outlined text-base sm:text-lg">forum</span>
@@ -520,7 +546,11 @@ const Navbar = () => {
                                 type="button"
                                 onClick={() => setIsNotificationOpen(prev => !prev)}
                                 aria-label="Notifications"
-                                className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm"
+                                className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm ${
+                                    isDark
+                                        ? 'bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white'
+                                        : 'bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900'
+                                }`}
                             >
                                 <span className="material-symbols-outlined text-base sm:text-lg">notifications</span>
                                 {unreadCount > 0 && (
@@ -533,13 +563,19 @@ const Navbar = () => {
                             {/* Notification Popover Dropdown */}
                             {isNotificationOpen && (
                                 <div className="absolute right-0 top-full pt-3 w-80 sm:w-96 max-w-[calc(100vw-2rem)] z-[99999]">
-                                    <div className="bg-[#080b12]/95 backdrop-blur-2xl border border-white/15 rounded-3xl p-4 shadow-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
-                                        <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                                    <div className={`backdrop-blur-2xl rounded-3xl p-4 shadow-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-150 ${
+                                        isDark
+                                            ? 'bg-[#080b12]/95 border border-white/15 text-white'
+                                            : 'bg-white/95 border border-slate-200 text-slate-800 shadow-slate-300/50'
+                                    }`}>
+                                        <div className={`flex items-center justify-between pb-2 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
                                             <div className="flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-[#a5d391] text-base">notifications_active</span>
-                                                <h4 className="text-sm font-bold text-white font-hero-display">Notifications</h4>
+                                                <span className={`material-symbols-outlined text-base ${isDark ? 'text-[#a5d391]' : 'text-emerald-600'}`}>notifications_active</span>
+                                                <h4 className={`text-sm font-bold font-hero-display ${isDark ? 'text-white' : 'text-slate-900'}`}>Notifications</h4>
                                                 {unreadCount > 0 && (
-                                                    <span className="text-[10px] font-bold bg-[#a5d391]/20 text-[#a5d391] px-2 py-0.5 rounded-full border border-[#a5d391]/30">
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                                        isDark ? 'bg-[#a5d391]/20 text-[#a5d391] border-[#a5d391]/30' : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                    }`}>
                                                         {unreadCount} new
                                                     </span>
                                                 )}
@@ -548,7 +584,7 @@ const Navbar = () => {
                                                 {unreadCount > 0 && (
                                                     <button
                                                         onClick={markAllAsRead}
-                                                        className="text-[11px] text-white/50 hover:text-[#a5d391] font-semibold transition-colors cursor-pointer"
+                                                        className={`text-[11px] font-semibold transition-colors cursor-pointer ${isDark ? 'text-white/50 hover:text-[#a5d391]' : 'text-slate-500 hover:text-emerald-700'}`}
                                                     >
                                                         Mark read
                                                     </button>
@@ -556,7 +592,7 @@ const Navbar = () => {
                                                 {notifications.length > 0 && (
                                                     <button
                                                         onClick={handleClearAllNotifications}
-                                                        className="text-[11px] text-red-400/80 hover:text-red-300 font-semibold transition-colors cursor-pointer flex items-center gap-0.5"
+                                                        className="text-[11px] text-red-400/80 hover:text-red-500 font-semibold transition-colors cursor-pointer flex items-center gap-0.5"
                                                     >
                                                         <span className="material-symbols-outlined text-xs">delete_sweep</span>
                                                         Clear
@@ -569,11 +605,13 @@ const Navbar = () => {
                                         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                                             {!user ? (
                                                 <div className="p-4 text-center space-y-2">
-                                                    <div className="w-10 h-10 rounded-full bg-white/5 text-white/40 flex items-center justify-center mx-auto border border-white/10">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto border ${
+                                                        isDark ? 'bg-white/5 text-white/40 border-white/10' : 'bg-slate-100 text-slate-400 border-slate-200'
+                                                    }`}>
                                                         <span className="material-symbols-outlined">notifications_off</span>
                                                     </div>
-                                                    <div className="text-xs font-bold text-white">No New Notifications</div>
-                                                    <p className="text-[11px] text-white/50 leading-relaxed">
+                                                    <div className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>No New Notifications</div>
+                                                    <p className={`text-[11px] leading-relaxed ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
                                                         Sign in to receive personalized AI macro target updates and live nutritionist booking alerts.
                                                     </p>
                                                     <Link
@@ -585,7 +623,7 @@ const Navbar = () => {
                                                     </Link>
                                                 </div>
                                             ) : notifications.length === 0 ? (
-                                                <div className="p-4 text-center text-xs text-white/40">
+                                                <div className={`p-4 text-center text-xs ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
                                                     No new notifications at this time.
                                                 </div>
                                             ) : (
@@ -593,19 +631,23 @@ const Navbar = () => {
                                                     <div
                                                         key={n.id}
                                                         onClick={() => handleNotificationClick(n)}
-                                                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 group ${!n.read ? 'bg-[#a5d391]/10 border-[#a5d391]/30 hover:border-[#a5d391]/60' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                                                        className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 group ${
+                                                            !n.read 
+                                                                ? (isDark ? 'bg-[#a5d391]/10 border-[#a5d391]/30 hover:border-[#a5d391]/60' : 'bg-emerald-50 border-emerald-200 hover:border-emerald-400')
+                                                                : (isDark ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-slate-50 border-slate-200 hover:border-slate-300')
+                                                        }`}
                                                     >
-                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${!n.read ? 'bg-[#a5d391] text-black' : 'bg-white/10 text-white/60'}`}>
+                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${!n.read ? 'bg-[#a5d391] text-black' : (isDark ? 'bg-white/10 text-white/60' : 'bg-slate-200 text-slate-600')}`}>
                                                             <span className="material-symbols-outlined text-base">{n.icon || 'notifications'}</span>
                                                         </div>
                                                         <div className="flex-grow min-w-0">
                                                             <div className="flex justify-between items-start gap-1">
-                                                                <div className="text-xs font-bold text-white group-hover:text-[#a5d391] transition-colors truncate">
+                                                                <div className={`text-xs font-bold truncate ${isDark ? 'text-white group-hover:text-[#a5d391]' : 'text-slate-800 group-hover:text-emerald-700'}`}>
                                                                     {n.title}
                                                                 </div>
-                                                                <span className="text-[9px] text-white/40 shrink-0">{n.time}</span>
+                                                                <span className={`text-[9px] shrink-0 ${isDark ? 'text-white/40' : 'text-slate-400'}`}>{n.time}</span>
                                                             </div>
-                                                            <p className="text-[11px] text-white/60 leading-relaxed mt-0.5 line-clamp-2">
+                                                            <p className={`text-[11px] leading-relaxed mt-0.5 line-clamp-2 ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
                                                                 {n.message}
                                                             </p>
                                                         </div>
@@ -615,7 +657,7 @@ const Navbar = () => {
                                                             )}
                                                             <button
                                                                 onClick={(e) => handleDeleteNotification(n.id, e)}
-                                                                className="p-1 text-white/30 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                                                                className={`p-1 rounded-lg transition-colors cursor-pointer ${isDark ? 'text-white/30 hover:text-red-400 hover:bg-white/10' : 'text-slate-400 hover:text-red-500 hover:bg-slate-200'}`}
                                                                 title="Delete notification"
                                                             >
                                                                 <span className="material-symbols-outlined text-sm">delete</span>
@@ -630,13 +672,34 @@ const Navbar = () => {
                             )}
                         </div>
 
+                        {/* Theme Toggle Button (Light / Dark Switcher) */}
+                        <button
+                            type="button"
+                            onClick={toggleTheme}
+                            aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+                            title={isDark ? "Switch to Light Theme (Light Blue & Green/Purple)" : "Switch to Dark Theme"}
+                            className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer shadow-sm group ${
+                                isDark
+                                    ? 'bg-white/5 hover:bg-white/10 border border-white/10 text-amber-300 hover:text-amber-200 hover:border-amber-400/40 hover:shadow-[0_0_12px_rgba(252,211,77,0.3)]'
+                                    : 'bg-slate-100 hover:bg-slate-200 border border-slate-200 text-indigo-600 hover:text-indigo-800 hover:border-indigo-400/40 hover:shadow-[0_0_12px_rgba(99,102,241,0.25)]'
+                            }`}
+                        >
+                            <span className={`material-symbols-outlined text-base sm:text-lg transition-transform duration-500 group-hover:scale-110 ${isDark ? 'rotate-0' : 'rotate-180'}`}>
+                                {isDark ? 'light_mode' : 'dark_mode'}
+                            </span>
+                        </button>
+
                         {/* Extreme Right: User Profile Pill (Desktop only; moved to mobile bottom dock on mobile) & Logout OR Login / Sign up Button */}
                         {user ? (
                             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                 <Link
                                     to={profilePath}
                                     title={`${displayName} • Role: ${roleLabel} • View Profile`}
-                                    className="hidden lg:flex group relative items-center gap-1.5 sm:gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 px-2 sm:px-2.5 py-1.5 rounded-full transition-all text-xs font-bold text-white cursor-pointer shadow-sm shrink-0"
+                                    className={`hidden lg:flex group relative items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 rounded-full transition-all text-xs font-bold cursor-pointer shadow-sm shrink-0 ${
+                                        isDark
+                                            ? 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 text-white'
+                                            : 'bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-emerald-500/40 text-slate-800'
+                                    }`}
                                 >
                                     {/* User Initials Avatar Circle */}
                                     <div className="w-6 h-6 rounded-full bg-[#a5d391] text-black font-black text-[10px] flex items-center justify-center border border-white/20 group-hover:border-[#a5d391] shrink-0 overflow-hidden shadow-sm">
@@ -653,18 +716,28 @@ const Navbar = () => {
                                     </div>
 
                                     {/* Role Badge */}
-                                    <span className={`hidden xl:inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${rawRole === 'ADMIN' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : (rawRole === 'NUTRITIONIST') ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30'}`}>
+                                    <span className={`hidden xl:inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${
+                                        rawRole === 'ADMIN' 
+                                            ? (isDark ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-purple-100 text-purple-800 border border-purple-300')
+                                            : (rawRole === 'NUTRITIONIST') 
+                                                ? (isDark ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-sky-100 text-sky-800 border border-sky-300')
+                                                : (isDark ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-300')
+                                    }`}>
                                         {roleLabel}
                                     </span>
 
                                     {/* Hover Tooltip Popup displaying User Name & Role */}
                                     <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2.5 hidden group-hover:flex flex-col items-center z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
-                                        <div className="w-2 h-2 bg-[#080b12] border-t border-l border-white/20 rotate-45 -mb-1"></div>
-                                        <div className="bg-[#080b12]/95 backdrop-blur-xl border border-white/20 text-white px-3 py-1.5 rounded-xl shadow-2xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5">
+                                        <div className={`w-2 h-2 rotate-45 -mb-1 border-t border-l ${
+                                            isDark ? 'bg-[#080b12] border-white/20' : 'bg-white border-slate-300'
+                                        }`}></div>
+                                        <div className={`backdrop-blur-xl border px-3 py-1.5 rounded-xl shadow-2xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 ${
+                                            isDark ? 'bg-[#080b12]/95 border-white/20 text-white' : 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-300/40'
+                                        }`}>
                                             <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-pulse"></span>
-                                            <span className="text-white font-semibold">{displayName}</span>
-                                            <span className="text-white/40">•</span>
-                                            <span className="text-[#a5d391] font-black uppercase">{roleLabel}</span>
+                                            <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{displayName}</span>
+                                            <span className={isDark ? 'text-white/40' : 'text-slate-400'}>•</span>
+                                            <span className={`${isDark ? 'text-[#a5d391]' : 'text-emerald-600'} font-black uppercase`}>{roleLabel}</span>
                                         </div>
                                     </div>
                                 </Link>

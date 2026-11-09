@@ -3,53 +3,263 @@
 @tailwind utilities;
 
 @layer base {
-  html, body {
-    @apply font-body-md text-on-background selection:bg-primary-container selection:text-on-primary-container;
-    background-color: #080b12 !important;
-    color: #ffffff;
+  html {
     min-height: 100vh;
     overflow-x: hidden;
   }
 
+  body {
+    min-height: 100vh;
+    overflow-x: hidden;
+    @apply font-body-md;
+  }
+
+  /* Default & Dark Theme */
+  html.dark, html:not(.light) {
+    background-color: #080b12 !important;
+    color: #ffffff;
+    color-scheme: dark;
+  }
+
+  html.dark body, html:not(.light) body {
+    background-color: #080b12 !important;
+    color: #ffffff;
+  }
+
+  /* Light Theme - Light Blue & Light Green/Purple Harmony */
+  html.light {
+    background: linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 50%, #ecfdf5 100%) !important;
+    background-attachment: fixed !important;
+    color: #0f172a !important;
+    color-scheme: light;
+  }
+
+  html.light body {
+    background: transparent !important;
+    color: #0f172a !important;
+  }
+
   /* Custom Premium Dark Theme Scrollbar */
-  ::-webkit-scrollbar {
+  html.dark ::-webkit-scrollbar,
+  html:not(.light) ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-  ::-webkit-scrollbar-track {
+  html.dark ::-webkit-scrollbar-track,
+  html:not(.light) ::-webkit-scrollbar-track {
     background: #080b12 !important;
   }
-  ::-webkit-scrollbar-thumb {
+  html.dark ::-webkit-scrollbar-thumb,
+  html:not(.light) ::-webkit-scrollbar-thumb {
     background: rgba(165, 211, 145, 0.3) !important;
     border-radius: 9999px;
     border: 2px solid #080b12;
   }
-  ::-webkit-scrollbar-thumb:hover {
+  html.dark ::-webkit-scrollbar-thumb:hover,
+  html:not(.light) ::-webkit-scrollbar-thumb:hover {
     background: rgba(165, 211, 145, 0.7) !important;
   }
-  ::-webkit-scrollbar-corner {
+  html.dark ::-webkit-scrollbar-corner,
+  html:not(.light) ::-webkit-scrollbar-corner {
     background: #080b12 !important;
   }
-  
-  /* Firefox Fallback */
-  html {
+  html.dark, html:not(.light) {
     scrollbar-width: thin;
     scrollbar-color: rgba(165, 211, 145, 0.4) #080b12;
   }
 
-  /* Fix Browser Autofill White/Light Background Issue in Dark Theme */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover, 
-  input:-webkit-autofill:focus, 
-  input:-webkit-autofill:active,
-  select:-webkit-autofill,
-  select:-webkit-autofill:hover,
-  select:-webkit-autofill:focus {
+  /* Light Theme Scrollbars */
+  html.light ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  html.light ::-webkit-scrollbar-track {
+    background: #e2e8f0 !important;
+  }
+  html.light ::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4) !important;
+    border-radius: 9999px;
+    border: 2px solid #f1f5f9;
+  }
+  html.light ::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.7) !important;
+  }
+  html.light ::-webkit-scrollbar-corner {
+    background: #e2e8f0 !important;
+  }
+  html.light {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.5) #e2e8f0;
+  }
+
+  /* Browser Autofill Styling */
+  html.dark input:-webkit-autofill,
+  html.dark input:-webkit-autofill:hover, 
+  html.dark input:-webkit-autofill:focus, 
+  html.dark input:-webkit-autofill:active,
+  html:not(.light) input:-webkit-autofill,
+  html:not(.light) input:-webkit-autofill:hover,
+  html:not(.light) input:-webkit-autofill:focus,
+  html:not(.light) input:-webkit-autofill:active {
     -webkit-text-fill-color: #ffffff !important;
     -webkit-box-shadow: 0 0 0px 1000px #090d16 inset !important;
     box-shadow: 0 0 0px 1000px #090d16 inset !important;
     transition: background-color 5000s ease-in-out 0s;
     caret-color: #ffffff !important;
+  }
+
+  html.light input:-webkit-autofill,
+  html.light input:-webkit-autofill:hover, 
+  html.light input:-webkit-autofill:focus, 
+  html.light input:-webkit-autofill:active,
+  html.light select:-webkit-autofill,
+  html.light textarea:-webkit-autofill {
+    -webkit-text-fill-color: #0f172a !important;
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: #0f172a !important;
+  }
+
+  /* ------------------------------------------------------------- */
+  /* LIGHT THEME HIGH-CONTRAST & READABILITY OVERRIDES            */
+  /* ------------------------------------------------------------- */
+
+  /* General Text Contrast in Light Theme */
+  html.light .text-white {
+    color: #0f172a;
+  }
+  html.light .text-white\/90 {
+    color: #1e293b;
+  }
+  html.light .text-white\/80 {
+    color: #334155;
+  }
+  html.light .text-white\/70 {
+    color: #334155;
+  }
+  html.light .text-white\/60 {
+    color: #475569;
+  }
+  html.light .text-white\/50 {
+    color: #64748b;
+  }
+  html.light .text-white\/40 {
+    color: #64748b;
+  }
+  html.light .text-white\/30 {
+    color: #94a3b8;
+  }
+
+  /* Solid colored buttons & badges MUST keep white text */
+  html.light .bg-blue-600,
+  html.light .bg-blue-600 *,
+  html.light .bg-blue-500,
+  html.light .bg-blue-500 *,
+  html.light .bg-red-500,
+  html.light .bg-red-500 *,
+  html.light .bg-red-600,
+  html.light .bg-red-600 *,
+  html.light .bg-rose-500,
+  html.light .bg-rose-500 *,
+  html.light .bg-emerald-600,
+  html.light .bg-emerald-600 *,
+  html.light .bg-emerald-500,
+  html.light .bg-emerald-500 *,
+  html.light .bg-purple-600,
+  html.light .bg-purple-600 *,
+  html.light .bg-slate-900,
+  html.light .bg-slate-900 *,
+  html.light [class*="bg-primary"]:not(.text-primary),
+  html.light [class*="bg-primary"]:not(.text-primary) * {
+    color: #ffffff;
+  }
+
+  /* Luminous green/mint adjustments for high contrast on light background */
+  html.light .text-\[\#a5d391\] {
+    color: #15803d !important;
+  }
+  html.light .text-\[\#a3e635\] {
+    color: #15803d !important;
+  }
+
+  /* Frosted Glass Cards in Light Mode */
+  html.light .bg-white\/5,
+  html.light .bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    border-color: rgba(203, 213, 225, 0.85) !important;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+  }
+
+  html.light .border-white\/5,
+  html.light .border-white\/10,
+  html.light .border-white\/15,
+  html.light .border-white\/20,
+  html.light .border-white\/30 {
+    border-color: rgba(203, 213, 225, 0.8) !important;
+  }
+
+  /* Form Inputs in Light Mode */
+  html.light .bg-black\/20,
+  html.light .bg-black\/30,
+  html.light .bg-black\/40,
+  html.light .bg-black\/50,
+  html.light .bg-black\/60,
+  html.light .bg-black\/70,
+  html.light .bg-black\/80 {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    color: #0f172a !important;
+    border-color: rgba(203, 213, 225, 0.9) !important;
+  }
+
+  html.light input,
+  html.light select,
+  html.light textarea {
+    color: #0f172a !important;
+    background-color: rgba(255, 255, 255, 0.95);
+  }
+
+  html.light input::placeholder,
+  html.light textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  /* Dark themed containers & panels in Light Mode */
+  html.light .bg-\[\#080b12\]:not(button):not(a),
+  html.light .bg-\[\#080b12\]\/85:not(button):not(a),
+  html.light .bg-\[\#080b12\]\/95:not(button):not(a),
+  html.light .bg-\[\#0d121c\]:not(button):not(a),
+  html.light .bg-\[\#0b1017\]\/90:not(button):not(a),
+  html.light .bg-\[\#0b1017\]\/95:not(button):not(a),
+  html.light .bg-\[\#090d16\]:not(button):not(a) {
+    background-color: rgba(255, 255, 255, 0.92) !important;
+    color: #0f172a !important;
+    border-color: rgba(226, 232, 240, 0.9) !important;
+  }
+
+  /* Pills & Badges in Light Mode */
+  html.light .bg-\[\#a5d391\]\/10,
+  html.light .bg-\[\#a5d391\]\/15,
+  html.light .bg-\[\#a5d391\]\/20 {
+    background-color: rgba(22, 163, 74, 0.12) !important;
+    color: #15803d !important;
+    border-color: rgba(22, 163, 74, 0.25) !important;
+  }
+
+  html.light .bg-sky-500\/10,
+  html.light .bg-blue-500\/10,
+  html.light .bg-blue-500\/15 {
+    background-color: rgba(14, 165, 233, 0.12) !important;
+    color: #0284c7 !important;
+    border-color: rgba(14, 165, 233, 0.25) !important;
+  }
+
+  html.light .bg-purple-500\/10,
+  html.light .bg-purple-500\/15,
+  html.light .bg-purple-500\/20 {
+    background-color: rgba(168, 85, 247, 0.12) !important;
+    color: #7e22ce !important;
+    border-color: rgba(168, 85, 247, 0.25) !important;
   }
 }
 

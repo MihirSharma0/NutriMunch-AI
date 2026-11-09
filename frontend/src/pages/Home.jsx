@@ -8,6 +8,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useContext } from 'react';
 import ServicesOverview from './HomeSections/ServicesOverview';
 import { AuthContext } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import HowItWorks from './HomeSections/HowItWorks';
 import FinalCTA from './HomeSections/FinalCTA';
 
@@ -425,6 +426,7 @@ const HeroCarousel = () => {
 const Home = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);
+    const { isDark } = useTheme();
     const role = String(user?.role || '').toUpperCase().replace('ROLE_', '');
     const isStaffHome = role === 'ADMIN' || role === 'NUTRITIONIST';
     const roleContent = role === 'ADMIN'
@@ -463,6 +465,13 @@ const Home = () => {
         return `${x}px ${y}px 0 #${hex}${hex}${hex}`;
     }).join(', ') + ', 20px 12px 50px rgba(0,0,0,0.9)';
 
+    const lightBlockShadow = Array.from({ length: 20 }).map((_, i) => {
+        const x = i * 0.8;
+        const y = i * 0.5;
+        const alpha = (0.22 - (0.22 / 20) * i).toFixed(3);
+        return `${x}px ${y}px 0 rgba(100, 116, 139, ${alpha})`;
+    }).join(', ') + ', 15px 10px 30px rgba(100, 116, 139, 0.25)';
+
     return (
         <div className="relative flex flex-col w-full">
             {/* Main Hero Container */}
@@ -471,8 +480,10 @@ const Home = () => {
                 {/* Top Section - Huge Typography */}
                 <div className="relative mb-12 md:mb-16">
                     <h1
-                        className="font-hero-display text-[3rem] sm:text-[4.5rem] md:text-[10rem] lg:text-[12rem] leading-none font-bold text-white tracking-tighter relative z-20"
-                        style={{ textShadow: blockShadow }}
+                        className={`font-hero-display text-[3rem] sm:text-[4.5rem] md:text-[10rem] lg:text-[12rem] leading-none font-bold tracking-tighter relative z-20 transition-colors duration-300 ${
+                            isDark ? 'text-white' : 'text-slate-900'
+                        }`}
+                        style={{ textShadow: isDark ? blockShadow : lightBlockShadow }}
                     >
                         Nutrition
                     </h1>

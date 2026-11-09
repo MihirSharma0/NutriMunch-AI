@@ -8,6 +8,7 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * Extracts up to 2 uppercase initials from a display name string.
@@ -174,6 +175,7 @@ const isItemActive = (pathname, item) => {
  */
 const MobileBottomNav = () => {
     const { user } = useContext(AuthContext);
+    const { isDark } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
     const [activeOverlay, setActiveOverlay] = useState(null);
@@ -274,26 +276,38 @@ const MobileBottomNav = () => {
                         ref={overlayRef}
                         className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5.2rem)] left-3 right-3 max-w-md mx-auto z-[80] lg:hidden transition-all duration-200"
                     >
-                        <div className="bg-[#0b1017]/95 backdrop-blur-2xl border border-white/15 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden ring-1 ring-[#a5d391]/20">
+                        <div className={`backdrop-blur-2xl border rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden transition-colors ${
+                            isDark 
+                                ? 'bg-[#0b1017]/95 border-white/15 ring-1 ring-[#a5d391]/20' 
+                                : 'bg-white/95 border-slate-200 ring-1 ring-emerald-500/20 text-slate-800'
+                        }`}>
                             {/* Overlay Header */}
-                            <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10 bg-white/[0.02]">
+                            <div className={`flex items-center justify-between px-4 py-3.5 border-b ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-slate-50/50'}`}>
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-xl bg-[#a5d391]/15 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391]">
+                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                                        isDark 
+                                            ? 'bg-[#a5d391]/15 border border-[#a5d391]/30 text-[#a5d391]' 
+                                            : 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                                    }`}>
                                         <span className="material-symbols-outlined text-base">
                                             {navItems[activeOverlay].icon}
                                         </span>
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-bold text-white tracking-wide">
+                                        <h3 className={`text-sm font-bold tracking-wide ${isDark ? 'text-white' : 'text-slate-900'}`}>
                                             {navItems[activeOverlay].label}
                                         </h3>
-                                        <p className="text-[10px] text-white/40">Select a feature to navigate</p>
+                                        <p className={`text-[10px] ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Select a feature to navigate</p>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setActiveOverlay(null)}
-                                    className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all cursor-pointer"
+                                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                                        isDark 
+                                            ? 'bg-white/10 hover:bg-white/20 text-white/60 hover:text-white' 
+                                            : 'bg-slate-200/80 hover:bg-slate-300 text-slate-600 hover:text-slate-900'
+                                    }`}
                                     aria-label="Close submenu"
                                 >
                                     <span className="material-symbols-outlined text-sm">close</span>
@@ -353,7 +367,11 @@ const MobileBottomNav = () => {
                 aria-label="Mobile bottom navigation"
                 style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
-                <div className="bg-[#0b1017]/90 backdrop-blur-2xl border border-white/15 rounded-full px-2 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.7)] ring-1 ring-white/5">
+                <div className={`backdrop-blur-2xl border rounded-full px-2 py-1.5 transition-colors ${
+                    isDark
+                        ? 'bg-[#0b1017]/90 border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.7)] ring-1 ring-white/5'
+                        : 'bg-white/90 border-slate-200/90 shadow-[0_12px_40px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/40 text-slate-800'
+                }`}>
                     <div className="flex items-center justify-around">
                         {navItems.map((item, index) => {
                             const active = isItemActive(location.pathname, item);

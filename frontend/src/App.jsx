@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import GlobalLayout from './layouts/GlobalLayout';
 import Home from './pages/Home';
 import Testimonials from './pages/Testimonials';
@@ -88,8 +89,9 @@ function App() {
     <HelmetProvider>
       <GoogleOAuthProvider clientId={googleClientId}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <Router>
+          <ThemeProvider>
+            <AuthProvider>
+              <Router>
               <ScrollToTop />
               <Routes>
             <Route path="/login" element={<Login />} />
@@ -173,6 +175,7 @@ function App() {
           </Routes>
         </Router>
       </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
     </GoogleOAuthProvider>
     </HelmetProvider>

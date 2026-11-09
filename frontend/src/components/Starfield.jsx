@@ -1,19 +1,28 @@
 /**
  * Interactive Background Starfield
  * Canvas animation component rendering an interactive starfield with physics-driven particles
- * responsive to window dimensions and mouse cursor movement.
+ * responsive to window dimensions, mouse cursor movement, and active theme (dark / light).
  */
 import React, { useEffect, useRef } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * Starfield Component
- * Renders an animated particle field simulating a starry cosmic space environment.
+ * Renders an animated particle field simulating a starry cosmic space environment in dark mode,
+ * and elegant floating dark particles in light mode.
  */
 const Starfield = () => {
+    const { isDark } = useTheme();
     const canvasRef = useRef(null);
+    const isDarkRef = useRef(isDark);
+
+    useEffect(() => {
+        isDarkRef.current = isDark;
+    }, [isDark]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
         let animationFrameId;
         
@@ -23,19 +32,23 @@ const Starfield = () => {
         canvas.height = height;
 
         const particles = [];
-        const numParticles = 1500;
+        const numParticles = 1400;
         let mouse = { x: -1000, y: -1000 };
 
         for (let i = 0; i < numParticles; i++) {
+            const isDarkNow = isDarkRef.current;
+            const alpha = Math.random() * 0.7 + 0.15;
             particles.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
-                size: Math.random() * 1.5 + 0.5,
+                size: Math.random() * 1.6 + 0.4,
                 baseX: Math.random() * width,
                 baseY: Math.random() * height,
                 vx: (Math.random() - 0.5) * 0.3,
                 vy: (Math.random() - 0.5) * 0.3,
-                color: `rgba(220, 255, 255, ${Math.random() * 0.7 + 0.1})`
+                color: isDarkNow
+                    ? `rgba(220, 255, 255, ${alpha})`
+                    : `rgba(15, 23, 42, ${alpha * 0.7 + 0.2})`
             });
         }
 
@@ -62,6 +75,7 @@ const Starfield = () => {
 
         const animate = () => {
             ctx.clearRect(0, 0, width, height);
+            const isDarkCurrent = isDarkRef.current;
             
             for (let i = 0; i < numParticles; i++) {
                 let p = particles[i];
@@ -84,12 +98,22 @@ const Starfield = () => {
 
                 if (distance < maxDistance) {
                     let force = (maxDistance - distance) / maxDistance;
-                    // Pull and swirl slightly towards the mouse
                     p.x += (dx / distance) * force * 1.5 + (dy / distance) * force * 1.0;
                     p.y += (dy / distance) * force * 1.5 - (dx / distance) * force * 1.0;
-                    p.color = `rgba(180, 255, 255, ${Math.min(1, Math.random() * 0.5 + 0.5)})`;
+
+                    if (isDarkCurrent) {
+                        p.color = `rgba(180, 255, 255, ${Math.min(1, Math.random() * 0.5 + 0.5)})`;
+                    } else {
+                        // Dark black/navy particles swirl around cursor in light mode
+                        p.color = `rgba(2, 6, 23, ${Math.min(0.95, Math.random() * 0.4 + 0.55)})`;
+                    }
                 } else {
-                    p.color = `rgba(220, 255, 255, ${Math.random() * 0.5 + 0.1})`;
+                    if (isDarkCurrent) {
+                        p.color = `rgba(220, 255, 255, ${Math.random() * 0.5 + 0.15})`;
+                    } else {
+                        // Dark slate / black stars in light mode
+                        p.color = `rgba(15, 23, 42, ${Math.random() * 0.45 + 0.2})`;
+                    }
                 }
 
                 ctx.beginPath();
@@ -114,7 +138,11 @@ const Starfield = () => {
     return (
         <canvas 
             ref={canvasRef} 
-            className="absolute inset-0 pointer-events-none z-0 mix-blend-screen opacity-80"
+            className={`absolute inset-0 pointer-events-none z-0 transition-opacity duration-500 ${
+                isDark 
+                    ? 'mix-blend-screen opacity-80' 
+                    : 'mix-blend-multiply opacity-75'
+            }`}
         />
     );
 };

@@ -11,6 +11,7 @@ import Footer from '../common/Footer';
 import MobileBottomNav from '../common/MobileBottomNav';
 import Starfield from '../components/Starfield';
 import { AuthContext } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { subscribeWalletSse } from '../utils/walletSse';
 
 /**
@@ -20,6 +21,7 @@ import { subscribeWalletSse } from '../utils/walletSse';
  */
 const GlobalLayout = () => {
     const { user } = useContext(AuthContext);
+    const { isDark } = useTheme();
     const { pathname } = useLocation();
     const isConsultationChat = pathname === '/consultation-chat';
 
@@ -35,11 +37,25 @@ const GlobalLayout = () => {
     }, [user?.id, user?.userId, user?.email]);
 
     return (
-        <div className={`relative flex flex-col overflow-hidden bg-[#080b12] text-white selection:bg-[#a3e635]/30 selection:text-white ${isConsultationChat ? 'h-dvh max-h-dvh min-h-0' : 'min-h-screen'}`}>
+        <div className={`relative flex flex-col overflow-hidden transition-colors duration-500 ${
+            isDark
+                ? 'bg-[#080b12] text-white selection:bg-[#a3e635]/30 selection:text-white'
+                : 'bg-gradient-to-br from-[#e0f2fe] via-[#f3e8ff] to-[#ecfdf5] text-slate-900 selection:bg-emerald-200 selection:text-emerald-900'
+        } ${isConsultationChat ? 'h-dvh max-h-dvh min-h-0' : 'min-h-screen'}`}>
             <Starfield />
-            {/* Global Ambient Glows for vibrant space theme */}
-            <div className="fixed top-[20%] left-0 -translate-x-[40%] -translate-y-1/2 w-[800px] h-[800px] bg-[#a3e635]/15 blur-[160px] rounded-full pointer-events-none z-0"></div>
-            <div className="fixed bottom-[20%] right-0 translate-x-[40%] translate-y-1/2 w-[800px] h-[800px] bg-[#0ea5e9]/15 blur-[160px] rounded-full pointer-events-none z-0"></div>
+            {/* Ambient Glows: Space glow in dark, and light blue / purple / mint glows in light mode */}
+            {isDark ? (
+                <>
+                    <div className="fixed top-[20%] left-0 -translate-x-[40%] -translate-y-1/2 w-[800px] h-[800px] bg-[#a3e635]/15 blur-[160px] rounded-full pointer-events-none z-0"></div>
+                    <div className="fixed bottom-[20%] right-0 translate-x-[40%] translate-y-1/2 w-[800px] h-[800px] bg-[#0ea5e9]/15 blur-[160px] rounded-full pointer-events-none z-0"></div>
+                </>
+            ) : (
+                <>
+                    <div className="fixed top-[15%] left-0 -translate-x-[30%] -translate-y-1/2 w-[850px] h-[850px] bg-[#38bdf8]/20 blur-[180px] rounded-full pointer-events-none z-0"></div>
+                    <div className="fixed top-[45%] right-0 translate-x-[30%] -translate-y-1/2 w-[850px] h-[850px] bg-[#c084fc]/15 blur-[180px] rounded-full pointer-events-none z-0"></div>
+                    <div className="fixed bottom-[10%] left-[20%] w-[750px] h-[750px] bg-[#34d399]/20 blur-[180px] rounded-full pointer-events-none z-0"></div>
+                </>
+            )}
 
             <Navbar />
             <main className={`relative w-full flex-grow ${isConsultationChat
