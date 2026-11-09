@@ -13,7 +13,6 @@ import {
     Utensils,
     Camera,
     Droplets,
-    Bot,
     Calendar,
     FileText,
     Users,
@@ -33,33 +32,28 @@ const UserRoles = () => {
     const userFeatures = [
         {
             icon: Utensils,
-            title: 'AI Weekly Diet Plan Generator',
-            desc: 'Generate automated, fully macro-balanced weekly meal plans customized to your caloric goals, budget tier, and diet preferences (Keto, Vegan, High-Protein, Mediterranean).'
+            title: 'AI Meal Plan Generator',
+            desc: 'Generate a one-day meal plan with daily nutrition targets, timed meals, ingredients, and macros based on selected goals and dietary restrictions.'
         },
         {
             icon: Camera,
-            title: 'Food Photo & Calorie Scanner',
-            desc: 'Snap a picture of any meal or ingredient to receive instant computer vision calorie counts, protein/fat/carb breakdowns, and dietary quality scores.'
+            title: 'AI Food & Barcode Analyzer',
+            desc: 'Upload a food photo or scan a product barcode to review nutrition facts, allergen and additive flags, diet compatibility, and suggested alternatives.'
         },
         {
             icon: Droplets,
             title: 'Smart Hydration & BMR Tracker',
-            desc: 'Set daily fluid targets, log water consumption in real time, and compute accurate Mifflin-St Jeor basal metabolic rate (BMR) metrics.'
-        },
-        {
-            icon: Bot,
-            title: '24/7 AI Health Chat Assistant',
-            desc: 'Interact with an intelligent, fine-tuned AI health companion for instant answers on nutrition questions, ingredient swaps, and dietary advice.'
+            desc: 'Set daily water and nutrition targets, log hydration, and get an estimated BMR during profile setup using the Mifflin-St Jeor formula.'
         },
         {
             icon: Calendar,
-            title: '1-on-1 Certified Nutritionist Consults',
-            desc: 'Book one-on-one virtual video and chat consultations with verified, licensed nutritionists.'
+            title: 'Nutritionist Consultations',
+            desc: 'Browse available nutritionists and request one-on-one appointments with verified professionals. Appointment chat and virtual-room tools are available.'
         },
         {
             icon: FileText,
-            title: 'Health Progress & PDF Exporter',
-            desc: 'Track weight trends and dietary adherence over time, and export clean PDF reports to share with your personal healthcare providers.'
+            title: 'Health Progress & Report Export',
+            desc: 'Review health and nutrition trends over time, then print or save a report as a PDF to share with your healthcare provider.'
         }
     ];
 
@@ -92,10 +86,9 @@ const UserRoles = () => {
     ];
 
     const comparisonMatrix = [
-        { feature: 'AI Weekly Diet Plan Generator', user: true, nutritionist: true, admin: true },
-        { feature: 'Food Photo Calorie & Macro Scanner', user: true, nutritionist: true, admin: true },
+        { feature: 'AI Meal Plan Generator', user: true, nutritionist: true, admin: true },
+        { feature: 'AI Food & Barcode Analyzer', user: true, nutritionist: true, admin: true },
         { feature: 'Smart Hydration & BMR Tracking', user: true, nutritionist: true, admin: true },
-        { feature: '24/7 AI Health Chat Assistant', user: true, nutritionist: true, admin: true },
         { feature: 'Book Certified Nutritionist Consultations', user: true, nutritionist: false, admin: false },
         { feature: 'Custom Prescription Diet Regimen Builder', user: false, nutritionist: true, admin: true },
         { feature: 'Virtual Consultation Calendar & Scheduling', user: false, nutritionist: true, admin: true },
@@ -185,7 +178,7 @@ const UserRoles = () => {
                                         </div>
                                     </div>
                                     <p className="text-slate-600 dark:text-white/70 leading-relaxed text-sm sm:text-base">
-                                        As a standard user, NutriMunch AI acts as your personal digital nutritionist. Get instant access to AI-generated weekly diet plans, food photo calorie scanning, daily hydration logs, and 1-on-1 consultations with certified nutritionists.
+                                        As a standard user, use AI tools to generate one-day meal plans and analyze food, track hydration and health progress, and request consultations with verified nutritionists.
                                     </p>
                                 </div>
                                 <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
