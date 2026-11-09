@@ -812,43 +812,6 @@ const DietPlans = () => {
                             <span>Import Daily Requirements</span>
                         </button>
                     </div>
-
-                    {/* Grocery Order Card */}
-                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-8 shadow-xl">
-                        <h3 className="font-bold mb-4 flex items-center gap-2 font-hero-display text-white">
-                            <span className="material-symbols-outlined text-[#a5d391]">shopping_cart</span>
-                            Grocery List
-                        </h3>
-                        <p className="text-white/50 text-xs mb-4">Auto-compiled from this protocol schedule.</p>
-
-                        <div className="space-y-2.5 mb-6 text-xs">
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" className="accent-[#a5d391] w-4 h-4 rounded cursor-pointer" defaultChecked />
-                                <span className="text-white/90">Steel-cut Oats & Blueberries</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" className="accent-[#a5d391] w-4 h-4 rounded cursor-pointer" defaultChecked />
-                                <span className="text-white/90">Wild Caught Salmon Fillets (180g)</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" className="accent-[#a5d391] w-4 h-4 rounded cursor-pointer" />
-                                <span className="text-white/90">Organic Quinoa & Steamed Broccoli</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" className="accent-[#a5d391] w-4 h-4 rounded cursor-pointer" />
-                                <span className="text-white/90">Greek Yogurt & Raw Walnuts</span>
-                            </div>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => showToast('Grocery list exported to clipboard!')}
-                            className="w-full bg-[#080b12]/80 border border-white/10 hover:border-[#a5d391]/30 text-white font-bold py-3 rounded-2xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
-                        >
-                            <span className="material-symbols-outlined text-sm text-[#a5d391]">download</span>
-                            <span>Export Grocery Order</span>
-                        </button>
-                    </div>
                 </div>
             </div>
                 </>
