@@ -6,6 +6,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { ArrowLeft, ArrowRight, Mail, Lock, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { getDashboardUrl, isRouteAllowedForRole } from '../../utils/roleUtils';
@@ -38,6 +39,7 @@ const Login = () => {
     const [isSigningIn, setIsSigningIn] = useState(false);
 
     const { login, googleLogin, user } = useContext(AuthContext);
+    const { isDark } = useTheme();
     const navigate = useNavigate();
 
     // Return to the page the visitor originally requested (same-site paths only)
@@ -170,9 +172,20 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#080b12] text-slate-200 font-sans antialiased flex flex-col justify-between selection:bg-[#a5d391]/30 selection:text-[#a5d391] relative overflow-x-hidden">
+        <div className={`min-h-screen font-sans antialiased flex flex-col justify-between relative overflow-x-hidden transition-colors duration-300 ${
+            isDark 
+                ? 'bg-[#080b12] text-slate-200 selection:bg-[#a5d391]/30 selection:text-[#a5d391]' 
+                : 'bg-gradient-to-br from-[#e0f2fe] via-[#f3e8ff] to-[#ecfdf5] text-slate-900 selection:bg-emerald-200 selection:text-emerald-900'
+        }`}>
             {/* Ambient Background Glows */}
-            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#a5d391]/10 blur-[150px] rounded-full pointer-events-none z-0"></div>
+            {isDark ? (
+                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#a5d391]/10 blur-[150px] rounded-full pointer-events-none z-0"></div>
+            ) : (
+                <>
+                    <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-300/25 blur-[160px] rounded-full pointer-events-none z-0"></div>
+                    <div className="absolute bottom-1/4 right-1/3 translate-x-1/2 translate-y-1/2 w-[550px] h-[550px] bg-purple-300/20 blur-[160px] rounded-full pointer-events-none z-0"></div>
+                </>
+            )}
 
             {/* BEGIN: Google Role Selection & Onboarding Modal */}
             {requiresRoleSelection && (
@@ -246,9 +259,13 @@ const Login = () => {
             <header className="w-full px-6 lg:px-10 py-6 flex items-center justify-between z-10">
                 <button 
                     onClick={() => navigate('/')} 
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border border-white/10 backdrop-blur-md transition duration-200 group cursor-pointer"
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold backdrop-blur-md transition duration-200 group cursor-pointer border ${
+                        isDark 
+                            ? 'text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/80 border-white/10' 
+                            : 'text-slate-700 hover:text-slate-900 bg-white/80 hover:bg-white border-slate-200 shadow-sm'
+                    }`}
                 >
-                    <ArrowLeft className="w-3.5 h-3.5 text-slate-400 group-hover:text-white group-hover:-translate-x-0.5 transition-transform" />
+                    <ArrowLeft className={`w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5 ${isDark ? 'text-slate-400 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-900'}`} />
                     <span>Back to Home</span>
                 </button>
             </header>
@@ -267,21 +284,29 @@ const Login = () => {
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#a5d391] to-emerald-400 flex items-center justify-center shadow-lg shadow-[#a5d391]/20 ring-1 ring-white/20">
                                 <Sparkles className="w-5 h-5 text-slate-950 transform group-hover:scale-110 transition-transform duration-200" />
                             </div>
-                            <span className="text-2xl font-bold tracking-tight text-white flex items-center gap-2 font-hero-display">
-                                NutriMunch <span className="text-[10px] uppercase font-semibold tracking-wider text-[#a5d391] bg-[#a5d391]/10 border border-[#a5d391]/30 px-2 py-0.5 rounded-full">AI</span>
+                            <span className={`text-2xl font-bold tracking-tight flex items-center gap-2 font-hero-display ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                NutriMunch <span className={`text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded-full border ${isDark ? 'text-[#a5d391] bg-[#a5d391]/10 border-[#a5d391]/30' : 'text-emerald-700 bg-emerald-100 border-emerald-300'}`}>AI</span>
                             </span>
                         </div>
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2 font-hero-display">Welcome back</h1>
-                        <p className="text-sm text-slate-400">
+                        <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight mb-2 font-hero-display ${isDark ? 'text-white' : 'text-slate-900'}`}>Welcome back</h1>
+                        <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {roleSubtitles[activeTab]}
                         </p>
                     </div>
 
                     {/* Authentication Card */}
-                    <div className="w-full bg-[#0d121c]/80 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2.5rem] p-7 sm:p-9">
+                    <div className={`w-full backdrop-blur-2xl border rounded-[2.5rem] p-7 sm:p-9 transition-all duration-300 ${
+                        isDark
+                            ? 'bg-[#0d121c]/80 border-white/10 shadow-2xl text-white'
+                            : 'bg-white/90 border-slate-200/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)] text-slate-800'
+                    }`}>
                         
                         {/* Role Selector Tabs */}
-                        <div className="flex bg-[#080b12]/80 p-1 rounded-2xl mb-6 border border-white/10">
+                        <div className={`flex p-1 rounded-2xl mb-6 border transition-colors ${
+                            isDark
+                                ? 'bg-[#080b12]/80 border-white/10'
+                                : 'bg-slate-100/90 border-slate-200'
+                        }`}>
                             {['USER', 'NUTRITIONIST', 'ADMIN'].map((role) => (
                                 <button
                                     key={role}
@@ -289,8 +314,12 @@ const Login = () => {
                                     onClick={() => { setActiveTab(role); setError(''); }}
                                     className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-300 cursor-pointer ${
                                         activeTab === role 
-                                        ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' 
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                        ? (isDark 
+                                            ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' 
+                                            : 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25')
+                                        : (isDark 
+                                            ? 'text-slate-400 hover:text-white hover:bg-white/5' 
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60')
                                     }`}
                                 >
                                     {role === 'USER' ? 'User' : role === 'NUTRITIONIST' ? 'Nutritionist' : 'Admin'}
@@ -316,11 +345,15 @@ const Login = () => {
                             
                             {/* Email Field Group */}
                             <div className="space-y-1.5">
-                                <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-300" htmlFor="email">
+                                <label className={`block text-[11px] font-semibold tracking-wider uppercase ${isDark ? 'text-slate-300' : 'text-slate-700'}`} htmlFor="email">
                                     Email Address
                                 </label>
-                                <div className={`relative flex items-center bg-[#090d16]/90 border rounded-xl overflow-hidden focus-within:ring-2 transition-all ${emailError ? 'border-red-500/60 focus-within:border-red-500/60 focus-within:ring-red-500/20' : 'border-white/10 focus-within:border-[#a5d391]/60 focus-within:ring-[#a5d391]/20'}`}>
-                                    <span className="pl-3.5 pointer-events-none text-slate-400 flex items-center">
+                                <div className={`relative flex items-center border rounded-xl overflow-hidden focus-within:ring-2 transition-all ${
+                                    isDark
+                                        ? `bg-[#090d16]/90 ${emailError ? 'border-red-500/60 focus-within:border-red-500/60 focus-within:ring-red-500/20' : 'border-white/10 focus-within:border-[#a5d391]/60 focus-within:ring-[#a5d391]/20'}`
+                                        : `bg-slate-50 border-slate-200 focus-within:bg-white ${emailError ? 'border-red-400 focus-within:border-red-500 focus-within:ring-red-500/20' : 'focus-within:border-emerald-500 focus-within:ring-emerald-500/20'}`
+                                }`}>
+                                    <span className={`pl-3.5 pointer-events-none flex items-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                                         <Mail className="w-4 h-4" />
                                     </span>
                                     <input
@@ -334,24 +367,30 @@ const Login = () => {
                                         aria-invalid={!!emailError}
                                         aria-describedby={emailError ? 'email-error' : undefined}
                                         placeholder={activeTab === 'USER' ? 'user@example.com' : activeTab === 'NUTRITIONIST' ? 'nutritionist@nutrimunch.com' : 'admin@nutrimunch.com'}
-                                        className="w-full bg-transparent border-0 py-2.5 pl-3 pr-4 text-sm text-white placeholder-slate-500 focus:ring-0 focus:outline-none"
+                                        className={`w-full bg-transparent border-0 py-2.5 pl-3 pr-4 text-sm focus:ring-0 focus:outline-none ${
+                                            isDark ? 'text-white placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'
+                                        }`}
                                     />
                                 </div>
-                                {emailError && <p id="email-error" className="text-xs text-amber-300/80">Check the email format before signing in.</p>}
+                                {emailError && <p id="email-error" className={`text-xs ${isDark ? 'text-amber-300/80' : 'text-amber-600'}`}>Check the email format before signing in.</p>}
                             </div>
 
                             {/* Password Field Group */}
                             <div className="space-y-1.5">
                                 <div className="flex items-center justify-between">
-                                    <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-300" htmlFor="password">
+                                    <label className={`block text-[11px] font-semibold tracking-wider uppercase ${isDark ? 'text-slate-300' : 'text-slate-700'}`} htmlFor="password">
                                         Password
                                     </label>
-                                    <Link to="/forgot-password" className="text-xs font-medium text-[#a5d391] hover:text-white transition-colors">
+                                    <Link to="/forgot-password" className={`text-xs font-semibold transition-colors ${isDark ? 'text-[#a5d391] hover:text-white' : 'text-emerald-600 hover:text-emerald-700'}`}>
                                         Forgot Password?
                                     </Link>
                                 </div>
-                                <div className="relative flex items-center bg-[#090d16]/90 border border-white/10 rounded-xl overflow-hidden focus-within:border-[#a5d391]/60 focus-within:ring-2 focus-within:ring-[#a5d391]/20 transition-all">
-                                    <span className="pl-3.5 pointer-events-none text-slate-400 flex items-center">
+                                <div className={`relative flex items-center border rounded-xl overflow-hidden focus-within:ring-2 transition-all ${
+                                    isDark
+                                        ? 'bg-[#090d16]/90 border-white/10 focus-within:border-[#a5d391]/60 focus-within:ring-[#a5d391]/20'
+                                        : 'bg-slate-50 border-slate-200 focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-emerald-500/20'
+                                }`}>
+                                    <span className={`pl-3.5 pointer-events-none flex items-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                                         <Lock className="w-4 h-4" />
                                     </span>
                                     <input
@@ -363,12 +402,16 @@ const Login = () => {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••••••"
-                                        className="w-full bg-transparent border-0 py-2.5 pl-3 pr-10 text-sm text-white placeholder-slate-600 focus:ring-0 focus:outline-none tracking-widest"
+                                        className={`w-full bg-transparent border-0 py-2.5 pl-3 pr-10 text-sm focus:ring-0 focus:outline-none tracking-widest ${
+                                            isDark ? 'text-white placeholder-slate-600' : 'text-slate-900 placeholder-slate-400'
+                                        }`}
                                     />
                                     <button 
                                         type="button" 
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 text-slate-400 hover:text-slate-200 p-1 focus:outline-none transition-colors cursor-pointer"
+                                        className={`absolute right-3 p-1 focus:outline-none transition-colors cursor-pointer ${
+                                            isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600'
+                                        }`}
                                     >
                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
@@ -383,9 +426,9 @@ const Login = () => {
                                     type="checkbox"
                                     checked={rememberMe}
                                     onChange={(e) => setRememberMe(e.target.checked)}
-                                    className="h-4 w-4 rounded border-slate-700 bg-slate-900/80 text-[#a5d391] focus:ring-[#a5d391]/30 focus:ring-offset-0 transition-colors cursor-pointer"
+                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/80 text-emerald-600 focus:ring-emerald-500/30 focus:ring-offset-0 transition-colors cursor-pointer"
                                 />
-                                <label htmlFor="remember-me" className="ml-2.5 block text-xs text-slate-300 select-none cursor-pointer">
+                                <label htmlFor="remember-me" className={`ml-2.5 block text-xs select-none cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                                     Remember me
                                 </label>
                             </div>
@@ -395,11 +438,15 @@ const Login = () => {
                                 <button 
                                     type="submit" 
                                     disabled={isSigningIn || !areLoginFieldsFilled(email, password)}
-                                    className="w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)] transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+                                    className={`w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${
+                                        isDark
+                                            ? 'text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)]'
+                                            : 'text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 shadow-lg shadow-emerald-600/30'
+                                    }`}
                                 >
                                     {isSigningIn ? (
                                         <>
-                                            <span className="h-4 w-4 rounded-full border-2 border-black/25 border-t-black animate-spin" />
+                                            <span className={`h-4 w-4 rounded-full border-2 border-t-transparent animate-spin ${isDark ? 'border-black' : 'border-white'}`} />
                                             <span>Signing in…</span>
                                         </>
                                     ) : (
@@ -421,7 +468,11 @@ const Login = () => {
                                         setIsSigningIn(true);
                                         loginWithGoogle();
                                     }}
-                                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white font-medium text-xs uppercase tracking-wider cursor-pointer disabled:cursor-wait disabled:opacity-60"
+                                    className={`w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border transition-all font-semibold text-xs uppercase tracking-wider cursor-pointer disabled:cursor-wait disabled:opacity-60 ${
+                                        isDark
+                                            ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white'
+                                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-sm'
+                                    }`}
                                 >
                                     <svg className="w-4 h-4" viewBox="0 0 24 24">
                                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -435,9 +486,9 @@ const Login = () => {
 
                             {/* Register Navigation */}
                             <div className="text-center pt-2">
-                                <p className="text-xs text-slate-400">
+                                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                                     Don't have an account? 
-                                    <Link to="/register" className="font-semibold text-[#a5d391] hover:text-white ml-1 transition-colors">
+                                    <Link to="/register" className={`font-semibold ml-1 transition-colors ${isDark ? 'text-[#a5d391] hover:text-white' : 'text-emerald-600 hover:text-emerald-700'}`}>
                                         Sign up today
                                     </Link>
                                 </p>

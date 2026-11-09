@@ -212,11 +212,16 @@
     border-color: rgba(203, 213, 225, 0.9) !important;
   }
 
-  html.light input,
-  html.light select,
-  html.light textarea {
+  html.light input:not(.bg-transparent),
+  html.light select:not(.bg-transparent),
+  html.light textarea:not(.bg-transparent) {
     color: #0f172a !important;
     background-color: rgba(255, 255, 255, 0.95);
+  }
+
+  html.light input.bg-transparent,
+  html.light textarea.bg-transparent {
+    background-color: transparent !important;
   }
 
   html.light input::placeholder,
@@ -225,13 +230,10 @@
   }
 
   /* Dark themed containers & panels in Light Mode */
-  html.light .bg-\[\#080b12\]:not(button):not(a),
-  html.light .bg-\[\#080b12\]\/85:not(button):not(a),
-  html.light .bg-\[\#080b12\]\/95:not(button):not(a),
-  html.light .bg-\[\#0d121c\]:not(button):not(a),
-  html.light .bg-\[\#0b1017\]\/90:not(button):not(a),
-  html.light .bg-\[\#0b1017\]\/95:not(button):not(a),
-  html.light .bg-\[\#090d16\]:not(button):not(a) {
+  html.light [class*="bg-\[\#080b12\]"]:not(button):not(a),
+  html.light [class*="bg-\[\#0d121c\]"]:not(button):not(a),
+  html.light [class*="bg-\[\#0b1017\]"]:not(button):not(a),
+  html.light [class*="bg-\[\#090d16\]"]:not(button):not(a) {
     background-color: rgba(255, 255, 255, 0.92) !important;
     color: #0f172a !important;
     border-color: rgba(226, 232, 240, 0.9) !important;
