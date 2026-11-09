@@ -308,29 +308,29 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
     const previewFats = selectedFood ? (selectedFood.fats * activeMultiplier).toFixed(1) : 0;
 
     return (
-        <div className="bg-gradient-to-br from-[#0c121e] via-[#080b12] to-[#0c121e] border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 shadow-[0_0_50px_rgba(165,211,145,0.12)] relative overflow-hidden space-y-8">
+        <div className="bg-white/95 border border-slate-200/90 shadow-xl dark:bg-gradient-to-br dark:from-[#0c121e] dark:via-[#080b12] dark:to-[#0c121e] dark:border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 dark:shadow-[0_0_50px_rgba(165,211,145,0.12)] relative overflow-hidden space-y-8 transition-colors">
             {/* Ambient Background Glow */}
             <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#a5d391]/5 rounded-full blur-3xl pointer-events-none"></div>
 
             {/* Header Section with Backdated Day Controller */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6 relative z-30">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-white/10 pb-6 relative z-30">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[#a5d391]/15 text-[#a5d391] border border-[#a5d391]/30 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(165,211,145,0.25)]">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-[#a5d391]/15 dark:text-[#a5d391] dark:border-[#a5d391]/30 flex items-center justify-center shrink-0 shadow-sm dark:shadow-[0_0_20px_rgba(165,211,145,0.25)]">
                         <span className="material-symbols-outlined text-2xl">restaurant_menu</span>
                     </div>
                     <div>
-                        <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#a5d391]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-pulse"></span>
+                        <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-800 dark:text-[#a5d391]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-[#a5d391] animate-pulse"></span>
                             {selectedLogDate === todayStr ? "Today's Live Nutrition Log" : `Backdated Log: ${selectedLogDate}`}
                         </div>
-                        <h2 className="text-2xl font-bold font-hero-display text-white">Daily Food & Macro Logging</h2>
-                        <p className="text-xs text-white/50">Log intake for today or select any backdated day to record previous nutritional metrics.</p>
+                        <h2 className="text-2xl font-bold font-hero-display text-slate-900 dark:text-white">Daily Food & Macro Logging</h2>
+                        <p className="text-xs text-slate-600 dark:text-white/50">Log intake for today or select any backdated day to record previous nutritional metrics.</p>
                     </div>
                 </div>
 
                 {/* Backdated Date Selector Controls */}
                 <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mr-1">Log Date:</span>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-white/40 uppercase tracking-wider mr-1">Log Date:</span>
                     <DarkCalendarPicker
                         value={selectedLogDate}
                         onChange={(val) => setSelectedLogDate(val)}
@@ -341,7 +341,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                         type="button"
                         onClick={() => setSelectedLogDate(todayStr)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            selectedLogDate === todayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                            selectedLogDate === todayStr ? 'bg-emerald-600 text-white border-emerald-600 dark:bg-[#a5d391] dark:text-black dark:border-[#a5d391]' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 dark:bg-white/5 dark:text-white/60 dark:hover:text-white dark:border-white/10'
                         }`}
                     >
                         Today
@@ -350,7 +350,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                         type="button"
                         onClick={() => setSelectedLogDate(yesterdayStr)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            selectedLogDate === yesterdayStr ? 'bg-[#a5d391] text-black border-[#a5d391]' : 'bg-white/5 text-white/60 hover:text-white border-white/10'
+                            selectedLogDate === yesterdayStr ? 'bg-emerald-600 text-white border-emerald-600 dark:bg-[#a5d391] dark:text-black dark:border-[#a5d391]' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 dark:bg-white/5 dark:text-white/60 dark:hover:text-white dark:border-white/10'
                         }`}
                     >
                         Yesterday
@@ -359,7 +359,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                         <button
                             type="button"
                             onClick={handleClearDay}
-                            className="text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0 ml-1"
+                            className="text-xs font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-300 dark:text-red-400 dark:hover:text-red-300 dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:border-red-500/30 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0 ml-1"
                             title={`Reset log for ${selectedLogDate}`}
                         >
                             <span className="material-symbols-outlined text-sm">delete_sweep</span>
@@ -373,8 +373,8 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
             {feedbackMessage && (
                 <div className={`p-4 rounded-2xl text-xs font-bold border flex items-center gap-2 animate-in fade-in duration-200 ${
                     feedbackMessage.type === 'error'
-                        ? 'bg-red-500/15 border-red-500/30 text-red-300'
-                        : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                        ? 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:bg-red-500/15 dark:border-red-500/30 dark:text-red-300'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:bg-emerald-500/15 dark:border-emerald-500/30 dark:text-emerald-300'
                 }`}>
                     <span className="material-symbols-outlined text-base">
                         {feedbackMessage.type === 'error' ? 'error' : 'check_circle'}
@@ -386,25 +386,25 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
             {/* LIVE DAILY NUTRITION CONSUMED METRICS (Auto Daily Nutrition Count) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
                 {/* Total Calories Card */}
-                <div className="bg-[#080b12]/90 border border-white/10 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 rounded-2xl p-5 shadow-sm dark:shadow-lg flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-2">
-                        <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Calories Consumed</span>
-                        <span className="material-symbols-outlined text-amber-400 text-lg">local_fire_department</span>
+                        <span className="text-slate-600 dark:text-white/40 text-[10px] font-bold uppercase tracking-wider">Calories Consumed</span>
+                        <span className="material-symbols-outlined text-amber-500 dark:text-amber-400 text-lg">local_fire_department</span>
                     </div>
                     <div>
                         <div className="flex items-baseline gap-1.5">
-                            <span className="text-2xl font-extrabold text-white">{dailyTotals.calories}</span>
-                            <span className="text-xs text-white/50">/ {targetCalories} kcal</span>
+                            <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{dailyTotals.calories}</span>
+                            <span className="text-xs text-slate-500 dark:text-white/50">/ {targetCalories} kcal</span>
                         </div>
-                        <div className="w-full bg-white/10 h-2 rounded-full mt-2.5 overflow-hidden">
+                        <div className="w-full bg-slate-200 dark:bg-white/10 h-2 rounded-full mt-2.5 overflow-hidden">
                             <div 
                                 className={`h-full rounded-full transition-all duration-500 ${
-                                    dailyTotals.calories > targetCalories ? 'bg-red-400' : 'bg-gradient-to-r from-amber-400 to-[#a5d391]'
+                                    dailyTotals.calories > targetCalories ? 'bg-red-500 dark:bg-red-400' : 'bg-gradient-to-r from-amber-500 to-emerald-600 dark:from-amber-400 dark:to-[#a5d391]'
                                 }`}
                                 style={{ width: `${calPercent}%` }}
                             ></div>
                         </div>
-                        <div className="text-[10px] text-white/40 mt-1.5 flex justify-between">
+                        <div className="text-[10px] text-slate-500 dark:text-white/40 mt-1.5 flex justify-between">
                             <span>{calPercent}% of target</span>
                             <span>{calOver > 0 ? `+${calOver} kcal over` : `${calRemaining} kcal left`}</span>
                         </div>
@@ -412,23 +412,23 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                 </div>
 
                 {/* Protein Card */}
-                <div className="bg-[#080b12]/90 border border-[#a5d391]/25 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-[#a5d391]/25 rounded-2xl p-5 shadow-sm dark:shadow-lg flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-2">
-                        <span className="text-[#a5d391]/70 text-[10px] font-bold uppercase tracking-wider">Protein</span>
-                        <span className="material-symbols-outlined text-[#a5d391] text-lg">fitness_center</span>
+                        <span className="text-emerald-800 dark:text-[#a5d391]/70 text-[10px] font-bold uppercase tracking-wider">Protein</span>
+                        <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391] text-lg">fitness_center</span>
                     </div>
                     <div>
                         <div className="flex items-baseline gap-1.5">
-                            <span className="text-2xl font-extrabold text-[#a5d391]">{dailyTotals.protein.toFixed(1)}g</span>
-                            <span className="text-xs text-white/50">/ {targetProtein}g</span>
+                            <span className="text-2xl font-extrabold text-emerald-700 dark:text-[#a5d391]">{dailyTotals.protein.toFixed(1)}g</span>
+                            <span className="text-xs text-slate-500 dark:text-white/50">/ {targetProtein}g</span>
                         </div>
-                        <div className="w-full bg-white/10 h-2 rounded-full mt-2.5 overflow-hidden">
+                        <div className="w-full bg-slate-200 dark:bg-white/10 h-2 rounded-full mt-2.5 overflow-hidden">
                             <div 
-                                className="h-full bg-[#a5d391] rounded-full transition-all duration-500"
+                                className="h-full bg-emerald-600 dark:bg-[#a5d391] rounded-full transition-all duration-500"
                                 style={{ width: `${proteinPercent}%` }}
                             ></div>
                         </div>
-                        <div className="text-[10px] text-[#a5d391]/70 mt-1.5 flex justify-between">
+                        <div className="text-[10px] text-emerald-800 dark:text-[#a5d391]/70 mt-1.5 flex justify-between">
                             <span>{proteinPercent}% target</span>
                             <span>{dailyTotals.protein >= targetProtein ? 'Goal Reached!' : `${(targetProtein - dailyTotals.protein).toFixed(1)}g left`}</span>
                         </div>
@@ -436,23 +436,23 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                 </div>
 
                 {/* Carbs Card */}
-                <div className="bg-[#080b12]/90 border border-[#38bdf8]/25 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-[#38bdf8]/25 rounded-2xl p-5 shadow-sm dark:shadow-lg flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-2">
-                        <span className="text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider">Carbohydrates</span>
-                        <span className="material-symbols-outlined text-[#38bdf8] text-lg">grain</span>
+                        <span className="text-sky-800 dark:text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider">Carbohydrates</span>
+                        <span className="material-symbols-outlined text-sky-700 dark:text-[#38bdf8] text-lg">grain</span>
                     </div>
                     <div>
                         <div className="flex items-baseline gap-1.5">
-                            <span className="text-2xl font-extrabold text-[#38bdf8]">{dailyTotals.carbs.toFixed(1)}g</span>
-                            <span className="text-xs text-white/50">/ {targetCarbs}g</span>
+                            <span className="text-2xl font-extrabold text-sky-700 dark:text-[#38bdf8]">{dailyTotals.carbs.toFixed(1)}g</span>
+                            <span className="text-xs text-slate-500 dark:text-white/50">/ {targetCarbs}g</span>
                         </div>
-                        <div className="w-full bg-white/10 h-2 rounded-full mt-2.5 overflow-hidden">
+                        <div className="w-full bg-slate-200 dark:bg-white/10 h-2 rounded-full mt-2.5 overflow-hidden">
                             <div 
-                                className="h-full bg-[#38bdf8] rounded-full transition-all duration-500"
+                                className="h-full bg-sky-600 dark:bg-[#38bdf8] rounded-full transition-all duration-500"
                                 style={{ width: `${carbsPercent}%` }}
                             ></div>
                         </div>
-                        <div className="text-[10px] text-[#38bdf8]/70 mt-1.5 flex justify-between">
+                        <div className="text-[10px] text-sky-800 dark:text-[#38bdf8]/70 mt-1.5 flex justify-between">
                             <span>{carbsPercent}% target</span>
                             <span>{dailyTotals.carbs >= targetCarbs ? 'Met' : `${(targetCarbs - dailyTotals.carbs).toFixed(1)}g left`}</span>
                         </div>
@@ -460,23 +460,23 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                 </div>
 
                 {/* Fats Card */}
-                <div className="bg-[#080b12]/90 border border-yellow-400/25 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-yellow-400/25 rounded-2xl p-5 shadow-sm dark:shadow-lg flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-2">
-                        <span className="text-yellow-400/70 text-[10px] font-bold uppercase tracking-wider">Fats</span>
-                        <span className="material-symbols-outlined text-yellow-400 text-lg">opacity</span>
+                        <span className="text-amber-800 dark:text-yellow-400/70 text-[10px] font-bold uppercase tracking-wider">Fats</span>
+                        <span className="material-symbols-outlined text-amber-600 dark:text-yellow-400 text-lg">opacity</span>
                     </div>
                     <div>
                         <div className="flex items-baseline gap-1.5">
-                            <span className="text-2xl font-extrabold text-yellow-400">{dailyTotals.fats.toFixed(1)}g</span>
-                            <span className="text-xs text-white/50">/ {targetFats}g</span>
+                            <span className="text-2xl font-extrabold text-amber-700 dark:text-yellow-400">{dailyTotals.fats.toFixed(1)}g</span>
+                            <span className="text-xs text-slate-500 dark:text-white/50">/ {targetFats}g</span>
                         </div>
-                        <div className="w-full bg-white/10 h-2 rounded-full mt-2.5 overflow-hidden">
+                        <div className="w-full bg-slate-200 dark:bg-white/10 h-2 rounded-full mt-2.5 overflow-hidden">
                             <div 
-                                className="h-full bg-yellow-400 rounded-full transition-all duration-500"
+                                className="h-full bg-amber-500 dark:bg-yellow-400 rounded-full transition-all duration-500"
                                 style={{ width: `${fatsPercent}%` }}
                             ></div>
                         </div>
-                        <div className="text-[10px] text-yellow-400/70 mt-1.5 flex justify-between">
+                        <div className="text-[10px] text-amber-800 dark:text-yellow-400/70 mt-1.5 flex justify-between">
                             <span>{fatsPercent}% target</span>
                             <span>{dailyTotals.fats >= targetFats ? 'Met' : `${(targetFats - dailyTotals.fats).toFixed(1)}g left`}</span>
                         </div>
@@ -485,14 +485,14 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
             </div>
 
             {/* LOGGING MODE TABS */}
-            <div className="flex items-center gap-2 border-b border-white/10 pb-3 relative z-20">
+            <div className="flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-3 relative z-20">
                 <button
                     type="button"
                     onClick={() => setEntryMode('search')}
                     className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                         entryMode === 'search'
-                            ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
-                            : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
+                            ? 'bg-emerald-600 text-white font-extrabold shadow-sm dark:bg-[#a5d391] dark:text-black'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-white/5 dark:text-white/60 dark:hover:text-white dark:border-white/5'
                     }`}
                 >
                     <span className="material-symbols-outlined text-sm">search</span>
@@ -503,8 +503,8 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                     onClick={() => setEntryMode('direct')}
                     className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                         entryMode === 'direct'
-                            ? 'bg-[#a5d391] text-black font-extrabold shadow-sm'
-                            : 'bg-white/5 text-white/60 hover:text-white border border-white/5'
+                            ? 'bg-emerald-600 text-white font-extrabold shadow-sm dark:bg-[#a5d391] dark:text-black'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-white/5 dark:text-white/60 dark:hover:text-white dark:border-white/5'
                     }`}
                 >
                     <span className="material-symbols-outlined text-sm">speed</span>
@@ -514,15 +514,15 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
 
             {/* DIRECT MACRO ENTRY FORM (For quick backdated or daily whole-count entry) */}
             {entryMode === 'direct' && (
-                <form onSubmit={handleSaveDirectTotals} className="bg-[#080b12]/90 border border-white/10 rounded-2xl p-5 space-y-4 relative z-20">
-                    <div className="flex items-center justify-between text-xs text-white/70">
-                        <span>Direct daily intake count for <strong className="text-white">{selectedLogDate}</strong>:</span>
-                        <span className="text-[10px] text-[#a5d391] font-bold uppercase tracking-wider">Single-day resolution</span>
+                <form onSubmit={handleSaveDirectTotals} className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 rounded-2xl p-5 space-y-4 relative z-20 shadow-sm">
+                    <div className="flex items-center justify-between text-xs text-slate-700 dark:text-white/70">
+                        <span>Direct daily intake count for <strong className="text-slate-900 dark:text-white">{selectedLogDate}</strong>:</span>
+                        <span className="text-[10px] text-emerald-800 dark:text-[#a5d391] font-bold uppercase tracking-wider">Single-day resolution</span>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div>
-                            <label className="text-[10px] font-bold text-white/50 uppercase block mb-1">Calories (kcal) *</label>
+                            <label className="text-[10px] font-bold text-slate-700 dark:text-white/50 uppercase block mb-1">Calories (kcal) *</label>
                             <input
                                 type="number"
                                 min="1"
@@ -531,11 +531,11 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                 placeholder="e.g. 1850"
                                 value={directCalories}
                                 onChange={(e) => setDirectCalories(e.target.value)}
-                                className="w-full bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                                className="w-full bg-white border border-slate-300 focus:border-emerald-600 dark:bg-white/5 dark:border-white/15 dark:focus:border-[#a5d391] rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-mono font-bold outline-none shadow-sm"
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-bold text-[#a5d391]/80 uppercase block mb-1">Protein (g)</label>
+                            <label className="text-[10px] font-bold text-emerald-800 dark:text-[#a5d391]/80 uppercase block mb-1">Protein (g)</label>
                             <input
                                 type="number"
                                 min="0"
@@ -544,11 +544,11 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                 placeholder="e.g. 120"
                                 value={directProtein}
                                 onChange={(e) => setDirectProtein(e.target.value)}
-                                className="w-full bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                                className="w-full bg-white border border-slate-300 focus:border-emerald-600 dark:bg-white/5 dark:border-white/15 dark:focus:border-[#a5d391] rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-mono font-bold outline-none shadow-sm"
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-bold text-[#38bdf8]/80 uppercase block mb-1">Carbs (g)</label>
+                            <label className="text-[10px] font-bold text-sky-800 dark:text-[#38bdf8]/80 uppercase block mb-1">Carbs (g)</label>
                             <input
                                 type="number"
                                 min="0"
@@ -557,11 +557,11 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                 placeholder="e.g. 190"
                                 value={directCarbs}
                                 onChange={(e) => setDirectCarbs(e.target.value)}
-                                className="w-full bg-white/5 border border-white/15 focus:border-[#38bdf8] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                                className="w-full bg-white border border-slate-300 focus:border-sky-600 dark:bg-white/5 dark:border-white/15 dark:focus:border-[#38bdf8] rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-mono font-bold outline-none shadow-sm"
                             />
                         </div>
                         <div>
-                            <label className="text-[10px] font-bold text-amber-400/80 uppercase block mb-1">Fats (g)</label>
+                            <label className="text-[10px] font-bold text-amber-800 dark:text-amber-400/80 uppercase block mb-1">Fats (g)</label>
                             <input
                                 type="number"
                                 min="0"
@@ -570,7 +570,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                 placeholder="e.g. 55"
                                 value={directFats}
                                 onChange={(e) => setDirectFats(e.target.value)}
-                                className="w-full bg-white/5 border border-white/15 focus:border-amber-400 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold outline-none"
+                                className="w-full bg-white border border-slate-300 focus:border-amber-600 dark:bg-white/5 dark:border-white/15 dark:focus:border-amber-400 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white font-mono font-bold outline-none shadow-sm"
                             />
                         </div>
                     </div>
@@ -581,11 +581,11 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                             placeholder="Optional note / label (e.g. Daily Nutritional Count, Home Meals)"
                             value={directLabel}
                             onChange={(e) => setDirectLabel(e.target.value)}
-                            className="w-full sm:w-2/3 bg-white/5 border border-white/15 focus:border-[#a5d391] rounded-xl px-3 py-2 text-xs text-white outline-none"
+                            className="w-full sm:w-2/3 bg-white border border-slate-300 focus:border-emerald-600 dark:bg-white/5 dark:border-white/15 dark:focus:border-[#a5d391] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none shadow-sm"
                         />
                         <button
                             type="submit"
-                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#a5d391] hover:bg-[#b2e29e] text-black font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:hover:bg-[#b2e29e] dark:text-black font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0"
                         >
                             <span className="material-symbols-outlined text-sm font-bold">add_task</span>
                             <span>Save Count for {selectedLogDate}</span>
@@ -599,14 +599,14 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-20">
                 {/* Search & Food Picker Column */}
                 <div className="lg:col-span-7 space-y-4">
-                    <label className="text-xs font-bold uppercase tracking-wider text-white/70 block">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 block">
                         Search Food Repository (Type any name or category)
                     </label>
 
                     {/* Search Input Box */}
                     <div ref={searchContainerRef} className="relative">
                         <div className="relative">
-                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#a5d391] text-xl pointer-events-none">
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-emerald-700 dark:text-[#a5d391] text-xl pointer-events-none">
                                 search
                             </span>
                             <input
@@ -617,7 +617,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                     if (searchQuery.trim().length > 0) setIsDropdownOpen(true);
                                 }}
                                 placeholder="Type letters (e.g., 'chi' for Chicken, 'oat', 'paneer', 'rice', 'egg')..."
-                                className="w-full bg-[#080b12]/95 border border-white/20 focus:border-[#a5d391] pl-12 pr-10 py-3.5 rounded-2xl text-white text-sm outline-none transition-all shadow-inner focus:shadow-[0_0_20px_rgba(165,211,145,0.25)] placeholder:text-white/30"
+                                className="w-full bg-white border border-slate-300 focus:border-emerald-600 dark:bg-[#080b12]/95 dark:border-white/20 dark:focus:border-[#a5d391] pl-12 pr-10 py-3.5 rounded-2xl text-slate-900 dark:text-white text-sm outline-none transition-all shadow-sm focus:shadow-md placeholder:text-slate-400 dark:placeholder:text-white/30"
                             />
                             {searchQuery && (
                                 <button
@@ -626,7 +626,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                         setSearchResults([]);
                                         setIsDropdownOpen(false);
                                     }}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-sm p-1 cursor-pointer"
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white text-sm p-1 cursor-pointer"
                                 >
                                     <span className="material-symbols-outlined text-base">close</span>
                                 </button>
@@ -635,36 +635,36 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
 
                         {/* Autocomplete Results Dropdown */}
                         {isDropdownOpen && searchResults.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#080b12]/95 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl max-h-80 overflow-y-auto z-50 divide-y divide-white/5 animate-in fade-in duration-150">
-                                <div className="px-4 py-2 text-[10px] font-bold uppercase text-[#a5d391] tracking-wider bg-white/5 flex justify-between items-center">
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#080b12]/95 dark:backdrop-blur-2xl border border-slate-200 dark:border-white/15 rounded-2xl shadow-2xl max-h-80 overflow-y-auto z-50 divide-y divide-slate-100 dark:divide-white/5 animate-in fade-in duration-150">
+                                <div className="px-4 py-2 text-[10px] font-bold uppercase text-emerald-800 dark:text-[#a5d391] tracking-wider bg-slate-50 dark:bg-white/5 flex justify-between items-center">
                                     <span>Matching Repository Results ({searchResults.length})</span>
-                                    <span className="text-white/40">Click item to inspect & log</span>
+                                    <span className="text-slate-500 dark:text-white/40">Click item to inspect & log</span>
                                 </div>
                                 {searchResults.map((item) => (
                                     <div
                                         key={item.id}
                                         onClick={() => handleSelectFood(item)}
-                                        className="p-3.5 hover:bg-[#a5d391]/15 transition-colors cursor-pointer flex items-center justify-between gap-3 group"
+                                        className="p-3.5 hover:bg-slate-50 dark:hover:bg-[#a5d391]/15 transition-colors cursor-pointer flex items-center justify-between gap-3 group"
                                     >
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <span className="font-bold text-sm text-white group-hover:text-[#a5d391] transition-colors truncate">
+                                                <span className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 dark:text-white dark:group-hover:text-[#a5d391] transition-colors truncate">
                                                     {item.name}
                                                 </span>
-                                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/10 text-white/70 shrink-0">
+                                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70 shrink-0">
                                                     {item.category}
                                                 </span>
                                             </div>
-                                            <div className="text-xs text-white/50 mt-0.5">
-                                                Serving: <span className="text-white/80">{item.servingSize}</span>
+                                            <div className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
+                                                Serving: <span className="text-slate-800 dark:text-white/80">{item.servingSize}</span>
                                             </div>
                                         </div>
 
                                         <div className="text-right shrink-0">
-                                            <span className="font-black text-sm text-[#a5d391] block">
-                                                {item.calories} <span className="text-[10px] font-normal text-white/60">kcal</span>
+                                            <span className="font-black text-sm text-emerald-700 dark:text-[#a5d391] block">
+                                                {item.calories} <span className="text-[10px] font-normal text-slate-500 dark:text-white/60">kcal</span>
                                             </span>
-                                            <span className="text-[10px] text-white/40 font-mono">
+                                            <span className="text-[10px] text-slate-500 dark:text-white/40 font-mono">
                                                 P:{item.protein}g · C:{item.carbs}g · F:{item.fats}g
                                             </span>
                                         </div>
@@ -674,7 +674,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                         )}
 
                         {isDropdownOpen && searchQuery.trim().length > 0 && searchResults.length === 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#080b12]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-6 text-center text-white/50 text-xs shadow-2xl z-50">
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#080b12]/95 dark:backdrop-blur-2xl border border-slate-200 dark:border-white/15 rounded-2xl p-6 text-center text-slate-500 dark:text-white/50 text-xs shadow-2xl z-50">
                                 No exact food matches found for "{searchQuery}". Try a broader term like "chicken", "salad", "bread", or "rice".
                             </div>
                         )}
@@ -682,7 +682,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
 
                     {/* Quick Popular Picks Pills */}
                     <div className="pt-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block mb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/40 block mb-2">
                             Quick Frequent Picks
                         </span>
                         <div className="flex flex-wrap gap-2">
@@ -694,7 +694,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                         key={name}
                                         type="button"
                                         onClick={() => handleSelectFood(matched)}
-                                        className="text-xs bg-white/5 hover:bg-[#a5d391]/15 hover:text-[#a5d391] border border-white/10 hover:border-[#a5d391]/30 px-3 py-1.5 rounded-full transition-all text-white/70 cursor-pointer flex items-center gap-1.5"
+                                        className="text-xs bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 dark:bg-white/5 dark:hover:bg-[#a5d391]/15 dark:hover:text-[#a5d391] dark:border-white/10 dark:hover:border-[#a5d391]/30 px-3 py-1.5 rounded-full transition-all dark:text-white/70 cursor-pointer flex items-center gap-1.5"
                                     >
                                         <span>+ {name}</span>
                                     </button>
@@ -705,30 +705,30 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                 </div>
 
                 {/* Selected Food Inspector & Serving Multiplier Column */}
-                <div className="lg:col-span-5 bg-[#080b12]/90 border border-white/10 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
+                <div className="lg:col-span-5 bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 rounded-2xl p-5 shadow-sm dark:shadow-xl flex flex-col justify-between space-y-4">
                     {selectedFood ? (
                         <>
                             <div>
                                 <div className="flex justify-between items-start gap-2 mb-2">
-                                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30">
+                                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-[#a5d391]/20 dark:text-[#a5d391] dark:border-[#a5d391]/30">
                                         {selectedFood.category}
                                     </span>
                                     <button 
                                         onClick={() => setSelectedFood(null)}
-                                        className="text-white/40 hover:text-white text-xs cursor-pointer"
+                                        className="text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white text-xs cursor-pointer"
                                     >
                                         <span className="material-symbols-outlined text-sm">close</span>
                                     </button>
                                 </div>
-                                <h3 className="text-xl font-bold font-hero-display text-white">{selectedFood.name}</h3>
-                                <p className="text-xs text-white/50 mt-0.5">Base portion: {selectedFood.servingSize}</p>
+                                <h3 className="text-xl font-bold font-hero-display text-slate-900 dark:text-white">{selectedFood.name}</h3>
+                                <p className="text-xs text-slate-600 dark:text-white/50 mt-0.5">Base portion: {selectedFood.servingSize}</p>
                             </div>
 
                             {/* Serving Multiplier Selector */}
-                            <div className="bg-white/5 p-3.5 rounded-xl border border-white/10 space-y-2.5">
+                            <div className="bg-white border border-slate-200 dark:bg-white/5 dark:border-white/10 p-3.5 rounded-xl space-y-2.5 shadow-sm">
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-white/70 font-semibold">Serving Multiplier:</span>
-                                    <span className="text-base font-black text-[#a5d391]">{activeMultiplier}x</span>
+                                    <span className="text-slate-700 dark:text-white/70 font-semibold">Serving Multiplier:</span>
+                                    <span className="text-base font-black text-emerald-700 dark:text-[#a5d391]">{activeMultiplier}x</span>
                                 </div>
 
                                 <div className="flex items-center gap-2">
@@ -739,8 +739,8 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                             onClick={() => setServingMultiplier(val)}
                                             className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                                 activeMultiplier === val 
-                                                    ? 'bg-[#a5d391] text-black shadow-sm font-black' 
-                                                    : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/5'
+                                                    ? 'bg-emerald-600 text-white shadow-sm font-black dark:bg-[#a5d391] dark:text-black' 
+                                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 dark:bg-white/5 dark:text-white/70 dark:hover:bg-white/10 dark:border-white/5'
                                             }`}
                                         >
                                             {val}x
@@ -751,7 +751,7 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
 
                             {/* Meal Type Radio Selection */}
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-white/50">Log Under Meal</label>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-white/50">Log Under Meal</label>
                                 <div className="grid grid-cols-4 gap-1.5">
                                     {MEAL_TYPES.map(meal => (
                                         <button
@@ -760,8 +760,8 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                                             onClick={() => setSelectedMeal(meal.id)}
                                             className={`py-2 px-1 rounded-xl text-center text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer ${
                                                 selectedMeal === meal.id
-                                                    ? 'bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/40'
-                                                    : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/5'
+                                                    ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-[#a5d391]/20 dark:text-[#a5d391] dark:border-[#a5d391]/40'
+                                                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10 dark:border-white/5'
                                             }`}
                                         >
                                             <span className="material-symbols-outlined text-sm">{meal.icon}</span>
@@ -772,23 +772,23 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                             </div>
 
                             {/* Live Dynamic Nutritional Info for Selected Quantity */}
-                            <div className="grid grid-cols-4 gap-2 p-3 bg-white/5 rounded-xl text-center border border-white/5 text-xs">
+                            <div className="grid grid-cols-4 gap-2 p-3 bg-white border border-slate-200 dark:bg-white/5 dark:border-white/5 rounded-xl text-center text-xs shadow-sm">
                                 <div>
-                                    <span className="text-[9px] uppercase text-white/40 block">Calories</span>
-                                    <strong className="text-amber-400 font-bold text-sm">{previewCalories}</strong>
-                                    <span className="text-[9px] text-white/40 block">kcal</span>
+                                    <span className="text-[9px] uppercase text-slate-500 dark:text-white/40 block">Calories</span>
+                                    <strong className="text-amber-700 dark:text-amber-400 font-bold text-sm">{previewCalories}</strong>
+                                    <span className="text-[9px] text-slate-500 dark:text-white/40 block">kcal</span>
                                 </div>
                                 <div>
-                                    <span className="text-[9px] uppercase text-white/40 block">Protein</span>
-                                    <strong className="text-[#a5d391] font-bold text-sm">{previewProtein}g</strong>
+                                    <span className="text-[9px] uppercase text-slate-500 dark:text-white/40 block">Protein</span>
+                                    <strong className="text-emerald-700 dark:text-[#a5d391] font-bold text-sm">{previewProtein}g</strong>
                                 </div>
                                 <div>
-                                    <span className="text-[9px] uppercase text-white/40 block">Carbs</span>
-                                    <strong className="text-[#38bdf8] font-bold text-sm">{previewCarbs}g</strong>
+                                    <span className="text-[9px] uppercase text-slate-500 dark:text-white/40 block">Carbs</span>
+                                    <strong className="text-sky-700 dark:text-[#38bdf8] font-bold text-sm">{previewCarbs}g</strong>
                                 </div>
                                 <div>
-                                    <span className="text-[9px] uppercase text-white/40 block">Fats</span>
-                                    <strong className="text-yellow-400 font-bold text-sm">{previewFats}g</strong>
+                                    <span className="text-[9px] uppercase text-slate-500 dark:text-white/40 block">Fats</span>
+                                    <strong className="text-amber-700 dark:text-yellow-400 font-bold text-sm">{previewFats}g</strong>
                                 </div>
                             </div>
 
@@ -796,17 +796,17 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                             <button
                                 type="button"
                                 onClick={handleAddToIntake}
-                                className="w-full bg-[#a5d391] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider py-3.5 rounded-xl transition-all shadow-[0_0_20px_rgba(165,211,145,0.35)] hover:scale-[1.02] cursor-pointer flex items-center justify-center gap-2"
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:hover:bg-white dark:text-black font-extrabold text-xs uppercase tracking-wider py-3.5 rounded-xl transition-all shadow-md shadow-emerald-600/20 dark:shadow-[0_0_20px_rgba(165,211,145,0.35)] hover:scale-[1.02] cursor-pointer flex items-center justify-center gap-2"
                             >
                                 <span className="material-symbols-outlined text-base">add_circle</span>
                                 <span>Add to Today's Intake (+{previewCalories} kcal)</span>
                             </button>
                         </>
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-6 text-white/40 space-y-3">
-                            <span className="material-symbols-outlined text-4xl text-white/20">search_check</span>
-                            <div className="text-sm font-bold text-white/70">No Food Selected</div>
-                            <p className="text-xs text-white/40 max-w-xs">
+                        <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 dark:text-white/40 space-y-3">
+                            <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-white/20">search_check</span>
+                            <div className="text-sm font-bold text-slate-800 dark:text-white/70">No Food Selected</div>
+                            <p className="text-xs text-slate-500 dark:text-white/40 max-w-xs">
                                 Search for any food item on the left, then select it to customize serving portion and add it to your daily nutrition count.
                             </p>
                         </div>
@@ -816,26 +816,26 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
             )}
 
             {/* LOGGED FOODS INTAKE TIMELINE FOR SELECTED DATE */}
-            <div className="pt-4 border-t border-white/10 relative z-10">
+            <div className="pt-4 border-t border-slate-200 dark:border-white/10 relative z-10">
                 <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#a5d391] text-lg">history</span>
-                        <h3 className="font-bold text-base text-white">
+                        <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391] text-lg">history</span>
+                        <h3 className="font-bold text-base text-slate-900 dark:text-white">
                             {selectedLogDate === todayStr ? "Today's Consumed Intake Log" : `Consumed Intake Log (${selectedLogDate})`}
                         </h3>
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white/10 text-white/60">
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-white/10 dark:text-white/60 dark:border-transparent">
                             {loggedFoods.length} items logged
                         </span>
                     </div>
 
-                    <div className="text-xs text-white/50">
-                        Total {selectedLogDate === todayStr ? 'Today' : selectedLogDate}: <strong className="text-[#a5d391]">{dailyTotals.calories} kcal</strong>
+                    <div className="text-xs text-slate-600 dark:text-white/50">
+                        Total {selectedLogDate === todayStr ? 'Today' : selectedLogDate}: <strong className="text-emerald-700 dark:text-[#a5d391]">{dailyTotals.calories} kcal</strong>
                     </div>
                 </div>
 
                 {loggedFoods.length === 0 ? (
-                    <div className="bg-[#080b12]/60 border border-dashed border-white/10 rounded-2xl p-8 text-center text-white/40 text-xs">
-                        <span className="material-symbols-outlined text-3xl mb-2 text-white/20 block">lunch_dining</span>
+                    <div className="bg-slate-50 border border-dashed border-slate-300 dark:bg-[#080b12]/60 dark:border-white/10 rounded-2xl p-8 text-center text-slate-500 dark:text-white/40 text-xs">
+                        <span className="material-symbols-outlined text-3xl mb-2 text-slate-300 dark:text-white/20 block">lunch_dining</span>
                         No foods logged yet today. Use the search box above to log your breakfast, lunch, dinner, or snacks!
                     </div>
                 ) : (
@@ -843,36 +843,36 @@ const ManualFoodTracker = ({ customTargets = {}, initialDate }) => {
                         {loggedFoods.map((item) => (
                             <div
                                 key={item.id}
-                                className="p-3.5 rounded-xl bg-[#080b12]/80 border border-white/10 hover:border-[#a5d391]/30 transition-all flex items-center justify-between gap-3 group"
+                                className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-emerald-300 dark:bg-[#080b12]/80 dark:border-white/10 dark:hover:border-[#a5d391]/30 transition-all flex items-center justify-between gap-3 group shadow-sm"
                             >
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#a5d391]/15 text-[#a5d391]">
+                                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-[#a5d391]/15 dark:text-[#a5d391]">
                                             {item.mealType}
                                         </span>
-                                        <span className="font-bold text-xs text-white truncate">{item.name}</span>
-                                        <span className="text-[10px] text-white/40">({item.multiplier}x)</span>
+                                        <span className="font-bold text-xs text-slate-900 dark:text-white truncate">{item.name}</span>
+                                        <span className="text-[10px] text-slate-500 dark:text-white/40">({item.multiplier}x)</span>
                                     </div>
-                                    <div className="text-[10px] text-white/50 mt-1 flex items-center gap-2">
+                                    <div className="text-[10px] text-slate-500 dark:text-white/50 mt-1 flex items-center gap-2">
                                         <span>{item.loggedAt}</span>
                                         <span>•</span>
-                                        <span className="text-white/70">P: {item.protein}g</span>
+                                        <span className="text-slate-700 dark:text-white/70">P: {item.protein}g</span>
                                         <span>•</span>
-                                        <span className="text-white/70">C: {item.carbs}g</span>
+                                        <span className="text-slate-700 dark:text-white/70">C: {item.carbs}g</span>
                                         <span>•</span>
-                                        <span className="text-white/70">F: {item.fats}g</span>
+                                        <span className="text-slate-700 dark:text-white/70">F: {item.fats}g</span>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-3 shrink-0">
-                                    <span className="font-extrabold text-sm text-[#a5d391]">
-                                        {item.calories} <span className="text-[10px] font-normal text-white/60">kcal</span>
+                                    <span className="font-extrabold text-sm text-emerald-700 dark:text-[#a5d391]">
+                                        {item.calories} <span className="text-[10px] font-normal text-slate-500 dark:text-white/60">kcal</span>
                                     </span>
                                     <button
                                         type="button"
                                         onClick={() => handleRemoveItem(item.id)}
                                         title="Remove entry"
-                                        className="text-white/30 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                                        className="text-slate-400 hover:text-rose-600 dark:text-white/30 dark:hover:text-red-400 p-1 transition-colors cursor-pointer"
                                     >
                                         <span className="material-symbols-outlined text-base">delete</span>
                                     </button>

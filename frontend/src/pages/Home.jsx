@@ -547,16 +547,16 @@ const Home = () => {
             <div className="relative bg-background w-full z-20">
                 {isStaffHome ? (
                     <section className="max-w-7xl mx-auto px-4 sm:px-8 -mt-24 md:-mt-36 relative z-20">
-                        <div className="rounded-[2.5rem] border border-[#a5d391]/20 bg-[#0d121c] p-8 sm:p-12 shadow-2xl">
+                        <div className="rounded-[2.5rem] bg-white border border-slate-200 shadow-xl dark:border-[#a5d391]/20 dark:bg-[#0d121c] p-8 sm:p-12 dark:shadow-2xl transition-colors">
                             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
                                 <div className="max-w-2xl">
-                                    <span className="text-[#a5d391] text-xs font-bold uppercase tracking-widest">{roleContent.eyebrow}</span>
-                                    <h2 className="font-hero-display text-3xl sm:text-5xl font-bold text-white mt-4 mb-4">{roleContent.title}</h2>
-                                    <p className="text-white/60 text-base leading-relaxed">{roleContent.description}</p>
+                                    <span className="text-emerald-700 dark:text-[#a5d391] text-xs font-bold uppercase tracking-widest">{roleContent.eyebrow}</span>
+                                    <h2 className="font-hero-display text-3xl sm:text-5xl font-bold text-slate-900 dark:text-white mt-4 mb-4">{roleContent.title}</h2>
+                                    <p className="text-slate-600 dark:text-white/60 text-base leading-relaxed">{roleContent.description}</p>
                                 </div>
                                 <button
                                     onClick={() => navigate(roleContent.path)}
-                                    className="shrink-0 bg-[#a5d391] text-black px-6 py-4 rounded-full font-bold flex items-center gap-2 hover:bg-white transition-colors"
+                                    className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black px-6 py-4 rounded-full font-bold flex items-center gap-2 dark:hover:bg-white transition-colors cursor-pointer"
                                 >
                                     <span className="material-symbols-outlined">{roleContent.icon}</span>
                                     {roleContent.action}
@@ -618,21 +618,21 @@ const Home = () => {
                         {/* Card 2: AI Diet & Recipe Generator */}
                         <FlipFeatureCard
                             wrapperClass="md:col-span-5 min-h-[480px]"
-                            frontClass="bg-[#0b121f] text-white rounded-[2.5rem] overflow-hidden shadow-xl shadow-[#a3e635]/10 border border-transparent hover:border-[#a3e635]/20 flex flex-col justify-between"
-                            backClass="bg-[#0b121f] text-white shadow-xl shadow-[#a3e635]/10 border border-white/5"
+                            frontClass="bg-white border border-slate-200/90 shadow-xl dark:bg-[#0b121f] dark:text-white dark:border-transparent dark:shadow-xl dark:shadow-[#a3e635]/10 rounded-[2.5rem] overflow-hidden hover:border-emerald-500/40 dark:hover:border-[#a3e635]/20 flex flex-col justify-between transition-colors"
+                            backClass="bg-white border border-slate-200 shadow-xl dark:bg-[#0b121f] dark:text-white dark:border-white/5"
                             backContent={
                                 <>
-                                    <span className="material-symbols-outlined text-[#a3e635] text-5xl mb-6">restaurant_menu</span>
-                                    <h3 className="font-hero-display text-3xl font-bold mb-4">Custom Meal Planning</h3>
-                                    <p className="text-white/60 text-lg leading-relaxed max-w-sm mx-auto">Generate weekly meal plans, customized recipes, and grocery lists based on your specific health targets, budget, and food allergies.</p>
+                                    <span className="material-symbols-outlined text-emerald-700 dark:text-[#a3e635] text-5xl mb-6">restaurant_menu</span>
+                                    <h3 className="font-hero-display text-3xl font-bold text-slate-900 dark:text-white mb-4">Custom Meal Planning</h3>
+                                    <p className="text-slate-600 dark:text-white/60 text-lg leading-relaxed max-w-sm mx-auto">Generate weekly meal plans, customized recipes, and grocery lists based on your specific health targets, budget, and food allergies.</p>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); navigate('/ai-diet'); }}
-                                        className="mt-6 inline-flex items-center gap-2 bg-[#a3e635] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all shadow-[0_0_20px_rgba(163,230,53,0.3)] cursor-pointer"
+                                        className="mt-6 inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a3e635] dark:hover:bg-white dark:text-black font-extrabold text-xs uppercase tracking-wider px-6 py-2.5 rounded-full transition-all shadow-md shadow-emerald-600/20 dark:shadow-[0_0_20px_rgba(163,230,53,0.3)] cursor-pointer"
                                     >
                                         <span>Launch AI Diet Generator</span>
                                         <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                     </button>
-                                    <div className="mt-6 flex items-center gap-2 text-white/40 text-sm font-bold uppercase tracking-widest">
+                                    <div className="mt-6 flex items-center gap-2 text-slate-400 dark:text-white/40 text-sm font-bold uppercase tracking-widest">
                                         <span className="material-symbols-outlined text-sm">autorenew</span> Flip Back
                                     </div>
                                 </>
@@ -642,21 +642,21 @@ const Home = () => {
                                 <Link
                                     to="/ai-diet"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="text-[10px] tracking-widest text-[#a3e635] hover:text-white font-bold uppercase mb-3 inline-flex items-center gap-1.5 transform group-hover:translate-x-2 transition-transform duration-500"
+                                    className="text-[10px] tracking-widest text-emerald-700 dark:text-[#a3e635] hover:text-emerald-800 dark:hover:text-white font-bold uppercase mb-3 inline-flex items-center gap-1.5 transform group-hover:translate-x-2 transition-transform duration-500"
                                 >
                                     <span>AI DIET PLANNER</span>
                                     <span className="material-symbols-outlined text-xs">open_in_new</span>
                                 </Link>
                                 <h3
                                     onClick={(e) => { e.stopPropagation(); navigate('/ai-diet'); }}
-                                    className="font-hero-display text-3xl sm:text-4xl md:text-[2.25rem] font-bold tracking-tight leading-[1.1] cursor-pointer hover:text-[#a3e635] transition-colors"
+                                    className="font-hero-display text-3xl sm:text-4xl md:text-[2.25rem] font-bold tracking-tight leading-[1.1] text-slate-900 dark:text-white cursor-pointer hover:text-emerald-600 dark:hover:text-[#a3e635] transition-colors"
                                 >
                                     Precision-tailored<br/>weekly meal plans.
                                 </h3>
                                 <div className="mt-5">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); navigate('/ai-diet'); }}
-                                        className="inline-flex items-center gap-2 bg-[#a3e635] hover:bg-white text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(163,230,53,0.35)] hover:scale-105 cursor-pointer"
+                                        className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a3e635] dark:hover:bg-white dark:text-black font-extrabold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full transition-all duration-300 shadow-md shadow-emerald-600/20 dark:shadow-[0_0_20px_rgba(163,230,53,0.35)] hover:scale-105 cursor-pointer"
                                     >
                                         <span>Explore AI Diet Planner</span>
                                         <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
@@ -666,11 +666,15 @@ const Home = () => {
 
                             {/* Image container strictly below the text */}
                             <div className="relative w-full h-44 sm:h-52 overflow-hidden mt-6 z-10">
-                                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[#0b121f]/20 to-[#0b121f] z-10 pointer-events-none"></div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/20 to-white dark:from-transparent dark:via-[#0b121f]/20 dark:to-[#0b121f] z-10 pointer-events-none"></div>
                                 <img
-                                    className="w-full h-full object-cover object-center opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                                    className="w-full h-full object-cover object-center opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
                                     src="/meal-plate.png"
                                     alt="Healthy meal plan plate"
+                                    onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&fit=crop";
+                                    }}
                                 />
                             </div>
                         </FlipFeatureCard>
@@ -683,7 +687,7 @@ const Home = () => {
                 <div className="w-full bg-background text-on-background pt-0 pb-10">
                     <ServicesOverview />
                 </div>
-                {!isStaffHome && <div className="w-full bg-[#080b12] text-white py-16 border-t border-white/10">
+                {!isStaffHome && <div className="w-full bg-slate-50 dark:bg-[#080b12] text-slate-900 dark:text-white py-16 border-t border-slate-200 dark:border-white/10 transition-colors">
                     <HowItWorks />
                 </div>}
 

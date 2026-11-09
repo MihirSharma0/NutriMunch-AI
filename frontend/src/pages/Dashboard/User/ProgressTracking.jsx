@@ -396,28 +396,28 @@ const ProgressTracking = () => {
 
                     {/* Edit Fluid Goal Popover / Modal Overlay */}
                     {isEditingGoal && (
-                        <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-                            <div className="bg-[#0d121c] border border-[#a5d391]/40 rounded-3xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(165,211,145,0.2)] relative text-white space-y-5 animate-in fade-in zoom-in-95 max-h-[80vh] overflow-y-auto my-auto">
-                                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                        <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-slate-900/60 dark:bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+                            <div className="bg-white dark:bg-[#0d121c] border border-slate-200 dark:border-[#a5d391]/40 rounded-3xl p-6 max-w-md w-full shadow-2xl dark:shadow-[0_0_50px_rgba(165,211,145,0.2)] relative text-slate-900 dark:text-white space-y-5 animate-in fade-in zoom-in-95 max-h-[80vh] overflow-y-auto my-auto">
+                                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
                                     <div className="flex items-center gap-2">
-                                        <Droplet className="w-5 h-5 text-[#a5d391]" />
-                                        <h3 className="text-lg font-bold font-hero-display text-white">Update Fluid Target</h3>
+                                        <Droplet className="w-5 h-5 text-emerald-700 dark:text-[#a5d391]" />
+                                        <h3 className="text-lg font-bold font-hero-display text-slate-900 dark:text-white">Update Fluid Target</h3>
                                     </div>
                                     <button
                                         onClick={() => setIsEditingGoal(false)}
-                                        className="p-1 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                                        className="p-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/60 dark:hover:text-white transition-colors"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
 
-                                <p className="text-xs text-white/60 leading-relaxed">
-                                    Set your custom daily water target. Updating here automatically syncs with your <strong className="text-white">Profile</strong> and persists permanently.
+                                <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed">
+                                    Set your custom daily water target. Updating here automatically syncs with your <strong className="text-slate-900 dark:text-white">Profile</strong> and persists permanently.
                                 </p>
 
                                 {/* Preset Goal Options */}
                                 <div className="space-y-1.5">
-                                    <label className="text-[11px] font-bold uppercase tracking-wider text-[#a5d391]">Quick Presets</label>
+                                    <label className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-[#a5d391]">Quick Presets</label>
                                     <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                                         {['2.0', '2.5', '3.0', '3.5', '4.0'].map((preset) => (
                                             <button
@@ -429,8 +429,8 @@ const ProgressTracking = () => {
                                                 }}
                                                 className={`py-2 rounded-xl text-xs font-bold border transition-all ${
                                                     editGoalLiters === preset 
-                                                        ? 'bg-[#a5d391] text-black border-[#a5d391]' 
-                                                        : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 dark:bg-[#a5d391] dark:text-black dark:border-[#a5d391]' 
+                                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white dark:border-white/10'
                                                 }`}
                                             >
                                                 {preset} L
@@ -442,7 +442,7 @@ const ProgressTracking = () => {
                                 {/* Custom Liters Input */}
                                 <form onSubmit={(e) => { e.preventDefault(); handleSaveGoal(); }} className="space-y-4 pt-1">
                                     <div>
-                                        <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block mb-1">
+                                        <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-white/70 block mb-1">
                                             Custom Target (Liters)
                                         </label>
                                         <div className="relative">
@@ -453,10 +453,10 @@ const ProgressTracking = () => {
                                                 max="10.0"
                                                 value={editGoalLiters}
                                                 onChange={(e) => setEditGoalLiters(e.target.value)}
-                                                className="w-full bg-[#080b12] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-bold outline-none focus:border-[#a5d391]"
+                                                className="w-full bg-slate-50 dark:bg-[#080b12] border border-slate-300 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white font-bold outline-none focus:border-emerald-600 dark:focus:border-[#a5d391]"
                                                 placeholder="e.g. 3.5"
                                             />
-                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-white/40">Liters</span>
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-white/40">Liters</span>
                                         </div>
                                     </div>
 
@@ -464,14 +464,14 @@ const ProgressTracking = () => {
                                         <button
                                             type="button"
                                             onClick={() => setIsEditingGoal(false)}
-                                            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 font-bold text-xs"
+                                            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/70 font-bold text-xs"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={isSavingGoal}
-                                            className="px-5 py-2 rounded-xl bg-[#a5d391] hover:bg-[#8ec478] text-black font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                                            className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:hover:bg-[#8ec478] dark:text-black font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                                         >
                                             <Save className="w-3.5 h-3.5" />
                                             <span>{isSavingGoal ? 'Saving & Syncing...' : 'Save & Sync with Profile'}</span>
@@ -484,34 +484,34 @@ const ProgressTracking = () => {
 
                     {/* Right: Quick Water Logging Action Buttons */}
                     <div className="flex flex-col gap-3 w-full lg:w-auto">
-                        <div className="text-xs font-bold text-white/70 uppercase tracking-wider text-center lg:text-left">
+                        <div className="text-xs font-bold text-slate-700 dark:text-white/70 uppercase tracking-wider text-center lg:text-left">
                             Quick Add Fluid Intake
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                             <button
                                 onClick={() => handleAddWater(250)}
-                                className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-[#a5d391]/20 border border-white/10 hover:border-[#a5d391]/50 text-white hover:text-[#a5d391] transition-all cursor-pointer flex flex-col items-center gap-1 text-xs font-bold group shadow-md"
+                                className="px-4 py-3 rounded-2xl bg-slate-50 hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 dark:bg-white/5 dark:hover:bg-[#a5d391]/20 dark:border-white/10 dark:hover:border-[#a5d391]/50 dark:text-white dark:hover:text-[#a5d391] transition-all cursor-pointer flex flex-col items-center gap-1 text-xs font-bold group shadow-sm"
                             >
                                 <span className="material-symbols-outlined text-lg group-hover:scale-110 transition-transform">local_drink</span>
                                 <span>+250 ml</span>
                             </button>
                             <button
                                 onClick={() => handleAddWater(500)}
-                                className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-[#a5d391]/20 border border-white/10 hover:border-[#a5d391]/50 text-white hover:text-[#a5d391] transition-all cursor-pointer flex flex-col items-center gap-1 text-xs font-bold group shadow-md"
+                                className="px-4 py-3 rounded-2xl bg-slate-50 hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 dark:bg-white/5 dark:hover:bg-[#a5d391]/20 dark:border-white/10 dark:hover:border-[#a5d391]/50 dark:text-white dark:hover:text-[#a5d391] transition-all cursor-pointer flex flex-col items-center gap-1 text-xs font-bold group shadow-sm"
                             >
                                 <span className="material-symbols-outlined text-lg group-hover:scale-110 transition-transform">water_full</span>
                                 <span>+500 ml</span>
                             </button>
                             <button
                                 onClick={() => handleAddWater(750)}
-                                className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-[#a5d391]/20 border border-white/10 hover:border-[#a5d391]/50 text-white hover:text-[#a5d391] transition-all cursor-pointer flex flex-col items-center gap-1 text-xs font-bold group shadow-md"
+                                className="px-4 py-3 rounded-2xl bg-slate-50 hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 dark:bg-white/5 dark:hover:bg-[#a5d391]/20 dark:border-white/10 dark:hover:border-[#a5d391]/50 dark:text-white dark:hover:text-[#a5d391] transition-all cursor-pointer flex flex-col items-center gap-1 text-xs font-bold group shadow-sm"
                             >
                                 <span className="material-symbols-outlined text-lg group-hover:scale-110 transition-transform">sports_bar</span>
                                 <span>+750 ml</span>
                             </button>
                             <button
                                 onClick={() => handleAddWater(1000)}
-                                className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-[#a5d391]/20 border border-white/10 hover:border-[#a5d391]/50 text-white hover:text-[#a5d391] transition-all cursor-pointer flex flex-col items-center gap-1 text-xs font-bold group shadow-md"
+                                className="px-4 py-3 rounded-2xl bg-slate-50 hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 dark:bg-white/5 dark:hover:bg-[#a5d391]/20 dark:border-white/10 dark:hover:border-[#a5d391]/50 dark:text-white dark:hover:text-[#a5d391] transition-all cursor-pointer flex flex-col items-center gap-1 text-xs font-bold group shadow-sm"
                             >
                                 <span className="material-symbols-outlined text-lg group-hover:scale-110 transition-transform">water_bottle</span>
                                 <span>+1000 ml</span>
@@ -526,11 +526,11 @@ const ProgressTracking = () => {
                                     placeholder="Custom ml (e.g. 350)"
                                     value={customAmount}
                                     onChange={(e) => setCustomAmount(e.target.value)}
-                                    className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/30 focus:border-[#a5d391] outline-none"
+                                    className="w-full bg-slate-50 dark:bg-[#080b12] border border-slate-300 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:border-emerald-600 dark:focus:border-[#a5d391] outline-none shadow-sm"
                                 />
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 rounded-xl bg-[#a5d391] text-black font-bold text-xs hover:bg-[#8ec478] transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1"
+                                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black dark:hover:bg-[#8ec478] font-bold text-xs transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1 shadow-sm"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                     <span>Add</span>
@@ -539,7 +539,7 @@ const ProgressTracking = () => {
                             <button
                                 onClick={handleResetWater}
                                 title="Reset Today's Water"
-                                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
+                                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-600 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-white/50 dark:hover:text-white transition-colors cursor-pointer"
                             >
                                 <RotateCcw className="w-4 h-4" />
                             </button>
@@ -554,13 +554,13 @@ const ProgressTracking = () => {
             </div>
 
             {/* 3. Daily Requirements Section */}
-            <div className="bg-gradient-to-r from-emerald-950/40 via-white/5 to-[#a5d391]/10 backdrop-blur-xl border border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+            <div className="bg-white/95 border border-slate-200/90 shadow-xl dark:bg-gradient-to-r dark:from-emerald-950/40 dark:via-white/5 dark:to-[#a5d391]/10 dark:backdrop-blur-xl dark:border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 relative overflow-hidden transition-colors">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                     <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-[#a5d391] text-3xl">tune</span>
+                        <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391] text-3xl">tune</span>
                         <div>
-                            <h3 className="text-xl font-bold font-hero-display text-white">Daily Requirements</h3>
-                            <p className="text-xs text-white/50">
+                            <h3 className="text-xl font-bold font-hero-display text-slate-900 dark:text-white">Daily Requirements</h3>
+                            <p className="text-xs text-slate-600 dark:text-white/50">
                                 {isEditingRequirements 
                                     ? 'Fill your daily nutrition targets manually below or click "Default Baseline".' 
                                     : 'Active daily target protocol driving AI meal generation and progress tracking.'}
@@ -574,7 +574,7 @@ const ProgressTracking = () => {
                             <button
                                 type="button"
                                 onClick={() => setIsEditingRequirements(true)}
-                                className="bg-[#a5d391] hover:bg-white text-black px-5 py-2.5 rounded-2xl font-bold text-xs transition-all shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer flex items-center gap-2 whitespace-nowrap"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:hover:bg-white dark:text-black px-5 py-2.5 rounded-2xl font-bold text-xs transition-all shadow-md shadow-emerald-600/20 dark:shadow-[0_0_15px_rgba(165,211,145,0.3)] cursor-pointer flex items-center gap-2 whitespace-nowrap"
                             >
                                 <span className="material-symbols-outlined text-sm">edit</span>
                                 <span>Edit Requirements</span>
@@ -584,7 +584,7 @@ const ProgressTracking = () => {
                                 <button
                                     type="button"
                                     onClick={handleApplyDefaultRequirements}
-                                    className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-2xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-transparent px-4 py-2 rounded-2xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
                                 >
                                     <span className="material-symbols-outlined text-sm">restart_alt</span>
                                     <span>Default Baseline</span>
@@ -592,7 +592,7 @@ const ProgressTracking = () => {
                                 <button
                                     type="button"
                                     onClick={() => setIsEditingRequirements(false)}
-                                    className="bg-white/10 hover:bg-white/20 text-white/70 px-4 py-2 rounded-2xl font-bold text-xs transition-all cursor-pointer"
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white/70 dark:border-transparent px-4 py-2 rounded-2xl font-bold text-xs transition-all cursor-pointer"
                                 >
                                     Cancel
                                 </button>
@@ -600,7 +600,7 @@ const ProgressTracking = () => {
                                     type="button"
                                     onClick={handleSaveRequirements}
                                     disabled={savingRequirements}
-                                    className="bg-[#a5d391] hover:bg-white text-black px-5 py-2 rounded-2xl font-bold text-xs transition-all cursor-pointer shadow-[0_0_15px_rgba(165,211,145,0.3)] flex items-center gap-1.5 disabled:opacity-50"
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:hover:bg-white dark:text-black px-5 py-2 rounded-2xl font-bold text-xs transition-all cursor-pointer shadow-md shadow-emerald-600/20 dark:shadow-[0_0_15px_rgba(165,211,145,0.3)] flex items-center gap-1.5 disabled:opacity-50"
                                 >
                                     <span className="material-symbols-outlined text-sm">save</span>
                                     <span>{savingRequirements ? 'Saving...' : 'Save'}</span>
@@ -614,8 +614,8 @@ const ProgressTracking = () => {
                 {requirementsMessage.text && (
                     <div className={`mb-6 p-4 rounded-2xl text-xs font-bold border flex items-center gap-2 animate-in fade-in duration-200 ${
                         requirementsMessage.type === 'error'
-                            ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                            : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                            ? 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300'
+                            : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
                     }`}>
                         <span className="material-symbols-outlined text-sm">
                             {requirementsMessage.type === 'error' ? 'error' : 'check_circle'}
@@ -628,31 +628,31 @@ const ProgressTracking = () => {
                 {!isEditingRequirements ? (
                     <div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
-                                <div className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-1">Daily Calories</div>
-                                <div className="text-2xl font-bold text-white">{customTargets.calories || 2000} <span className="text-xs font-normal text-white/50">kcal</span></div>
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 p-4 rounded-2xl text-center shadow-sm">
+                                <div className="text-slate-500 dark:text-white/40 text-[10px] font-bold uppercase tracking-wider mb-1">Daily Calories</div>
+                                <div className="text-2xl font-bold text-slate-900 dark:text-white">{customTargets.calories || 2000} <span className="text-xs font-normal text-slate-500 dark:text-white/50">kcal</span></div>
                             </div>
 
-                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
-                                <div className="text-[#a5d391]/70 text-[10px] font-bold uppercase tracking-wider mb-1">Protein Target</div>
-                                <div className="text-2xl font-bold text-[#a5d391]">{customTargets.protein || 140} <span className="text-xs font-normal text-[#a5d391]/70">g</span></div>
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 p-4 rounded-2xl text-center shadow-sm">
+                                <div className="text-emerald-700 dark:text-[#a5d391]/70 text-[10px] font-bold uppercase tracking-wider mb-1">Protein Target</div>
+                                <div className="text-2xl font-bold text-emerald-700 dark:text-[#a5d391]">{customTargets.protein || 140} <span className="text-xs font-normal text-emerald-600/70 dark:text-[#a5d391]/70">g</span></div>
                             </div>
 
-                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
-                                <div className="text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider mb-1">Carbs Target</div>
-                                <div className="text-2xl font-bold text-[#38bdf8]">{customTargets.carbs || 200} <span className="text-xs font-normal text-[#38bdf8]/70">g</span></div>
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 p-4 rounded-2xl text-center shadow-sm">
+                                <div className="text-sky-700 dark:text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider mb-1">Carbs Target</div>
+                                <div className="text-2xl font-bold text-sky-700 dark:text-[#38bdf8]">{customTargets.carbs || 200} <span className="text-xs font-normal text-sky-600/70 dark:text-[#38bdf8]/70">g</span></div>
                             </div>
 
-                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10 text-center">
-                                <div className="text-yellow-400/70 text-[10px] font-bold uppercase tracking-wider mb-1">Fats Target</div>
-                                <div className="text-2xl font-bold text-yellow-400">{customTargets.fats || 65} <span className="text-xs font-normal text-yellow-400/70">g</span></div>
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 p-4 rounded-2xl text-center shadow-sm">
+                                <div className="text-amber-700 dark:text-yellow-400/70 text-[10px] font-bold uppercase tracking-wider mb-1">Fats Target</div>
+                                <div className="text-2xl font-bold text-amber-700 dark:text-yellow-400">{customTargets.fats || 65} <span className="text-xs font-normal text-amber-600/70 dark:text-yellow-400/70">g</span></div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3 pt-4 border-t border-white/10 text-xs">
-                            <div className="flex items-center gap-2 text-white/80 bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <span className="material-symbols-outlined text-[#38bdf8] text-sm">water_drop</span>
-                                <span>Water: <strong>{customTargets.water || 2.5} L</strong></span>
+                        <div className="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 dark:border-white/10 text-xs">
+                            <div className="flex items-center gap-2 text-slate-800 dark:text-white/80 bg-slate-50 dark:bg-[#080b12]/60 p-3 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
+                                <span className="material-symbols-outlined text-sky-600 dark:text-[#38bdf8] text-sm">water_drop</span>
+                                <span>Water: <strong className="text-slate-900 dark:text-white">{customTargets.water || 2.5} L</strong></span>
                             </div>
                         </div>
                     </div>
@@ -660,59 +660,59 @@ const ProgressTracking = () => {
                     /* VISUAL STATE B: FORM INPUT EDITING MODE */
                     <div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10">
-                                <div className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-2">Daily Calories (kcal)</div>
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 p-4 rounded-2xl shadow-sm">
+                                <div className="text-slate-600 dark:text-white/40 text-[10px] font-bold uppercase tracking-wider mb-2">Daily Calories (kcal)</div>
                                 <input
                                     type="number"
                                     name="calories"
                                     value={customTargets.calories}
                                     onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-[#38bdf8]/40 px-3 py-2 rounded-xl text-xl font-bold text-white outline-none focus:border-[#38bdf8]"
+                                    className="w-full bg-white dark:bg-white/5 border border-slate-300 dark:border-[#38bdf8]/40 px-3 py-2 rounded-xl text-xl font-bold text-slate-900 dark:text-white outline-none focus:border-emerald-600 dark:focus:border-[#38bdf8] shadow-sm"
                                     placeholder="e.g. 2000"
                                 />
                             </div>
 
-                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10">
-                                <div className="text-[#a5d391]/70 text-[10px] font-bold uppercase tracking-wider mb-2">Protein Target (g)</div>
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 p-4 rounded-2xl shadow-sm">
+                                <div className="text-emerald-700 dark:text-[#a5d391]/70 text-[10px] font-bold uppercase tracking-wider mb-2">Protein Target (g)</div>
                                 <input
                                     type="number"
                                     name="protein"
                                     value={customTargets.protein}
                                     onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-[#a5d391]/40 px-3 py-2 rounded-xl text-xl font-bold text-[#a5d391] outline-none focus:border-[#a5d391]"
+                                    className="w-full bg-white dark:bg-white/5 border border-slate-300 dark:border-[#a5d391]/40 px-3 py-2 rounded-xl text-xl font-bold text-emerald-700 dark:text-[#a5d391] outline-none focus:border-emerald-600 dark:focus:border-[#a5d391] shadow-sm"
                                     placeholder="e.g. 140"
                                 />
                             </div>
 
-                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-white/10">
-                                <div className="text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider mb-2">Carbs Target (g)</div>
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 p-4 rounded-2xl shadow-sm">
+                                <div className="text-sky-700 dark:text-[#38bdf8]/70 text-[10px] font-bold uppercase tracking-wider mb-2">Carbs Target (g)</div>
                                 <input
                                     type="number"
                                     name="carbs"
                                     value={customTargets.carbs}
                                     onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-[#38bdf8]/40 px-3 py-2 rounded-xl text-xl font-bold text-[#38bdf8] outline-none focus:border-[#38bdf8]"
+                                    className="w-full bg-white dark:bg-white/5 border border-slate-300 dark:border-[#38bdf8]/40 px-3 py-2 rounded-xl text-xl font-bold text-sky-700 dark:text-[#38bdf8] outline-none focus:border-sky-600 dark:focus:border-[#38bdf8] shadow-sm"
                                     placeholder="e.g. 200"
                                 />
                             </div>
 
-                            <div className="bg-[#080b12]/90 p-4 rounded-2xl border border-yellow-400/40">
-                                <div className="text-yellow-400/70 text-[10px] font-bold uppercase tracking-wider mb-2">Fats Target (g)</div>
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/90 dark:border-white/10 p-4 rounded-2xl shadow-sm">
+                                <div className="text-amber-700 dark:text-yellow-400/70 text-[10px] font-bold uppercase tracking-wider mb-2">Fats Target (g)</div>
                                 <input
                                     type="number"
                                     name="fats"
                                     value={customTargets.fats}
                                     onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-yellow-400/40 px-3 py-2 rounded-xl text-xl font-bold text-yellow-400 outline-none focus:border-yellow-400"
+                                    className="w-full bg-white dark:bg-white/5 border border-slate-300 dark:border-yellow-400/40 px-3 py-2 rounded-xl text-xl font-bold text-amber-700 dark:text-yellow-400 outline-none focus:border-amber-600 dark:focus:border-yellow-400 shadow-sm"
                                     placeholder="e.g. 65"
                                 />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3 pt-4 border-t border-white/10 text-xs">
-                            <div className="bg-[#080b12]/60 p-3 rounded-xl border border-white/5">
-                                <div className="text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[#38bdf8] text-xs">water_drop</span>
+                        <div className="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 dark:border-white/10 text-xs">
+                            <div className="bg-slate-50 border border-slate-200 dark:bg-[#080b12]/60 dark:border-white/5 p-3 rounded-xl shadow-sm">
+                                <div className="text-slate-600 dark:text-white/40 text-[9px] uppercase font-bold mb-1 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-sky-600 dark:text-[#38bdf8] text-xs">water_drop</span>
                                     <span>Water (L)</span>
                                 </div>
                                 <input
@@ -721,7 +721,7 @@ const ProgressTracking = () => {
                                     name="water"
                                     value={customTargets.water}
                                     onChange={handleCustomTargetChange}
-                                    className="w-full bg-white/5 border border-white/10 px-2 py-1 rounded text-sm font-bold text-white outline-none"
+                                    className="w-full bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 px-2 py-1 rounded text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-emerald-600 shadow-sm"
                                 />
                             </div>
 

@@ -39,24 +39,24 @@ const HowItWorks = () => {
     return (
         <section className="pt-12 pb-16 sm:pb-24 max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
             <div className="text-center mb-20">
-                <span className="text-primary font-bold tracking-widest uppercase text-sm mb-4 block">The Process</span>
-                <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-white mb-6">How It Works</h2>
+                <span className="text-emerald-700 dark:text-primary font-bold tracking-widest uppercase text-sm mb-4 block">The Process</span>
+                <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">How It Works</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
                 {/* Connecting Line */}
-                <div className="hidden lg:block absolute top-12 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                <div className="hidden lg:block absolute top-12 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-white/20 to-transparent"></div>
                 
                 {steps.map((step, idx) => (
                     <div key={idx} className="relative z-10 flex flex-col items-center text-center group">
-                        <div className="w-24 h-24 bg-black/50 shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-white/10 rounded-full flex items-center justify-center mb-6 group-hover:border-primary/50 transition-all relative group-hover:-translate-y-2 duration-500">
-                            <span className="material-symbols-outlined text-3xl text-white/50 group-hover:text-primary transition-colors">{step.icon}</span>
-                            <div className="absolute -top-3 -right-3 w-8 h-8 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-sm">
+                        <div className="w-24 h-24 bg-white dark:bg-black/50 shadow-md dark:shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-slate-200 dark:border-white/10 rounded-full flex items-center justify-center mb-6 group-hover:border-emerald-500/50 dark:group-hover:border-primary/50 transition-all relative group-hover:-translate-y-2 duration-500">
+                            <span className="material-symbols-outlined text-3xl text-slate-600 dark:text-white/50 group-hover:text-emerald-700 dark:group-hover:text-primary transition-colors">{step.icon}</span>
+                            <div className="absolute -top-3 -right-3 w-8 h-8 bg-emerald-600 text-white dark:bg-primary dark:text-on-primary rounded-full flex items-center justify-center font-bold text-sm">
                                 {step.num}
                             </div>
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-3 group-hover:text-primary transition-colors">{step.title}</h3>
-                        <p className="text-white/50 text-sm leading-relaxed max-w-xs">{step.desc}</p>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-emerald-700 dark:group-hover:text-primary transition-colors">{step.title}</h3>
+                        <p className="text-slate-600 dark:text-white/50 text-sm leading-relaxed max-w-xs">{step.desc}</p>
                     </div>
                 ))}
             </div>

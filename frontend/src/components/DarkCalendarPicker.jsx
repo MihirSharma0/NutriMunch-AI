@@ -210,18 +210,18 @@ const DarkCalendarPicker = ({
             <button
                 type="button"
                 onClick={() => setIsOpen(prev => !prev)}
-                className={`bg-[#080b12] hover:bg-white/10 border transition-all rounded-xl px-3.5 py-2 text-xs flex items-center gap-2 cursor-pointer ${
+                className={`bg-white hover:bg-slate-50 border transition-all rounded-xl px-3.5 py-2 text-xs flex items-center gap-2 cursor-pointer shadow-sm dark:bg-[#080b12] dark:hover:bg-white/10 ${
                     isOpen 
-                        ? 'border-[#a5d391] shadow-[0_0_15px_rgba(165,211,145,0.25)] text-white' 
-                        : 'border-white/15 text-white/90 hover:text-white hover:border-white/30'
+                        ? 'border-emerald-600 shadow-md text-slate-900 dark:border-[#a5d391] dark:shadow-[0_0_15px_rgba(165,211,145,0.25)] dark:text-white' 
+                        : 'border-slate-300 text-slate-800 hover:text-slate-900 hover:border-slate-400 dark:border-white/15 dark:text-white/90 dark:hover:text-white dark:hover:border-white/30'
                 }`}
             >
-                <span className="material-symbols-outlined text-sm text-[#a5d391]">
+                <span className="material-symbols-outlined text-sm text-emerald-700 dark:text-[#a5d391]">
                     {mode === 'month' ? 'calendar_month' : (mode === 'week' ? 'date_range' : 'calendar_today')}
                 </span>
-                {label && <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{label}</span>}
+                {label && <span className="text-[10px] text-slate-500 dark:text-white/40 font-bold uppercase tracking-wider">{label}</span>}
                 <span className="font-semibold tracking-wide text-xs">{triggerLabel}</span>
-                <span className={`material-symbols-outlined text-xs text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#a5d391]' : ''}`}>
+                <span className={`material-symbols-outlined text-xs text-slate-500 dark:text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180 text-emerald-700 dark:text-[#a5d391]' : ''}`}>
                     expand_more
                 </span>
             </button>
@@ -229,19 +229,19 @@ const DarkCalendarPicker = ({
             {/* Custom Dark Theme Calendar Popup Card */}
             {isOpen && (
                 <div 
-                    className="absolute z-[9999] mt-2 left-0 sm:right-auto bg-[#0a0e17] border border-white/15 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl w-[300px] animate-in fade-in zoom-in-95 duration-150 select-none"
+                    className="absolute z-[9999] mt-2 left-0 sm:right-auto bg-white dark:bg-[#0a0e17] border border-slate-200 dark:border-white/15 rounded-2xl p-4 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.85)] dark:backdrop-blur-2xl w-[300px] animate-in fade-in zoom-in-95 duration-150 select-none text-slate-900 dark:text-white"
                     style={{ minWidth: '300px' }}
                 >
                     {/* Calendar Header */}
-                    <div className="flex items-center justify-between pb-3 mb-2 border-b border-white/10">
+                    <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-200 dark:border-white/10">
                         {/* Month / Year Title with toggle */}
                         <button
                             type="button"
                             onClick={() => setIsSelectingMonthView(prev => !prev)}
-                            className="font-bold text-sm text-white hover:text-[#a5d391] transition-colors flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-lg hover:bg-white/5"
+                            className="font-bold text-sm text-slate-900 hover:text-emerald-700 dark:text-white dark:hover:text-[#a5d391] transition-colors flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5"
                         >
                             <span>{MONTH_NAMES[viewMonth]} {viewYear}</span>
-                            <span className="material-symbols-outlined text-xs text-white/40">
+                            <span className="material-symbols-outlined text-xs text-slate-400 dark:text-white/40">
                                 {isSelectingMonthView ? 'unfold_less' : 'unfold_more'}
                             </span>
                         </button>
@@ -251,7 +251,7 @@ const DarkCalendarPicker = ({
                             <button
                                 type="button"
                                 onClick={isSelectingMonthView ? () => setViewYear(y => y - 1) : handlePrevMonth}
-                                className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                                className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/15 dark:text-white/70 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                                 title="Previous"
                             >
                                 <span className="material-symbols-outlined text-base">chevron_left</span>
@@ -259,7 +259,7 @@ const DarkCalendarPicker = ({
                             <button
                                 type="button"
                                 onClick={isSelectingMonthView ? () => setViewYear(y => y + 1) : handleNextMonth}
-                                className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                                className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/15 dark:text-white/70 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                                 title="Next"
                             >
                                 <span className="material-symbols-outlined text-base">chevron_right</span>
@@ -270,7 +270,7 @@ const DarkCalendarPicker = ({
                     {/* View 1: 12-Month Grid View */}
                     {isSelectingMonthView ? (
                         <div className="py-2">
-                            <div className="text-[10px] uppercase font-bold text-white/40 tracking-wider mb-2 px-1 text-center">
+                            <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-white/40 tracking-wider mb-2 px-1 text-center">
                                 Select Month for Year {viewYear}
                             </div>
                             <div className="grid grid-cols-3 gap-2">
@@ -285,10 +285,10 @@ const DarkCalendarPicker = ({
                                             onClick={() => handleSelectMonth(idx)}
                                             className={`py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                                 isSelectedMonth
-                                                    ? 'bg-[#a5d391] text-black font-extrabold shadow-[0_0_12px_rgba(165,211,145,0.4)]'
+                                                    ? 'bg-emerald-600 text-white font-extrabold shadow-sm dark:bg-[#a5d391] dark:text-black dark:shadow-[0_0_12px_rgba(165,211,145,0.4)]'
                                                     : (isCurrentMonthThisYear
-                                                        ? 'bg-white/10 text-[#a5d391] border border-[#a5d391]/40'
-                                                        : 'bg-white/5 hover:bg-white/10 text-white/80 hover:text-white')
+                                                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-white/10 dark:text-[#a5d391] dark:border-[#a5d391]/40'
+                                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/80 dark:hover:text-white')
                                             }`}
                                         >
                                             {name}
@@ -303,7 +303,7 @@ const DarkCalendarPicker = ({
                             {/* Days of Week Header */}
                             <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
                                 {WEEKDAY_NAMES.map((dayName) => (
-                                    <div key={dayName} className="text-[10px] font-bold text-white/40 uppercase tracking-wider py-1">
+                                    <div key={dayName} className="text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase tracking-wider py-1">
                                         {dayName}
                                     </div>
                                 ))}
@@ -323,22 +323,22 @@ const DarkCalendarPicker = ({
                                     const isWeekStart = mode === 'week' && weekRange && dateStr === weekRange.start;
                                     const isWeekEnd = mode === 'week' && weekRange && dateStr === weekRange.end;
 
-                                    let cellStyles = 'text-white/80 hover:bg-white/15';
+                                    let cellStyles = 'text-slate-800 hover:bg-slate-100 dark:text-white/80 dark:hover:bg-white/15';
 
                                     if (!isCurrentMonth) {
-                                        cellStyles = 'text-white/20 hover:text-white/50 hover:bg-white/5';
+                                        cellStyles = 'text-slate-300 hover:text-slate-500 hover:bg-slate-50 dark:text-white/20 dark:hover:text-white/50 dark:hover:bg-white/5';
                                     }
 
                                     if (isDisabled) {
-                                        cellStyles = 'text-white/15 cursor-not-allowed pointer-events-none';
+                                        cellStyles = 'text-slate-200 dark:text-white/15 cursor-not-allowed pointer-events-none';
                                     } else if (isSelectedDay && mode !== 'week') {
-                                        cellStyles = 'bg-[#a5d391] text-black font-black shadow-[0_0_12px_rgba(165,211,145,0.45)] scale-105';
+                                        cellStyles = 'bg-emerald-600 text-white font-black shadow-sm dark:bg-[#a5d391] dark:text-black dark:shadow-[0_0_12px_rgba(165,211,145,0.45)] scale-105';
                                     } else if (isInSelectedWeek) {
                                         cellStyles = isWeekStart
-                                            ? 'bg-[#a5d391] text-black font-black shadow-[0_0_10px_rgba(165,211,145,0.4)] rounded-xl scale-105'
-                                            : `bg-[#a5d391]/20 text-[#a5d391] font-bold ${isWeekEnd ? 'rounded-r-xl' : ''}`;
+                                            ? 'bg-emerald-600 text-white font-black shadow-sm rounded-xl scale-105 dark:bg-[#a5d391] dark:text-black dark:shadow-[0_0_10px_rgba(165,211,145,0.4)]'
+                                            : `bg-emerald-100 text-emerald-900 font-bold dark:bg-[#a5d391]/20 dark:text-[#a5d391] ${isWeekEnd ? 'rounded-r-xl' : ''}`;
                                     } else if (isToday) {
-                                        cellStyles = 'text-[#a5d391] font-bold ring-1 ring-[#a5d391]/50';
+                                        cellStyles = 'text-emerald-700 font-bold ring-1 ring-emerald-500 dark:text-[#a5d391] dark:ring-[#a5d391]/50';
                                     }
 
                                     return (
@@ -356,19 +356,19 @@ const DarkCalendarPicker = ({
                             </div>
 
                             {/* Calendar Footer Shortcuts */}
-                            <div className="flex items-center justify-between pt-3 mt-2 border-t border-white/10 text-xs">
+                            <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-200 dark:border-white/10 text-xs">
                                 <button
                                     type="button"
                                     onClick={() => handleSelectDay(todayStr)}
-                                    className="text-xs font-bold text-[#a5d391] hover:underline cursor-pointer flex items-center gap-1"
+                                    className="text-xs font-bold text-emerald-700 dark:text-[#a5d391] hover:underline cursor-pointer flex items-center gap-1"
                                 >
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391]"></span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-[#a5d391]"></span>
                                     <span>Select Today</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setIsOpen(false)}
-                                    className="text-[11px] text-white/40 hover:text-white cursor-pointer"
+                                    className="text-[11px] text-slate-500 hover:text-slate-900 dark:text-white/40 dark:hover:text-white cursor-pointer"
                                 >
                                     Close
                                 </button>

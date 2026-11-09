@@ -306,7 +306,7 @@ const ServicesOverview = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[999999] flex flex-col items-center justify-start pt-24 pb-6 px-4 bg-[#080b12]/90 backdrop-blur-md overflow-hidden"
+                            className="fixed inset-0 z-[999999] flex flex-col items-center justify-start pt-24 pb-6 px-4 bg-slate-900/60 dark:bg-[#080b12]/90 backdrop-blur-md overflow-hidden"
                             onClick={() => setShowModal(false)}
                         >
                             <motion.div
@@ -314,24 +314,24 @@ const ServicesOverview = () => {
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.95, opacity: 0 }}
                                 transition={{ duration: 0.2 }}
-                                className="bg-[#0d121c] border border-[#a5d391]/40 rounded-3xl p-5 sm:p-6 max-w-xl w-full max-h-[calc(100vh-130px)] flex flex-col shadow-[0_0_60px_rgba(165,211,145,0.2)] relative text-white overflow-hidden my-auto"
+                                className="bg-white dark:bg-[#0d121c] border border-slate-200 dark:border-[#a5d391]/40 rounded-3xl p-5 sm:p-6 max-w-xl w-full max-h-[calc(100vh-130px)] flex flex-col shadow-2xl dark:shadow-[0_0_60px_rgba(165,211,145,0.2)] relative text-slate-900 dark:text-white overflow-hidden my-auto"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {/* Header Section */}
-                                <div className="shrink-0 flex items-center justify-between mb-3 pb-3 border-b border-white/10">
+                                <div className="shrink-0 flex items-center justify-between mb-3 pb-3 border-b border-slate-200 dark:border-white/10">
                                     <div className="flex items-center gap-2">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-[#a5d391] shadow-[0_0_8px_rgba(165,211,145,0.8)]"></span>
-                                        <h2 className="text-base sm:text-lg font-bold font-hero-display text-white">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 dark:bg-[#a5d391] shadow-sm dark:shadow-[0_0_8px_rgba(165,211,145,0.8)]"></span>
+                                        <h2 className="text-base sm:text-lg font-bold font-hero-display text-slate-900 dark:text-white">
                                             {modalData.modalTitle}
                                         </h2>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#a5d391]/10 text-[#a5d391] border border-[#a5d391]/30">
+                                        <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-[#a5d391]/10 dark:text-[#a5d391] dark:border-[#a5d391]/30">
                                             {modalData.modalBadge}
                                         </span>
                                         <button
                                             onClick={() => setShowModal(false)}
-                                            className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
+                                            className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
@@ -339,7 +339,7 @@ const ServicesOverview = () => {
                                 </div>
 
                                 {/* Services Grid (Compact Scrollable Body) */}
-                                <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#a5d391]/40 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-emerald-600/40 dark:[&::-webkit-scrollbar-thumb]:bg-[#a5d391]/40 [&::-webkit-scrollbar-thumb]:rounded-full">
                                     {modalData.items.map((item, idx) => (
                                         <div
                                             key={idx}
@@ -347,18 +347,18 @@ const ServicesOverview = () => {
                                                 setShowModal(false);
                                                 navigate(item.path);
                                             }}
-                                            className="bg-[#090d16] border border-white/10 rounded-xl p-3 hover:border-[#a5d391]/60 hover:bg-[#101726] transition-all cursor-pointer group flex flex-col justify-between"
+                                            className="bg-slate-50 border border-slate-200 hover:border-emerald-600/60 hover:bg-slate-100 dark:bg-[#090d16] dark:border-white/10 dark:hover:border-[#a5d391]/60 dark:hover:bg-[#101726] rounded-xl p-3 transition-all cursor-pointer group flex flex-col justify-between shadow-sm"
                                         >
                                             <div className="flex items-start gap-2.5">
-                                                <div className="w-8 h-8 rounded-lg bg-[#a5d391]/10 border border-[#a5d391]/20 flex items-center justify-center shrink-0 mt-0.5">
-                                                    <span className="material-symbols-outlined text-[#a5d391] text-base">{item.icon}</span>
+                                                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-[#a5d391]/10 dark:border-[#a5d391]/20 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391] text-base">{item.icon}</span>
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-xs font-bold text-white group-hover:text-[#a5d391] transition-colors leading-tight">{item.title}</h3>
-                                                    <p className="text-[11px] text-white/50 leading-snug mt-0.5 line-clamp-2">{item.desc}</p>
+                                                    <h3 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-[#a5d391] transition-colors leading-tight">{item.title}</h3>
+                                                    <p className="text-[11px] text-slate-600 dark:text-white/50 leading-snug mt-0.5 line-clamp-2">{item.desc}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-end gap-1 mt-2 pt-1.5 border-t border-white/5 text-[10px] font-bold text-[#a5d391] uppercase tracking-wider">
+                                            <div className="flex items-center justify-end gap-1 mt-2 pt-1.5 border-t border-slate-200 dark:border-white/5 text-[10px] font-bold text-emerald-700 dark:text-[#a5d391] uppercase tracking-wider">
                                                 <span>Launch</span>
                                                 <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                                             </div>
@@ -367,11 +367,11 @@ const ServicesOverview = () => {
                                 </div>
 
                                 {/* Footer Section */}
-                                <div className="shrink-0 mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-white/50">
+                                <div className="shrink-0 mt-3 pt-3 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs text-slate-600 dark:text-white/50">
                                     <span>Click any tool to navigate directly.</span>
                                     <button
                                         onClick={() => setShowModal(false)}
-                                        className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                                        className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer border border-slate-200 dark:border-transparent"
                                     >
                                         Close
                                     </button>
