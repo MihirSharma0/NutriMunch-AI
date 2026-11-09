@@ -872,6 +872,8 @@ public class AiService {
     private String classifyAiFailure(Exception e) {
         if (e instanceof HttpStatusCodeException http) {
             int code = http.getStatusCode().value();
+            if (code == 402)
+                return "the AI vision account has insufficient credits or requires a credit top-up (HTTP 402)";
             if (code == 429)
                 return "the AI vision service is rate-limiting requests (HTTP 429)";
             if (http.getStatusCode().is5xxServerError())
