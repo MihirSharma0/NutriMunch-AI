@@ -3,8 +3,10 @@
  * Leverages Gemini AI to generate custom 7-day meal plans calibrated to user calorie targets,
  * macronutrient splits, health goals, and allergen restrictions.
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api/axios';
+import { AuthContext } from '../../../context/AuthContext';
 
 /* ─── Predefined Tag Pools ─────────────────────────────────────────── */
 const PREDEFINED_GOALS = [
@@ -237,6 +239,10 @@ const PlanDisplay = ({ plan, planData }) => {
  * Parameterized generator interface for generating, inspecting, and deploying AI-crafted diet plans.
  */
 const AiDietGenerator = () => {
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const userRole = String(user?.role || '').toUpperCase().replace('ROLE_', '');
+
   const [selectedGoals, setSelectedGoals] = useState([]);
   const [selectedRestrictions, setSelectedRestrictions] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
@@ -253,6 +259,14 @@ const AiDietGenerator = () => {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type = 'warning') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 4500);
+  };
 
   useEffect(() => {
     let active = true;
@@ -438,6 +452,14 @@ const AiDietGenerator = () => {
 
   const savePlan = async () => {
     if (!plan || !planTargets) return;
+
+    // Check Role Restrictions:
+    // Admin: Both save and import target are unavailable
+    if (userRole === 'ADMIN') {
+      showNotification('This feature is available only for users.', 'warning');
+      return;
+    }
+
     const heading = planHeading.trim();
     if (!heading) {
       setError('Enter a personalized heading before saving this diet plan.');
@@ -445,6 +467,82 @@ const AiDietGenerator = () => {
     }
     setSaving(true);
     setError('');
+
+    // NUTRITIONIST ROLE: Save into Diet Plans History Vault
+    if (userRole === 'NUTRITIONIST') {
+      try {
+        const planId = `plan_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const nutritionistName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'Nutritionist');
+        const nutritionistEmail = user?.email || (user?.username && user.username.includes('@') ? user.username : '');
+
+        const vaultPayload = {
+          id: planId,
+          planTitle: heading,
+          title: heading,
+          authorName: nutritionistName,
+          authorEmail: nutritionistEmail,
+          nutritionistId: String(user?.id || user?.userId || ''),
+          nutritionistEmail: nutritionistEmail,
+          calories: planTargets.calories,
+          protein: planTargets.protein,
+          carbs: planTargets.carbs,
+          fats: planTargets.fats,
+          waterLiters: planTargets.water,
+          dietType: planData?.dietType || 'High-Protein Metabolic',
+          nutritionistNotes: planData?.nutritionistNotes || 'Generated via NutriMunch AI Diet Planner.',
+          meals: planData?.meals || [],
+          planText: planData?.planText || plan,
+          targets: planData?.targets || planTargets,
+          goals: selectedGoals,
+          allergies: selectedRestrictions,
+          scope: 'GENERAL',
+          targetMode: 'GENERAL',
+          deployedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
+        };
+
+        // 1. Update localStorage history vault
+        let localHistory = [];
+        try {
+          const raw = localStorage.getItem('nutrimunch_diet_plans_history');
+          const parsed = raw ? JSON.parse(raw) : [];
+          if (Array.isArray(parsed)) localHistory = parsed;
+        } catch { localHistory = []; }
+
+        const filtered = localHistory.filter(h =>
+          String(h.id) !== String(planId) &&
+          (h.title || h.planTitle || '').trim().toLowerCase() !== heading.toLowerCase()
+        );
+        const updatedHistory = [vaultPayload, ...filtered];
+        localStorage.setItem('nutrimunch_diet_plans_history', JSON.stringify(updatedHistory));
+        localStorage.setItem('nutrimunch_general_diet_plan', JSON.stringify(vaultPayload));
+        localStorage.setItem('nutrimunch_latest_deployed_plan', JSON.stringify(vaultPayload));
+        localStorage.setItem('nutrimunch_latest_deployed_plan_id', vaultPayload.id);
+
+        // 2. Dispatch cross-component and tab events
+        window.dispatchEvent(new Event('nutrimunch_diet_history_updated'));
+        window.dispatchEvent(new Event('nutrimunch_diet_plan_updated'));
+        window.dispatchEvent(new Event('storage'));
+
+        // 3. Attempt server sync to /diet-plans/deploy
+        try {
+          await api.post('/diet-plans/deploy', vaultPayload);
+        } catch (serverErr) {
+          console.warn('Backend deploy sync note:', serverErr);
+        }
+
+        setSaved(true);
+        showNotification(`"${heading}" saved to Diet Plan History Vault! You can view and edit it in Diet Builder.`, 'success');
+      } catch (err) {
+        console.error('Failed saving nutritionist diet plan:', err);
+        setError('Could not save diet plan to history vault. Please try again.');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // REGULAR USER ROLE: Save to personal user account
     try {
       await api.post('/diet-plans/me/save-ai', {
         generatedDate: new Date().toISOString().slice(0, 10),
@@ -467,6 +565,7 @@ const AiDietGenerator = () => {
         })
       });
       setSaved(true);
+      showNotification(`"${heading}" saved successfully to your Diet Plans!`, 'success');
     } catch (requestError) {
       const responseData = requestError?.response?.data;
       const backendMessage = responseData?.message || responseData?.error;
@@ -485,6 +584,13 @@ const AiDietGenerator = () => {
 
   const importTargetValues = async (targets) => {
     if (!targets) return;
+
+    // Both Nutritionists and Admins cannot import daily user profile targets
+    if (userRole !== 'USER') {
+      showNotification('This feature is available only for users.', 'warning');
+      return;
+    }
+
     setImporting(true);
     setError('');
     const payload = {
@@ -507,6 +613,7 @@ const AiDietGenerator = () => {
       localStorage.setItem('nutrimunch_water_target_liters', String(targets.water));
       window.dispatchEvent(new Event('nutrimunch_profile_updated'));
       window.dispatchEvent(new Event('storage'));
+      showNotification('Daily calorie and macronutrient targets imported successfully!', 'success');
     } catch (requestError) {
       setError(requestError?.response?.status === 401
         ? 'Please sign in to import daily targets.'
@@ -528,6 +635,28 @@ const AiDietGenerator = () => {
     <>
       <style>{CSS}</style>
       <div className="aidg-root">
+
+        {/* Floating Screen Notification Toast */}
+        {notification && (
+          <div
+            className={`aidg-screen-notification ${notification.type}`}
+            role="alert"
+          >
+            <Icon
+              name={notification.type === 'success' ? 'check_circle' : 'warning'}
+              size={20}
+            />
+            <span className="aidg-notification-text">{notification.message}</span>
+            <button
+              type="button"
+              className="aidg-notification-close"
+              onClick={() => setNotification(null)}
+              aria-label="Dismiss notification"
+            >
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+        )}
 
         {/* Header */}
         <div className="aidg-header">
@@ -654,11 +783,27 @@ const AiDietGenerator = () => {
               <Icon name="receipt_long" size={22} style={{ color: '#a5d391' }} />
               <h2 className="aidg-result-title">Your Personalized Diet Plan</h2>
               <div className="aidg-result-actions">
-                <button className="aidg-action-btn" type="button" onClick={savePlan} disabled={saving || saved}>
+                <button
+                  className="aidg-action-btn"
+                  type="button"
+                  onClick={savePlan}
+                  disabled={saving || (saved && userRole === 'USER')}
+                  title={userRole === 'NUTRITIONIST' ? 'Save into Diet Plan History Vault' : userRole === 'ADMIN' ? 'Available only for users' : 'Save to my Diet Plans'}
+                >
                   <Icon name={saved ? 'check_circle' : 'save'} size={15} />
-                  {saving ? 'Saving…' : saved ? 'Saved' : 'Save Plan'}
+                  {saving
+                    ? 'Saving…'
+                    : saved
+                    ? (userRole === 'NUTRITIONIST' ? 'Saved to Vault' : 'Saved')
+                    : (userRole === 'NUTRITIONIST' ? 'Save to Vault' : 'Save Plan')}
                 </button>
-                <button className="aidg-action-btn aidg-import-btn" type="button" onClick={importTargets} disabled={importing}>
+                <button
+                  className="aidg-action-btn aidg-import-btn"
+                  type="button"
+                  onClick={importTargets}
+                  disabled={importing}
+                  title={userRole !== 'USER' ? 'Available only for users' : 'Import daily calorie & macro targets'}
+                >
                   <Icon name="sync_alt" size={15} />
                   {importing ? 'Importing…' : 'Import Targets'}
                 </button>
@@ -689,6 +834,65 @@ const CSS = `
   max-width: 820px;
   margin: 0 auto;
   font-family: 'Inter', system-ui, sans-serif;
+  position: relative;
+}
+
+/* Screen Notification Toast */
+.aidg-screen-notification {
+  position: fixed;
+  top: 90px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+  animation: aidg-slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 420px;
+}
+@keyframes aidg-slideIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.aidg-screen-notification.warning {
+  background: #1c1508;
+  border: 1px solid rgba(255, 183, 100, 0.45);
+  color: #ffcf9c;
+}
+.aidg-screen-notification.warning svg {
+  color: #ffb764;
+}
+.aidg-screen-notification.success {
+  background: #0b180d;
+  border: 1px solid rgba(165, 211, 145, 0.45);
+  color: #c9f5bc;
+}
+.aidg-screen-notification.success svg {
+  color: #a5d391;
+}
+.aidg-notification-text {
+  flex: 1;
+  line-height: 1.45;
+}
+.aidg-notification-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: opacity 0.15s;
+}
+.aidg-notification-close:hover {
+  opacity: 1;
 }
 
 /* Header */
