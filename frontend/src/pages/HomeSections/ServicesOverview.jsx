@@ -133,7 +133,7 @@ const getModalServicesForRole = (user) => {
             },
             {
                 title: 'Progress & Water Tracking',
-                desc: 'Track weight trends, daily water intake targets, and Mifflin-St Jeor BMR metrics.',
+                desc: 'Log daily water and meals, track weight changes, and compare your hydration and nutrition intake with your targets.',
                 icon: 'water_drop',
                 path: '/progress'
             },
@@ -238,7 +238,7 @@ const ServicesOverview = () => {
         },
         {
             title: 'Progress & Water Tracking',
-            desc: 'Track weight trends, daily water intake targets, and Mifflin-St Jeor BMR metrics.',
+            desc: 'Log daily water and meals, track weight changes, and compare your hydration and nutrition intake with your targets.',
             icon: 'water_drop',
             path: '/progress'
         },
