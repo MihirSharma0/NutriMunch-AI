@@ -17,6 +17,7 @@ import {
     FileText,
     Users,
     BookOpen,
+    Wallet,
     CheckCircle2,
     ArrowRight,
     Lock
@@ -42,8 +43,8 @@ const UserRoles = () => {
         },
         {
             icon: Droplets,
-            title: 'Smart Hydration & BMR Tracker',
-            desc: 'Set daily water and nutrition targets, log hydration, and get an estimated BMR during profile setup using the Mifflin-St Jeor formula.'
+            title: 'Hydration & Nutrition Tracking',
+            desc: 'Set daily water and nutrition targets, log your water intake, and monitor progress toward your goals.'
         },
         {
             icon: Calendar,
@@ -60,39 +61,40 @@ const UserRoles = () => {
     const nutritionistFeatures = [
         {
             icon: Users,
-            title: 'Client Management Console',
-            desc: 'Full-featured roster to view assigned client health profiles, biometric history, dietary preferences, allergen filters, and active meal logs.'
+            title: 'Consultation Client Profiles',
+            desc: 'View profiles for clients with accepted consultations, including their health goals, body metrics, dietary preferences, and allergy information.'
         },
         {
             icon: BookOpen,
-            title: 'Custom Prescription Diet Builder',
-            desc: 'Craft, customize, and prescribe targeted weekly caloric & macro regimens directly into your patient’s NutriMunch account.'
+            title: '7-Day Diet Plan Builder',
+            desc: 'Create nutrition plans with meal schedules, calorie and macro targets, and clinical notes. Publish plans for clients or share them publicly.'
         },
         {
             icon: Calendar,
-            title: 'Virtual Consultation Scheduler',
-            desc: 'Organize your availability, accept incoming appointment requests, host video sessions, and manage client follow-up reminders.'
+            title: 'Appointment & Consultation Management',
+            desc: 'Review appointment requests, manage bookings and schedule, and connect with clients through consultation chat and virtual sessions.'
         },
         {
-            icon: Bot,
-            title: 'AI Clinical Research Companion',
-            desc: 'Leverage built-in AI tools for fast ingredient nutrient density reference, drug-nutrient interaction verification, and meal formulation.'
+            icon: Wallet,
+            title: 'Earnings & Transaction History',
+            desc: 'Review your wallet balance and track consultation payments, escrow releases, and refunds in the transaction ledger.'
         },
         {
             icon: ShieldCheck,
-            title: 'Verified Professional Bio & Profile',
-            desc: 'Showcase your clinical credentials, specializations, consultation rates, and patient reviews across the platform directory.'
+            title: 'Professional Profile & Credentials',
+            desc: 'Manage your professional bio, credentials, license details, specialization, languages, availability, and consultation fee.'
         }
     ];
 
     const comparisonMatrix = [
         { feature: 'AI Meal Plan Generator', user: true, nutritionist: true, admin: true },
         { feature: 'AI Food & Barcode Analyzer', user: true, nutritionist: true, admin: true },
-        { feature: 'Smart Hydration & BMR Tracking', user: true, nutritionist: true, admin: true },
+        { feature: 'Hydration & Nutrition Tracking', user: true, nutritionist: true, admin: true },
         { feature: 'Book Certified Nutritionist Consultations', user: true, nutritionist: false, admin: false },
         { feature: 'Custom Prescription Diet Regimen Builder', user: false, nutritionist: true, admin: true },
         { feature: 'Virtual Consultation Calendar & Scheduling', user: false, nutritionist: true, admin: true },
         { feature: 'Clinical PDF Progress & Compliance Export', user: true, nutritionist: true, admin: true },
+        { feature: 'Wallet & Transaction History', user: true, nutritionist: true, admin: true },
         { feature: 'User & Nutritionist Management Portal', user: false, nutritionist: false, admin: true },
         { feature: 'SQL Console & System Analytics', user: false, nutritionist: false, admin: true }
     ];
@@ -251,7 +253,7 @@ const UserRoles = () => {
                                         </div>
                                     </div>
                                     <p className="text-slate-600 dark:text-white/70 leading-relaxed text-sm sm:text-base">
-                                        Designed for certified nutritionists. Manage client rosters, prescribe customized weekly meal plans directly to patients, schedule virtual appointments, and generate white-labeled clinical PDF reports.
+                                        Manage consultation clients, create and share diet plans, handle appointments, maintain your professional profile, and review consultation earnings.
                                     </p>
                                 </div>
                                 <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">

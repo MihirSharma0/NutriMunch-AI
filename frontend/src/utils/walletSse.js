@@ -34,6 +34,7 @@ export const getCanonicalBalance = () => canonicalBalance;
  * (the emitter registry is process-local on the server).
  */
 export const resyncWalletBalance = async (force = false) => {
+    if (!localStorage.getItem('token')) return canonicalBalance;
     if (!force && balanceResyncedForSession) return canonicalBalance;
     if (resyncInFlight) return resyncInFlight;
     resyncInFlight = (async () => {
@@ -143,7 +144,7 @@ function initEventSource(user) {
     const role = user.role || '';
     const token = localStorage.getItem('token') || '';
 
-    if (!userId && !email) return;
+    if ((!userId && !email) || !token) return;
 
     const userKey = `${userId}_${email}_${token}`;
     if (activeEventSource && activeUserKey === userKey && activeEventSource.readyState !== EventSource.CLOSED) {
@@ -299,6 +300,7 @@ try {
  */
 try {
     window.addEventListener('focus', () => {
+        if (!localStorage.getItem('token')) return;
         const now = Date.now();
         if (now - lastFocusResyncAt < 30000) return;
         lastFocusResyncAt = now;
