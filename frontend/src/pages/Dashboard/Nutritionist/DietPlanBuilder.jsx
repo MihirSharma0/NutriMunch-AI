@@ -312,7 +312,9 @@ const DietPlanBuilder = () => {
     };
 
     const handleUpdateMeal = (mealId, field, value) => {
-        setMeals(meals.map(m => m.id === mealId ? { ...m, [field]: value } : m));
+        setMeals(currentMeals => currentMeals.map(meal => (
+            meal.id === mealId ? { ...meal, [field]: value } : meal
+        )));
     };
 
     const handleAddMeal = () => {
@@ -1126,23 +1128,36 @@ const DietPlanBuilder = () => {
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-4 gap-2 pt-1 text-[11px]">
-                                        <div className="bg-white dark:bg-black/40 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 text-center shadow-xs">
-                                            <span className="text-[9px] text-slate-500 dark:text-white/40 block">Calories</span>
-                                            <span className="font-bold text-slate-900 dark:text-white">{meal.calories} kcal</span>
-                                        </div>
-                                        <div className="bg-white dark:bg-black/40 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 text-center shadow-xs">
-                                            <span className="text-[9px] text-slate-500 dark:text-white/40 block">Protein</span>
-                                            <span className="font-bold text-emerald-700 dark:text-[#a5d391]">{meal.protein}g</span>
-                                        </div>
-                                        <div className="bg-white dark:bg-black/40 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 text-center shadow-xs">
-                                            <span className="text-[9px] text-slate-500 dark:text-white/40 block">Carbs</span>
-                                            <span className="font-bold text-sky-700 dark:text-cyan-300">{meal.carbs}g</span>
-                                        </div>
-                                        <div className="bg-white dark:bg-black/40 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 text-center shadow-xs">
-                                            <span className="text-[9px] text-slate-500 dark:text-white/40 block">Fats</span>
-                                            <span className="font-bold text-amber-700 dark:text-amber-300">{meal.fats}g</span>
-                                        </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                                        {[
+                                            { field: 'calories', label: 'Calories', unit: 'kcal', step: '1', color: 'text-slate-900 dark:text-white' },
+                                            { field: 'protein', label: 'Protein', unit: 'g', step: '0.1', color: 'text-emerald-700 dark:text-[#a5d391]' },
+                                            { field: 'carbs', label: 'Carbs', unit: 'g', step: '0.1', color: 'text-sky-700 dark:text-cyan-300' },
+                                            { field: 'fats', label: 'Fats', unit: 'g', step: '0.1', color: 'text-amber-700 dark:text-amber-300' }
+                                        ].map(({ field, label, unit, step, color }) => (
+                                            <label
+                                                key={field}
+                                                className="bg-white dark:bg-black/40 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-center shadow-xs focus-within:border-emerald-600 dark:focus-within:border-[#a5d391] transition-colors"
+                                            >
+                                                <span className="text-[9px] text-slate-500 dark:text-white/50 block">{label}</span>
+                                                <span className="flex items-center justify-center gap-1">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step={step}
+                                                        value={meal[field] ?? ''}
+                                                        onChange={(e) => handleUpdateMeal(
+                                                            meal.id,
+                                                            field,
+                                                            e.target.value === '' ? '' : Number(e.target.value)
+                                                        )}
+                                                        aria-label={`${label} for ${meal.name}`}
+                                                        className={`w-full min-w-0 bg-transparent text-center text-xs font-bold outline-none ${color}`}
+                                                    />
+                                                    <span className="shrink-0 text-[10px] text-slate-500 dark:text-white/50">{unit}</span>
+                                                </span>
+                                            </label>
+                                        ))}
                                     </div>
                                 </div>
                             ))}

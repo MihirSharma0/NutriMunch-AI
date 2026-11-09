@@ -25,7 +25,6 @@ const DietPlans = () => {
     const [avoidAllergens, setAvoidAllergens] = useState([]); // hide plans containing any of these
     const [dietFilter, setDietFilter] = useState('ALL');
     const [profilePrefs, setProfilePrefs] = useState({ allergies: [], dietType: null });
-    const lastSeenTopIdRef = useRef(null);
 
     // Current User Profile Targets (for comparison preview)
     const [currentUserTargets, setCurrentUserTargets] = useState({
@@ -128,35 +127,19 @@ const DietPlans = () => {
 
         const topId = deduplicated.length > 0 ? deduplicated[0].id : null;
         const latestDeployedId = localStorage.getItem('nutrimunch_latest_deployed_plan_id');
-
-        if (forcedSelectId) {
-            setSelectedPlanId(forcedSelectId);
-            lastSeenTopIdRef.current = forcedSelectId;
-        } else if (topId && lastSeenTopIdRef.current && topId !== lastSeenTopIdRef.current) {
-            // A NEW DIET PLAN WAS DEPLOYED! Auto-select it immediately without requiring click!
-            setSelectedPlanId(topId);
-            showToast(`⚡ Newly Prescribed Protocol Synced: "${deduplicated[0].title || deduplicated[0].planTitle}"`);
-            lastSeenTopIdRef.current = topId;
-        } else if (latestDeployedId && (!selectedPlanId || latestDeployedId !== lastSeenTopIdRef.current)) {
-            setSelectedPlanId(latestDeployedId);
-            lastSeenTopIdRef.current = latestDeployedId;
-        } else {
-            setSelectedPlanId(prev => {
-                if (prev && deduplicated.some(p => p.id === prev)) {
-                    return prev;
-                }
-                return topId;
-            });
-            if (topId && !lastSeenTopIdRef.current) {
-                lastSeenTopIdRef.current = topId;
+        const preferredId = forcedSelectId || latestDeployedId;
+        setSelectedPlanId(previous => {
+            if (preferredId && deduplicated.some(plan => String(plan.id) === String(preferredId))) {
+                return preferredId;
             }
-        }
+            return previous && deduplicated.some(plan => plan.id === previous) ? previous : topId;
+        });
     };
 
     useEffect(() => {
         loadPlans();
 
-        const syncServerPlans = async () => {
+        const syncServerPlans = async (preferredPlanId = null) => {
             const [publishedResult, generalResult] = await Promise.allSettled([
                 api.get('/diet-plans/published'),
                 api.get('/diet-plans/general'),
@@ -170,7 +153,7 @@ const DietPlans = () => {
                 && typeof generalResult.value.data === 'object'
                 ? [generalResult.value.data]
                 : [];
-            loadPlans(null, [...publishedPlans, ...generalPlan]);
+            loadPlans(preferredPlanId, [...publishedPlans, ...generalPlan]);
         };
 
         syncServerPlans();
@@ -218,21 +201,24 @@ const DietPlans = () => {
                     loadPlans();
                 } else if (event.data?.plan) {
                     const newPlan = event.data.plan;
-                    showToast(`⚡ Deployed protocol "${newPlan.title || newPlan.planTitle}" synchronized!`);
-                    loadPlans(newPlan.id);
+                    syncServerPlans(newPlan.id);
                 } else {
-                    loadPlans();
+                    syncServerPlans();
                 }
             };
         } catch (e) {}
 
-        const handleUpdate = () => {
-            const latestId = localStorage.getItem('nutrimunch_latest_deployed_plan_id');
-            loadPlans(latestId);
+        const handleUpdate = (event) => {
+            const detail = event?.detail;
+            if (detail?.type === 'DEPLOYED') {
+                const title = detail.title ? ` "${detail.title}"` : '';
+                showToast(`⚡ Newly prescribed protocol synced${title}.`);
+            }
+            syncServerPlans(detail?.planId || null);
         };
 
         const handleDeletedEvent = () => {
-            loadPlans();
+            syncServerPlans();
         };
 
         window.addEventListener('nutrimunch_diet_plan_updated', handleUpdate);
@@ -240,14 +226,8 @@ const DietPlans = () => {
         window.addEventListener('nutrimunch_diet_plan_deleted', handleDeletedEvent);
         window.addEventListener('storage', handleUpdate);
 
-        const pollInterval = setInterval(() => {
-            loadPlans();
-            syncServerPlans();
-        }, 5000);
-
         return () => {
             if (bc) bc.close();
-            clearInterval(pollInterval);
             window.removeEventListener('nutrimunch_diet_plan_updated', handleUpdate);
             window.removeEventListener('nutrimunch_diet_history_updated', handleUpdate);
             window.removeEventListener('nutrimunch_diet_plan_deleted', handleDeletedEvent);
@@ -357,7 +337,7 @@ const DietPlans = () => {
     };
 
     return (
-        <div className="w-full pb-12">
+        <div className="diet-plans-page w-full pb-12">
             {/* Live Toast Notification */}
             {notification && (
                 <div className="fixed top-24 right-8 z-[9999] bg-[#a5d391] text-[#080b12] px-6 py-3.5 rounded-2xl font-bold text-sm shadow-2xl flex items-center gap-2 animate-bounce">
@@ -532,9 +512,9 @@ const DietPlans = () => {
                             <div
                                 key={plan.id}
                                 onClick={() => setSelectedPlanId(plan.id)}
-                                className={`p-5 rounded-[2rem] border transition-all duration-300 cursor-pointer flex flex-col justify-between space-y-4 relative overflow-hidden group ${
+                                className={`diet-plan-card p-5 rounded-[2rem] border transition-all duration-300 cursor-pointer flex flex-col justify-between space-y-4 relative overflow-hidden group ${
                                     isSelected
-                                        ? 'bg-gradient-to-b from-[#a5d391]/15 to-[#080b12] border-[#a5d391] shadow-[0_0_30px_rgba(165,211,145,0.25)] ring-1 ring-[#a5d391]/40'
+                                        ? 'diet-plan-card-selected bg-gradient-to-b from-[#a5d391]/15 to-[#080b12] border-[#a5d391] shadow-[0_0_30px_rgba(165,211,145,0.25)] ring-1 ring-[#a5d391]/40'
                                         : 'bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10'
                                 }`}
                             >

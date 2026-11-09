@@ -598,6 +598,33 @@
     flex-shrink: 0;
   }
 
+  html.light .diet-plans-page .diet-plan-card-selected {
+    background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 58%, #eff6ff 100%) !important;
+    border-color: #16a34a !important;
+    box-shadow: 0 16px 36px -20px rgba(22, 101, 52, 0.32) !important;
+    --tw-ring-color: rgba(22, 163, 74, 0.28) !important;
+  }
+
+  html.light .diet-plans-page .diet-plan-card-selected [class*="bg-black/"] {
+    background-color: #ffffff !important;
+    border-color: #dbe3ec !important;
+  }
+
+  html.light .diet-plans-page .diet-plan-card-selected [class*="border-white/"] {
+    border-color: #dbe3ec !important;
+  }
+
+  html.light .diet-plans-page .diet-plan-card-selected .text-white\/40,
+  html.light .diet-plans-page .diet-plan-card-selected .text-white\/50,
+  html.light .diet-plans-page .diet-plan-card-selected .text-white\/60,
+  html.light .diet-plans-page .diet-plan-card-selected .text-white\/70 {
+    color: #475569 !important;
+  }
+
+  html.light .diet-plans-page .diet-plan-card-selected .text-white {
+    color: #0f172a !important;
+  }
+
   html.light .home-ai-diet-card {
     background: #ffffff !important;
     color: #0f172a !important;

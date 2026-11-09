@@ -237,6 +237,22 @@ public class WalletSseService {
         }
     }
 
+    /** Pushes a non-sensitive event to all active authenticated user streams. */
+    public void broadcastUserEvent(String eventName, Object payload) {
+        Set<SseEmitter> targetEmitters = new LinkedHashSet<>();
+        userEmitters.values().forEach(targetEmitters::addAll);
+        emailEmitters.values().forEach(targetEmitters::addAll);
+
+        for (SseEmitter emitter : targetEmitters) {
+            try {
+                emitter.send(SseEmitter.event().name(eventName).data(payload));
+            } catch (Exception e) {
+                log.debug("Dropping dead emitter while broadcasting {}: {}", eventName, e.getMessage());
+                removeFromAll(emitter);
+            }
+        }
+    }
+
     /**
      * Executes send wallet update operation.
      */

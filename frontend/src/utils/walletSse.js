@@ -227,9 +227,27 @@ function initEventSource(user) {
             } catch (e) { }
         };
 
+        const onDietPlanUpdate = (event) => {
+            try {
+                window.dispatchEvent(new CustomEvent('nutrimunch_diet_plan_updated', { detail: JSON.parse(event.data) }));
+            } catch (e) {
+                console.warn('[Wallet SSE] Diet plan event parse error:', e);
+            }
+        };
+
+        const onDietPlanDelete = (event) => {
+            try {
+                window.dispatchEvent(new CustomEvent('nutrimunch_diet_plan_deleted', { detail: JSON.parse(event.data) }));
+            } catch (e) {
+                console.warn('[Wallet SSE] Diet plan deletion event parse error:', e);
+            }
+        };
+
         activeEventSource.addEventListener('chat_message', onChatMessage);
         activeEventSource.addEventListener('conversation_status', onConversationStatus);
         activeEventSource.addEventListener('notification', onNotificationEvent);
+        activeEventSource.addEventListener('diet_plan_updated', onDietPlanUpdate);
+        activeEventSource.addEventListener('diet_plan_deleted', onDietPlanDelete);
 
         activeEventSource.onmessage = onWalletMessage;
         activeEventSource.addEventListener('wallet_update', onWalletMessage);

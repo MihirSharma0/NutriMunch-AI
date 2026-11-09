@@ -5,6 +5,7 @@ import com.nutrition.entity.Role;
 import com.nutrition.security.CustomUserDetails;
 import com.nutrition.service.DietPlanService;
 import com.nutrition.service.NutritionistDietPlanService;
+import com.nutrition.service.WalletSseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ public class DietPlanController {
 
     private final DietPlanService dietPlanService;
     private final NutritionistDietPlanService nutritionistDietPlanService;
+    private final WalletSseService walletSseService;
 
     /**
      * Retained for the admin user-deletion flow. Published plans now live in the
@@ -94,8 +96,27 @@ public class DietPlanController {
         if (userDetails == null) {
             return ResponseEntity.status(401).build();
         }
-        return ResponseEntity.ok(nutritionistDietPlanService.deploy(
-                userDetails.getId(), userDetails.getRole(), planData));
+        Map<String, Object> deployedPlan = nutritionistDietPlanService.deploy(
+                userDetails.getId(), userDetails.getRole(), planData);
+        Map<String, Object> event = Map.of(
+                "type", "DEPLOYED",
+                "planId", deployedPlan.getOrDefault("id", ""),
+                "scope", deployedPlan.getOrDefault("scope", ""),
+                "title", deployedPlan.getOrDefault("title", ""));
+
+        if ("EXCLUSIVE".equals(String.valueOf(deployedPlan.get("scope")))) {
+            Object targetId = deployedPlan.get("targetUserId");
+            try {
+                walletSseService.sendUserEvent(Long.valueOf(String.valueOf(targetId)), null,
+                        "diet_plan_updated", event);
+            } catch (NumberFormatException ignored) {
+                // Invalid/missing targets are rejected by the service before deployment.
+            }
+        } else {
+            walletSseService.broadcastUserEvent("diet_plan_updated", event);
+        }
+
+        return ResponseEntity.ok(deployedPlan);
     }
 
     /**
@@ -157,6 +178,12 @@ public class DietPlanController {
                     // Non-numeric plan identifiers simply have no legacy row to remove.
                 }
             }
+        }
+
+        if (removedPublished) {
+            walletSseService.broadcastUserEvent("diet_plan_deleted", Map.of(
+                    "type", "DELETED",
+                    "planId", cleanId));
         }
 
         Map<String, Object> response = new HashMap<>();

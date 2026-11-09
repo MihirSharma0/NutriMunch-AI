@@ -223,11 +223,6 @@ const ShareYourStoryForm = () => {
                     <span className="material-symbols-outlined text-6xl sm:text-8xl md:text-[10rem] text-emerald-600 dark:text-primary">rate_review</span>
                 </div>
 
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 dark:bg-primary/10 dark:border-primary/20 dark:text-primary text-xs font-bold uppercase tracking-widest mb-4">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-primary animate-pulse"></span>
-                    {editingId ? 'Edit Your Testimonial' : 'Share Your Health Journey'}
-                </div>
-
                 <h2 className="font-hero-display text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3 relative z-10">
                     {editingId ? 'Modify Your Experience' : 'Deploy Your Outcome to the Platform'}
                 </h2>

@@ -1,63 +1,85 @@
 /**
  * How It Works Section
- * Visual multi-step guide explaining the NutriMunch nutrition calibration and consultation lifecycle.
+ * Step-by-step guide to the core NutriMunch user workflow.
  */
 import React from 'react';
 
 /**
- * HowItWorks Component
- * Step-by-step sequential cards illustrating biometric setup, AI diet generation, and nutritionist oversight.
+ * Shows how users can set up their profile, explore nutrition tools,
+ * connect with a nutritionist, and track their progress.
  */
 const HowItWorks = () => {
     const steps = [
         {
-            num: "01",
-            title: "Book Consultation",
-            desc: "Schedule a comprehensive 1-on-1 session with our clinical nutritionists to map out your baseline and objectives.",
-            icon: "event_available"
+            num: '01',
+            title: 'Set Up Your Profile',
+            desc: 'Add your health details, goals, dietary preferences, and allergies to personalize your experience.',
+            icon: 'person_edit'
         },
         {
-            num: "02",
-            title: "Health Assessment",
-            desc: "We analyze your blood work, metabolic rate, and lifestyle factors to create your unique biometric profile.",
-            icon: "biotech"
+            num: '02',
+            title: 'Explore Nutrition Tools',
+            desc: 'Generate a daily meal plan or analyze food and product barcodes with the AI tools.',
+            icon: 'auto_awesome'
         },
         {
-            num: "03",
-            title: "Personalized Plan",
-            desc: "Our AI engine generates a dynamic, meal-by-meal nutritional protocol tailored exactly to your body's needs.",
-            icon: "restaurant_menu"
+            num: '03',
+            title: 'Connect with a Nutritionist',
+            desc: 'Browse verified nutritionists and request a consultation for one-on-one support.',
+            icon: 'support_agent'
         },
         {
-            num: "04",
-            title: "Track & Achieve",
-            desc: "Log your progress daily. The system learns and adapts your protocol automatically to prevent plateaus.",
-            icon: "monitoring"
+            num: '04',
+            title: 'Track Your Progress',
+            desc: 'Log meals, water, and weight, then review your nutrition and health trends over time.',
+            icon: 'monitoring'
         }
     ];
 
     return (
-        <section className="pt-12 pb-16 sm:pb-24 max-w-7xl mx-auto px-4 sm:px-8 relative z-20">
-            <div className="text-center mb-20">
-                <span className="text-emerald-700 dark:text-primary font-bold tracking-widest uppercase text-sm mb-4 block">The Process</span>
-                <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">How It Works</h2>
+        <section className="relative z-20 mx-auto max-w-7xl px-4 py-16 sm:px-8 sm:py-24">
+            <div className="mb-12 max-w-2xl sm:mb-16">
+                <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-700/15 bg-emerald-700/5 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800 dark:border-[#a5d391]/20 dark:bg-[#a5d391]/10 dark:text-[#a5d391]">
+                    <span className="material-symbols-outlined text-sm">route</span>
+                    Your journey
+                </span>
+                <h2 className="font-hero-display text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl lg:text-5xl">
+                    A clearer path to healthier habits
+                </h2>
+                <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 dark:text-white/60 sm:text-lg">
+                    Start with your profile, use the tools that fit your needs, and build steady progress at your own pace.
+                </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-                {/* Connecting Line */}
-                <div className="hidden lg:block absolute top-12 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-white/20 to-transparent"></div>
-                
+            <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="absolute left-[12.5%] right-[12.5%] top-8 hidden h-px bg-gradient-to-r from-emerald-300 via-slate-200 to-sky-300 dark:from-emerald-500/30 dark:via-white/10 dark:to-sky-500/30 xl:block"></div>
                 {steps.map((step, idx) => (
-                    <div key={idx} className="relative z-10 flex flex-col items-center text-center group">
-                        <div className="w-24 h-24 bg-white dark:bg-black/50 shadow-md dark:shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-slate-200 dark:border-white/10 rounded-full flex items-center justify-center mb-6 group-hover:border-emerald-500/50 dark:group-hover:border-primary/50 transition-all relative group-hover:-translate-y-2 duration-500">
-                            <span className="material-symbols-outlined text-3xl text-slate-600 dark:text-white/50 group-hover:text-emerald-700 dark:group-hover:text-primary transition-colors">{step.icon}</span>
-                            <div className="absolute -top-3 -right-3 w-8 h-8 bg-emerald-600 text-white dark:bg-primary dark:text-on-primary rounded-full flex items-center justify-center font-bold text-sm">
-                                {step.num}
+                    <article
+                        key={step.num}
+                        className="group relative z-10 flex min-h-[250px] flex-col rounded-3xl border border-slate-200/90 bg-white/90 p-6 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/30 hover:shadow-[0_24px_48px_-30px_rgba(16,120,75,0.35)] dark:border-white/10 dark:bg-[#0d121c]/90 dark:shadow-[0_18px_40px_-30px_rgba(0,0,0,0.9)] dark:hover:border-[#a5d391]/30 sm:p-7"
+                    >
+                        <div className="mb-8 flex items-center justify-between">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-700/10 bg-gradient-to-br from-emerald-50 to-sky-50 text-emerald-800 transition-transform duration-300 group-hover:scale-105 dark:border-[#a5d391]/20 dark:from-[#a5d391]/15 dark:to-sky-400/10 dark:text-[#a5d391]">
+                                <span className="material-symbols-outlined text-3xl">{step.icon}</span>
                             </div>
+                            <span className="rounded-full border border-emerald-700/15 bg-emerald-700/5 px-3 py-1.5 font-mono text-xs font-bold tracking-wider text-emerald-800 dark:border-[#a5d391]/20 dark:bg-[#a5d391]/10 dark:text-[#a5d391]">
+                                STEP {step.num}
+                            </span>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-emerald-700 dark:group-hover:text-primary transition-colors">{step.title}</h3>
-                        <p className="text-slate-600 dark:text-white/50 text-sm leading-relaxed max-w-xs">{step.desc}</p>
-                    </div>
+                        <div className="mt-auto">
+                            <h3 className="text-xl font-bold leading-snug text-slate-950 transition-colors group-hover:text-emerald-800 dark:text-white dark:group-hover:text-[#a5d391]">
+                                {step.title}
+                            </h3>
+                            <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-white/60">
+                                {step.desc}
+                            </p>
+                        </div>
+                        {idx < steps.length - 1 && (
+                            <span className="material-symbols-outlined absolute -bottom-3 left-1/2 z-20 hidden -translate-x-1/2 rounded-full border border-slate-200 bg-white px-1 text-slate-400 dark:border-white/10 dark:bg-[#0d121c] dark:text-white/40 xl:block">
+                                arrow_forward
+                            </span>
+                        )}
+                    </article>
                 ))}
             </div>
         </section>
