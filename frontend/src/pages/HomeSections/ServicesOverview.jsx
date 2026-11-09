@@ -226,7 +226,7 @@ const ServicesOverview = () => {
             : [
         {
             title: 'AI Diet Generator',
-            desc: 'Generate instant custom weekly meal plans based on your caloric target & budget.',
+            desc: 'Create a personalized daily meal plan based on your nutrition goals and dietary preferences.',
             icon: 'restaurant_menu',
             path: '/ai-diet'
         },
@@ -244,7 +244,7 @@ const ServicesOverview = () => {
         },
         {
             title: 'Appointments & Consultations',
-            desc: 'Book one-on-one virtual consultations with certified nutritionists and nutritionists.',
+            desc: 'Browse nutritionists, request appointments, and manage your consultations.',
             icon: 'support_agent',
             path: '/appointments'
         }
@@ -253,47 +253,62 @@ const ServicesOverview = () => {
     const modalData = getModalServicesForRole(user);
 
     return (
-        <section className="pt-4 sm:pt-6 pb-16 sm:pb-20 relative overflow-hidden z-20">
-            <div className="absolute top-1/2 left-0 w-96 h-96 bg-primary/5 blur-[100px] rounded-full pointer-events-none -translate-y-1/2"></div>
+        <section className="services-overview relative z-20 overflow-hidden py-16 sm:py-20">
+            <div className="absolute -left-40 top-24 h-80 w-80 rounded-full bg-emerald-400/10 blur-[100px] pointer-events-none dark:bg-[#a5d391]/10"></div>
+            <div className="absolute -right-36 bottom-0 h-80 w-80 rounded-full bg-sky-400/10 blur-[100px] pointer-events-none dark:bg-sky-500/10"></div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8">
+            <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+                <div className="mb-10 flex flex-col gap-6 sm:mb-12 md:flex-row md:items-end md:justify-between">
                     <div className="max-w-2xl">
-                        <span className="text-primary font-bold tracking-widest uppercase text-sm mb-4 block font-label-caps">Platform Services</span>
-                        <h2 className="font-hero-display text-4xl md:text-5xl font-bold text-on-background mb-6">AI-Powered Health & Nutrition Services</h2>
-                        <p className="text-on-background/70 text-lg leading-relaxed">
-                            From personalized calorie tracking to automated AI diet generation, our smart tools are tailored to your unique lifestyle and fitness goals.
+                        <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-700/15 bg-emerald-700/5 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800 dark:border-[#a5d391]/20 dark:bg-[#a5d391]/10 dark:text-[#a5d391]">
+                            <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                            Platform Services
+                        </span>
+                        <h2 className="font-hero-display text-3xl font-bold leading-tight tracking-tight text-slate-950 dark:text-white sm:text-4xl lg:text-5xl">
+                            AI-Powered Health & Nutrition Services
+                        </h2>
+                        <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 dark:text-white/65 sm:text-lg">
+                            Practical tools to plan meals, understand food, and keep track of your health progress.
                         </p>
                     </div>
                     <button
                         onClick={() => setShowModal(true)}
-                        className="text-on-background border border-outline-variant/50 hover:border-primary hover:text-primary px-8 py-4 rounded-full font-semibold transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 group shadow-lg"
+                        className="group inline-flex w-fit shrink-0 items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-600 hover:text-emerald-800 hover:shadow-md dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:border-[#a5d391]/60 dark:hover:text-[#a5d391]"
                     >
-                        <span>View All Services</span>
-                        <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">open_in_new</span>
+                        <span>Explore all services</span>
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {featuredServices.map((service, idx) => (
-                        <div
+                        <button
                             key={idx}
+                            type="button"
                             onClick={() => navigate(service.path)}
-                            className="bg-white shadow-xl shadow-black/5 border border-outline-variant/30 rounded-3xl p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-6 group hover:border-primary/50 transition-all cursor-pointer"
+                            className="group relative flex min-h-[245px] w-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-[0_12px_30px_-22px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_22px_42px_-26px_rgba(16,120,75,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-[#0d121c] dark:shadow-[0_16px_40px_-28px_rgba(0,0,0,0.85)] dark:hover:border-[#a5d391]/40 dark:hover:shadow-[0_22px_45px_-24px_rgba(165,211,145,0.16)] dark:focus-visible:ring-[#a5d391] dark:focus-visible:ring-offset-[#080b12]"
                         >
-                            <div className="w-20 h-20 bg-surface rounded-2xl flex items-center justify-center shrink-0 border border-outline-variant/30 group-hover:scale-110 transition-transform duration-500">
-                                <span className="material-symbols-outlined text-4xl text-on-background/70 group-hover:text-primary transition-colors">{service.icon}</span>
+                            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-500/5 blur-2xl transition-colors group-hover:bg-emerald-500/10 dark:bg-[#a5d391]/5 dark:group-hover:bg-[#a5d391]/10"></div>
+                            <div className="relative mb-8 flex w-full items-start justify-between">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-700/10 bg-gradient-to-br from-emerald-50 to-sky-50 text-emerald-800 transition-transform duration-300 group-hover:scale-105 dark:border-[#a5d391]/20 dark:from-[#a5d391]/15 dark:to-sky-400/10 dark:text-[#a5d391]">
+                                    <span className="material-symbols-outlined text-[30px]">{service.icon}</span>
+                                </div>
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 transition-all group-hover:border-emerald-700 group-hover:bg-emerald-700 group-hover:text-white dark:border-white/10 dark:bg-white/5 dark:text-white/55 dark:group-hover:border-[#a5d391] dark:group-hover:bg-[#a5d391] dark:group-hover:text-[#080b12]">
+                                    <ArrowRight className="h-4 w-4 transition-transform group-hover:-rotate-45" />
+                                </span>
                             </div>
-                            <div className="flex-grow">
-                                <h3 className="text-2xl font-bold text-on-background mb-3 group-hover:text-primary transition-colors">{service.title}</h3>
-                                <p className="text-on-background/70 leading-relaxed">
+                            <div className="relative mt-auto">
+                                <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-800/65 dark:text-[#a5d391]/60">
+                                    {String(idx + 1).padStart(2, '0')} / Service
+                                </span>
+                                <h3 className="text-xl font-bold leading-snug text-slate-950 transition-colors group-hover:text-emerald-800 dark:text-white dark:group-hover:text-[#a5d391]">
+                                    {service.title}
+                                </h3>
+                                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-white/60">
                                     {service.desc}
                                 </p>
                             </div>
-                            <div className="ml-auto hidden md:block">
-                                <span className="material-symbols-outlined text-on-background/30 text-3xl group-hover:text-primary transition-colors group-hover:translate-x-2 duration-300">arrow_forward</span>
-                            </div>
-                        </div>
+                        </button>
                     ))}
                 </div>
             </div>
