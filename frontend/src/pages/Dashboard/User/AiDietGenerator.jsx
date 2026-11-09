@@ -416,12 +416,20 @@ const AiDietGenerator = () => {
       });
       setSaved(false);
     } catch (requestError) {
+      const status = requestError?.response?.status;
       const backendMessage = requestError?.response?.data?.message
-        || requestError?.response?.data?.detail
-        || requestError?.message;
-      const errorMessage = requestError?.response?.status === 503
-        ? backendMessage || 'The AI service may be experiencing high load. Please try again shortly.'
-        : backendMessage || 'Failed to generate the diet plan. The AI service may be experiencing high load; please try again later.';
+        || requestError?.response?.data?.detail;
+
+      // Provide a clean, friendly user-facing error message instead of raw HTTP / Axios codes
+      let errorMessage = 'We are currently experiencing a high load on the AI service. Please come back and try again shortly.';
+      if (status === 503 || status === 429) {
+        errorMessage = 'We are currently experiencing a high load on the AI service. Please come back and try again shortly.';
+      } else if (status === 401) {
+        errorMessage = 'We are experiencing a temporary service load. Please try again or log in again after some time.';
+      } else if (backendMessage && !backendMessage.toLowerCase().includes('status code')) {
+        errorMessage = backendMessage;
+      }
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -462,9 +470,14 @@ const AiDietGenerator = () => {
     } catch (requestError) {
       const responseData = requestError?.response?.data;
       const backendMessage = responseData?.message || responseData?.error;
-      setError(requestError?.response?.status === 401
-        ? 'Please sign in to save this diet plan.'
-        : backendMessage || 'Could not save this diet plan. Please try again.');
+      const status = requestError?.response?.status;
+      setError(
+        status === 401
+          ? 'We are experiencing high load or your session has timed out. Please try again after some time.'
+          : (backendMessage && !backendMessage.toLowerCase().includes('status code'))
+          ? backendMessage
+          : 'Could not save this diet plan right now due to server load. Please try again in a few moments.'
+      );
     } finally {
       setSaving(false);
     }
@@ -931,17 +944,19 @@ const CSS = `
 }
 .aidg-normalized { opacity: 0.75; margin-left: 3px; }
 
-/* Error */
+/* Error Alert Card */
 .aidg-error {
   display: flex;
   align-items: center;
-  gap: 9px;
-  background: rgba(255,107,107,0.07);
-  border: 1px solid rgba(255,107,107,0.18);
-  color: #ff9b9b;
-  border-radius: 11px;
-  padding: 11px 14px;
+  gap: 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fcd34d;
+  border-radius: 14px;
+  padding: 13px 16px;
   font-size: 13.5px;
+  line-height: 1.5;
+  box-shadow: 0 4px 20px -2px rgba(245, 158, 11, 0.06);
 }
 .aidg-profile-notice,
 .aidg-profile-disclaimer {
