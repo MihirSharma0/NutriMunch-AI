@@ -43,23 +43,13 @@ const isAuthRequest = (url) => {
 
 /**
  * Response Interceptor
- * An expired/invalid JWT on any other endpoint means the session is no longer
- * valid: clear it and broadcast one event so AuthContext can route to login.
+ * Do not automatically clear the token or force redirect to the login page on errors.
+ * Preserves the current page so users and admins can see and fix the error on the spot.
  */
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        const status = error?.response?.status;
-        const url = error?.config?.url || '';
-        if (status === 401 && !isAuthRequest(url) && localStorage.getItem('token')) {
-            try {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.dispatchEvent(new Event('nutrimunch_session_expired'));
-            } catch (e) {
-                console.warn('[Auth] could not clear expired session:', e);
-            }
-        }
+        // Return the rejected promise so individual caller components can handle the error in-place
         return Promise.reject(error);
     }
 );

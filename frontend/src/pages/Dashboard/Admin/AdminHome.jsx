@@ -10,6 +10,7 @@ import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 import { getEmailError } from '../../../utils/emailValidation';
 import { getPasswordError } from '../../../utils/formValidation';
+import LlmConfigCard from './LlmConfigCard';
 
 /**
  * AdminHome Component
@@ -166,6 +167,9 @@ const AdminHome = () => {
                     </div>
                 </div>
             </div>
+
+            {/* LLM Configuration Module (OpenRouter Exclusive) */}
+            <LlmConfigCard />
 
             {/* Quick Action Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

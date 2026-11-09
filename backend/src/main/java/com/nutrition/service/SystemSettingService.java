@@ -34,4 +34,19 @@ public class SystemSettingService {
         setting.setSettingValue(String.valueOf(enabled));
         systemSettingRepository.save(setting);
     }
+
+    public String getSetting(String key, String defaultValue) {
+        return systemSettingRepository.findBySettingKey(key)
+                .map(SystemSetting::getSettingValue)
+                .filter(val -> !val.isBlank())
+                .orElse(defaultValue);
+    }
+
+    public void setSetting(String key, String value) {
+        SystemSetting setting = systemSettingRepository.findBySettingKey(key)
+                .orElse(new SystemSetting());
+        setting.setSettingKey(key);
+        setting.setSettingValue(value != null ? value.trim() : "");
+        systemSettingRepository.save(setting);
+    }
 }

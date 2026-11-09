@@ -35,6 +35,7 @@ public class AdminController {
     private final UserProfileRepository userProfileRepository;
     private final UserProfileService userProfileService;
     private final com.nutrition.repository.DietPlanRepository dietPlanRepository;
+    private final com.nutrition.service.AiService aiService;
     private final SystemSettingService systemSettingService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
@@ -52,6 +53,65 @@ public class AdminController {
 
     @org.springframework.beans.factory.annotation.Value("${app.admin.email:}")
     private String configuredAdminEmail;
+
+    /**
+     * Retrieves the current LLM configuration (OpenRouter only).
+     */
+    @GetMapping("/llm-config")
+    public ResponseEntity<Map<String, Object>> getLlmConfig() {
+        String effectiveKey = aiService.getEffectiveApiKey();
+        boolean hasKey = effectiveKey != null && !effectiveKey.isBlank() && !"mock-key".equals(effectiveKey);
+        String maskedKey = "";
+        if (hasKey) {
+            maskedKey = effectiveKey.length() > 8
+                    ? effectiveKey.substring(0, 4) + "..." + effectiveKey.substring(effectiveKey.length() - 4)
+                    : "••••••••";
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("provider", "OPENROUTER");
+        response.put("model", aiService.getEffectiveModel());
+        response.put("baseUrl", aiService.getEffectiveBaseUrl());
+        response.put("hasApiKey", hasKey);
+        response.put("maskedApiKey", maskedKey);
+        response.put("defaultModel", "google/gemini-2.5-flash");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Updates the OpenRouter LLM configuration.
+     */
+    @PutMapping("/llm-config")
+    public ResponseEntity<Map<String, Object>> updateLlmConfig(@RequestBody Map<String, String> body) {
+        String model = body.get("model");
+        String apiKey = body.get("apiKey");
+        String baseUrl = body.get("baseUrl");
+
+        if (model != null && !model.isBlank()) {
+            systemSettingService.setSetting("OPENROUTER_MODEL", model.trim());
+        }
+        if (apiKey != null && !apiKey.isBlank()) {
+            systemSettingService.setSetting("OPENROUTER_API_KEY", apiKey.trim());
+        }
+        if (baseUrl != null) {
+            systemSettingService.setSetting("OPENROUTER_BASE_URL", baseUrl.trim());
+        }
+
+        return getLlmConfig();
+    }
+
+    /**
+     * Tests connectivity to OpenRouter with either the saved or candidate configuration.
+     */
+    @PostMapping("/llm-config/test")
+    public ResponseEntity<Map<String, Object>> testLlmConnection(@RequestBody(required = false) Map<String, String> body) {
+        String candidateKey = body != null ? body.get("apiKey") : null;
+        String candidateModel = body != null ? body.get("model") : null;
+        String candidateBaseUrl = body != null ? body.get("baseUrl") : null;
+
+        Map<String, Object> result = aiService.testOpenRouterConnection(candidateKey, candidateModel, candidateBaseUrl);
+        return ResponseEntity.ok(result);
+    }
 
     @GetMapping("/credentials")
     public ResponseEntity<Map<String, String>> getAdminCredentials() {
