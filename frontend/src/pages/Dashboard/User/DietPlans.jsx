@@ -968,7 +968,7 @@ const DietPlans = () => {
                                         type="button"
                                         onClick={() => {
                                             setIsImportModalOpen(false);
-                                            navigate('/dashboard/user/progress-tracking');
+                                            navigate('/progress');
                                         }}
                                         className="w-full sm:w-auto bg-[#a5d391] text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-lg"
                                     >

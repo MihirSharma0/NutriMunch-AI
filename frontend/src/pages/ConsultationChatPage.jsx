@@ -288,7 +288,7 @@ const ConsultationChatPage = () => {
         } else if (role === 'ADMIN') {
             navigate('/dashboard/admin');
         } else if (role === 'USER') {
-            navigate('/dashboard/user');
+            navigate('/profile');
         } else {
             navigate('/');
         }

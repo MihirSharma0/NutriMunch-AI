@@ -398,7 +398,7 @@ const TransactionHistory = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <div className="flex items-center gap-2 text-xs text-white/50 mb-1">
-                            <Link to={isAdmin ? "/dashboard/admin" : isNutritionist ? "/dashboard/nutritionist" : "/dashboard/user"} className="hover:text-[#a5d391] transition-colors">
+                            <Link to={isAdmin ? "/dashboard/admin" : isNutritionist ? "/dashboard/nutritionist" : "/profile"} className="hover:text-[#a5d391] transition-colors">
                                 Dashboard
                             </Link>
                             <span>/</span>

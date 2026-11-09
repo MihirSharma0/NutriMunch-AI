@@ -140,7 +140,7 @@ const VerifyOtp = () => {
                     initialEmail={email} 
                     initialFirstName={verifiedUser?.firstName || location.state?.firstName || pendingData.firstName || ''} 
                     initialLastName={verifiedUser?.lastName || location.state?.lastName || pendingData.lastName || ''} 
-                    onComplete={() => navigate('/dashboard/user')} 
+                    onComplete={() => navigate('/profile')} 
                 />
             ) : (
                 <div className={`w-full max-w-md rounded-[2.5rem] shadow-2xl p-6 sm:p-10 relative z-10 backdrop-blur-2xl transition-all duration-300 border ${

@@ -23,7 +23,6 @@ import ForgotPassword from './pages/Authentication/ForgotPassword';
 import ResetPassword from './pages/Authentication/ResetPassword';
 
 // User Dashboard Layout & Pages
-import DashboardHome from './pages/Dashboard/User/DashboardHome';
 import Profile from './pages/Dashboard/User/Profile';
 import Appointments from './pages/Dashboard/User/Appointments';
 import ProgressTracking from './pages/Dashboard/User/ProgressTracking';
@@ -118,7 +117,7 @@ function App() {
                 </Route>
                 {/* User Platform Feature Routes & Dashboard Aliases */}
                 <Route path="profile" element={<Profile />} />
-                <Route path="dashboard" element={<Navigate to="/dashboard/user" replace />} />
+                <Route path="dashboard" element={<Navigate to="/profile" replace />} />
                 <Route path="ai-diet" element={<AiDietGenerator />} />
                 <Route path="ai-image" element={<AiImageAnalyzer />} />
                 <Route path="progress" element={<ProgressTracking />} />
@@ -126,7 +125,7 @@ function App() {
                 <Route path="reports" element={<Reports />} />
                 <Route path="virtual-room" element={<VirtualRoom />} />
                 <Route path="room" element={<VirtualRoom />} />
-                <Route path="dashboard/user" element={<DashboardHome />} />
+                <Route path="dashboard/user" element={<Navigate to="/profile" replace />} />
                 <Route path="dashboard/user/profile" element={<Profile />} />
                 <Route path="dashboard/user/ai-diet" element={<AiDietGenerator />} />
                 <Route path="dashboard/user/ai-image" element={<AiImageAnalyzer />} />

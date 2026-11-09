@@ -2305,7 +2305,7 @@ const Reports = () => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    navigate(`/dashboard/user/progress?section=nutrition&date=${todayStr}#nutrition-section`);
+                                    navigate(`/progress?section=nutrition&date=${todayStr}#nutrition-section`);
                                 }}
                                 className="px-3 py-2 rounded-xl text-xs font-bold bg-[#a5d391]/15 hover:bg-[#a5d391]/25 text-[#a5d391] border border-[#a5d391]/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                                 title="Log today's daily nutrition count on Progress page"
@@ -2348,7 +2348,7 @@ const Reports = () => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    navigate(`/dashboard/user/progress?section=nutrition&date=${selectedDayDate}#nutrition-section`);
+                                    navigate(`/progress?section=nutrition&date=${selectedDayDate}#nutrition-section`);
                                 }}
                                 className="px-3 py-2 rounded-xl text-xs font-bold bg-[#a5d391]/15 hover:bg-[#a5d391]/25 text-[#a5d391] border border-[#a5d391]/30 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                                 title="Log or adjust nutrition count for selected day on Progress page"
@@ -2493,7 +2493,7 @@ const Reports = () => {
                                         type="button"
                                         onClick={() => {
                                             const targetD = viewMode === 'today' ? todayStr : selectedDayDate;
-                                            navigate(`/dashboard/user/progress?section=water&date=${targetD}#water-section`);
+                                            navigate(`/progress?section=water&date=${targetD}#water-section`);
                                         }}
                                         className="px-3 py-1 rounded-full bg-gradient-to-r from-[#38bdf8]/20 to-cyan-500/20 hover:from-[#38bdf8]/30 hover:to-cyan-500/30 text-[#38bdf8] hover:text-white border border-[#38bdf8]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
                                         title="Navigate to Smart Hydration Tracker on Progress Page"
@@ -2595,7 +2595,7 @@ const Reports = () => {
                                         type="button"
                                         onClick={() => {
                                             const targetD = viewMode === 'today' ? todayStr : selectedDayDate;
-                                            navigate(`/dashboard/user/progress?section=nutrition&date=${targetD}#nutrition-section`);
+                                            navigate(`/progress?section=nutrition&date=${targetD}#nutrition-section`);
                                         }}
                                         className="px-3 py-1 rounded-full bg-gradient-to-r from-[#a5d391]/20 to-emerald-500/20 hover:from-[#a5d391]/30 hover:to-emerald-500/30 text-[#a5d391] hover:text-white border border-[#a5d391]/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
                                         title="Navigate to Daily Nutrition Count on Progress Page"

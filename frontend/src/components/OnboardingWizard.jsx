@@ -220,7 +220,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
             if (onComplete) {
                 onComplete();
             } else {
-                navigate('/dashboard/user');
+                navigate('/profile');
             }
         } catch (err) {
             console.error("Onboarding profile save error", err);
@@ -231,7 +231,7 @@ const OnboardingWizard = ({ initialEmail = '', initialFirstName = '', initialLas
             if (onComplete) {
                 onComplete();
             } else {
-                navigate('/dashboard/user');
+                navigate('/profile');
             }
         } finally {
             setSaving(false);
