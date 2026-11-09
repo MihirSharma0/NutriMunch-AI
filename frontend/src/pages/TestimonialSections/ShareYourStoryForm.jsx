@@ -173,12 +173,12 @@ const ShareYourStoryForm = () => {
     if (!user) {
         return (
             <section id="story-form-container" className="py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-8 relative z-20">
-                <div className="bg-white/95 dark:bg-black border border-slate-200 dark:border-white/10 rounded-[3rem] p-8 sm:p-12 md:p-14 text-center relative overflow-hidden shadow-2xl transition-colors">
-                    <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 dark:bg-[#a5d391]/15 dark:text-[#a5d391] border border-emerald-300 dark:border-[#a5d391]/30 flex items-center justify-center mx-auto mb-6">
+                <div className="bg-white/95 border border-slate-200/90 shadow-2xl dark:bg-gradient-to-br dark:from-primary/10 dark:via-[#080b12]/80 dark:to-[#38bdf8]/10 dark:border-white/10 rounded-[3rem] p-8 sm:p-12 md:p-14 text-center relative overflow-hidden dark:shadow-2xl dark:backdrop-blur-xl transition-colors">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 dark:bg-primary/10 dark:text-primary border border-emerald-300 dark:border-primary/20 flex items-center justify-center mx-auto mb-6">
                         <span className="material-symbols-outlined text-3xl">lock</span>
                     </div>
 
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-[#a5d391]/15 border border-emerald-300 dark:border-[#a5d391]/30 text-emerald-800 dark:text-[#a5d391] text-xs font-bold uppercase tracking-widest mb-4">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 dark:bg-primary/10 dark:border-primary/20 dark:text-primary text-xs font-bold uppercase tracking-widest mb-4">
                         Login Required
                     </div>
 
@@ -192,7 +192,7 @@ const ShareYourStoryForm = () => {
 
                     <Link
                         to="/login"
-                        className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black dark:hover:bg-white font-bold px-8 py-4 rounded-full text-sm transition-all shadow-lg shadow-emerald-600/20 dark:shadow-[0_0_20px_rgba(165,211,145,0.3)] cursor-pointer hover:-translate-y-0.5"
+                        className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-primary dark:text-[#080b12] font-bold px-8 py-4 rounded-full text-sm dark:hover:bg-white transition-all shadow-lg shadow-emerald-600/20 dark:shadow-primary/20 cursor-pointer hover:-translate-y-0.5"
                     >
                         <span className="material-symbols-outlined text-lg">login</span>
                         Login to Submit Testimonial
@@ -204,11 +204,11 @@ const ShareYourStoryForm = () => {
 
     return (
         <section id="story-form-container" className="py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-8 relative z-20">
-            <div className="bg-white/95 dark:bg-black border border-slate-200 dark:border-white/10 rounded-[3rem] p-6 sm:p-10 md:p-14 text-center relative overflow-hidden shadow-2xl transition-colors">
+            <div className="bg-white/95 border border-slate-200/90 shadow-2xl dark:bg-gradient-to-br dark:from-primary/10 dark:via-[#080b12]/80 dark:to-[#38bdf8]/10 dark:border-white/10 rounded-[3rem] p-6 sm:p-10 md:p-14 text-center relative overflow-hidden dark:shadow-2xl dark:backdrop-blur-xl transition-colors">
 
                 {/* Notification Banner */}
                 {notification && (
-                    <div className={`mb-6 p-4 rounded-2xl border text-sm font-bold flex items-center justify-between animate-fadeIn ${notification.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'}`}>
+                    <div className={`mb-6 p-4 rounded-2xl border text-sm font-bold flex items-center justify-between animate-fadeIn ${notification.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300' : 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300'}`}>
                         <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-lg">{notification.type === 'success' ? 'check_circle' : 'error'}</span>
                             <span>{notification.message}</span>
@@ -223,8 +223,8 @@ const ShareYourStoryForm = () => {
                     <span className="material-symbols-outlined text-6xl sm:text-8xl md:text-[10rem] text-emerald-600 dark:text-primary">rate_review</span>
                 </div>
 
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-[#a5d391]/15 border border-emerald-300 dark:border-[#a5d391]/30 text-emerald-800 dark:text-[#a5d391] text-xs font-bold uppercase tracking-widest mb-4">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-[#a5d391] animate-pulse"></span>
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 dark:bg-primary/10 dark:border-primary/20 dark:text-primary text-xs font-bold uppercase tracking-widest mb-4">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-primary animate-pulse"></span>
                     {editingId ? 'Edit Your Testimonial' : 'Share Your Health Journey'}
                 </div>
 
@@ -246,7 +246,7 @@ const ShareYourStoryForm = () => {
                                 value={name}
                                 maxLength="80"
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full h-[50px] bg-slate-50 dark:bg-black border border-slate-300 dark:border-white/15 rounded-2xl px-5 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-600 dark:focus:border-[#a5d391] transition-colors text-sm shadow-sm"
+                                className="w-full h-[50px] bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded-2xl px-5 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-emerald-600 dark:focus:border-primary transition-colors text-sm shadow-sm"
                                 placeholder="Jane Doe"
                                 required
                             />
@@ -255,7 +255,7 @@ const ShareYourStoryForm = () => {
                         {/* Verified Role - Read-only & locked to account role */}
                         <div>
                             <label className="block text-slate-700 dark:text-white/50 text-xs font-bold uppercase tracking-widest mb-2 pl-1">Verified Role</label>
-                            <div className="w-full h-[50px] bg-slate-100 dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/15 rounded-2xl px-5 text-slate-800 dark:text-white/90 text-sm flex items-center justify-between font-semibold select-none cursor-not-allowed">
+                            <div className="w-full h-[50px] bg-slate-100 dark:bg-black/60 border border-slate-300 dark:border-white/10 rounded-2xl px-5 text-slate-800 dark:text-white/90 text-sm flex items-center justify-between font-semibold select-none cursor-not-allowed">
                                 <span className="flex items-center gap-2 min-w-0">
                                     <span className="material-symbols-outlined text-base text-emerald-700 dark:text-[#a5d391] shrink-0">verified</span>
                                     <span className="whitespace-nowrap font-bold text-xs sm:text-sm text-slate-900 dark:text-white">{role}</span>
@@ -271,14 +271,14 @@ const ShareYourStoryForm = () => {
                                 value={programResult}
                                 maxLength="200"
                                 onChange={(e) => setProgramResult(e.target.value)}
-                                className="w-full h-[50px] bg-slate-50 dark:bg-black border border-slate-300 dark:border-white/15 rounded-2xl px-5 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-600 dark:focus:border-[#a5d391] transition-colors text-sm shadow-sm"
+                                className="w-full h-[50px] bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded-2xl px-5 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-emerald-600 dark:focus:border-primary transition-colors text-sm shadow-sm"
                                 placeholder="e.g. your own result"
                             />
                         </div>
                     </div>
 
                     {/* Star Rating Picker */}
-                    <div className="bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                    <div className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                         <div>
                             <label className="block text-slate-900 dark:text-white font-bold text-sm mb-1">Overall Satisfaction Rating</label>
                             <p className="text-slate-500 dark:text-white/40 text-xs">Select your rating out of 5 stars</p>
@@ -301,7 +301,7 @@ const ShareYourStoryForm = () => {
                                     </button>
                                 );
                             })}
-                            <span className="ml-2 text-amber-800 dark:text-amber-400 font-bold text-sm bg-amber-100 dark:bg-amber-400/10 border border-amber-300 dark:border-amber-400/20 px-3 py-1 rounded-full">
+                            <span className="ml-2 text-amber-900 dark:text-amber-400 font-bold text-sm bg-amber-100 border border-amber-300 dark:bg-amber-400/10 dark:border-amber-400/20 px-3 py-1 rounded-full">
                                 {rating} / 5
                             </span>
                         </div>
@@ -315,7 +315,7 @@ const ShareYourStoryForm = () => {
                             maxLength="2000"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-black border border-slate-300 dark:border-white/15 rounded-2xl p-5 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-emerald-600 dark:focus:border-[#a5d391] transition-colors resize-none text-sm leading-relaxed shadow-sm"
+                            className="w-full bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded-2xl p-5 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-emerald-600 dark:focus:border-primary transition-colors resize-none text-sm leading-relaxed shadow-sm"
                             placeholder="Describe how NutriMunch AI dynamic meal planning, water tracking, or nutritionist support impacted your health..."
                             required
                         ></textarea>
@@ -327,7 +327,7 @@ const ShareYourStoryForm = () => {
                             <button
                                 type="button"
                                 onClick={() => setIsPreviewOpen(true)}
-                                className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-bold px-6 py-3.5 rounded-xl border border-slate-200 dark:border-white/15 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
+                                className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-bold px-6 py-3.5 rounded-xl border border-slate-300 dark:border-white/15 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-lg">visibility</span>
                                 Preview Card
@@ -336,7 +336,7 @@ const ShareYourStoryForm = () => {
                                 <button
                                     type="button"
                                     onClick={resetForm}
-                                    className="w-full sm:w-auto bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white font-bold px-4 py-3.5 rounded-xl border border-slate-300 dark:border-white/10 text-sm cursor-pointer"
+                                    className="w-full sm:w-auto bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 font-bold px-4 py-3.5 rounded-xl border border-slate-300 dark:hover:bg-white/5 dark:text-white/60 dark:hover:text-white dark:border-white/10 text-sm cursor-pointer"
                                 >
                                     Cancel Edit
                                 </button>
@@ -346,7 +346,7 @@ const ShareYourStoryForm = () => {
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black dark:hover:bg-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-md shadow-emerald-600/20 dark:shadow-[0_0_20px_rgba(165,211,145,0.3)] text-sm flex items-center justify-center gap-2 cursor-pointer"
+                            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-primary dark:text-[#080b12] dark:hover:bg-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-md shadow-emerald-600/20 dark:shadow-lg dark:shadow-primary/20 text-sm flex items-center justify-center gap-2 cursor-pointer"
                         >
                             <span className="material-symbols-outlined text-lg">publish</span>
                             {isSubmitting ? 'Deploying...' : (editingId ? 'Update Testimonial' : 'Submit & Deploy Live')}
@@ -367,7 +367,7 @@ const ShareYourStoryForm = () => {
 
                         <div className="space-y-4">
                             {myTestimonials.map((test) => (
-                                <div key={test.id} className="bg-slate-50 dark:bg-black border border-slate-200 dark:border-white/10 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-emerald-500/40 dark:hover:border-primary/30 transition-all shadow-sm">
+                                <div key={test.id} className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-emerald-500/40 dark:hover:border-primary/30 transition-all shadow-sm">
                                     <div className="space-y-2 flex-grow">
                                         <div className="flex items-center gap-3">
                                             <span className="font-bold text-slate-900 dark:text-white text-base">{test.authorName}</span>
@@ -393,7 +393,7 @@ const ShareYourStoryForm = () => {
                                         </button>
                                         <button
                                             onClick={() => handleDelete(test.id)}
-                                            className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer"
+                                            className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:border-rose-500/20 dark:text-rose-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer"
                                         >
                                             <span className="material-symbols-outlined text-sm">delete</span>
                                             Remove
@@ -409,7 +409,7 @@ const ShareYourStoryForm = () => {
             {/* Modal: Live Testimonial Preview */}
             {isPreviewOpen && (
                 <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-slate-900/60 dark:bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-                    <div className="bg-white dark:bg-black border border-slate-200 dark:border-white/20 rounded-[2.5rem] p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
+                    <div className="bg-white dark:bg-[#080b12] border border-slate-200 dark:border-white/20 rounded-[2.5rem] p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
                         <div className="flex justify-between items-center border-b border-slate-200 dark:border-white/10 pb-4">
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                 <span className="material-symbols-outlined text-emerald-700 dark:text-primary">visibility</span>
@@ -421,7 +421,7 @@ const ShareYourStoryForm = () => {
                         </div>
 
                         {/* Card Preview */}
-                        <div className="bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-[2rem] p-6 relative overflow-hidden space-y-4">
+                        <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[2rem] p-6 relative overflow-hidden space-y-4">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
                                     <img
