@@ -83,13 +83,6 @@ const ClientTestimonials = ({ showHeader = true, showAll = true, limit = 6 }) =>
                                     </div>
                                 </div>
 
-                                {/* Program Result Badge */}
-                                {(test.programResult || test.result) && (
-                                    <div className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-primary/10 dark:border-primary/20 dark:text-primary text-xs font-bold mb-4">
-                                        {test.programResult || test.result}
-                                    </div>
-                                )}
-
                                 {/* Quote Content */}
                                 <p className="text-slate-700 dark:text-white/80 leading-relaxed italic text-sm relative z-10">
                                     "{test.content || test.quote}"

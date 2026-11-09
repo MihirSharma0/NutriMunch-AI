@@ -698,7 +698,7 @@ const Appointments = () => {
                             Loading consultation schedule...
                         </div>
                     ) : activeDisplayedAppointment ? (
-                        <div className="bg-gradient-to-r from-[#a5d391]/10 via-white/5 to-[#080b12] backdrop-blur-xl border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 flex flex-col md:flex-row gap-6 items-center shadow-xl relative overflow-hidden">
+                        <div className="appointment-featured-card bg-gradient-to-r from-[#a5d391]/10 via-white/5 to-[#080b12] backdrop-blur-xl border border-[#a5d391]/30 rounded-[2.5rem] p-6 lg:p-8 flex flex-col md:flex-row gap-6 items-center shadow-xl relative overflow-hidden">
                             <div className="bg-[#080b12]/90 border border-white/10 rounded-2xl p-4 text-center min-w-[110px] shrink-0 shadow-lg">
                                 <div className="text-[#a5d391] font-bold text-xs uppercase tracking-widest mb-1">
                                     {formatDate(activeDisplayedAppointment.appointmentTime).month}
