@@ -9,6 +9,11 @@ import api from '../../../api/axios';
 import { AuthContext } from '../../../context/AuthContext';
 import FeatureGate from '../../../components/FeatureGate';
 
+const getAuthRequestConfig = () => {
+    const token = localStorage.getItem('token');
+    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+};
+
 /**
  * UserManagement Component
  * User administration table providing search, role modification, and account status controls.
@@ -54,7 +59,7 @@ const UserManagement = () => {
         }
         if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
             try {
-                await api.delete(`/admin/users/${id}`);
+                await api.delete(`/admin/users/${id}`, getAuthRequestConfig());
                 setUsers(users.filter(u => u.id !== id));
                 setActionNotice({ type: 'success', text: `${targetUser?.email || 'Account'} was deleted.` });
 
@@ -117,7 +122,7 @@ const UserManagement = () => {
 
     const changeRole = async (id, newRole) => {
         try {
-            await api.put(`/admin/users/${id}/role`, { role: newRole });
+            await api.put(`/admin/users/${id}/role`, { role: newRole }, getAuthRequestConfig());
 
             // 1. Instantly update local table state
             setUsers(prev => prev.map(u => u.id === id ? { ...u, role: newRole } : u));
@@ -176,7 +181,7 @@ const UserManagement = () => {
         try {
             const response = await api.post(`/admin/users/${selectedUser.id}/reset-password`, {
                 newPassword: newPassword
-            });
+            }, getAuthRequestConfig());
             setResetMessage(response.data.message || "Password reset successfully!");
             setActionNotice({ type: 'success', text: `Password reset for ${selectedUser.email}.` });
             setTimeout(() => {

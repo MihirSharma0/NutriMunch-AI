@@ -54,7 +54,7 @@ const UserRoles = () => {
         {
             icon: Calendar,
             title: '1-on-1 Certified Nutritionist Consults',
-            desc: 'Book one-on-one virtual video and chat consultations with verified professional nutritionists and licensed nutritionists.'
+            desc: 'Book one-on-one virtual video and chat consultations with verified, licensed nutritionists.'
         },
         {
             icon: FileText,
@@ -112,16 +112,6 @@ const UserRoles = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 {/* Hero Header */}
                 <div className="text-center max-w-3xl mx-auto mb-16">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-primary/10 border border-emerald-200 dark:border-primary/30 text-emerald-700 dark:text-primary text-xs font-bold uppercase tracking-widest mb-6"
-                    >
-                        <Sparkles className="w-4 h-4" />
-                        Platform Roles & Capabilities
-                    </motion.div>
-
                     <motion.h1
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -263,12 +253,12 @@ const UserRoles = () => {
                                             <Stethoscope className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-slate-900 dark:text-white">Nutritionist & Nutritionist Role</h2>
+                                            <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-slate-900 dark:text-white">Nutritionist Role</h2>
                                             <span className="text-xs font-bold text-emerald-700 dark:text-[#a5d391] uppercase tracking-wider">For Healthcare & Clinical Professionals</span>
                                         </div>
                                     </div>
                                     <p className="text-slate-600 dark:text-white/70 leading-relaxed text-sm sm:text-base">
-                                        Designed specifically for certified nutritionists and nutritionists. Manage client rosters, prescribe customized weekly meal plans directly to patients, schedule virtual appointments, and generate white-labeled clinical PDF reports.
+                                        Designed for certified nutritionists. Manage client rosters, prescribe customized weekly meal plans directly to patients, schedule virtual appointments, and generate white-labeled clinical PDF reports.
                                     </p>
                                 </div>
                                 <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">

@@ -6,6 +6,7 @@ import com.nutrition.entity.User;
 import com.nutrition.repository.NutritionistProfileRepository;
 import com.nutrition.repository.UserProfileRepository;
 import com.nutrition.repository.UserRepository;
+import com.nutrition.repository.NutritionistDietPlanRepository;
 import com.nutrition.dto.UserProfileDto;
 import com.nutrition.security.CustomUserDetails;
 import com.nutrition.service.UserProfileService;
@@ -35,6 +36,7 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final NutritionistProfileRepository nutritionistProfileRepository;
+    private final NutritionistDietPlanRepository nutritionistDietPlanRepository;
     private final UserProfileRepository userProfileRepository;
     private final UserProfileService userProfileService;
     private final com.nutrition.repository.DietPlanRepository dietPlanRepository;
@@ -340,6 +342,7 @@ public class AdminController {
 
         // Remove all records owned by or directly linked to the account first.
         conversationRepository.deleteByPatient_IdOrNutritionist_Id(id, id);
+        nutritionistDietPlanRepository.deleteReferencingUser(id);
         dietPlanRepository.deleteByUserId(id);
         appointmentRepository.deleteByUserId(id);
         appointmentRepository.deleteByNutritionistId(id);

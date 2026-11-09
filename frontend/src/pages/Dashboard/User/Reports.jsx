@@ -2201,7 +2201,7 @@ const Reports = () => {
     };
 
     return (
-        <div className="w-full text-white space-y-8 font-body-md">
+        <div className="health-reports-page w-full text-white space-y-8 font-body-md">
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
@@ -2460,17 +2460,6 @@ const Reports = () => {
                         </div>
                     )}
 
-                    {/* Direct Statement PDF Action */}
-                    <ExportRangeSelect value={exportRange} onChange={setExportRange} />
-                    <button
-                        onClick={() => handleDownloadReportPdf('Active')}
-                        disabled={isDownloadingPdf}
-                        className="bg-white/10 hover:bg-[#a5d391] text-white hover:text-black font-bold text-xs px-3.5 py-1.5 rounded-xl border border-white/15 hover:border-[#a5d391] transition-all flex items-center gap-1.5 cursor-pointer ml-auto"
-                        title="Download Health Report for current selected period"
-                    >
-                        <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
-                        <span>{isDownloadingPdf ? 'Generating...' : 'Download Health Report'}</span>
-                    </button>
                 </div>
             </div>
 
@@ -2894,7 +2883,7 @@ const Reports = () => {
 
                 {/* An unlogged day is a recorded zero, so the chart still renders. */}
                 {!chartHasIntake && (
-                    <div className="flex items-center gap-1.5 text-xs text-amber-300/80">
+                    <div className="health-reports-zero-note flex items-center gap-1.5 text-xs text-amber-300/80">
                         <span className="material-symbols-outlined text-sm">info</span>
                         No intake logged for this range — values shown as 0 (not estimated).
                     </div>

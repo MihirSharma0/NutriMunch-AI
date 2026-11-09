@@ -395,8 +395,12 @@ const MobileBottomNav = () => {
                                     <div className={`
                                         relative w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200
                                         ${isSelected
-                                            ? 'bg-white/15 text-[#a5d391] shadow-inner border border-white/20'
-                                            : 'text-white/50 hover:text-white/90 group-hover:bg-white/5'
+                                            ? (isDark
+                                                ? 'bg-white/15 text-[#a5d391] shadow-inner border border-white/20'
+                                                : 'bg-white text-emerald-700 shadow-sm border border-slate-300')
+                                            : (isDark
+                                                ? 'text-white/50 hover:text-white/90 group-hover:bg-white/5'
+                                                : 'text-slate-600 hover:text-slate-900 group-hover:bg-slate-100')
                                         }
                                     `}>
                                         {/* Profile Avatar / Initials vs Standard Icon */}
@@ -427,14 +431,18 @@ const MobileBottomNav = () => {
                                         {/* Submenu indicator dot on top right */}
                                         {hasSubmenu && (
                                             <span className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full transition-colors ${
-                                                isOverlayOpen ? 'bg-[#a5d391] shadow-[0_0_6px_rgba(165,211,145,0.9)]' : 'bg-white/30'
+                                                isOverlayOpen
+                                                    ? 'bg-[#a5d391] shadow-[0_0_6px_rgba(165,211,145,0.9)]'
+                                                    : (isDark ? 'bg-white/30' : 'bg-slate-300')
                                             }`} />
                                         )}
                                     </div>
 
                                     {/* Item Label */}
                                     <span className={`text-[10px] font-bold leading-tight mt-0.5 truncate max-w-full tracking-tight transition-colors ${
-                                        isSelected ? 'text-[#a5d391]' : 'text-white/45'
+                                        isSelected
+                                            ? (isDark ? 'text-[#a5d391]' : 'text-emerald-700')
+                                            : (isDark ? 'text-white/45' : 'text-slate-600')
                                     }`}>
                                         {item.label}
                                     </span>

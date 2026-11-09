@@ -53,10 +53,10 @@ const FinalCTA = () => {
                         <div className="flex justify-center items-center">
                             <Link
                                 to={ctaContent.path}
-                                className="bg-[#080b12] !text-white px-10 py-5 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl flex items-center gap-3 cursor-pointer"
+                                className="home-final-cta-button bg-[#080b12] !text-white px-10 py-5 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl flex items-center gap-3 cursor-pointer"
                             >
-                                <span className="!text-white">{ctaContent.label}</span>
-                                <span className="material-symbols-outlined !text-[#a5d391] text-xl">arrow_forward</span>
+                                <span className="home-final-cta-button-label !text-white">{ctaContent.label}</span>
+                                <span className="home-final-cta-button-icon material-symbols-outlined !text-[#a5d391] text-xl">arrow_forward</span>
                             </Link>
                         </div>
                     </div>

@@ -3,16 +3,16 @@
  * Collects new user details, role selection (User vs Nutritionist),
  * credentials/specialization info for dietitians, and dispatches verification OTP.
  */
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { ArrowLeft, ArrowRight, Sparkles, Camera, Check, User, ShieldCheck, X, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Check, User, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { getEmailError } from '../../utils/emailValidation';
 
 /**
  * Register Component
- * Interactive signup form with profile picture preview, role toggle, and validation.
+ * Interactive signup form with role toggle and validation.
  */
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -27,12 +27,10 @@ const Register = () => {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [avatarPreview, setAvatarPreview] = useState(null);
     const [error, setError] = useState('');
     const emailError = getEmailError(formData.email);
     const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const fileInputRef = useRef(null);
     
     const { register } = useContext(AuthContext);
     const { isDark, toggleTheme } = useTheme();
@@ -40,24 +38,6 @@ const Register = () => {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleImageChange = (e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setAvatarPreview(reader.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const removeAvatar = () => {
-        setAvatarPreview(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
     };
 
     const handleSubmit = async (e) => {
@@ -82,8 +62,7 @@ const Register = () => {
                 password: formData.password,
                 role: formData.role,
                 credentials: formData.credentials,
-                specialization: formData.specialization,
-                avatar: avatarPreview // base64 string or file if needed
+                specialization: formData.specialization
             });
 
             if (result.success) {
@@ -196,15 +175,6 @@ const Register = () => {
                         : 'bg-white/90 border-slate-200/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)] text-slate-800'
                 }`}>
                     
-                    {/* Hidden File Input */}
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        accept="image/*" 
-                        onChange={handleImageChange} 
-                        className="hidden" 
-                    />
-
                     {/* Role / Stepper Selection Indicator */}
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
                         <button
@@ -250,48 +220,6 @@ const Register = () => {
                         <p className={`text-sm mt-1.5 font-normal ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {formData.role === 'NUTRITIONIST' ? 'Join as a verified health expert' : "Let's start with your basic details."}
                         </p>
-                    </div>
-
-                    {/* Profile Avatar Upload Zone */}
-                    <div className="flex flex-col items-center justify-center mb-6">
-                        {avatarPreview ? (
-                            <div className="relative group flex items-center justify-center">
-                                <img 
-                                    src={avatarPreview} 
-                                    alt="Avatar Preview" 
-                                    className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500 shadow-lg shadow-emerald-500/20"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={removeAvatar}
-                                    className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-transform transform hover:scale-110 cursor-pointer"
-                                    title="Remove Picture"
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[9px] font-bold uppercase tracking-wider transition-opacity cursor-pointer"
-                                >
-                                    <Camera className="w-4 h-4 mb-0.5 text-emerald-400" />
-                                    Change
-                                </button>
-                            </div>
-                        ) : (
-                            <div 
-                                onClick={() => fileInputRef.current?.click()}
-                                className={`w-20 h-20 rounded-full border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-200 group p-2 shadow-inner ${
-                                    isDark 
-                                        ? 'border-slate-600/80 hover:border-[#a5d391] bg-slate-900/40 hover:bg-[#a5d391]/10' 
-                                        : 'border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50'
-                                }`}
-                            >
-                                <Camera className={`w-5 h-5 transition-colors duration-200 ${isDark ? 'text-slate-400 group-hover:text-[#a5d391]' : 'text-slate-400 group-hover:text-emerald-600'}`} />
-                                <span className={`text-[9px] font-bold uppercase tracking-wider mt-1 ${isDark ? 'text-slate-400 group-hover:text-[#a5d391]' : 'text-slate-400 group-hover:text-emerald-600'}`}>UPLOAD</span>
-                            </div>
-                        )}
-                        <p className={`text-[11px] mt-2 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Click to select profile photo</p>
                     </div>
 
                     {error && (

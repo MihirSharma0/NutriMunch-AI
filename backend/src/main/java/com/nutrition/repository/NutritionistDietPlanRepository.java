@@ -2,6 +2,7 @@ package com.nutrition.repository;
 
 import com.nutrition.entity.NutritionistDietPlan;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,6 +36,10 @@ public interface NutritionistDietPlanRepository extends JpaRepository<Nutritioni
     Optional<NutritionistDietPlan> findByPlanKey(String planKey);
 
     Optional<NutritionistDietPlan> findByPlanKeyAndDeletedFalse(String planKey);
+
+    @Modifying
+    @Query("DELETE FROM NutritionistDietPlan p WHERE p.nutritionist.id = :userId OR p.targetUser.id = :userId")
+    int deleteReferencingUser(@Param("userId") Long userId);
 
     /** Exact lookup of server-namespaced keys created by COMMIT 09. */
     List<NutritionistDietPlan> findByPlanKeyIn(Collection<String> planKeys);

@@ -618,7 +618,7 @@ const Home = () => {
                         {/* Card 2: AI Diet & Recipe Generator */}
                         <FlipFeatureCard
                             wrapperClass="md:col-span-5 min-h-[480px]"
-                            frontClass="bg-white border border-slate-200/90 shadow-xl dark:bg-[#0b121f] dark:text-white dark:border-transparent dark:shadow-xl dark:shadow-[#a3e635]/10 rounded-[2.5rem] overflow-hidden hover:border-emerald-500/40 dark:hover:border-[#a3e635]/20 flex flex-col justify-between transition-colors"
+                            frontClass="home-ai-diet-card bg-white border border-slate-200/90 shadow-xl dark:bg-[#0b121f] dark:text-white dark:border-transparent dark:shadow-xl dark:shadow-[#a3e635]/10 rounded-[2.5rem] overflow-hidden hover:border-emerald-500/40 dark:hover:border-[#a3e635]/20 flex flex-col justify-between transition-colors"
                             backClass="bg-white border border-slate-200 shadow-xl dark:bg-[#0b121f] dark:text-white dark:border-white/5"
                             backContent={
                                 <>
@@ -665,7 +665,7 @@ const Home = () => {
                             </div>
 
                             {/* Image container strictly below the text */}
-                            <div className="relative w-full h-44 sm:h-52 overflow-hidden mt-6 z-10">
+                            <div className="home-ai-diet-image relative w-full h-44 sm:h-52 overflow-hidden mt-6 z-10">
                                 <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/20 to-white dark:from-transparent dark:via-[#0b121f]/20 dark:to-[#0b121f] z-10 pointer-events-none"></div>
                                 <img
                                     className="w-full h-full object-cover object-center opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
@@ -673,7 +673,11 @@ const Home = () => {
                                     alt="Healthy meal plan plate"
                                     onError={(e) => {
                                         e.target.onerror = null;
-                                        e.target.src = "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&fit=crop";
+                                        if (document.documentElement.classList.contains('light')) {
+                                            e.target.style.display = 'none';
+                                        } else {
+                                            e.target.src = "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80&fit=crop";
+                                        }
                                     }}
                                 />
                             </div>

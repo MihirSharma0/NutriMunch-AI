@@ -377,7 +377,7 @@ const TransactionHistory = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#080b12] text-white pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans">
+        <div className="transactions-page min-h-screen bg-[#080b12] text-white pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans">
             <div className="max-w-7xl mx-auto space-y-8">
 
                 {/* Real-time Push Notification Banner */}
@@ -529,9 +529,9 @@ const TransactionHistory = () => {
                 </div>
 
                 {/* Ledger Transactions Table */}
-                <div className="rounded-3xl bg-[#0c121e]/80 border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl">
+                <div className="transactions-table rounded-3xl bg-[#0c121e]/80 border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
+                        <table className="w-full min-w-[980px] text-left text-xs border-collapse">
                             <thead>
                                 <tr className="border-b border-white/10 bg-white/5 text-white/50 uppercase text-[10px] tracking-wider font-mono">
                                     <th className="py-3.5 px-4">Reference & Date</th>
@@ -683,7 +683,7 @@ const TransactionHistory = () => {
                 {/* Audit Modal for Selected Transaction */}
                 {selectedTx && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-                        <div className="w-full max-w-lg bg-[#0c121e] border border-white/20 rounded-3xl p-6 shadow-2xl space-y-4">
+                        <div className="transactions-audit-modal w-full max-w-lg max-h-[90vh] overflow-y-auto bg-[#0c121e] border border-white/20 rounded-3xl p-6 shadow-2xl space-y-4">
                             <div className="flex items-center justify-between pb-3 border-b border-white/10">
                                 <div className="flex items-center gap-2">
                                     <span className="material-symbols-outlined text-[#a5d391]">policy</span>

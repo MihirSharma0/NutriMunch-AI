@@ -482,10 +482,10 @@ const Profile = () => {
     const isNutritionist = rawRole === 'NUTRITIONIST';
 
     return (
-        <div className="w-full max-w-5xl mx-auto pb-16">
+        <div className="user-profile-page w-full max-w-5xl mx-auto pb-16">
             {/* Professional Nutritionist Banner */}
             {isNutritionist && (
-                <div className="mb-8 bg-gradient-to-r from-emerald-950/90 via-[#0d131f] to-[#080b12] border border-[#a5d391]/40 rounded-3xl p-5 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
+                <div className="user-profile-nutritionist-banner mb-8 bg-gradient-to-r from-emerald-950/90 via-[#0d131f] to-[#080b12] border border-[#a5d391]/40 rounded-3xl p-5 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fadeIn">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-[#a5d391]/20 text-[#a5d391] border border-[#a5d391]/30 flex items-center justify-center shrink-0">
                             <span className="material-symbols-outlined text-xl">badge</span>
@@ -538,7 +538,7 @@ const Profile = () => {
             )}
 
             {/* User Profile Header Card */}
-            <div className="bg-gradient-to-r from-white/10 via-white/5 to-transparent backdrop-blur-xl border border-white/15 rounded-[2.5rem] p-6 sm:p-8 mb-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="user-profile-summary bg-gradient-to-r from-white/10 via-white/5 to-transparent backdrop-blur-xl border border-white/15 rounded-[2.5rem] p-6 sm:p-8 mb-8 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex flex-col md:flex-row items-center gap-6">
                     <img
                         src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((profile.firstName || 'U') + ' ' + (profile.lastName || ''))}&background=a5d391&color=000`}
@@ -1179,7 +1179,7 @@ const Profile = () => {
             )}
 
             {/* DAILY REQUIREMENTS SECTION */}
-            <div className="bg-gradient-to-r from-emerald-950/40 via-white/5 to-[#a5d391]/10 backdrop-blur-xl border border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 mb-8 shadow-2xl relative overflow-hidden">
+            <div className="user-profile-daily-section bg-gradient-to-r from-emerald-950/40 via-white/5 to-[#a5d391]/10 backdrop-blur-xl border border-[#a5d391]/40 rounded-[2.5rem] p-6 sm:p-8 mb-8 shadow-2xl relative overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                     <div className="flex items-center gap-3">
                         <span className="material-symbols-outlined text-[#a5d391] text-3xl">tune</span>
