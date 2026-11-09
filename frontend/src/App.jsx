@@ -152,9 +152,11 @@ function App() {
               {/* Nutritionist Platform Routes */}
               <Route element={<ProtectedRoute allowedRoles={['NUTRITIONIST', 'ADMIN']} />}>
                 <Route path="dashboard/nutritionist" element={<NutritionistHome />} />
-                <Route path="dashboard/nutritionist/profile" element={<NutritionistProfile />} />
                 <Route path="dashboard/nutritionist/builder" element={<DietPlanBuilder />} />
                 <Route path="dashboard/nutritionist/schedule" element={<AppointmentManagement />} />
+              </Route>
+              <Route element={<ProtectedRoute allowedRoles={['NUTRITIONIST']} />}>
+                <Route path="dashboard/nutritionist/profile" element={<NutritionistProfile />} />
               </Route>
 
               {/* Admin Platform Routes */}

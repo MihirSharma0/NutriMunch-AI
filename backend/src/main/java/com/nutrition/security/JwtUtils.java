@@ -2,6 +2,7 @@ package com.nutrition.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -79,6 +80,18 @@ public class JwtUtils {
      */
     public String getUserNameFromJwtToken(String token) {
         return Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody().getSubject();
+    }
+
+    /**
+     * Extracts the database user ID from a signed JWT, when present.
+     *
+     * @param token signed JWT string
+     * @return the user ID claim, or null for older tokens without one
+     */
+    public Long getUserIdFromJwtToken(String token) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
+        Object id = claims.get("id");
+        return id instanceof Number number ? number.longValue() : null;
     }
 
     /**

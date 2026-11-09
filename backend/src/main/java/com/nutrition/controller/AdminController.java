@@ -7,11 +7,14 @@ import com.nutrition.repository.NutritionistProfileRepository;
 import com.nutrition.repository.UserProfileRepository;
 import com.nutrition.repository.UserRepository;
 import com.nutrition.dto.UserProfileDto;
+import com.nutrition.security.CustomUserDetails;
 import com.nutrition.service.UserProfileService;
 import com.nutrition.service.SystemSettingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
@@ -253,7 +256,7 @@ public class AdminController {
         }
         Role newRole;
         try {
-            newRole = Role.valueOf(requestedRole.toUpperCase());
+            newRole = Role.valueOf(requestedRole.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Invalid role: " + requestedRole);
         }
@@ -290,8 +293,8 @@ public class AdminController {
     @PostMapping("/users/{id}/reset-password")
     public ResponseEntity<Map<String, String>> resetUserPassword(@org.springframework.security.core.annotation.AuthenticationPrincipal com.nutrition.security.CustomUserDetails adminDetails, @PathVariable Long id, @RequestBody Map<String, String> body) {
         String newPassword = body.get("newPassword");
-        if (newPassword == null || newPassword.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "New password cannot be empty"));
+        if (newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("message", "New password must be at least 6 characters long"));
         }
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
@@ -322,7 +325,13 @@ public class AdminController {
      */
     @DeleteMapping("/users/{id}")
     @Transactional
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(
+            @AuthenticationPrincipal CustomUserDetails adminDetails,
+            @PathVariable Long id) {
+        if (adminDetails != null && id.equals(adminDetails.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         User user = userRepository.findById(id).orElse(null);
         if (user == null) {
             return ResponseEntity.notFound().build();

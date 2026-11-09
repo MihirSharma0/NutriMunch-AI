@@ -49,17 +49,6 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, [token]);
 
-    // The axios interceptor clears an expired session on a non-auth 401.
-    useEffect(() => {
-        const onExpired = () => {
-            setToken(null);
-            setUser(null);
-            try { window.dispatchEvent(new Event('nutrimunch_logout')); } catch { /* best-effort signal */ }
-        };
-        window.addEventListener('nutrimunch_session_expired', onExpired);
-        return () => window.removeEventListener('nutrimunch_session_expired', onExpired);
-    }, []);
-
     /**
      * Authenticates a user with email and password credentials.
      * 

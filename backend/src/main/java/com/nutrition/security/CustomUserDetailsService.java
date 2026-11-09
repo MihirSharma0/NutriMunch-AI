@@ -31,4 +31,36 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
         return new CustomUserDetails(user);
     }
+
+    /**
+     * Loads a user by the immutable database ID stored in a signed JWT.
+     *
+     * @param id database user ID
+     * @return authenticated user details
+     * @throws UsernameNotFoundException if the ID no longer exists
+     */
+    public UserDetails loadUserById(Long id) throws UsernameNotFoundException {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + id));
+        return new CustomUserDetails(user);
+    }
+
+    /**
+     * Resolves a JWT identity by its stable ID, falling back to its signed email
+     * subject when a database reset or account recreation changed that ID.
+     *
+     * @param id database user ID claim, if present
+     * @param username signed JWT subject
+     * @return authenticated user details
+     * @throws UsernameNotFoundException if neither identity resolves
+     */
+    public UserDetails loadUserByTokenIdentity(Long id, String username) throws UsernameNotFoundException {
+        if (id != null) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user != null) {
+                return new CustomUserDetails(user);
+            }
+        }
+        return loadUserByUsername(username);
+    }
 }

@@ -1,12 +1,11 @@
 /**
  * Route Protection Guard
  * Inspects authentication status and user roles, redirecting unauthenticated visitors to login
- * and restricting unauthorized roles from protected dashboards.
+ * and displaying an inline message when an authenticated role is not permitted.
  */
-import React, { useContext, useEffect, useRef } from 'react';
-import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { getDashboardUrl } from '../utils/roleUtils';
 
 /**
  * ProtectedRoute Component
@@ -18,23 +17,12 @@ import { getDashboardUrl } from '../utils/roleUtils';
 const ProtectedRoute = ({ allowedRoles }) => {
     const { user, token, loading } = useContext(AuthContext);
     const location = useLocation();
-    const navigate = useNavigate();
-    const accessDeniedHandled = useRef(false);
 
     // Display-only gate: localStorage role can be tampered with, so this only
     // decides which dashboard shell to show. Every API call is separately
     // authorised by the JWT / server-side role checks.
     const role = String(user?.role || '').toUpperCase().replace('ROLE_', '');
     const accessDenied = Boolean(allowedRoles && user && !allowedRoles.includes(role));
-
-    useEffect(() => {
-        if (!accessDenied || accessDeniedHandled.current) return;
-
-        accessDeniedHandled.current = true;
-        window.alert('This feature is not available for your account.');
-
-        navigate(getDashboardUrl(user?.role), { replace: true });
-    }, [accessDenied, navigate, user?.role]);
 
     if (loading) return null;
 
@@ -44,7 +32,16 @@ const ProtectedRoute = ({ allowedRoles }) => {
     }
 
     if (accessDenied) {
-        return null;
+        return (
+            <div className="flex min-h-[50vh] items-center justify-center p-6">
+                <div className="max-w-md rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-center shadow-xl">
+                    <h1 className="text-lg font-bold text-white">Access unavailable</h1>
+                    <p className="mt-2 text-sm text-white/70">
+                        This feature is not available for your account. You can stay on this page or use the navigation to return.
+                    </p>
+                </div>
+            </div>
+        );
     }
 
     return <Outlet />;

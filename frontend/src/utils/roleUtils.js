@@ -31,6 +31,9 @@ export const isRouteAllowedForRole = (route, rawRole) => {
     if (route.startsWith('/dashboard/admin') && role !== 'ADMIN') {
         return false;
     }
+    if (route.split(/[?#]/, 1)[0].replace(/\/+$/, '') === '/dashboard/nutritionist/profile' && role !== 'NUTRITIONIST') {
+        return false;
+    }
     if (route.startsWith('/dashboard/nutritionist') && role !== 'NUTRITIONIST' && role !== 'ADMIN') {
         return false;
     }

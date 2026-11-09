@@ -145,9 +145,9 @@ const NutritionistProfile = () => {
     const fullName = `${firstName} ${lastName}`.trim() || registeredEmail || user?.email || 'Certified Nutritionist';
 
     return (
-        <div className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full space-y-8 animate-fadeIn">
+        <div className="nutritionist-profile flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full space-y-8 animate-fadeIn">
             {/* Header Title & Verification Badge */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-950/40 via-[#090d16] to-[#080b12] border border-[#a5d391]/30 p-6 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+            <div className="nutritionist-profile-header flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-950/40 via-[#090d16] to-[#080b12] border border-[#a5d391]/30 p-6 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#a5d391]/10 blur-3xl pointer-events-none"></div>
                 <div className="flex items-center gap-4">
                     {isApproved ? (
@@ -182,14 +182,14 @@ const NutritionistProfile = () => {
             </div>
 
             {!isApproved && (
-                <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl animate-fadeIn">
+                <div className="nutritionist-profile-pending bg-amber-500/10 border border-amber-500/30 text-amber-300 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl animate-fadeIn">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 border border-amber-500/40">
                             <span className="material-symbols-outlined text-amber-300">hourglass_empty</span>
                         </div>
                         <div>
                             <h4 className="font-bold text-sm text-white">License Verification Pending Approval</h4>
-                            <p className="text-xs text-amber-300/80 mt-0.5">
+                            <p className="nutritionist-profile-pending-description text-xs text-amber-300/80 mt-0.5">
                                 Your nutritionist license credentials are currently awaiting approval from system administrators.
                             </p>
                         </div>

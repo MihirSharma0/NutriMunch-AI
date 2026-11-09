@@ -32,24 +32,12 @@ api.interceptors.request.use(
 );
 
 /**
- * Auth endpoints legitimately return 401 for wrong credentials. Those must keep
- * their exact C1 messages ("Incorrect Password", "Profile/E-Mail Id Doesn't
- * Exist. Please Create One") and must NOT tear down the session.
- */
-const isAuthRequest = (url) => {
-    const path = String(url || '');
-    return path.includes('/auth/');
-};
-
-/**
- * Response Interceptor
- * Do not automatically clear the token or force redirect to the login page on errors.
- * Preserves the current page so users and admins can see and fix the error on the spot.
+ * Keep the current route when an API request is unauthorized so the page can
+ * display and handle its own error without clearing the user's session.
  */
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Return the rejected promise so individual caller components can handle the error in-place
         return Promise.reject(error);
     }
 );

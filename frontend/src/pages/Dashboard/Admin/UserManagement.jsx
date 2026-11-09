@@ -16,14 +16,12 @@ import FeatureGate from '../../../components/FeatureGate';
 const UserManagement = () => {
     const { user } = useContext(AuthContext);
 
-    if (!user) {
-        return <FeatureGate />;
-    }
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterRole, setFilterRole] = useState('ALL');
     const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL' | 'VERIFIED' | 'PENDING_OTP'
     const [searchQuery, setSearchQuery] = useState('');
+    const [actionNotice, setActionNotice] = useState(null);
 
     // Password reset modal state
     const [selectedUser, setSelectedUser] = useState(null);
@@ -50,10 +48,15 @@ const UserManagement = () => {
 
     const deleteUser = async (id) => {
         const targetUser = users.find(u => u.id === id);
+        if (String(user.id) === String(id)) {
+            window.alert("You cannot delete the account you are currently signed in with.");
+            return;
+        }
         if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
             try {
                 await api.delete(`/admin/users/${id}`);
                 setUsers(users.filter(u => u.id !== id));
+                setActionNotice({ type: 'success', text: `${targetUser?.email || 'Account'} was deleted.` });
 
                 // If user/nutritionist is deleted, purge all their associated diet plans & local caches
                 if (targetUser) {
@@ -104,7 +107,10 @@ const UserManagement = () => {
                 }
             } catch (error) {
                 console.error("Error deleting user", error);
-                window.alert(error.response?.data?.message || "Unable to delete this user. Please try again.");
+                setActionNotice({
+                    type: 'error',
+                    text: error.response?.data?.message || `Unable to delete account (HTTP ${error.response?.status || 'network error'}).`
+                });
             }
         }
     };
@@ -131,9 +137,14 @@ const UserManagement = () => {
             window.dispatchEvent(new Event('nutrimunch_role_updated'));
             window.dispatchEvent(new Event('storage'));
 
+            setActionNotice({ type: 'success', text: `Account role changed to ${newRole}.` });
             fetchUsers();
         } catch (error) {
             console.error("Error updating role", error);
+            setActionNotice({
+                type: 'error',
+                text: error.response?.data?.message || `Unable to change account role (HTTP ${error.response?.status || 'network error'}).`
+            });
         }
     };
 
@@ -167,11 +178,15 @@ const UserManagement = () => {
                 newPassword: newPassword
             });
             setResetMessage(response.data.message || "Password reset successfully!");
+            setActionNotice({ type: 'success', text: `Password reset for ${selectedUser.email}.` });
             setTimeout(() => {
                 handleCloseResetModal();
             }, 1800);
         } catch (err) {
-            setResetError(err.response?.data?.message || "Failed to reset password.");
+            const errorMessage = err.response?.data?.message
+                || `Failed to reset password (HTTP ${err.response?.status || 'network error'}).`;
+            setResetError(errorMessage);
+            setActionNotice({ type: 'error', text: errorMessage });
         } finally {
             setResetLoading(false);
         }
@@ -207,6 +222,10 @@ const UserManagement = () => {
     const verifiedCount = users.filter(u => Boolean(u.verified || u.otpVerified || u.enabled)).length;
     const pendingCount = users.length - verifiedCount;
 
+    if (!user) {
+        return <FeatureGate />;
+    }
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -240,6 +259,19 @@ const UserManagement = () => {
                     </Link>
                 </div>
             </div>
+
+            {actionNotice && (
+                <div
+                    role="status"
+                    className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+                        actionNotice.type === 'success'
+                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
+                            : 'border-red-500/30 bg-red-500/10 text-red-700'
+                    }`}
+                >
+                    {actionNotice.text}
+                </div>
+            )}
 
             {/* Filter Controls & Search Bar Row */}
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-6 space-y-4 shadow-xl">
