@@ -39,7 +39,7 @@ const Login = () => {
     const [isSigningIn, setIsSigningIn] = useState(false);
 
     const { login, googleLogin, user } = useContext(AuthContext);
-    const { isDark } = useTheme();
+    const { isDark, toggleTheme } = useTheme();
     const navigate = useNavigate();
 
     // Return to the page the visitor originally requested (same-site paths only)
@@ -268,6 +268,23 @@ const Login = () => {
                     <ArrowLeft className={`w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5 ${isDark ? 'text-slate-400 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-900'}`} />
                     <span>Back to Home</span>
                 </button>
+
+                {/* Direct Light/Dark Theme Switcher */}
+                <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+                    title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer shadow-sm border ${
+                        isDark
+                            ? 'bg-slate-900/60 hover:bg-slate-800/80 border-white/10 text-amber-300 hover:text-amber-200 hover:border-amber-400/40 hover:shadow-[0_0_12px_rgba(252,211,77,0.3)]'
+                            : 'bg-white/90 hover:bg-white border-slate-200 text-indigo-600 hover:text-indigo-800 hover:border-indigo-400/40 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]'
+                    }`}
+                >
+                    <span className={`material-symbols-outlined text-lg transition-transform duration-300 ${isDark ? 'rotate-0' : 'rotate-180'}`}>
+                        {isDark ? 'light_mode' : 'dark_mode'}
+                    </span>
+                </button>
             </header>
             {/* END: TopNavigation */}
 
@@ -297,15 +314,15 @@ const Login = () => {
                     {/* Authentication Card */}
                     <div className={`w-full backdrop-blur-2xl border rounded-[2.5rem] p-7 sm:p-9 transition-all duration-300 ${
                         isDark
-                            ? 'bg-[#0d121c]/80 border-white/10 shadow-2xl text-white'
-                            : 'bg-white/90 border-slate-200/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)] text-slate-800'
+                            ? 'bg-[#0d121c]/90 border-white/10 shadow-2xl text-white'
+                            : 'bg-white/95 border-slate-200/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)] text-slate-800'
                     }`}>
                         
                         {/* Role Selector Tabs */}
-                        <div className={`flex p-1 rounded-2xl mb-6 border transition-colors ${
+                        <div className={`flex p-1.5 rounded-2xl mb-6 border transition-colors ${
                             isDark
-                                ? 'bg-[#080b12]/80 border-white/10'
-                                : 'bg-slate-100/90 border-slate-200'
+                                ? 'bg-[#080b12]/90 border-white/10'
+                                : 'bg-slate-100 border-slate-200'
                         }`}>
                             {['USER', 'NUTRITIONIST', 'ADMIN'].map((role) => (
                                 <button
@@ -316,10 +333,10 @@ const Login = () => {
                                         activeTab === role 
                                         ? (isDark 
                                             ? 'bg-[#a5d391] text-black shadow-[0_0_15px_rgba(165,211,145,0.3)]' 
-                                            : 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25')
+                                            : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25')
                                         : (isDark 
                                             ? 'text-slate-400 hover:text-white hover:bg-white/5' 
-                                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60')
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/80')
                                     }`}
                                 >
                                     {role === 'USER' ? 'User' : role === 'NUTRITIONIST' ? 'Nutritionist' : 'Admin'}
@@ -350,8 +367,8 @@ const Login = () => {
                                 </label>
                                 <div className={`relative flex items-center border rounded-xl overflow-hidden focus-within:ring-2 transition-all ${
                                     isDark
-                                        ? `bg-[#090d16]/90 ${emailError ? 'border-red-500/60 focus-within:border-red-500/60 focus-within:ring-red-500/20' : 'border-white/10 focus-within:border-[#a5d391]/60 focus-within:ring-[#a5d391]/20'}`
-                                        : `bg-slate-50 border-slate-200 focus-within:bg-white ${emailError ? 'border-red-400 focus-within:border-red-500 focus-within:ring-red-500/20' : 'focus-within:border-emerald-500 focus-within:ring-emerald-500/20'}`
+                                        ? `bg-[#090d16] ${emailError ? 'border-red-500/60 focus-within:border-red-500/60 focus-within:ring-red-500/20' : 'border-white/10 focus-within:border-[#a5d391]/60 focus-within:ring-[#a5d391]/20'}`
+                                        : `bg-white border-slate-300 shadow-sm focus-within:bg-white ${emailError ? 'border-red-400 focus-within:border-red-500 focus-within:ring-red-500/20' : 'focus-within:border-emerald-500 focus-within:ring-emerald-500/20'}`
                                 }`}>
                                     <span className={`pl-3.5 pointer-events-none flex items-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                                         <Mail className="w-4 h-4" />
@@ -372,7 +389,7 @@ const Login = () => {
                                         }`}
                                     />
                                 </div>
-                                {emailError && <p id="email-error" className={`text-xs ${isDark ? 'text-amber-300/80' : 'text-amber-600'}`}>Check the email format before signing in.</p>}
+                                {emailError && <p id="email-error" className={`text-xs ${isDark ? 'text-amber-300/80' : 'text-amber-700'}`}>Check the email format before signing in.</p>}
                             </div>
 
                             {/* Password Field Group */}
@@ -381,14 +398,14 @@ const Login = () => {
                                     <label className={`block text-[11px] font-semibold tracking-wider uppercase ${isDark ? 'text-slate-300' : 'text-slate-700'}`} htmlFor="password">
                                         Password
                                     </label>
-                                    <Link to="/forgot-password" className={`text-xs font-semibold transition-colors ${isDark ? 'text-[#a5d391] hover:text-white' : 'text-emerald-600 hover:text-emerald-700'}`}>
+                                    <Link to="/forgot-password" className={`text-xs font-semibold transition-colors ${isDark ? 'text-[#a5d391] hover:text-white' : 'text-emerald-700 hover:text-emerald-800'}`}>
                                         Forgot Password?
                                     </Link>
                                 </div>
                                 <div className={`relative flex items-center border rounded-xl overflow-hidden focus-within:ring-2 transition-all ${
                                     isDark
-                                        ? 'bg-[#090d16]/90 border-white/10 focus-within:border-[#a5d391]/60 focus-within:ring-[#a5d391]/20'
-                                        : 'bg-slate-50 border-slate-200 focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-emerald-500/20'
+                                        ? 'bg-[#090d16] border-white/10 focus-within:border-[#a5d391]/60 focus-within:ring-[#a5d391]/20'
+                                        : 'bg-white border-slate-300 shadow-sm focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-emerald-500/20'
                                 }`}>
                                     <span className={`pl-3.5 pointer-events-none flex items-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                                         <Lock className="w-4 h-4" />
@@ -410,7 +427,7 @@ const Login = () => {
                                         type="button" 
                                         onClick={() => setShowPassword(!showPassword)}
                                         className={`absolute right-3 p-1 focus:outline-none transition-colors cursor-pointer ${
-                                            isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600'
+                                            isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'
                                         }`}
                                     >
                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -438,10 +455,10 @@ const Login = () => {
                                 <button 
                                     type="submit" 
                                     disabled={isSigningIn || !areLoginFieldsFilled(email, password)}
-                                    className={`w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${
+                                    className={`w-full py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-widest transition duration-150 ease-in-out flex items-center justify-center gap-2 group cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                                         isDark
-                                            ? 'text-black bg-[#a5d391] hover:bg-white active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.3)]'
-                                            : 'text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 shadow-lg shadow-emerald-600/30'
+                                            ? 'text-black bg-[#a5d391] hover:bg-[#bbf7a7] active:bg-slate-200 border border-[#a5d391]/30 shadow-[0_0_20px_rgba(165,211,145,0.25)]'
+                                            : 'text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-md shadow-emerald-600/20'
                                     }`}
                                 >
                                     {isSigningIn ? (
@@ -471,7 +488,7 @@ const Login = () => {
                                     className={`w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border transition-all font-semibold text-xs uppercase tracking-wider cursor-pointer disabled:cursor-wait disabled:opacity-60 ${
                                         isDark
                                             ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white'
-                                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-sm'
+                                            : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-sm'
                                     }`}
                                 >
                                     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -488,7 +505,7 @@ const Login = () => {
                             <div className="text-center pt-2">
                                 <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                                     Don't have an account? 
-                                    <Link to="/register" className={`font-semibold ml-1 transition-colors ${isDark ? 'text-[#a5d391] hover:text-white' : 'text-emerald-600 hover:text-emerald-700'}`}>
+                                    <Link to="/register" className={`font-semibold ml-1 transition-colors ${isDark ? 'text-[#a5d391] hover:text-white' : 'text-emerald-700 hover:text-emerald-800 underline-offset-2 hover:underline'}`}>
                                         Sign up today
                                     </Link>
                                 </p>

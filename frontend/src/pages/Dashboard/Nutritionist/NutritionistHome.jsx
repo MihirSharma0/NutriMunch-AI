@@ -198,52 +198,52 @@ const NutritionistHome = () => {
                 {/* Live App Wallet Earnings Card - Clickable Hyperlink to Nutritionist Transaction History */}
                 <Link
                     to="/dashboard/nutritionist/transactions"
-                    className="bg-gradient-to-br from-[#a5d391]/15 via-white/5 to-transparent backdrop-blur-xl border border-[#a5d391]/30 rounded-[2.5rem] p-5 flex flex-col justify-between shadow-[0_0_20px_rgba(165,211,145,0.15)] hover:border-[#a5d391] hover:scale-[1.02] transition-all cursor-pointer group block"
+                    className="bg-white/90 dark:bg-gradient-to-br dark:from-[#a5d391]/15 dark:via-white/5 dark:to-transparent backdrop-blur-xl border border-slate-200 dark:border-[#a5d391]/30 rounded-[2.5rem] p-5 flex flex-col justify-between shadow-md dark:shadow-[0_0_20px_rgba(165,211,145,0.15)] hover:border-emerald-600 dark:hover:border-[#a5d391] hover:scale-[1.02] transition-all cursor-pointer group block"
                     title="Click to view full transaction ledger and session earnings"
                 >
                     <div className="flex justify-between items-start mb-4">
-                        <div className="text-[#a5d391] text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#a5d391] animate-pulse"></span>
+                        <div className="text-emerald-700 dark:text-[#a5d391] text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-[#a5d391] animate-pulse"></span>
                             Wallet Earnings
                         </div>
-                        <div className="flex items-center gap-1 text-[#a5d391] group-hover:translate-x-0.5 transition-transform">
+                        <div className="flex items-center gap-1 text-emerald-700 dark:text-[#a5d391] group-hover:translate-x-0.5 transition-transform">
                             <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
                             <span className="material-symbols-outlined text-sm opacity-60">arrow_forward</span>
                         </div>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display text-[#a5d391] font-mono">
+                        <div className="text-3xl font-bold font-hero-display text-emerald-700 dark:text-[#a5d391] font-mono">
                             {walletBalance !== null ? `₹${parseFloat(walletBalance).toFixed(2)}` : '₹0.00'}
                         </div>
-                        <div className="text-xs text-white/60 mt-1 flex items-center justify-between">
+                        <div className="text-xs text-slate-600 dark:text-white/60 mt-1 flex items-center justify-between">
                             <span>Direct session credits</span>
-                            <span className="text-[#a5d391] font-bold text-[10px] uppercase tracking-wider group-hover:underline">View History →</span>
+                            <span className="text-emerald-700 dark:text-[#a5d391] font-bold text-[10px] uppercase tracking-wider group-hover:underline">View History →</span>
                         </div>
                     </div>
                 </Link>
 
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-[#a5d391]/30 transition-all duration-300 shadow-xl">
+                <div className="bg-white/90 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-5 flex flex-col justify-between hover:border-emerald-600/40 dark:hover:border-[#a5d391]/30 transition-all duration-300 shadow-md dark:shadow-xl">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Active Clients</div>
-                        <span className="material-symbols-outlined text-[#a5d391] text-[20px]">groups</span>
+                        <div className="text-slate-500 dark:text-white/40 text-[10px] font-bold uppercase tracking-widest">Active Clients</div>
+                        <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391] text-[20px]">groups</span>
                     </div>
                     <div>
-                        <div className="text-3xl font-bold font-hero-display">{activeRoster}</div>
-                        <div className="text-xs text-white/50 mt-1">Clients with active consultations</div>
+                        <div className="text-3xl font-bold font-hero-display text-slate-900 dark:text-white">{activeRoster}</div>
+                        <div className="text-xs text-slate-600 dark:text-white/50 mt-1">Clients with active consultations</div>
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <Link to="/dashboard/nutritionist/schedule" className="bg-[#a5d391]/10 border border-[#a5d391]/25 rounded-2xl p-5 hover:bg-[#a5d391]/20 transition-colors">
-                    <span className="material-symbols-outlined text-[#a5d391]">calendar_month</span>
-                    <h2 className="font-bold mt-3">Review schedule</h2>
-                    <p className="text-xs text-white/50 mt-1">Approve requests and manage consultation times.</p>
+                <Link to="/dashboard/nutritionist/schedule" className="bg-emerald-50/80 dark:bg-[#a5d391]/10 border border-emerald-200 dark:border-[#a5d391]/25 rounded-2xl p-5 hover:bg-emerald-100/80 dark:hover:bg-[#a5d391]/20 transition-colors">
+                    <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391]">calendar_month</span>
+                    <h2 className="font-bold text-slate-900 dark:text-white mt-3">Review schedule</h2>
+                    <p className="text-xs text-slate-600 dark:text-white/50 mt-1">Approve requests and manage consultation times.</p>
                 </Link>
-                <Link to="/dashboard/nutritionist/builder" className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-[#a5d391]/40 transition-colors">
-                    <span className="material-symbols-outlined text-[#a5d391]">edit_note</span>
-                    <h2 className="font-bold mt-3">Create diet plan</h2>
-                    <p className="text-xs text-white/50 mt-1">Build and save a personalized nutrition protocol.</p>
+                <Link to="/dashboard/nutritionist/builder" className="bg-white/90 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-5 hover:border-emerald-600/40 dark:hover:border-[#a5d391]/40 transition-colors">
+                    <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391]">edit_note</span>
+                    <h2 className="font-bold text-slate-900 dark:text-white mt-3">Create diet plan</h2>
+                    <p className="text-xs text-slate-600 dark:text-white/50 mt-1">Build and save a personalized nutrition protocol.</p>
                 </Link>
             </div>
 

@@ -122,36 +122,93 @@
   }
 
   /* ------------------------------------------------------------- */
-  /* LIGHT THEME HIGH-CONTRAST & READABILITY OVERRIDES            */
+  /* LIGHT THEME HIGH-CONTRAST & READABILITY OVERRIDES (WCAG 2.1)  */
   /* ------------------------------------------------------------- */
+
+  /* Dark Theme Contrast Fixes */
+  html.dark .text-primary,
+  html:not(.light) .text-primary {
+    color: #a5d391 !important;
+  }
+  html.dark .text-white\/40,
+  html:not(.light) .text-white\/40 {
+    color: rgba(255, 255, 255, 0.65) !important;
+  }
+  html.dark .text-white\/30,
+  html:not(.light) .text-white\/30 {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
 
   /* General Text Contrast in Light Theme */
   html.light .text-white {
     color: #0f172a;
   }
   html.light .text-white\/90 {
-    color: #1e293b;
+    color: #0f172a !important;
   }
   html.light .text-white\/80 {
-    color: #334155;
+    color: #1e293b !important;
   }
   html.light .text-white\/70 {
-    color: #334155;
+    color: #334155 !important;
   }
   html.light .text-white\/60 {
-    color: #475569;
+    color: #334155 !important;
   }
   html.light .text-white\/50 {
-    color: #64748b;
+    color: #475569 !important;
   }
   html.light .text-white\/40 {
-    color: #64748b;
+    color: #475569 !important;
   }
   html.light .text-white\/30 {
-    color: #94a3b8;
+    color: #475569 !important;
   }
 
-  /* Solid colored buttons & badges MUST keep white text */
+  /* Muted Text Tokens in Light Theme */
+  html.light .text-slate-400,
+  html.light .text-gray-400,
+  html.light .text-zinc-400,
+  html.light .text-neutral-400 {
+    color: #475569 !important;
+  }
+
+  /* Accent Colors Mapped for Light Theme (> 4.5:1 contrast) */
+  html.light .text-\[\#a5d391\],
+  html.light .text-\[\#a3e635\],
+  html.light .text-emerald-400,
+  html.light .text-green-400 {
+    color: #15803d !important; /* emerald-700: 5.3:1 */
+  }
+
+  html.light .text-sky-400,
+  html.light .text-sky-300,
+  html.light .text-cyan-300,
+  html.light .text-cyan-400,
+  html.light .text-\[\#38bdf8\] {
+    color: #0369a1 !important; /* sky-700: 5.6:1 */
+  }
+
+  html.light .text-amber-400,
+  html.light .text-amber-300,
+  html.light .text-yellow-400,
+  html.light .text-yellow-300,
+  html.light .text-\[\#fbbf24\],
+  html.light .text-\[\#ffb764\] {
+    color: #92400e !important; /* amber-800: 5.8:1 */
+  }
+
+  html.light .text-red-300,
+  html.light .text-red-400 {
+    color: #b91c1c !important; /* red-700: 5.5:1 */
+  }
+
+  html.light .text-purple-300,
+  html.light .text-purple-400 {
+    color: #6b21a8 !important; /* purple-800: 5.8:1 */
+  }
+
+  /* Solid colored buttons & badges MUST keep high contrast text */
   html.light .bg-blue-600,
   html.light .bg-blue-600 *,
   html.light .bg-blue-500,
@@ -164,30 +221,36 @@
   html.light .bg-rose-500 *,
   html.light .bg-emerald-600,
   html.light .bg-emerald-600 *,
-  html.light .bg-emerald-500,
-  html.light .bg-emerald-500 *,
+  html.light .bg-emerald-700,
+  html.light .bg-emerald-700 *,
   html.light .bg-purple-600,
   html.light .bg-purple-600 *,
   html.light .bg-slate-900,
   html.light .bg-slate-900 *,
   html.light [class*="bg-primary"]:not(.text-primary),
   html.light [class*="bg-primary"]:not(.text-primary) * {
-    color: #ffffff;
+    color: #ffffff !important;
   }
 
-  /* Luminous green/mint adjustments for high contrast on light background */
-  html.light .text-\[\#a5d391\] {
-    color: #15803d !important;
+  /* Deepen emerald-600 slightly in light mode for 4.65:1 contrast with white text */
+  html.light .bg-emerald-600 {
+    background-color: #047857 !important;
   }
-  html.light .text-\[\#a3e635\] {
-    color: #15803d !important;
+
+  /* Light green / mint buttons must have dark text */
+  .bg-\[\#a5d391\],
+  .bg-\[\#a5d391\] *,
+  .bg-emerald-500,
+  .bg-emerald-500 * {
+    color: #022c22 !important;
   }
 
   /* Frosted Glass Cards in Light Mode */
   html.light .bg-white\/5,
-  html.light .bg-white\/10 {
-    background-color: rgba(255, 255, 255, 0.8) !important;
-    border-color: rgba(203, 213, 225, 0.85) !important;
+  html.light .bg-white\/10,
+  html.light [class*="bg-gradient-to-b"][class*="from-white"] {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border-color: rgba(203, 213, 225, 0.9) !important;
     box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
   }
 
@@ -195,8 +258,9 @@
   html.light .border-white\/10,
   html.light .border-white\/15,
   html.light .border-white\/20,
+  html.light .border-white\/25,
   html.light .border-white\/30 {
-    border-color: rgba(203, 213, 225, 0.8) !important;
+    border-color: rgba(148, 163, 184, 0.6) !important;
   }
 
   /* Form Inputs in Light Mode */
@@ -209,14 +273,15 @@
   html.light .bg-black\/80 {
     background-color: rgba(255, 255, 255, 0.95) !important;
     color: #0f172a !important;
-    border-color: rgba(203, 213, 225, 0.9) !important;
+    border-color: #94a3b8 !important;
   }
 
   html.light input:not(.bg-transparent),
   html.light select:not(.bg-transparent),
   html.light textarea:not(.bg-transparent) {
     color: #0f172a !important;
-    background-color: rgba(255, 255, 255, 0.95);
+    background-color: rgba(255, 255, 255, 0.98);
+    border-color: #94a3b8 !important;
   }
 
   html.light input.bg-transparent,
@@ -226,7 +291,7 @@
 
   html.light input::placeholder,
   html.light textarea::placeholder {
-    color: #94a3b8 !important;
+    color: #475569 !important;
   }
 
   /* Dark themed containers & panels in Light Mode */
@@ -234,9 +299,9 @@
   html.light [class*="bg-\[\#0d121c\]"]:not(button):not(a),
   html.light [class*="bg-\[\#0b1017\]"]:not(button):not(a),
   html.light [class*="bg-\[\#090d16\]"]:not(button):not(a) {
-    background-color: rgba(255, 255, 255, 0.92) !important;
+    background-color: rgba(255, 255, 255, 0.94) !important;
     color: #0f172a !important;
-    border-color: rgba(226, 232, 240, 0.9) !important;
+    border-color: rgba(203, 213, 225, 0.9) !important;
   }
 
   /* Pills & Badges in Light Mode */
@@ -245,24 +310,74 @@
   html.light .bg-\[\#a5d391\]\/20 {
     background-color: rgba(22, 163, 74, 0.12) !important;
     color: #15803d !important;
-    border-color: rgba(22, 163, 74, 0.25) !important;
+    border-color: rgba(22, 163, 74, 0.3) !important;
   }
 
   html.light .bg-sky-500\/10,
   html.light .bg-blue-500\/10,
   html.light .bg-blue-500\/15 {
     background-color: rgba(14, 165, 233, 0.12) !important;
-    color: #0284c7 !important;
-    border-color: rgba(14, 165, 233, 0.25) !important;
+    color: #0369a1 !important;
+    border-color: rgba(14, 165, 233, 0.3) !important;
+  }
+
+  html.light .bg-amber-500\/10,
+  html.light .bg-amber-500\/15,
+  html.light .bg-amber-500\/20 {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+    color: #92400e !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+  }
+
+  html.light .bg-red-500\/10,
+  html.light .bg-red-500\/15,
+  html.light .bg-red-500\/20 {
+    background-color: rgba(239, 68, 68, 0.12) !important;
+    color: #b91c1c !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
   }
 
   html.light .bg-purple-500\/10,
   html.light .bg-purple-500\/15,
   html.light .bg-purple-500\/20 {
     background-color: rgba(168, 85, 247, 0.12) !important;
-    color: #7e22ce !important;
-    border-color: rgba(168, 85, 247, 0.25) !important;
+    color: #6b21a8 !important;
+    border-color: rgba(168, 85, 247, 0.3) !important;
   }
+
+  /* AI Diet Generator High-Contrast Light Theme Overrides */
+  html.light .aidg-title { color: #0f172a !important; }
+  html.light .aidg-subtitle { color: #475569 !important; }
+  html.light .aidg-heading-input { background: #ffffff !important; color: #0f172a !important; border-color: #94a3b8 !important; }
+  html.light .aidg-heading-input::placeholder { color: #475569 !important; }
+  html.light .aidg-heading-help { color: #475569 !important; }
+  html.light .aidg-search-input { background: #ffffff !important; color: #0f172a !important; border-color: #94a3b8 !important; }
+  html.light .aidg-search-input::placeholder { color: #475569 !important; }
+  html.light .aidg-search-icon { color: #475569 !important; }
+  html.light .aidg-form { background: rgba(255,255,255,0.94) !important; border-color: #cbd5e1 !important; box-shadow: 0 10px 25px -5px rgba(15,23,42,0.05); }
+  html.light .aidg-dropdown { background: #ffffff !important; border-color: #cbd5e1 !important; box-shadow: 0 14px 40px rgba(15,23,42,0.12) !important; }
+  html.light .aidg-dropdown-item { color: #334155 !important; }
+  html.light .aidg-dropdown-item:hover { background: #f1f5f9 !important; color: #0f172a !important; }
+  html.light .aidg-dropdown-empty { color: #475569 !important; }
+  html.light .aidg-tag { color: #15803d !important; background: rgba(22, 163, 74, 0.12) !important; border-color: rgba(22, 163, 74, 0.3) !important; }
+  html.light .aidg-tag-remove { color: #15803d !important; }
+  html.light .aidg-plan-section { background: rgba(255, 255, 255, 0.95) !important; border-color: #cbd5e1 !important; }
+  html.light .aidg-plan-section-title { color: #0f172a !important; }
+  html.light .aidg-plan-pre { color: #334155 !important; }
+  html.light .aidg-result { background: rgba(255, 255, 255, 0.95) !important; border-color: #cbd5e1 !important; }
+  html.light .aidg-result-title { color: #0f172a !important; }
+  html.light .aidg-target-summary b { color: #0f172a !important; }
+  html.light .aidg-target-summary span { background: #f8fafc !important; border-color: #cbd5e1 !important; color: #334155 !important; }
+  html.light .aidg-meal-row { background: #f8fafc !important; border-color: #cbd5e1 !important; }
+  html.light .aidg-meal-row strong { color: #0f172a !important; }
+  html.light .aidg-meal-row span { color: #15803d !important; }
+  html.light .aidg-meal-row small { color: #475569 !important; }
+  html.light .aidg-meal-macros b { color: #0f172a !important; }
+  html.light .aidg-meal-macros span { color: #475569 !important; }
+  html.light .aidg-custom-input { background: #ffffff !important; color: #0f172a !important; border-color: #94a3b8 !important; }
+  html.light .aidg-custom-input::placeholder { color: #475569 !important; }
+  html.light .aidg-profile-notice, html.light .aidg-profile-disclaimer { background: #f8fafc !important; border-color: #cbd5e1 !important; color: #334155 !important; }
+  html.light .aidg-profile-notice strong, html.light .aidg-profile-disclaimer strong { color: #0f172a !important; }
 }
 
 @layer utilities {

@@ -561,10 +561,10 @@ const DietPlanBuilder = () => {
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <span className="material-symbols-outlined text-[#a5d391] text-2xl">restaurant_menu</span>
-                        <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white">Diet Builder</h1>
+                        <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391] text-2xl">restaurant_menu</span>
+                        <h1 className="text-3xl font-bold font-hero-display tracking-tight text-slate-900 dark:text-white">Diet Builder</h1>
                     </div>
-                    <p className="text-white/60 text-xs sm:text-sm">
+                    <p className="text-slate-600 dark:text-white/60 text-xs sm:text-sm">
                         Architect and deploy general public nutrition protocols or target individual patients with bespoke macro formulations and clinical notes.
                     </p>
                 </div>
@@ -574,7 +574,7 @@ const DietPlanBuilder = () => {
                         <button
                             type="button"
                             onClick={() => handleOpenChat(selectedClient)}
-                            className="bg-[#0d131f] border border-[#a5d391]/40 hover:border-[#a5d391] text-[#a5d391] hover:text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                            className="bg-slate-100 dark:bg-[#0d131f] border border-slate-300 dark:border-[#a5d391]/40 hover:border-emerald-600 dark:hover:border-[#a5d391] text-emerald-800 dark:text-[#a5d391] hover:text-emerald-950 dark:hover:text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer"
                         >
                             <span className="material-symbols-outlined text-base">forum</span>
                             <span>Consultation Chat</span>
@@ -584,7 +584,7 @@ const DietPlanBuilder = () => {
                     <button 
                         onClick={handleDeployPlan}
                         disabled={isDeploying}
-                        className="bg-[#a5d391] text-black font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-2xl hover:bg-white transition-all shadow-[0_0_20px_rgba(165,211,145,0.35)] cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                        className="bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-2xl hover:bg-emerald-800 dark:hover:bg-white transition-all shadow-md dark:shadow-[0_0_20px_rgba(165,211,145,0.35)] cursor-pointer flex items-center gap-2 disabled:opacity-50"
                     >
                         <span className="material-symbols-outlined text-sm">rocket_launch</span>
                         <span>{targetMode === 'GENERAL' ? 'Deploy General Plan (All Users)' : 'Deploy Exclusive Diet Plan'}</span>
@@ -593,14 +593,14 @@ const DietPlanBuilder = () => {
             </div>
 
             {/* Top Level Studio / History Tab Switcher */}
-            <div className="flex items-center gap-2 mb-8 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-2 mb-8 border-b border-slate-200 dark:border-white/10 pb-4">
                 <button
                     type="button"
                     onClick={() => setActiveTab('STUDIO')}
                     className={`px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
                         activeTab === 'STUDIO'
-                            ? 'bg-[#a5d391] text-black shadow-[0_0_25px_rgba(165,211,145,0.4)]'
-                            : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10'
+                            ? 'bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black shadow-md dark:shadow-[0_0_25px_rgba(165,211,145,0.4)]'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-300 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/60 dark:hover:text-white dark:border-white/10'
                     }`}
                 >
                     <span className="material-symbols-outlined text-sm">tune</span>
@@ -612,14 +612,14 @@ const DietPlanBuilder = () => {
                     onClick={() => setActiveTab('HISTORY')}
                     className={`px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
                         activeTab === 'HISTORY'
-                            ? 'bg-[#a5d391] text-black shadow-[0_0_25px_rgba(165,211,145,0.4)]'
-                            : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10'
+                            ? 'bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black shadow-md dark:shadow-[0_0_25px_rgba(165,211,145,0.4)]'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-300 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/60 dark:hover:text-white dark:border-white/10'
                     }`}
                 >
                     <span className="material-symbols-outlined text-sm">history_edu</span>
                     <span>Diet Plans History Vault</span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                        activeTab === 'HISTORY' ? 'bg-black text-[#a5d391]' : 'bg-[#a5d391]/20 text-[#a5d391]'
+                        activeTab === 'HISTORY' ? 'bg-emerald-900 text-white dark:bg-black dark:text-[#a5d391]' : 'bg-emerald-100 text-emerald-800 dark:bg-[#a5d391]/20 dark:text-[#a5d391]'
                     }`}>
                         {dietHistory.length}
                     </span>
@@ -630,28 +630,28 @@ const DietPlanBuilder = () => {
             {activeTab === 'STUDIO' && (
                 <div className="space-y-8 animate-fadeIn">
                     {/* DIET PLAN NAME & DISTINCT IDENTIFIER CARD */}
-                    <div className="bg-gradient-to-r from-emerald-950/40 via-[#0d131f] to-[#080b12] border border-[#a5d391]/50 rounded-[2.5rem] p-6 lg:p-8 shadow-xl relative overflow-hidden">
+                    <div className="bg-emerald-50/50 dark:bg-gradient-to-r dark:from-emerald-950/40 dark:via-[#0d131f] dark:to-[#080b12] border border-emerald-300 dark:border-[#a5d391]/50 rounded-[2.5rem] p-6 lg:p-8 shadow-md dark:shadow-xl relative overflow-hidden">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                             <div>
-                                <span className="text-[10px] font-black text-[#a5d391] uppercase tracking-[0.2em] flex items-center gap-1.5">
-                                    <span className="material-symbols-outlined text-sm text-[#a5d391]">badge</span>
+                                <span className="text-[10px] font-black text-emerald-700 dark:text-[#a5d391] uppercase tracking-[0.2em] flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-sm text-emerald-700 dark:text-[#a5d391]">badge</span>
                                     <span>Diet Plan Identity & Unique Name</span>
                                 </span>
-                                <h2 className="text-xl font-bold font-hero-display text-white mt-1">
+                                <h2 className="text-xl font-bold font-hero-display text-slate-900 dark:text-white mt-1">
                                     Distinguish & Name Your Diet Plan
                                 </h2>
-                                <p className="text-xs text-white/50">
+                                <p className="text-xs text-slate-600 dark:text-white/50">
                                     Every formulated diet plan must have a distinctive title to distinguish it from other clinical protocols in your history and on the user dashboard.
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/60">
+                                <span className="text-[10px] font-mono px-3 py-1.5 rounded-xl bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 text-slate-700 dark:text-white/60">
                                     ID: #{planForm.planTitle.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase() || 'PLAN'}
                                 </span>
                                 <span className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl border ${
                                     targetMode === 'GENERAL'
-                                        ? 'bg-[#a5d391]/20 text-[#a5d391] border-[#a5d391]/40'
-                                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-[#a5d391]/20 dark:text-[#a5d391] dark:border-[#a5d391]/40'
+                                        : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30'
                                 }`}>
                                     {targetMode === 'GENERAL' ? 'General Scope' : `Exclusive: ${selectedClient?.name || 'Selected User'}`}
                                 </span>
@@ -662,29 +662,29 @@ const DietPlanBuilder = () => {
                         <div className="space-y-3">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="md:col-span-2">
-                                    <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-[11px] font-bold text-slate-700 dark:text-white/70 uppercase tracking-wider mb-1.5">
                                         Diet Plan Name *
                                     </label>
                                     <div className="relative">
-                                        <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 text-lg">edit</span>
+                                        <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-white/40 text-lg">edit</span>
                                         <input
                                             type="text"
                                             value={planForm.planTitle}
                                             onChange={(e) => setPlanForm({ ...planForm, planTitle: e.target.value })}
                                             placeholder="e.g. Ketogenic Metabolic Protocol #1..."
-                                            className="w-full bg-[#080b12] border border-white/20 focus:border-[#a5d391] rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold text-white placeholder:text-white/30 outline-none transition-all shadow-inner"
+                                            className="w-full bg-white dark:bg-[#080b12] border border-slate-300 dark:border-white/20 focus:border-emerald-600 dark:focus:border-[#a5d391] rounded-2xl pl-11 pr-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all shadow-inner"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-[11px] font-bold text-slate-700 dark:text-white/70 uppercase tracking-wider mb-1.5">
                                         Diet Category
                                     </label>
                                     <select
                                         value={planForm.dietType}
                                         onChange={(e) => setPlanForm({ ...planForm, dietType: e.target.value })}
-                                        className="w-full bg-[#080b12] border border-white/20 focus:border-[#a5d391] rounded-2xl px-4 py-3.5 text-sm font-bold text-white outline-none transition-all cursor-pointer"
+                                        className="w-full bg-white dark:bg-[#080b12] border border-slate-300 dark:border-white/20 focus:border-emerald-600 dark:focus:border-[#a5d391] rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white outline-none transition-all cursor-pointer"
                                     >
                                         <option value="High-Protein Metabolic">High-Protein Metabolic</option>
                                         <option value="Keto Glycemic Reset">Keto Glycemic Reset</option>
@@ -699,7 +699,7 @@ const DietPlanBuilder = () => {
 
                             {/* Quick Preset Title Chips */}
                             <div>
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 block mb-1.5">Quick Distinguishing Presets:</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50 block mb-1.5">Quick Distinguishing Presets:</span>
                                 <div className="flex flex-wrap gap-2">
                                     {[
                                         "Clinical Metabolic Optimization Protocol",
@@ -716,8 +716,8 @@ const DietPlanBuilder = () => {
                                             onClick={() => setPlanForm(prev => ({ ...prev, planTitle: preset }))}
                                             className={`text-[11px] px-3 py-1.5 rounded-full border transition-all cursor-pointer ${
                                                 planForm.planTitle === preset
-                                                    ? 'bg-[#a5d391] text-black font-extrabold border-[#a5d391]'
-                                                    : 'bg-white/5 hover:bg-white/15 text-white/70 border-white/10 hover:text-white'
+                                                    ? 'bg-emerald-700 text-white font-extrabold border-emerald-700 dark:bg-[#a5d391] dark:text-black dark:border-[#a5d391]'
+                                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/15 dark:text-white/70 dark:border-white/10 dark:hover:text-white'
                                             }`}
                                         >
                                             {preset}

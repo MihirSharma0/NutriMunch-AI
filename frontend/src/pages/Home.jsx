@@ -506,18 +506,18 @@ const Home = () => {
                             </div>
                         </div>
                         <div>
-                            <div className="text-[#a5d391] text-[10px] font-black tracking-[0.2em] flex items-center gap-2 uppercase mb-1 drop-shadow-[0_0_4px_rgba(165,211,145,0.3)]">
-                                <span className="w-1.5 h-1.5 bg-[#a5d391] rounded-full animate-pulse"></span>
+                            <div className="text-emerald-700 dark:text-[#a5d391] text-[10px] font-black tracking-[0.2em] flex items-center gap-2 uppercase mb-1 drop-shadow-[0_0_4px_rgba(165,211,145,0.3)]">
+                                <span className="w-1.5 h-1.5 bg-emerald-600 dark:bg-[#a5d391] rounded-full animate-pulse"></span>
                                 Precision Health
                             </div>
-                            <div className="text-white/40 text-sm font-medium tracking-wide">Real-time AI Adaptation</div>
+                            <div className="text-slate-600 dark:text-white/40 text-sm font-medium tracking-wide">Real-time AI Adaptation</div>
                         </div>
                     </div>
 
                     {/* Center: Description */}
                     <div className="col-span-12 md:col-span-5 md:ml-8">
-                        <p className="text-white/60 text-base md:text-lg leading-relaxed font-light text-center md:text-left">
-                            <span className="text-[#a5d391] text-xs font-bold uppercase tracking-widest block mb-3">{roleContent.eyebrow}</span>
+                        <p className="text-slate-600 dark:text-white/60 text-base md:text-lg leading-relaxed font-light text-center md:text-left">
+                            <span className="text-emerald-700 dark:text-[#a5d391] text-xs font-bold uppercase tracking-widest block mb-3">{roleContent.eyebrow}</span>
                             {roleContent.description}
                         </p>
                     </div>
@@ -527,14 +527,14 @@ const Home = () => {
                         onClick={() => navigate(roleContent.path)}
                         className="col-span-12 md:col-span-4 flex items-center gap-6 justify-start md:justify-end cursor-pointer group hover:opacity-90 transition-all"
                     >
-                        <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-2xl overflow-hidden relative shadow-2xl shrink-0 backdrop-blur-xl group-hover:border-[#a5d391]/50 group-hover:shadow-[0_0_20px_rgba(165,211,145,0.2)] transition-all">
-                            <img src="/role-card.png" alt="UI" className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-700"/>
+                        <div className="w-20 h-20 bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-2xl overflow-hidden relative shadow-md dark:shadow-2xl shrink-0 backdrop-blur-xl group-hover:border-emerald-600 dark:group-hover:border-[#a5d391]/50 group-hover:shadow-[0_0_20px_rgba(165,211,145,0.2)] transition-all">
+                            <img src="/role-card.png" alt="UI" className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700"/>
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-white text-2xl drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] group-hover:text-[#a5d391] group-hover:drop-shadow-[0_0_18px_rgba(165,211,145,1)] transition-all">{roleContent.icon}</span>
+                                <span className="material-symbols-outlined text-slate-800 dark:text-white text-2xl drop-shadow-[0_0_12px_rgba(255,255,255,0.7)] group-hover:text-emerald-700 dark:group-hover:text-[#a5d391] transition-all">{roleContent.icon}</span>
                             </div>
                         </div>
-                        <div className="text-white text-[15px] leading-snug group-hover:text-[#a5d391] transition-colors">
-                            {roleContent.action} <strong className="font-semibold text-white group-hover:text-[#a5d391]">➔</strong>
+                        <div className="text-slate-800 dark:text-white text-[15px] leading-snug group-hover:text-emerald-700 dark:group-hover:text-[#a5d391] transition-colors">
+                            {roleContent.action} <strong className="font-semibold text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-[#a5d391]">➔</strong>
                         </div>
                     </div>
 

@@ -105,7 +105,7 @@ const UserRoles = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#080b12] text-white pt-28 pb-20 relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-transparent text-slate-800 dark:text-white pt-28 pb-20 relative overflow-hidden font-sans">
             {/* Glowing background spotlights */}
             <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/15 blur-[140px] rounded-full pointer-events-none"></div>
 
@@ -116,7 +116,7 @@ const UserRoles = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-bold uppercase tracking-widest mb-6"
+                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-primary/10 border border-emerald-200 dark:border-primary/30 text-emerald-700 dark:text-primary text-xs font-bold uppercase tracking-widest mb-6"
                     >
                         <Sparkles className="w-4 h-4" />
                         Platform Roles & Capabilities
@@ -126,10 +126,10 @@ const UserRoles = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
-                        className="text-4xl sm:text-5xl md:text-6xl font-extrabold font-hero-display tracking-tight text-white leading-tight mb-6"
+                        className="text-4xl sm:text-5xl md:text-6xl font-extrabold font-hero-display tracking-tight text-slate-900 dark:text-white leading-tight mb-6"
                     >
                         Tailored Solutions for <br />
-                        <span className="bg-gradient-to-r from-[#a5d391] via-[#c6edb6] to-[#7ec362] bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 dark:from-[#a5d391] dark:via-[#c6edb6] dark:to-[#7ec362] bg-clip-text text-transparent">
                             Every Health Journey
                         </span>
                     </motion.h1>
@@ -138,7 +138,7 @@ const UserRoles = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
-                        className="text-white/70 text-base sm:text-lg leading-relaxed"
+                        className="text-slate-600 dark:text-white/70 text-base sm:text-lg leading-relaxed"
                     >
                         Discover the specific features, AI tools, and professional workspace controls designed for both individual health seekers and certified nutritionists.
                     </motion.p>
@@ -146,13 +146,13 @@ const UserRoles = () => {
 
                 {/* Role Selection Tabs */}
                 <div className="flex justify-center mb-16">
-                    <div className="bg-white/5 border border-white/10 p-1.5 rounded-2xl flex items-center gap-2 max-w-md w-full backdrop-blur-xl">
+                    <div className="bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-1.5 rounded-2xl flex items-center gap-2 max-w-md w-full backdrop-blur-xl shadow-sm">
                         <button
                             onClick={() => setActiveTab('user')}
                             className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
                                 activeTab === 'user'
-                                    ? 'bg-[#a5d391] text-black shadow-[0_0_20px_rgba(165,211,145,0.4)]'
-                                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                                    ? 'bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black shadow-md dark:shadow-[0_0_20px_rgba(165,211,145,0.4)]'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-white/70 dark:hover:text-white dark:hover:bg-white/5'
                             }`}
                         >
                             <User className="w-4 h-4" />
@@ -162,8 +162,8 @@ const UserRoles = () => {
                             onClick={() => setActiveTab('nutritionist')}
                             className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
                                 activeTab === 'nutritionist'
-                                    ? 'bg-[#a5d391] text-black shadow-[0_0_20px_rgba(165,211,145,0.4)]'
-                                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                                    ? 'bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black shadow-md dark:shadow-[0_0_20px_rgba(165,211,145,0.4)]'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-white/70 dark:hover:text-white dark:hover:bg-white/5'
                             }`}
                         >
                             <Stethoscope className="w-4 h-4" />
@@ -183,32 +183,32 @@ const UserRoles = () => {
                             transition={{ duration: 0.3 }}
                         >
                             {/* Role Overview Banner */}
-                            <div className="bg-gradient-to-br from-[#0d131f] to-[#080b12] border border-[#a5d391]/30 rounded-3xl p-8 sm:p-10 mb-12 shadow-[0_0_50px_rgba(165,211,145,0.1)] flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div className="bg-white/90 dark:bg-gradient-to-br dark:from-[#0d131f] dark:to-[#080b12] border border-emerald-200 dark:border-[#a5d391]/30 rounded-3xl p-8 sm:p-10 mb-12 shadow-md dark:shadow-[0_0_50px_rgba(165,211,145,0.1)] flex flex-col md:flex-row items-center justify-between gap-8">
                                 <div className="space-y-4 max-w-2xl">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#a5d391]/20 border border-[#a5d391]/40 flex items-center justify-center text-[#a5d391]">
+                                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-[#a5d391]/20 border border-emerald-300 dark:border-[#a5d391]/40 flex items-center justify-center text-emerald-700 dark:text-[#a5d391]">
                                             <User className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-white">Standard User Role</h2>
-                                            <span className="text-xs font-bold text-[#a5d391] uppercase tracking-wider">For Individuals & Health Enthusiasts</span>
+                                            <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-slate-900 dark:text-white">Standard User Role</h2>
+                                            <span className="text-xs font-bold text-emerald-700 dark:text-[#a5d391] uppercase tracking-wider">For Individuals & Health Enthusiasts</span>
                                         </div>
                                     </div>
-                                    <p className="text-white/70 leading-relaxed text-sm sm:text-base">
+                                    <p className="text-slate-600 dark:text-white/70 leading-relaxed text-sm sm:text-base">
                                         As a standard user, NutriMunch AI acts as your personal digital nutritionist. Get instant access to AI-generated weekly diet plans, food photo calorie scanning, daily hydration logs, and 1-on-1 consultations with certified nutritionists.
                                     </p>
                                 </div>
                                 <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                                     <Link
                                         to="/register"
-                                        className="px-6 py-3.5 rounded-xl bg-[#a5d391] text-black font-bold text-sm hover:bg-[#8ec478] transition-all flex items-center justify-center gap-2 shadow-lg"
+                                        className="px-6 py-3.5 rounded-xl bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black font-bold text-sm hover:bg-emerald-800 dark:hover:bg-[#8ec478] transition-all flex items-center justify-center gap-2 shadow-lg"
                                     >
                                         <span>Create Free Account</span>
                                         <ArrowRight className="w-4 h-4" />
                                     </Link>
                                     <Link
                                         to="/login"
-                                        className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/10 transition-all text-center"
+                                        className="px-6 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-bold text-sm border border-slate-300 dark:border-white/10 transition-all text-center"
                                     >
                                         Sign In
                                     </Link>
@@ -225,20 +225,20 @@ const UserRoles = () => {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.4, delay: idx * 0.05 }}
-                                            className="bg-[#0b1019] border border-white/10 hover:border-[#a5d391]/50 rounded-3xl p-6 flex flex-col justify-between transition-all group hover:-translate-y-1"
+                                            className="bg-white/90 dark:bg-[#0b1019] border border-slate-200 dark:border-white/10 hover:border-emerald-600/40 dark:hover:border-[#a5d391]/50 rounded-3xl p-6 flex flex-col justify-between transition-all group hover:-translate-y-1 shadow-sm"
                                         >
                                             <div>
-                                                <div className="w-12 h-12 rounded-2xl bg-[#a5d391]/10 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391] mb-5 group-hover:scale-110 transition-transform">
+                                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-[#a5d391]/10 border border-emerald-200 dark:border-[#a5d391]/30 flex items-center justify-center text-emerald-700 dark:text-[#a5d391] mb-5 group-hover:scale-110 transition-transform">
                                                     <IconComponent className="w-6 h-6" />
                                                 </div>
-                                                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#a5d391] transition-colors">
+                                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-emerald-700 dark:group-hover:text-[#a5d391] transition-colors">
                                                     {feat.title}
                                                 </h3>
-                                                <p className="text-white/60 text-sm leading-relaxed mb-6">
+                                                <p className="text-slate-600 dark:text-white/60 text-sm leading-relaxed mb-6">
                                                     {feat.desc}
                                                 </p>
                                             </div>
-                                            <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-bold text-[#a5d391]">
+                                            <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-[#a5d391]">
                                                 <span>Included in User Plan</span>
                                                 <CheckCircle2 className="w-4 h-4" />
                                             </div>
@@ -256,32 +256,32 @@ const UserRoles = () => {
                             transition={{ duration: 0.3 }}
                         >
                             {/* Nutritionist Overview Banner */}
-                            <div className="bg-gradient-to-br from-[#0d131f] to-[#080b12] border border-[#a5d391]/30 rounded-3xl p-8 sm:p-10 mb-12 shadow-[0_0_50px_rgba(165,211,145,0.1)] flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div className="bg-white/90 dark:bg-gradient-to-br dark:from-[#0d131f] dark:to-[#080b12] border border-emerald-200 dark:border-[#a5d391]/30 rounded-3xl p-8 sm:p-10 mb-12 shadow-md dark:shadow-[0_0_50px_rgba(165,211,145,0.1)] flex flex-col md:flex-row items-center justify-between gap-8">
                                 <div className="space-y-4 max-w-2xl">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#a5d391]/20 border border-[#a5d391]/40 flex items-center justify-center text-[#a5d391]">
+                                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-[#a5d391]/20 border border-emerald-300 dark:border-[#a5d391]/40 flex items-center justify-center text-emerald-700 dark:text-[#a5d391]">
                                             <Stethoscope className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-white">Nutritionist & Nutritionist Role</h2>
-                                            <span className="text-xs font-bold text-[#a5d391] uppercase tracking-wider">For Healthcare & Clinical Professionals</span>
+                                            <h2 className="text-2xl sm:text-3xl font-bold font-hero-display text-slate-900 dark:text-white">Nutritionist & Nutritionist Role</h2>
+                                            <span className="text-xs font-bold text-emerald-700 dark:text-[#a5d391] uppercase tracking-wider">For Healthcare & Clinical Professionals</span>
                                         </div>
                                     </div>
-                                    <p className="text-white/70 leading-relaxed text-sm sm:text-base">
+                                    <p className="text-slate-600 dark:text-white/70 leading-relaxed text-sm sm:text-base">
                                         Designed specifically for certified nutritionists and nutritionists. Manage client rosters, prescribe customized weekly meal plans directly to patients, schedule virtual appointments, and generate white-labeled clinical PDF reports.
                                     </p>
                                 </div>
                                 <div className="shrink-0 flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                                     <Link
                                         to="/register"
-                                        className="px-6 py-3.5 rounded-xl bg-[#a5d391] text-black font-bold text-sm hover:bg-[#8ec478] transition-all flex items-center justify-center gap-2 shadow-lg"
+                                        className="px-6 py-3.5 rounded-xl bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black font-bold text-sm hover:bg-emerald-800 dark:hover:bg-[#8ec478] transition-all flex items-center justify-center gap-2 shadow-lg"
                                     >
                                         <span>Apply as Nutritionist</span>
                                         <ArrowRight className="w-4 h-4" />
                                     </Link>
                                     <Link
                                         to="/login"
-                                        className="px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/10 transition-all text-center"
+                                        className="px-6 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-bold text-sm border border-slate-300 dark:border-white/10 transition-all text-center"
                                     >
                                         Workspace Login
                                     </Link>
@@ -298,20 +298,20 @@ const UserRoles = () => {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.4, delay: idx * 0.05 }}
-                                            className="bg-[#0b1019] border border-white/10 hover:border-[#a5d391]/50 rounded-3xl p-6 flex flex-col justify-between transition-all group hover:-translate-y-1"
+                                            className="bg-white/90 dark:bg-[#0b1019] border border-slate-200 dark:border-white/10 hover:border-emerald-600/40 dark:hover:border-[#a5d391]/50 rounded-3xl p-6 flex flex-col justify-between transition-all group hover:-translate-y-1 shadow-sm"
                                         >
                                             <div>
-                                                <div className="w-12 h-12 rounded-2xl bg-[#a5d391]/10 border border-[#a5d391]/30 flex items-center justify-center text-[#a5d391] mb-5 group-hover:scale-110 transition-transform">
+                                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-[#a5d391]/10 border border-emerald-200 dark:border-[#a5d391]/30 flex items-center justify-center text-emerald-700 dark:text-[#a5d391] mb-5 group-hover:scale-110 transition-transform">
                                                     <IconComponent className="w-6 h-6" />
                                                 </div>
-                                                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#a5d391] transition-colors">
+                                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-emerald-700 dark:group-hover:text-[#a5d391] transition-colors">
                                                     {feat.title}
                                                 </h3>
-                                                <p className="text-white/60 text-sm leading-relaxed mb-6">
+                                                <p className="text-slate-600 dark:text-white/60 text-sm leading-relaxed mb-6">
                                                     {feat.desc}
                                                 </p>
                                             </div>
-                                            <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-bold text-[#a5d391]">
+                                            <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-[#a5d391]">
                                                 <span>Included in Professional Plan</span>
                                                 <CheckCircle2 className="w-4 h-4" />
                                             </div>
@@ -326,55 +326,55 @@ const UserRoles = () => {
                 {/* Feature Comparison Matrix */}
                 <div className="mt-20">
                     <div className="text-center max-w-2xl mx-auto mb-12">
-                        <span className="text-xs font-bold text-[#a5d391] uppercase tracking-widest block mb-3">Side-by-Side Comparison</span>
-                        <h2 className="text-3xl font-bold font-hero-display text-white mb-4">Complete Role Feature Matrix</h2>
-                        <p className="text-white/60 text-sm">Compare capabilities and tools available to each account type across the platform.</p>
+                        <span className="text-xs font-bold text-emerald-700 dark:text-[#a5d391] uppercase tracking-widest block mb-3">Side-by-Side Comparison</span>
+                        <h2 className="text-3xl font-bold font-hero-display text-slate-900 dark:text-white mb-4">Complete Role Feature Matrix</h2>
+                        <p className="text-slate-600 dark:text-white/60 text-sm">Compare capabilities and tools available to each account type across the platform.</p>
                     </div>
 
-                    <div className="bg-[#0b1019] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+                    <div className="bg-white/95 dark:bg-[#0b1019] border border-slate-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-xl">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse min-w-[600px]">
                                 <thead>
-                                    <tr className="bg-white/5 border-b border-white/10 text-white text-xs uppercase tracking-wider font-bold">
+                                    <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-slate-800 dark:text-white text-xs uppercase tracking-wider font-bold">
                                         <th className="p-5">Platform Feature</th>
-                                        <th className="p-5 text-center text-[#a5d391]">Standard User</th>
-                                        <th className="p-5 text-center text-[#a5d391]">Nutritionist</th>
-                                        <th className="p-5 text-center text-white/50">Admin</th>
+                                        <th className="p-5 text-center text-emerald-700 dark:text-[#a5d391]">Standard User</th>
+                                        <th className="p-5 text-center text-emerald-700 dark:text-[#a5d391]">Nutritionist</th>
+                                        <th className="p-5 text-center text-slate-600 dark:text-white/50">Admin</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5 text-sm text-white/80">
+                                <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-sm text-slate-700 dark:text-white/80">
                                     {comparisonMatrix.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="p-5 font-semibold text-white">{row.feature}</td>
+                                        <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors">
+                                            <td className="p-5 font-semibold text-slate-900 dark:text-white">{row.feature}</td>
                                             <td className="p-5 text-center">
                                                 {row.user ? (
-                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#a5d391]/20 text-[#a5d391]">
+                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 dark:bg-[#a5d391]/20 dark:text-[#a5d391]">
                                                         <CheckCircle2 className="w-4 h-4" />
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/5 text-white/30">
+                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-white/30">
                                                         <Lock className="w-3.5 h-3.5" />
                                                     </span>
                                                 )}
                                             </td>
                                             <td className="p-5 text-center">
                                                 {row.nutritionist ? (
-                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#a5d391]/20 text-[#a5d391]">
+                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 dark:bg-[#a5d391]/20 dark:text-[#a5d391]">
                                                         <CheckCircle2 className="w-4 h-4" />
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/5 text-white/30">
+                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-white/30">
                                                         <Lock className="w-3.5 h-3.5" />
                                                     </span>
                                                 )}
                                             </td>
                                             <td className="p-5 text-center">
                                                 {row.admin ? (
-                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/10 text-white">
+                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 dark:bg-white/10 dark:text-white">
                                                         <CheckCircle2 className="w-4 h-4" />
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/5 text-white/30">
+                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-white/30">
                                                         <Lock className="w-3.5 h-3.5" />
                                                     </span>
                                                 )}
@@ -388,23 +388,23 @@ const UserRoles = () => {
                 </div>
 
                 {/* Bottom Call-to-Action Section */}
-                <div className="mt-24 bg-gradient-to-r from-[#a5d391]/20 via-[#a5d391]/10 to-transparent border border-[#a5d391]/40 rounded-3xl p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-[0_0_60px_rgba(165,211,145,0.15)]">
+                <div className="mt-24 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-[#a5d391]/20 dark:via-[#a5d391]/10 dark:to-transparent border border-emerald-200 dark:border-[#a5d391]/40 rounded-3xl p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-md dark:shadow-[0_0_60px_rgba(165,211,145,0.15)]">
                     <div className="space-y-3 max-w-xl text-center md:text-left">
-                        <h3 className="text-2xl sm:text-3xl font-bold font-hero-display text-white">Ready to Experience NutriMunch AI?</h3>
-                        <p className="text-white/70 text-sm sm:text-base leading-relaxed">
+                        <h3 className="text-2xl sm:text-3xl font-bold font-hero-display text-slate-900 dark:text-white">Ready to Experience NutriMunch AI?</h3>
+                        <p className="text-slate-600 dark:text-white/70 text-sm sm:text-base leading-relaxed">
                             Sign up today as an individual user or apply to join our verified nutritionist network.
                         </p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <Link
                             to="/register"
-                            className="px-8 py-4 rounded-xl bg-[#a5d391] text-black font-bold text-sm hover:bg-[#8ec478] transition-all text-center shadow-lg hover:-translate-y-0.5"
+                            className="px-8 py-4 rounded-xl bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black font-bold text-sm hover:bg-emerald-800 dark:hover:bg-[#8ec478] transition-all text-center shadow-lg hover:-translate-y-0.5"
                         >
                             Sign Up Free
                         </Link>
                         <Link
                             to="/login"
-                            className="px-8 py-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/10 transition-all text-center"
+                            className="px-8 py-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-bold text-sm border border-slate-300 dark:border-white/10 transition-all text-center"
                         >
                             Login to Account
                         </Link>

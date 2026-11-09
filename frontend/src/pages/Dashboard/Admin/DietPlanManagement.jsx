@@ -264,15 +264,15 @@ const DietPlanManagement = () => {
             {/* Header */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
-                    <div className="text-[#a5d391] text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mb-2">
-                        <span className="w-1.5 h-1.5 bg-[#a5d391] rounded-full animate-pulse"></span>
+                    <div className="text-emerald-700 dark:text-[#a5d391] text-[10px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mb-2">
+                        <span className="w-1.5 h-1.5 bg-emerald-600 dark:bg-[#a5d391] rounded-full animate-pulse"></span>
                         Admin Control Suite • Diet Plans Vault
                     </div>
-                    <h1 className="text-3xl font-bold font-hero-display tracking-tight text-white flex items-center gap-3">
-                        <span className="material-symbols-outlined text-[#a5d391] text-3xl">menu_book</span>
+                    <h1 className="text-3xl font-bold font-hero-display tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+                        <span className="material-symbols-outlined text-emerald-700 dark:text-[#a5d391] text-3xl">menu_book</span>
                         Diet Plans Management
                     </h1>
-                    <p className="text-white/60 text-xs sm:text-sm mt-1">
+                    <p className="text-slate-600 dark:text-white/60 text-xs sm:text-sm mt-1">
                         Audit, inspect, promote, and permanently purge diet regimens across all platform users, nutritionists, and database records.
                     </p>
                 </div>
@@ -280,14 +280,14 @@ const DietPlanManagement = () => {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={loadAllPlans}
-                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/80 dark:hover:text-white border border-slate-300 dark:border-white/10 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
                     >
                         <span className="material-symbols-outlined text-sm">refresh</span>
                         <span>Sync Registry</span>
                     </button>
                     <Link
                         to="/dashboard/nutritionist/builder"
-                        className="px-5 py-2.5 bg-[#a5d391] text-black hover:bg-white rounded-2xl text-xs font-bold transition-all shadow-[0_0_20px_rgba(165,211,145,0.3)] flex items-center gap-2 cursor-pointer"
+                        className="px-5 py-2.5 bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-[#a5d391] dark:text-black dark:hover:bg-white rounded-2xl text-xs font-bold transition-all shadow-md dark:shadow-[0_0_20px_rgba(165,211,145,0.3)] flex items-center gap-2 cursor-pointer"
                     >
                         <span className="material-symbols-outlined text-sm">add_circle</span>
                         <span>Open Diet Studio</span>
@@ -297,53 +297,53 @@ const DietPlanManagement = () => {
 
             {/* Telemetry Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg">
-                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-1">Total Formulated Plans</span>
-                    <div className="text-3xl font-bold font-hero-display text-[#a5d391]">{plans.length}</div>
-                    <span className="text-white/40 text-[10px] mt-1 block">Active across all practices</span>
+                <div className="p-5 bg-white/90 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-lg">
+                    <span className="text-slate-500 dark:text-white/50 text-[10px] font-black uppercase tracking-widest block mb-1">Total Formulated Plans</span>
+                    <div className="text-3xl font-bold font-hero-display text-emerald-700 dark:text-[#a5d391]">{plans.length}</div>
+                    <span className="text-slate-500 dark:text-white/50 text-[10px] mt-1 block">Active across all practices</span>
                 </div>
-                <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg">
-                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-1">General Public Protocols</span>
-                    <div className="text-3xl font-bold font-hero-display text-sky-400">{generalCount}</div>
-                    <span className="text-white/40 text-[10px] mt-1 block">Available to all platform users</span>
+                <div className="p-5 bg-white/90 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-lg">
+                    <span className="text-slate-500 dark:text-white/50 text-[10px] font-black uppercase tracking-widest block mb-1">General Public Protocols</span>
+                    <div className="text-3xl font-bold font-hero-display text-sky-700 dark:text-sky-400">{generalCount}</div>
+                    <span className="text-slate-500 dark:text-white/50 text-[10px] mt-1 block">Available to all platform users</span>
                 </div>
-                <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg">
-                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-1">Exclusive Patient Plans</span>
-                    <div className="text-3xl font-bold font-hero-display text-amber-400">{exclusiveCount}</div>
-                    <span className="text-white/40 text-[10px] mt-1 block">Prescribed to targeted clients</span>
+                <div className="p-5 bg-white/90 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-lg">
+                    <span className="text-slate-500 dark:text-white/50 text-[10px] font-black uppercase tracking-widest block mb-1">Exclusive Patient Plans</span>
+                    <div className="text-3xl font-bold font-hero-display text-amber-800 dark:text-amber-400">{exclusiveCount}</div>
+                    <span className="text-slate-500 dark:text-white/50 text-[10px] mt-1 block">Prescribed to targeted clients</span>
                 </div>
-                <div className="p-5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-lg">
-                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest block mb-1">Database Sync Status</span>
-                    <div className="text-3xl font-bold font-hero-display text-emerald-400 flex items-center gap-2">
+                <div className="p-5 bg-white/90 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-lg">
+                    <span className="text-slate-500 dark:text-white/50 text-[10px] font-black uppercase tracking-widest block mb-1">Database Sync Status</span>
+                    <div className="text-3xl font-bold font-hero-display text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
                         <span className="material-symbols-outlined text-2xl">verified</span>
                         <span>LIVE</span>
                     </div>
-                    <span className="text-white/40 text-[10px] mt-1 block">Sub-1.2s reactive broadcast</span>
+                    <span className="text-slate-500 dark:text-white/50 text-[10px] mt-1 block">Sub-1.2s reactive broadcast</span>
                 </div>
             </div>
 
             {/* Filter and Search Bar */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/90 dark:bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-slate-200 dark:border-white/10">
                 <div className="relative flex-1">
-                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 text-base">search</span>
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-white/40 text-base">search</span>
                     <input
                         type="text"
                         placeholder="Search protocols by title, formulator, patient, or notes..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#a5d391] transition-all"
+                        className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-white/40 focus:outline-none focus:border-emerald-600 dark:focus:border-[#a5d391] transition-all"
                     />
                 </div>
 
                 {/* Scope Filter Pills */}
-                <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10 shrink-0">
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-black/40 p-1 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
                     <button
                         type="button"
                         onClick={() => setScopeFilter('ALL')}
                         className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             scopeFilter === 'ALL'
-                                ? 'bg-[#a5d391] text-black shadow-md font-black'
-                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                                ? 'bg-emerald-700 text-white dark:bg-[#a5d391] dark:text-black shadow-md font-black'
+                                : 'text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5'
                         }`}
                     >
                         All ({plans.length})
@@ -403,37 +403,37 @@ const DietPlanManagement = () => {
                         return (
                             <div
                                 key={plan.id}
-                                className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 hover:border-white/25 rounded-3xl p-6 transition-all duration-300 flex flex-col justify-between space-y-5 shadow-xl relative overflow-hidden group"
+                                className="bg-white/95 dark:bg-gradient-to-b dark:from-white/10 dark:to-white/5 border border-slate-300 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/25 rounded-3xl p-6 transition-all duration-300 flex flex-col justify-between space-y-5 shadow-lg relative overflow-hidden group"
                             >
                                 <div className="space-y-3">
                                     {/* Top Tag & ID */}
                                     <div className="flex items-center justify-between gap-2">
                                         <span className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
                                             isGen
-                                                ? 'bg-[#a5d391]/15 text-[#a5d391] border-[#a5d391]/30'
-                                                : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-[#a5d391]/15 dark:text-[#a5d391] dark:border-[#a5d391]/30'
+                                                : 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40'
                                         }`}>
                                             {isDatabasePlan
                                                 ? 'Saved in Database'
                                                 : isGen ? 'General • All Users' : `Exclusive: ${plan.targetUserName || 'Patient'}`}
                                         </span>
-                                        <span className="text-[10px] font-mono text-white/40">
+                                        <span className="text-[10px] font-mono text-slate-500 dark:text-white/40">
                                             #{String(plan.id).slice(-6)}
                                         </span>
                                     </div>
 
                                     {/* Title & Author */}
                                     <div>
-                                        <h3 className="text-white font-bold text-base leading-snug group-hover:text-[#a5d391] transition-colors">
+                                        <h3 className="text-slate-900 dark:text-white font-bold text-base leading-snug group-hover:text-emerald-700 dark:group-hover:text-[#a5d391] transition-colors">
                                             {title}
                                         </h3>
-                                        <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-white/50">
+                                        <div className="flex flex-col gap-0.5 mt-1 text-[11px] text-slate-600 dark:text-white/50">
                                             <div className="flex items-center gap-1.5">
-                                                <span className="material-symbols-outlined text-xs text-[#a5d391]">stethoscope</span>
-                                                <span>{plan.nutritionistName || 'Nutritionist Specialist'}</span>
+                                                <span className="material-symbols-outlined text-xs text-emerald-700 dark:text-[#a5d391]">stethoscope</span>
+                                                <span className="font-semibold text-slate-800 dark:text-white/80">{plan.nutritionistName || 'Nutritionist Specialist'}</span>
                                             </div>
                                             {plan.nutritionistEmail && (
-                                                <div className="text-[10px] text-[#a5d391] font-mono pl-4 truncate max-w-[220px]" title={plan.nutritionistEmail}>
+                                                <div className="text-[10px] text-emerald-700 dark:text-[#a5d391] font-mono pl-4 truncate max-w-[220px]" title={plan.nutritionistEmail}>
                                                     {plan.nutritionistEmail}
                                                 </div>
                                             )}
@@ -441,47 +441,47 @@ const DietPlanManagement = () => {
                                     </div>
 
                                     {/* Calorie & Macro Strip */}
-                                    <div className="grid grid-cols-4 gap-2 py-3 border-y border-white/10 text-center">
-                                        <div className="bg-black/30 p-2 rounded-xl">
-                                            <span className="text-[9px] text-white/40 block font-bold">ENERGY</span>
-                                            <span className="text-xs font-black text-white">{plan.calories || 2100}</span>
-                                            <span className="text-[8px] text-white/40 block">kcal</span>
+                                    <div className="grid grid-cols-4 gap-2 py-3 border-y border-slate-200 dark:border-white/10 text-center">
+                                        <div className="bg-slate-100 dark:bg-black/30 p-2 rounded-xl border border-slate-200 dark:border-transparent">
+                                            <span className="text-[9px] text-slate-500 dark:text-white/40 block font-bold">ENERGY</span>
+                                            <span className="text-xs font-black text-slate-900 dark:text-white">{plan.calories || 2100}</span>
+                                            <span className="text-[8px] text-slate-500 dark:text-white/40 block">kcal</span>
                                         </div>
-                                        <div className="bg-black/30 p-2 rounded-xl">
-                                            <span className="text-[9px] text-[#a5d391] block font-bold">PRO</span>
-                                            <span className="text-xs font-black text-[#a5d391]">{plan.protein || 150}g</span>
+                                        <div className="bg-emerald-50/80 dark:bg-black/30 p-2 rounded-xl border border-emerald-200 dark:border-transparent">
+                                            <span className="text-[9px] text-emerald-700 dark:text-[#a5d391] block font-bold">PRO</span>
+                                            <span className="text-xs font-black text-emerald-700 dark:text-[#a5d391]">{plan.protein || 150}g</span>
                                         </div>
-                                        <div className="bg-black/30 p-2 rounded-xl">
-                                            <span className="text-[9px] text-sky-400 block font-bold">CARBS</span>
-                                            <span className="text-xs font-black text-sky-400">{plan.carbs || 180}g</span>
+                                        <div className="bg-sky-50/80 dark:bg-black/30 p-2 rounded-xl border border-sky-200 dark:border-transparent">
+                                            <span className="text-[9px] text-sky-700 dark:text-sky-400 block font-bold">CARBS</span>
+                                            <span className="text-xs font-black text-sky-700 dark:text-sky-400">{plan.carbs || 180}g</span>
                                         </div>
-                                        <div className="bg-black/30 p-2 rounded-xl">
-                                            <span className="text-[9px] text-amber-400 block font-bold">FATS</span>
-                                            <span className="text-xs font-black text-amber-400">{plan.fats || 65}g</span>
+                                        <div className="bg-amber-50/80 dark:bg-black/30 p-2 rounded-xl border border-amber-200 dark:border-transparent">
+                                            <span className="text-[9px] text-amber-800 dark:text-amber-400 block font-bold">FATS</span>
+                                            <span className="text-xs font-black text-amber-800 dark:text-amber-400">{plan.fats || 65}g</span>
                                         </div>
                                     </div>
 
                                     {/* Clinical Notes snippet */}
                                     {plan.nutritionistNotes && (
-                                        <p className="text-[11px] text-white/50 italic line-clamp-2 bg-black/20 p-2.5 rounded-xl border border-white/5">
+                                        <p className="text-[11px] text-slate-600 dark:text-white/60 italic line-clamp-2 bg-slate-50 dark:bg-black/20 p-2.5 rounded-xl border border-slate-200 dark:border-white/5">
                                             "{plan.nutritionistNotes}"
                                         </p>
                                     )}
 
                                     {/* Metadata Footer */}
-                                    <div className="flex items-center justify-between text-[10px] text-white/40 pt-1">
+                                    <div className="flex items-center justify-between text-[10px] text-slate-600 dark:text-white/50 pt-1">
                                         <span>Water: {plan.waterLiters || 3}L</span>
                                         <span>Meals: {plan.meals?.length || 4} slots</span>
                                     </div>
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="space-y-2 pt-2 border-t border-white/10">
+                                <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-white/10">
                                     <div className="flex items-center gap-2">
                                         <button
                                             type="button"
                                             onClick={() => setSelectedPlan(plan)}
-                                            className="flex-1 py-2 px-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                            className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-transparent font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                                         >
                                             <span className="material-symbols-outlined text-sm">visibility</span>
                                             <span>Inspect Dossier</span>
@@ -492,7 +492,7 @@ const DietPlanManagement = () => {
                                                 type="button"
                                                 onClick={() => handlePromoteToGlobal(plan)}
                                                 title="Promote to Platform Default Active Plan"
-                                                className="py-2 px-3 bg-[#a5d391]/15 hover:bg-[#a5d391]/30 text-[#a5d391] border border-[#a5d391]/40 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                                className="py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-[#a5d391]/15 dark:hover:bg-[#a5d391]/30 dark:text-[#a5d391] dark:border-[#a5d391]/40 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                                             >
                                                 <span className="material-symbols-outlined text-sm">rocket_launch</span>
                                                 <span>Deploy</span>
@@ -503,9 +503,9 @@ const DietPlanManagement = () => {
                                     <button
                                         type="button"
                                         onClick={() => setPlanToDelete(plan)}
-                                        className="w-full py-2 px-3 bg-red-500/10 hover:bg-red-500/25 border border-red-500/30 text-red-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer group-hover:border-red-500/50"
+                                        className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 dark:bg-red-500/10 dark:hover:bg-red-500/25 dark:border-red-500/30 dark:text-red-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                                     >
-                                        <span className="material-symbols-outlined text-sm text-red-400">delete_forever</span>
+                                        <span className="material-symbols-outlined text-sm text-red-600 dark:text-red-400">delete_forever</span>
                                         <span>Permanent Purge (DB & All Registries)</span>
                                     </button>
                                 </div>
@@ -517,68 +517,68 @@ const DietPlanManagement = () => {
 
             {/* Inspect Clinical Dossier Modal */}
             {selectedPlan && (
-                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/15 rounded-[2.5rem] w-full max-w-2xl p-6 sm:p-8 space-y-6 relative shadow-2xl max-h-[85vh] overflow-y-auto">
-                        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fadeIn">
+                    <div className="bg-white dark:bg-[#080b12] border border-slate-300 dark:border-white/15 rounded-[2.5rem] w-full max-w-2xl p-6 sm:p-8 space-y-6 relative shadow-2xl max-h-[85vh] overflow-y-auto text-slate-800 dark:text-white">
+                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4">
                             <div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-[#a5d391] block mb-1">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-[#a5d391] block mb-1">
                                     Clinical Protocol Dossier • #{String(selectedPlan.id).slice(-8)}
                                 </span>
-                                <h3 className="text-xl font-bold font-hero-display text-white">
+                                <h3 className="text-xl font-bold font-hero-display text-slate-900 dark:text-white">
                                     {selectedPlan.title || selectedPlan.planTitle}
                                 </h3>
                             </div>
-                            <button onClick={() => setSelectedPlan(null)} className="text-white/40 hover:text-white cursor-pointer p-1">
+                            <button onClick={() => setSelectedPlan(null)} className="text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white cursor-pointer p-1">
                                 <span className="material-symbols-outlined text-xl">close</span>
                             </button>
                         </div>
 
                         {/* Overview strip */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
-                                <span className="text-[10px] text-white/50 block font-bold">TARGET SCOPE</span>
-                                <span className="text-xs font-bold text-[#a5d391] mt-0.5 block">
+                            <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 text-center">
+                                <span className="text-[10px] text-slate-500 dark:text-white/50 block font-bold">TARGET SCOPE</span>
+                                <span className="text-xs font-bold text-emerald-700 dark:text-[#a5d391] mt-0.5 block">
                                     {selectedPlan.scope === 'EXCLUSIVE' ? `Exclusive (${selectedPlan.targetUserName || 'Patient'})` : 'General Public'}
                                 </span>
                             </div>
-                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
-                                <span className="text-[10px] text-white/50 block font-bold">FORMULATOR</span>
-                                <span className="text-xs font-bold text-white mt-0.5 block">{selectedPlan.nutritionistName || 'Specialist'}</span>
+                            <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 text-center">
+                                <span className="text-[10px] text-slate-500 dark:text-white/50 block font-bold">FORMULATOR</span>
+                                <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">{selectedPlan.nutritionistName || 'Specialist'}</span>
                                 {selectedPlan.nutritionistEmail && (
-                                    <span className="text-[10px] text-[#a5d391] font-mono block mt-0.5 truncate" title={selectedPlan.nutritionistEmail}>
+                                    <span className="text-[10px] text-emerald-700 dark:text-[#a5d391] font-mono block mt-0.5 truncate" title={selectedPlan.nutritionistEmail}>
                                         {selectedPlan.nutritionistEmail}
                                     </span>
                                 )}
                             </div>
-                            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center">
-                                <span className="text-[10px] text-white/50 block font-bold">HYDRATION</span>
-                                <span className="text-xs font-bold text-sky-400 mt-0.5 block">{selectedPlan.waterLiters || 3} Liters/day</span>
+                            <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 text-center">
+                                <span className="text-[10px] text-slate-500 dark:text-white/50 block font-bold">HYDRATION</span>
+                                <span className="text-xs font-bold text-sky-700 dark:text-sky-400 mt-0.5 block">{selectedPlan.waterLiters || 3} Liters/day</span>
                             </div>
                         </div>
 
                         {/* Nutrition targets */}
-                        <div className="p-4 bg-black/40 rounded-2xl border border-white/10 space-y-3">
-                            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Calibrated Nutrition Targets</h4>
+                        <div className="p-4 bg-slate-50 dark:bg-black/40 rounded-2xl border border-slate-200 dark:border-white/10 space-y-3">
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Calibrated Nutrition Targets</h4>
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
-                                <div className="p-2 bg-white/5 rounded-xl">
-                                    <span className="text-[9px] text-white/40 block">Calories</span>
-                                    <span className="text-xs font-black text-white">{selectedPlan.calories} kcal</span>
+                                <div className="p-2 bg-white dark:bg-white/5 border border-slate-200 dark:border-transparent rounded-xl">
+                                    <span className="text-[9px] text-slate-500 dark:text-white/40 block">Calories</span>
+                                    <span className="text-xs font-black text-slate-900 dark:text-white">{selectedPlan.calories} kcal</span>
                                 </div>
-                                <div className="p-2 bg-white/5 rounded-xl">
-                                    <span className="text-[9px] text-[#a5d391] block">Protein</span>
-                                    <span className="text-xs font-black text-[#a5d391]">{selectedPlan.protein}g</span>
+                                <div className="p-2 bg-emerald-50 dark:bg-white/5 border border-emerald-200 dark:border-transparent rounded-xl">
+                                    <span className="text-[9px] text-emerald-700 dark:text-[#a5d391] block">Protein</span>
+                                    <span className="text-xs font-black text-emerald-700 dark:text-[#a5d391]">{selectedPlan.protein}g</span>
                                 </div>
-                                <div className="p-2 bg-white/5 rounded-xl">
-                                    <span className="text-[9px] text-sky-400 block">Carbs</span>
-                                    <span className="text-xs font-black text-sky-400">{selectedPlan.carbs}g</span>
+                                <div className="p-2 bg-sky-50 dark:bg-white/5 border border-sky-200 dark:border-transparent rounded-xl">
+                                    <span className="text-[9px] text-sky-700 dark:text-sky-400 block">Carbs</span>
+                                    <span className="text-xs font-black text-sky-700 dark:text-sky-400">{selectedPlan.carbs}g</span>
                                 </div>
-                                <div className="p-2 bg-white/5 rounded-xl">
-                                    <span className="text-[9px] text-amber-400 block">Fats</span>
-                                    <span className="text-xs font-black text-amber-400">{selectedPlan.fats}g</span>
+                                <div className="p-2 bg-amber-50 dark:bg-white/5 border border-amber-200 dark:border-transparent rounded-xl">
+                                    <span className="text-[9px] text-amber-800 dark:text-amber-400 block">Fats</span>
+                                    <span className="text-xs font-black text-amber-800 dark:text-amber-400">{selectedPlan.fats}g</span>
                                 </div>
-                                <div className="p-2 bg-white/5 rounded-xl">
-                                    <span className="text-[9px] text-cyan-400 block">Water</span>
-                                    <span className="text-xs font-black text-cyan-400">{selectedPlan.waterLiters || 3}L</span>
+                                <div className="p-2 bg-cyan-50 dark:bg-white/5 border border-cyan-200 dark:border-transparent rounded-xl">
+                                    <span className="text-[9px] text-cyan-700 dark:text-cyan-400 block">Water</span>
+                                    <span className="text-xs font-black text-cyan-700 dark:text-cyan-400">{selectedPlan.waterLiters || 3}L</span>
                                 </div>
                             </div>
                         </div>
@@ -586,26 +586,26 @@ const DietPlanManagement = () => {
                         {/* Meals breakdown */}
                         {selectedPlan.meals && selectedPlan.meals.length > 0 && (
                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-sm text-[#a5d391]">restaurant</span>
+                                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-sm text-emerald-700 dark:text-[#a5d391]">restaurant</span>
                                     Prescribed Meal Schedule ({selectedPlan.meals.length} Slots)
                                 </h4>
                                 <div className="space-y-2">
                                     {selectedPlan.meals.map((meal, mIdx) => (
-                                        <div key={mIdx} className="p-3 bg-white/5 border border-white/5 rounded-2xl flex items-start justify-between gap-3">
+                                        <div key={mIdx} className="p-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl flex items-start justify-between gap-3">
                                             <div className="space-y-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-mono text-[#a5d391] px-2 py-0.5 bg-[#a5d391]/10 rounded-md font-bold">
+                                                    <span className="text-[10px] font-mono text-emerald-800 dark:text-[#a5d391] px-2 py-0.5 bg-emerald-100 dark:bg-[#a5d391]/10 rounded-md font-bold">
                                                         {meal.time}
                                                     </span>
-                                                    <span className="text-xs font-bold text-white">{meal.name}</span>
-                                                    <span className="text-[10px] text-white/40 uppercase">({meal.mealType})</span>
+                                                    <span className="text-xs font-bold text-slate-900 dark:text-white">{meal.name}</span>
+                                                    <span className="text-[10px] text-slate-500 dark:text-white/40 uppercase">({meal.mealType})</span>
                                                 </div>
-                                                <p className="text-[11px] text-white/50">{meal.ingredients}</p>
+                                                <p className="text-[11px] text-slate-600 dark:text-white/50">{meal.ingredients}</p>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <span className="text-xs font-black text-white">{meal.calories} kcal</span>
-                                                <div className="text-[10px] text-white/40">P: {meal.protein}g • C: {meal.carbs}g • F: {meal.fats}g</div>
+                                                <span className="text-xs font-black text-slate-900 dark:text-white">{meal.calories} kcal</span>
+                                                <div className="text-[10px] text-slate-500 dark:text-white/40">P: {meal.protein}g • C: {meal.carbs}g • F: {meal.fats}g</div>
                                             </div>
                                         </div>
                                     ))}
@@ -615,17 +615,17 @@ const DietPlanManagement = () => {
 
                         {/* Clinical notes */}
                         {selectedPlan.nutritionistNotes && (
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-1.5">
-                                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Clinical Guidance & Prescriptive Notes</h4>
-                                <p className="text-xs text-white/70 italic leading-relaxed">"{selectedPlan.nutritionistNotes}"</p>
+                            <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 space-y-1.5">
+                                <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Clinical Guidance & Prescriptive Notes</h4>
+                                <p className="text-xs text-slate-600 dark:text-white/70 italic leading-relaxed">"{selectedPlan.nutritionistNotes}"</p>
                             </div>
                         )}
 
-                        <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
+                        <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-white/10">
                             <button
                                 type="button"
                                 onClick={() => setSelectedPlan(null)}
-                                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold cursor-pointer"
+                                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white rounded-xl text-xs font-bold cursor-pointer border border-slate-300 dark:border-transparent"
                             >
                                 Close Dossier
                             </button>
@@ -636,14 +636,14 @@ const DietPlanManagement = () => {
 
             {/* Permanent Purge Confirmation Modal */}
             {planToDelete && (
-                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fadeIn">
-                    <div className="bg-[#080b12] border border-red-500/40 rounded-[2.5rem] w-full max-w-md p-6 sm:p-8 space-y-6 relative shadow-2xl">
-                        <div className="flex items-center gap-3 text-red-400">
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fadeIn">
+                    <div className="bg-white dark:bg-[#080b12] border border-red-500/40 rounded-[2.5rem] w-full max-w-md p-6 sm:p-8 space-y-6 relative shadow-2xl">
+                        <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
                             <span className="material-symbols-outlined text-3xl">warning</span>
-                            <h3 className="text-xl font-bold font-hero-display text-white">Permanent Purge</h3>
+                            <h3 className="text-xl font-bold font-hero-display text-slate-900 dark:text-white">Permanent Purge</h3>
                         </div>
 
-                        <div className="space-y-3 text-xs text-white/70">
+                        <div className="space-y-3 text-xs text-slate-600 dark:text-white/70">
                             <p>
                                 You are about to permanently purge the following diet protocol:
                             </p>

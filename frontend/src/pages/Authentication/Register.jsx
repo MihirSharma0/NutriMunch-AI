@@ -35,7 +35,7 @@ const Register = () => {
     const fileInputRef = useRef(null);
     
     const { register } = useContext(AuthContext);
-    const { isDark } = useTheme();
+    const { isDark, toggleTheme } = useTheme();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -146,6 +146,23 @@ const Register = () => {
                 >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>Back to Home</span>
+                </button>
+
+                {/* Direct Light/Dark Theme Switcher */}
+                <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+                    title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer shadow-sm border ${
+                        isDark
+                            ? 'bg-slate-900/60 hover:bg-slate-800/80 border-white/10 text-amber-300 hover:text-amber-200 hover:border-amber-400/40 hover:shadow-[0_0_12px_rgba(252,211,77,0.3)]'
+                            : 'bg-white/90 hover:bg-white border-slate-200 text-indigo-600 hover:text-indigo-800 hover:border-indigo-400/40 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]'
+                    }`}
+                >
+                    <span className={`material-symbols-outlined text-lg transition-transform duration-300 ${isDark ? 'rotate-0' : 'rotate-180'}`}>
+                        {isDark ? 'light_mode' : 'dark_mode'}
+                    </span>
                 </button>
             </header>
             {/* END: TopNavigation */}

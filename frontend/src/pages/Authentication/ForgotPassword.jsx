@@ -3,7 +3,8 @@
  * Initiates self-service password recovery by requesting a secure token link via email.
  */
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import axios from '../../api/axios';
 import { useTheme } from '../../context/ThemeContext';
 import { getEmailError } from '../../utils/emailValidation';
@@ -16,7 +17,8 @@ const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState('idle'); // idle, loading, success, error
     const [message, setMessage] = useState('');
-    const { isDark } = useTheme();
+    const { isDark, toggleTheme } = useTheme();
+    const navigate = useNavigate();
     const emailError = getEmailError(email);
 
     const handleSubmit = async (e) => {
@@ -36,7 +38,7 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className={`min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-body-md transition-colors duration-300 relative overflow-x-hidden ${
+        <div className={`min-h-screen flex flex-col justify-between font-body-md transition-colors duration-300 relative overflow-x-hidden ${
             isDark 
                 ? 'bg-[#080b12] text-white selection:bg-[#a5d391]/30 selection:text-[#a5d391]' 
                 : 'bg-gradient-to-br from-[#e0f2fe] via-[#f3e8ff] to-[#ecfdf5] text-slate-900 selection:bg-emerald-200 selection:text-emerald-900'
@@ -48,11 +50,43 @@ const ForgotPassword = () => {
                 <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-300/25 blur-[160px] rounded-full pointer-events-none z-0"></div>
             )}
 
-            <div className={`max-w-md w-full space-y-8 backdrop-blur-2xl p-6 sm:p-10 rounded-[2.5rem] border shadow-2xl relative z-10 transition-all duration-300 ${
-                isDark 
-                    ? 'bg-[#0d121c]/80 border-white/10 text-white' 
-                    : 'bg-white/90 border-slate-200/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)] text-slate-800'
-            }`}>
+            {/* Top Navigation Bar */}
+            <header className="relative z-10 w-full px-6 py-6 md:px-10 flex items-center justify-between">
+                <button 
+                    onClick={() => navigate('/login')} 
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold backdrop-blur-md transition-all duration-200 shadow-sm cursor-pointer border ${
+                        isDark 
+                            ? 'text-slate-300 bg-slate-900/60 border-slate-700/60 hover:bg-slate-800/80 hover:text-white' 
+                            : 'text-slate-700 bg-white/80 border-slate-200 hover:bg-white hover:text-slate-900'
+                    }`}
+                >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Login</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+                    title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer shadow-sm border ${
+                        isDark
+                            ? 'bg-slate-900/60 hover:bg-slate-800/80 border-white/10 text-amber-300 hover:text-amber-200 hover:border-amber-400/40 hover:shadow-[0_0_12px_rgba(252,211,77,0.3)]'
+                            : 'bg-white/90 hover:bg-white border-slate-200 text-indigo-600 hover:text-indigo-800 hover:border-indigo-400/40 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]'
+                    }`}
+                >
+                    <span className={`material-symbols-outlined text-lg transition-transform duration-300 ${isDark ? 'rotate-0' : 'rotate-180'}`}>
+                        {isDark ? 'light_mode' : 'dark_mode'}
+                    </span>
+                </button>
+            </header>
+
+            <main className="flex-1 flex items-center justify-center px-4 py-6 sm:px-6 relative z-10">
+                <div className={`max-w-md w-full space-y-8 backdrop-blur-2xl p-6 sm:p-10 rounded-[2.5rem] border shadow-2xl transition-all duration-300 ${
+                    isDark 
+                        ? 'bg-[#0d121c]/90 border-white/10 text-white' 
+                        : 'bg-white/95 border-slate-200/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)] text-slate-800'
+                }`}>
 
                 <div>
                     <h2 className={`mt-2 text-center text-2xl sm:text-3xl font-bold tracking-tight font-hero-display ${isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -123,13 +157,15 @@ const ForgotPassword = () => {
                         </div>
                         
                         <div className="text-center mt-4">
-                            <Link to="/login" className={`font-semibold text-xs transition-colors ${isDark ? 'text-[#a5d391] hover:text-white' : 'text-emerald-600 hover:text-emerald-700'}`}>
+                            <Link to="/login" className={`font-semibold text-xs transition-colors ${isDark ? 'text-[#a5d391] hover:text-white' : 'text-emerald-700 hover:text-emerald-800 underline-offset-2 hover:underline'}`}>
                                 Back to Login
                             </Link>
                         </div>
                     </form>
                 )}
-            </div>
+                </div>
+            </main>
+            <div className="py-2" />
         </div>
     );
 };
