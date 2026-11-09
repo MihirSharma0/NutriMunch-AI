@@ -245,8 +245,8 @@ const ConsultationChatPage = () => {
         };
     }
 
-    const openConversation = (id) => navigate(`/consultation-chat?conversationId=${encodeURIComponent(id)}`);
-    const openAppointment = (id) => navigate(`/consultation-chat?appointmentId=${encodeURIComponent(id)}`);
+    const openConversation = (id) => navigate(`/consultation-chat?conversationId=${encodeURIComponent(id)}`, { replace: true });
+    const openAppointment = (id) => navigate(`/consultation-chat?appointmentId=${encodeURIComponent(id)}`, { replace: true });
     const openRecipient = (recipient) => {
         const activeConversation = conversations.find((item) =>
             String(item.patientId) === String(recipient.id) && item.status === 'ACTIVE');
@@ -268,7 +268,30 @@ const ConsultationChatPage = () => {
     const closeChat = () => {
         setNewChatMode(false);
         setSearch('');
-        navigate('/consultation-chat');
+        navigate('/consultation-chat', { replace: true });
+    };
+
+    const handleExitChat = () => {
+        setNewChatMode(false);
+        setSearch('');
+
+        const returnPath = sessionStorage.getItem('nutrimunch_chat_return_path');
+        if (returnPath && !returnPath.includes('consultation-chat')) {
+            sessionStorage.removeItem('nutrimunch_chat_return_path');
+            navigate(returnPath);
+            return;
+        }
+
+        // Clean role-based exit destinations
+        if (role === 'NUTRITIONIST') {
+            navigate('/dashboard/nutritionist');
+        } else if (role === 'ADMIN') {
+            navigate('/dashboard/admin');
+        } else if (role === 'USER') {
+            navigate('/dashboard/user');
+        } else {
+            navigate('/');
+        }
     };
     const isSelectionRequested = Boolean(requestedAppointmentId || requestedParticipantId || requestedConversationId);
 
@@ -323,17 +346,26 @@ const ConsultationChatPage = () => {
         ) : [];
 
         return (
-            <main className="flex h-full min-h-0 items-center justify-center bg-transparent px-3 text-[#111b21] sm:px-0">
-                <section className="mx-auto flex h-[min(76vh,700px)] min-h-[min(480px,calc(100dvh-10rem))] w-full overflow-hidden rounded-xl border border-white/10 bg-[#edf2f0] shadow-[0_24px_70px_rgba(0,0,0,0.28)] sm:w-[90%] lg:w-[80%] lg:max-w-[1500px]">
+            <main className="flex h-full w-full min-h-0 items-stretch sm:items-center justify-center bg-transparent px-0 sm:px-4 text-[#111b21]">
+                <section className="mx-auto flex h-full sm:h-[min(80dvh,750px)] min-h-0 w-full overflow-hidden rounded-none sm:rounded-xl border-0 sm:border border-white/10 bg-[#edf2f0] shadow-none sm:shadow-[0_24px_70px_rgba(0,0,0,0.28)] sm:w-[90%] lg:w-[80%] lg:max-w-[1500px]">
                     <aside className={`${selected ? 'hidden sm:flex' : 'flex'} w-full shrink-0 flex-col border-r border-[#d9e2df] bg-[#f7f9f8] sm:w-[340px] lg:w-[390px]`}>
-                        <div className="flex items-center justify-between bg-[#eaf0ee] px-4 py-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#d9fdd3] font-bold text-[#075e54]">
+                        <div className="flex items-center justify-between bg-[#eaf0ee] px-3 sm:px-4 py-3 gap-2">
+                            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                                <button
+                                    type="button"
+                                    onClick={handleExitChat}
+                                    className="flex h-9 w-9 items-center justify-center rounded-full text-[#54656f] hover:bg-[#d1d7db] active:bg-[#c2c9cd] transition cursor-pointer shrink-0"
+                                    aria-label="Back to dashboard"
+                                    title="Back to dashboard"
+                                >
+                                    <span className="material-symbols-outlined text-xl">arrow_back</span>
+                                </button>
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#d9fdd3] font-bold text-[#075e54] shrink-0">
                                     {(user?.name || user?.email || 'N').slice(0, 1).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
                                     <h1 className="truncate text-sm font-semibold">Consultation chats</h1>
-                                    <p className="text-xs text-[#667781]">
+                                    <p className="text-xs text-[#667781] truncate">
                                         {role === 'USER' ? 'Your consultations' : 'Nutritionist workspace'}
                                     </p>
                                 </div>
