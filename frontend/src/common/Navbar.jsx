@@ -135,22 +135,11 @@ const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout, token } = useContext(AuthContext);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const navContainerRef = useRef(null);
     const dropdownRef = useRef(null);
     const notificationRef = useRef(null);
-
-    useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth >= 1024) {
-                setIsMenuOpen(false);
-            }
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
 
     const navItems = getNavItemsForRole(user);
     const rawRole = user?.role ? String(user.role).toUpperCase().replace('ROLE_', '') : 'GUEST';
@@ -277,7 +266,6 @@ const Navbar = () => {
     }, [user, token]);
 
     useEffect(() => {
-        setIsMenuOpen(false);
         setActiveDropdown(null);
         setIsNotificationOpen(false);
     }, [location.pathname]);
@@ -299,7 +287,6 @@ const Navbar = () => {
     const handleLogout = () => {
         logout();
         navigate('/');
-        setIsMenuOpen(false);
     };
 
     const handleNotificationClick = async (item) => {
@@ -318,6 +305,9 @@ const Navbar = () => {
 
         // 1. Consultation chat deep-linking
         if (item.conversationId || item.type === 'CONSULTATION_MSG' || destination?.includes('consultation-chat')) {
+            if (location.pathname !== '/consultation-chat') {
+                sessionStorage.setItem('nutrimunch_chat_return_path', location.pathname);
+            }
             const convId = item.conversationId || (destination?.includes('conversationId=') ? destination.split('conversationId=')[1].split('&')[0] : null);
             if (convId) {
                 navigate(`/consultation-chat?conversationId=${encodeURIComponent(convId)}`);
@@ -376,7 +366,7 @@ const Navbar = () => {
             setNotificationsUnread(prev => Math.max(0, prev - 1));
         }
         if (token && (typeof id === 'number' || !isNaN(Number(id)))) {
-            api.delete(`/notifications/${id}`).catch(err => console.error('Failed to delete notification:', err));
+            api.delete(`/notifications/${id}`).catch(() => {});
         }
     };
 
@@ -384,7 +374,7 @@ const Navbar = () => {
         setNotifications([]);
         setNotificationsUnread(0);
         if (token) {
-            api.delete('/notifications/clear-all').catch(err => console.error('Failed to clear notifications:', err));
+            api.delete('/notifications/clear-all').catch(() => {});
         }
     };
 
@@ -503,7 +493,12 @@ const Navbar = () => {
                         {user && rawRole !== 'ADMIN' && (
                             <button
                                 type="button"
-                                onClick={() => navigate('/consultation-chat')}
+                                onClick={() => {
+                                    if (location.pathname !== '/consultation-chat') {
+                                        sessionStorage.setItem('nutrimunch_chat_return_path', location.pathname);
+                                    }
+                                    navigate('/consultation-chat');
+                                }}
                                 aria-label={chatUnread > 0
                                     ? `Clinical Consultation Chat, ${chatUnread} unread message${chatUnread === 1 ? '' : 's'}`
                                     : 'Clinical Consultation Chat'}
@@ -635,24 +630,13 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* Mobile Menu Toggle Button (Hamburger / Close) */}
-                        <button
-                            type="button"
-                            className="lg:hidden flex w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer shadow-sm"
-                            onClick={() => setIsMenuOpen(prev => !prev)}
-                            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-                            aria-expanded={isMenuOpen}
-                        >
-                            <span className="material-symbols-outlined text-lg sm:text-xl">{isMenuOpen ? 'close' : 'menu'}</span>
-                        </button>
-
-                        {/* Extreme Right: User Profile Pill & Logout OR Login / Sign up Button */}
+                        {/* Extreme Right: User Profile Pill (Desktop only; moved to mobile bottom dock on mobile) & Logout OR Login / Sign up Button */}
                         {user ? (
                             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                 <Link
                                     to={profilePath}
                                     title={`${displayName} • Role: ${roleLabel} • View Profile`}
-                                    className="group relative flex items-center gap-1.5 sm:gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 px-2 sm:px-2.5 py-1.5 rounded-full transition-all text-xs font-bold text-white cursor-pointer shadow-sm shrink-0"
+                                    className="hidden lg:flex group relative items-center gap-1.5 sm:gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#a5d391]/40 px-2 sm:px-2.5 py-1.5 rounded-full transition-all text-xs font-bold text-white cursor-pointer shadow-sm shrink-0"
                                 >
                                     {/* User Initials Avatar Circle */}
                                     <div className="w-6 h-6 rounded-full bg-[#a5d391] text-black font-black text-[10px] flex items-center justify-center border border-white/20 group-hover:border-[#a5d391] shrink-0 overflow-hidden shadow-sm">
@@ -702,73 +686,12 @@ const Navbar = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Mobile Dropdown Panel */}
-                <div className={`lg:hidden block grid transition-all duration-300 ease-in-out ${isMenuOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-                    <div className="overflow-hidden">
-                        <div className="px-5 pb-6 pt-2 border-t border-white/10 flex flex-col gap-1">
-                            {navItems.map(item => {
-                                if (item.subMenu) {
-                                    return (
-                                        <div key={item.label} className="space-y-1 my-1">
-                                            <div className="text-[10px] font-black uppercase text-[#a5d391] tracking-widest px-4 py-1">
-                                                {item.headerTitle || item.label}
-                                            </div>
-                                            {item.subMenu.map(sub => (
-                                                <Link
-                                                    key={sub.label}
-                                                    to={sub.path}
-                                                    onClick={() => setIsMenuOpen(false)}
-                                                    className={`flex items-center gap-3 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${location.pathname === sub.path ? 'bg-[#a5d391]/20 text-[#a5d391]' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
-                                                >
-                                                    <span className="material-symbols-outlined text-sm text-[#a5d391]">{sub.icon}</span>
-                                                    <span>{sub.label}</span>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    );
-                                }
-                                const isActive = checkIsActive(location.pathname, item.path);
-                                return (
-                                    <Link
-                                        key={item.label}
-                                        to={item.path}
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${isActive ? 'bg-[#a5d391]/20 text-[#a5d391]' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
-                                    >
-                                        {item.label}
-                                    </Link>
-                                );
-                            })}
-
-                            {user ? (
-                                <button
-                                    onClick={() => {
-                                        setIsMenuOpen(false);
-                                        handleLogout();
-                                    }}
-                                    className="mt-2 text-center bg-red-500/20 text-red-300 font-bold px-4 py-2.5 rounded-xl text-sm transition-all border border-red-500/30"
-                                >
-                                    Logout
-                                </button>
-                            ) : (
-                                <Link
-                                    to="/login"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="mt-2 text-center bg-[#a5d391] text-black font-bold px-4 py-2.5 rounded-xl text-sm transition-all"
-                                >
-                                    Login / Sign up
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                </div>
             </nav>
         </div>
 
             {/* Real-Time Push Notification Toast Banner */}
             {toastNotification && (
-                <div className="fixed bottom-6 right-6 z-[99999] max-w-md w-full animate-bounce-in shadow-2xl pointer-events-auto">
+                <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 left-3 sm:left-auto z-[99999] max-w-md w-auto sm:w-full animate-bounce-in shadow-2xl pointer-events-auto">
                     <div
                         onClick={() => handleNotificationClick(toastNotification)}
                         className="bg-[#121f18] border border-[#a5d391]/40 rounded-2xl p-4 shadow-2xl shadow-emerald-950/90 backdrop-blur-xl flex items-start gap-4 pointer-events-auto cursor-pointer hover:border-[#a5d391] transition-all group"

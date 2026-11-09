@@ -263,16 +263,34 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [conversation?.id, messages.length]);
 
+    // Ensure the latest message stays visible when the virtual keyboard opens/resizes viewport
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.visualViewport) return;
+        const handleViewportResize = () => {
+            endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        };
+        window.visualViewport.addEventListener('resize', handleViewportResize);
+        return () => window.visualViewport?.removeEventListener('resize', handleViewportResize);
+    }, []);
+
+    const handleTextareaFocus = () => {
+        setTimeout(() => {
+            endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 200);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    };
+
     const sendMessage = async (event) => {
         event?.preventDefault();
         const content = input.trim();
         if (!conversation?.id || !content || content.length > MAX_MESSAGE_LENGTH || sending) return;
         const clientMessageId = crypto.randomUUID();
-        // Backend @Size(max = 128); a UUID is 36 chars, but never send a longer id.
-        if (clientMessageId.length > 128) {
-            setError('Could not send message: invalid message id.');
-            return;
-        }
         const optimistic = {
             id: `pending-${clientMessageId}`,
             senderId: currentUser?.id,
@@ -353,15 +371,16 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
         >
             <section className={`flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#efeae2] shadow-2xl ${embedded ? '' : 'animate-fadeIn sm:h-[min(90vh,900px)] sm:max-w-5xl sm:rounded-xl'}`}>
                 <header className="z-10 flex shrink-0 items-center justify-between gap-3 border-b border-[#d1d7db] bg-[#f0f2f5] px-3 py-2.5 sm:px-5 sm:py-3">
-                    <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                         {embedded && (
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#54656f] transition hover:bg-[#e9edef] sm:hidden"
-                                aria-label="Back to chats"
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#54656f] transition hover:bg-[#e9edef] active:bg-[#d1d7db] cursor-pointer"
+                                aria-label="Back to conversations list"
+                                title="Back to chats"
                             >
-                                <span className="material-symbols-outlined">arrow_back</span>
+                                <span className="material-symbols-outlined text-xl">arrow_back</span>
                             </button>
                         )}
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#dfe8df] font-bold text-[#075e54]">
@@ -389,7 +408,7 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
                         )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                         {currentUserRole === 'NUTRITIONIST' && conversation?.status === 'ACTIVE' && (
                             <button
                                 type="button"
@@ -504,9 +523,28 @@ const ConsultationChatModal = ({ isOpen, onClose, currentUser, targetPatient, ap
                         </>
                     )}
                 </div>
-                <form onSubmit={sendMessage} className="flex shrink-0 items-end gap-2 bg-[#f0f2f5] px-3 py-2.5 sm:gap-3 sm:px-5">
-                    <textarea value={input} onChange={(event) => setInput(event.target.value)} maxLength={MAX_MESSAGE_LENGTH} rows={1} placeholder={chatExpired ? 'This chat has expired' : chatClosed ? 'This chat has ended' : 'Type a message'} className="min-h-12 max-h-32 flex-1 resize-y rounded-3xl border border-transparent bg-white px-4 py-3.5 text-[#111b21] outline-none placeholder:text-[#667781] focus:border-[#d1d7db]" disabled={!conversation || loading || !chatUsable} />
-                    <button type="submit" aria-label="Send message" disabled={!input.trim() || sending || !conversation || !chatUsable} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white transition hover:bg-[#008f72] disabled:opacity-40">
+                <form
+                    onSubmit={sendMessage}
+                    className="flex shrink-0 items-end gap-2 bg-[#f0f2f5] px-3 py-2.5 sm:gap-3 sm:px-5 border-t border-[#d1d7db]/40"
+                    style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
+                >
+                    <textarea
+                        value={input}
+                        onChange={(event) => setInput(event.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onFocus={handleTextareaFocus}
+                        maxLength={MAX_MESSAGE_LENGTH}
+                        rows={1}
+                        placeholder={chatExpired ? 'This chat has expired' : chatClosed ? 'This chat has ended' : 'Type a message'}
+                        className="min-h-11 max-h-32 flex-1 resize-none rounded-3xl border border-transparent bg-white px-4 py-3 text-sm text-[#111b21] outline-none placeholder:text-[#667781] focus:border-[#00a884] transition-all"
+                        disabled={!conversation || loading || !chatUsable}
+                    />
+                    <button
+                        type="submit"
+                        aria-label="Send message"
+                        disabled={!input.trim() || sending || !conversation || !chatUsable}
+                        className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white transition hover:bg-[#008f72] active:scale-95 disabled:opacity-40 cursor-pointer shadow-sm"
+                    >
                         <span className="material-symbols-outlined text-xl">{sending ? 'hourglass_top' : 'send'}</span>
                     </button>
                 </form>

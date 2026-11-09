@@ -178,15 +178,24 @@ const Appointments = () => {
     }, [user, token, selectedAppointment]);
 
     useEffect(() => {
-        if (isBookingModalOpen || selectedAppointment) {
+        const isAnyModalActive = Boolean(
+            isBookingModalOpen ||
+            selectedAppointment ||
+            guardBlockedModal ||
+            cancelPromptModal?.open
+        );
+        if (isAnyModalActive) {
             document.body.style.overflow = 'hidden';
+            document.body.setAttribute('data-modal-open', 'true');
         } else {
             document.body.style.overflow = 'unset';
+            document.body.removeAttribute('data-modal-open');
         }
         return () => {
             document.body.style.overflow = 'unset';
+            document.body.removeAttribute('data-modal-open');
         };
-    }, [isBookingModalOpen, selectedAppointment]);
+    }, [isBookingModalOpen, selectedAppointment, guardBlockedModal, cancelPromptModal]);
 
 
     // Helper to check if appointment status is confirmed/active
@@ -1144,19 +1153,25 @@ const Appointments = () => {
 
             {/* Modal: Book Appointment */}
             {isBookingModalOpen && (
-                <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
-                        <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    data-modal="true"
+                    className="fixed inset-0 z-[99999] flex items-center justify-center p-2.5 sm:p-6 bg-black/85 backdrop-blur-xl animate-fadeIn"
+                >
+                    <div className="bg-[#080b12] border border-white/20 rounded-3xl sm:rounded-[2.5rem] p-5 sm:p-7 max-w-lg w-full relative shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden">
+                        <div className="flex justify-between items-center border-b border-white/10 pb-4 shrink-0">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2 font-hero-display">
                                 <span className="material-symbols-outlined text-[#a5d391]">edit_calendar</span>
                                 Book Clinical Consultation
                             </h3>
-                            <button onClick={() => setIsBookingModalOpen(false)} className="text-white/50 hover:text-white cursor-pointer">
+                            <button onClick={() => setIsBookingModalOpen(false)} className="text-white/50 hover:text-white cursor-pointer p-1">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
 
-                        <form onSubmit={handleBookSubmit} className="space-y-4">
+                        <form onSubmit={handleBookSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                            <div className="space-y-4 overflow-y-auto flex-1 pr-1.5 py-3 overscroll-contain">
                             {/* Rich Nutritionist Selection Cards */}
                             <div>
                                 <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">
@@ -1400,18 +1415,21 @@ const Appointments = () => {
                                 })()}
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-2">
+                            </div>
+
+                            {/* Sticky Action Footer */}
+                            <div className="sticky bottom-0 bg-[#080b12] border-t border-white/10 pt-3 pb-4 sm:pb-5 -mx-5 sm:-mx-7 -mb-5 sm:-mb-7 px-5 sm:px-7 mt-auto flex items-center justify-end gap-2.5 sm:gap-3 shrink-0 z-10 shadow-[0_-12px_24px_rgba(8,11,18,0.95)] rounded-b-3xl sm:rounded-b-[2.5rem]">
                                 <button
                                     type="button"
                                     onClick={() => setIsBookingModalOpen(false)}
-                                    className="px-5 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white text-xs font-bold cursor-pointer"
+                                    className="px-4 sm:px-5 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white text-xs font-bold cursor-pointer transition-colors active:scale-95 shrink-0"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isPayingWithWallet}
-                                    className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg flex items-center gap-2 ${
+                                    className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5 sm:gap-2 active:scale-95 flex-1 sm:flex-initial text-center ${
                                         Number(wallet.balance || 0) < Number(sessionFee || 0)
                                             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500 hover:text-white'
                                             : 'bg-[#a5d391] text-black hover:bg-white'
@@ -1442,9 +1460,14 @@ const Appointments = () => {
 
             {/* Modal: Appointment Detail View */}
             {selectedAppointment && (
-                <div className="fixed inset-0 z-[99999] flex items-start sm:items-center justify-center p-4 sm:p-6 pt-24 sm:pt-28 pb-8 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-                    <div className="bg-[#080b12] border border-white/20 rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full relative shadow-2xl space-y-6 max-h-[80vh] overflow-y-auto my-auto">
-                        <div className="flex justify-between items-start border-b border-white/10 pb-4">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    data-modal="true"
+                    className="fixed inset-0 z-[99999] flex items-center justify-center p-2.5 sm:p-6 bg-black/85 backdrop-blur-xl animate-fadeIn"
+                >
+                    <div className="bg-[#080b12] border border-white/20 rounded-3xl sm:rounded-[2.5rem] p-5 sm:p-7 max-w-lg w-full relative shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden">
+                        <div className="flex justify-between items-start border-b border-white/10 pb-4 shrink-0">
                             <div>
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                                     isConfirmedOrApproved(selectedAppointment.status)
@@ -1470,12 +1493,12 @@ const Appointments = () => {
                                 <h3 className="text-xl font-bold text-white mt-2 font-hero-display">{selectedAppointment.title || 'Consultation Session'}</h3>
                                 <p className="text-xs text-[#a5d391] font-semibold">{selectedAppointment.sessionType || 'Clinical Consultation'}</p>
                             </div>
-                            <button onClick={() => setSelectedAppointment(null)} className="text-white/50 hover:text-white cursor-pointer">
+                            <button onClick={() => setSelectedAppointment(null)} className="text-white/50 hover:text-white cursor-pointer p-1">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-3 overflow-y-auto flex-1 pr-1.5 py-3 overscroll-contain">
                             {(selectedAppointment.status || '').toUpperCase() === 'CANCELLED_BY_NUTRITIONIST' && (
                                 <div className="bg-violet-500/15 border border-violet-400/30 rounded-2xl p-3.5 text-xs text-violet-200 flex items-center gap-2 font-medium">
                                     <span className="material-symbols-outlined text-violet-300 text-base shrink-0">currency_exchange</span>
@@ -1512,11 +1535,12 @@ const Appointments = () => {
                             )}
                         </div>
 
-                        <div className="flex flex-wrap justify-between items-center gap-3 pt-2">
+                        {/* Sticky Action Footer */}
+                        <div className="sticky bottom-0 bg-[#080b12] border-t border-white/10 pt-3 pb-4 sm:pb-5 -mx-5 sm:-mx-7 -mb-5 sm:-mb-7 px-5 sm:px-7 mt-auto flex flex-wrap justify-between items-center gap-2.5 sm:gap-3 shrink-0 z-10 shadow-[0_-12px_24px_rgba(8,11,18,0.95)] rounded-b-3xl sm:rounded-b-[2.5rem]">
                             {canDeleteAppointment(selectedAppointment) ? (
                                 <button
                                     onClick={() => handleDeleteHistoryItem(null, selectedAppointment)}
-                                    className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                                    className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                                 >
                                     <span className="material-symbols-outlined text-sm">delete</span>
                                     <span>Delete Record</span>
@@ -1530,7 +1554,7 @@ const Appointments = () => {
                                 ) : !isCancelledStatus(selectedAppointment.status) && (selectedAppointment.status || '').toUpperCase() !== 'REJECTED' ? (
                                     <button
                                         onClick={() => handleCancelAppointment(selectedAppointment.id)}
-                                        className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                                        className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                                     >
                                         <span className="material-symbols-outlined text-sm">event_busy</span>
                                         <span>Cancel Session</span>
@@ -1543,18 +1567,18 @@ const Appointments = () => {
                                 )
                             )}
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 ml-auto">
                                 {!isDatePassed(selectedAppointment.appointmentTime) && !isCancelledStatus(selectedAppointment.status) && (
                                     <Link
                                         to="/virtual-room"
-                                        className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer flex items-center gap-1"
+                                        className="px-5 py-2.5 rounded-xl bg-[#a5d391] text-black text-xs font-bold hover:bg-white transition-all cursor-pointer flex items-center gap-1 active:scale-95"
                                     >
                                         <span className="material-symbols-outlined text-sm">videocam</span> Join Room
                                     </Link>
                                 )}
                                 <button
                                     onClick={() => setSelectedAppointment(null)}
-                                    className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer"
+                                    className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-all cursor-pointer active:scale-95"
                                 >
                                     Close
                                 </button>
@@ -1566,7 +1590,12 @@ const Appointments = () => {
 
             {/* Modal: LOW_BALANCE Guard Blocked Dialog */}
             {guardBlockedModal && (
-                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fadeIn">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    data-modal="true"
+                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fadeIn"
+                >
                     <div className="bg-[#0e0708] border-2 border-rose-500/60 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full relative shadow-[0_0_50px_rgba(244,63,94,0.35)] space-y-5">
                         <div className="flex items-center gap-3 border-b border-rose-500/20 pb-4">
                             <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
@@ -1622,7 +1651,12 @@ const Appointments = () => {
 
             {/* Modal: Request Cancellation Confirmation Pop-up */}
             {cancelPromptModal.open && (
-                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fadeIn">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    data-modal="true"
+                    className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fadeIn"
+                >
                     <div className="bg-[#121612] border-2 border-amber-500/60 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full relative shadow-[0_0_50px_rgba(245,158,11,0.3)] space-y-5">
                         <div className="flex items-center gap-3 border-b border-amber-500/20 pb-4">
                             <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
