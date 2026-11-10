@@ -341,14 +341,14 @@ const AiImageAnalyzer = () => {
                         </h1>
                     </div>
 
-                    {/* Gemma AI Badge */}
+                    {/* AI Vision Badge */}
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 via-[#a5d391]/20 to-blue-500/20 border border-[#a5d391]/30 text-white text-xs font-bold shadow-lg">
                         <span className="material-symbols-outlined text-purple-300 text-base">auto_awesome</span>
-                        <span>Gemma AI Vision & OCR Engine</span>
+                        <span>AI Vision & OCR Engine</span>
                     </div>
                 </div>
                 <p className="text-white/60 text-sm font-body-md max-w-3xl">
-                    Powered by Google Gemma AI vision model. Scan food dishes or use live camera barcode scanning for instant allergen matching, additive safety, and health verdicts.
+                    Powered by AI Vision Model. Scan food dishes or use live camera barcode scanning for instant allergen matching, additive safety, and health verdicts.
                 </p>
             </div>
 
@@ -539,7 +539,7 @@ const AiImageAnalyzer = () => {
                         {loading ? (
                             <>
                                 <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
-                                <span>Running Gemma AI Vision & OCR Analysis...</span>
+                                <span>Running AI Vision & OCR Analysis...</span>
                             </>
                         ) : (
                             <>
