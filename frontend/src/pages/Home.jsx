@@ -688,14 +688,14 @@ const Home = () => {
                 )}
 
                 {/* Appended New Sections */}
-                <div className="w-full bg-background text-on-background pt-0 pb-10">
+                <div className="w-full bg-background text-on-background dark:bg-[#080b12] dark:text-white pt-0 pb-10">
                     <ServicesOverview />
                 </div>
                 {!isStaffHome && <div className="w-full bg-slate-50 dark:bg-[#080b12] text-slate-900 dark:text-white py-16 border-t border-slate-200 dark:border-white/10 transition-colors">
                     <HowItWorks />
                 </div>}
 
-                <div className="w-full bg-background text-on-background pb-24">
+                <div className="w-full bg-background text-on-background dark:bg-[#080b12] dark:text-white pb-24">
                     <FinalCTA />
                 </div>
             </div>

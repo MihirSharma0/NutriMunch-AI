@@ -108,7 +108,7 @@ const TagInput = ({
 
   return (
     <div className="aidg-field">
-      <label className="aidg-label" style={{ color: accentColor }}>
+      <label className={`aidg-label ${accentColor === '#ffb764' ? 'restriction' : 'goal'}`} style={{ color: accentColor }}>
         <Icon name={iconName} size={18} />
         {label}
       </label>
@@ -116,7 +116,7 @@ const TagInput = ({
       {selected.length > 0 && (
         <div className="aidg-tags-row">
           {selected.map(tag => (
-            <span key={tag} className="aidg-tag" style={{ borderColor: `${accentColor}55`, background: `${accentColor}18`, color: accentColor }}>
+            <span key={tag} className={`aidg-tag ${accentColor === '#ffb764' ? 'restriction' : 'goal'}`} style={{ borderColor: `${accentColor}55`, background: `${accentColor}18`, color: accentColor }}>
               {tag}
               <button className="aidg-tag-remove" onClick={() => onRemove(tag)} type="button" style={{ color: `${accentColor}99` }}>
                 <Icon name="close" size={13} />
@@ -139,7 +139,7 @@ const TagInput = ({
         {open && filtered.length > 0 && (
           <div className="aidg-dropdown">
             {filtered.map(tag => (
-              <button key={tag} className="aidg-dropdown-item" type="button" onClick={() => handleSelect(tag)}>
+              <button key={tag} className={`aidg-dropdown-item ${accentColor === '#ffb764' ? 'restriction' : 'goal'}`} type="button" onClick={() => handleSelect(tag)}>
                 <Icon name="add_circle" size={16} style={{ color: accentColor }} />
                 {tag}
               </button>
@@ -700,7 +700,7 @@ const AiDietGenerator = () => {
           )}
 
           <div className="aidg-field">
-            <label className="aidg-label" style={{ color: '#a5d391' }}>
+            <label className="aidg-label goal" style={{ color: '#a5d391' }}>
               <Icon name="receipt_long" size={18} />
               Personalized Plan Heading
             </label>
@@ -748,10 +748,10 @@ const AiDietGenerator = () => {
           <div className="aidg-form-footer">
             <div className="aidg-selection-summary">
               {selectedGoals.length > 0
-                ? <span><strong style={{ color: '#a5d391' }}>{selectedGoals.length}</strong> goal{selectedGoals.length > 1 ? 's' : ''}</span>
+                ? <span><strong className="aidg-goal-count" style={{ color: '#a5d391' }}>{selectedGoals.length}</strong> goal{selectedGoals.length > 1 ? 's' : ''}</span>
                 : <span style={{ opacity: 0.4 }}>No goals selected</span>}
               {selectedRestrictions.length > 0 && (
-                <span> · <strong style={{ color: '#ffb764' }}>{selectedRestrictions.length}</strong> restriction{selectedRestrictions.length > 1 ? 's' : ''}</span>
+                <span> · <strong className="aidg-restriction-count" style={{ color: '#ffb764' }}>{selectedRestrictions.length}</strong> restriction{selectedRestrictions.length > 1 ? 's' : ''}</span>
               )}
             </div>
             <button type="submit" className="aidg-generate-btn" disabled={loading || profileLoading}>
